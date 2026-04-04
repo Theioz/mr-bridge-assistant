@@ -1,13 +1,12 @@
 # Fitness Log
 
 ## Current Goal
-- Primary: Fat loss
-- Secondary: Strength maintenance
+- Primary:
+- Secondary:
 
 ## Program Structure
-- Split: Push / Legs / Pull + conditioning
-- Frequency: TBD
-- Program details: To be filled in first fitness session
+- Split:
+- Frequency:
 
 ## Baseline Metrics
 | Date | Weight | Body Fat % | Notes |
@@ -19,30 +18,27 @@
 ### Push
 | Exercise | Sets | Reps | Weight | Notes |
 |----------|------|------|--------|-------|
-| TBD | — | — | — | — |
+| | | | | |
 
 ### Legs
 | Exercise | Sets | Reps | Weight | Notes |
 |----------|------|------|--------|-------|
-| TBD | — | — | — | — |
+| | | | | |
 
 ### Pull
 | Exercise | Sets | Reps | Weight | Notes |
 |----------|------|------|--------|-------|
-| TBD | — | — | — | — |
+| | | | | |
 
 ### Conditioning
 | Exercise | Duration | Intensity | Notes |
 |----------|----------|-----------|-------|
-| TBD | — | — | — |
+| | | | |
 
 ## Session Log
 | Date | Day Type | Exercises Completed | Notes |
-|------|----------|--------------------:|-------|
+|------|----------|---------------------|-------|
 | — | — | — | — |
 
 ## Progression Rules
-- TBD — to be defined first fitness session
-
-## Notes
-- Program details TBD — fill in during first dedicated fitness session
+-

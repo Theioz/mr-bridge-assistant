@@ -8,20 +8,20 @@
 ---
 
 ## Daily Accountability Tracker
-| Date | Japanese (30–60 min) | Coding | Reading | Workout |
-|------|---------------------|--------|---------|---------|
+| Date | Target 1 | Target 2 | Target 3 | Target 4 |
+|------|----------|----------|----------|----------|
 | — | — | — | — | — |
 
 ---
 
-## Japanese Study Log
+## Study Log 1
 | Date | Duration | Method / Resource | Notes |
 |------|----------|------------------|-------|
 | — | — | — | — |
 
 ---
 
-## Coding Log
+## Study Log 2
 | Date | Duration | Topic / Project | Notes |
 |------|----------|----------------|-------|
 | — | — | — | — |
