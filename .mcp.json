@@ -1,23 +1,5 @@
 {
   "mcpServers": {
-    "gmail": {
-      "command": "npx",
-      "args": ["-y", "@shinzolabs/gmail-mcp"],
-      "env": {
-        "CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
-        "REFRESH_TOKEN": "${GOOGLE_REFRESH_TOKEN}"
-      }
-    },
-    "google-calendar": {
-      "command": "npx",
-      "args": ["-y", "@takumi0706/google-calendar-mcp"],
-      "env": {
-        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
-        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
-        "GOOGLE_REDIRECT_URI": "http://localhost:4153/oauth2callback"
-      }
-    },
     "deepwiki": {
       "command": "npx",
       "args": ["-y", "deepwiki-mcp"]
