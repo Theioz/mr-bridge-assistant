@@ -9,9 +9,9 @@
 - Frequency:
 
 ## Baseline Metrics
-| Date | Weight | Body Fat % | Notes |
-|------|--------|------------|-------|
-| — | — | — | — |
+| Date | Weight | Body Fat % | BMI | Muscle Mass | Notes |
+|------|--------|------------|-----|-------------|-------|
+| — | — | — | — | — | — |
 
 ## Current Exercises by Day
 
@@ -42,3 +42,8 @@
 
 ## Progression Rules
 -
+
+## Recovery Metrics
+| Date | Readiness | Sleep Score | Avg HRV | Resting HR | Notes |
+|------|-----------|-------------|---------|------------|-------|
+| — | — | — | — | — | — |

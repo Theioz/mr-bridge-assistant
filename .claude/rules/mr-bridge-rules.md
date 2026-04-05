@@ -32,7 +32,18 @@ Execute in this exact order:
 
 ### Accountability — Last 7 Days
 [Habit summary from habits.md — hit/missed per habit with streak count]
+
+### Recovery (last night)
+[From fitness_log.md Recovery Metrics — most recent row]
+Readiness: [score]/100 | Sleep: [score]/100 | HRV: [value] | Resting HR: [value] bpm
+[If no data: "No recovery data — run scripts/sync-oura.py"]
 ```
+
+Recovery interpretation rules:
+- Readiness < 70 → flag: "Readiness low — consider deload or rest day"
+- Readiness < 50 → flag: "Readiness critical — rest day recommended"
+- HRV balance trending down 3+ consecutive days → flag: "HRV declining — prioritize recovery"
+- Omit Recovery section entirely if fitness_log.md has no Recovery Metrics rows
 
 ## Session Close Protocol
 Before every commit at end of session:
@@ -93,11 +104,20 @@ When operating in voice context (responses will be spoken aloud):
 | File | Purpose |
 |------|---------|
 | `memory/profile.md` | Identity, background, preferences, communication style |
-| `memory/fitness_log.md` | Fitness goals, program, session log, metrics |
+| `memory/fitness_log.md` | Fitness goals, program, session log, baseline metrics, recovery metrics |
 | `memory/meal_log.md` | Cuisine preferences, recipes, meal prep log |
 | `memory/todo.md` | Tasks, daily accountability, study logs, reading log |
 | `memory/habits.md` | Daily habit registry, streaks, daily log |
 | `memory/timer_state.json` | Active study timer state (start time, subject, category) |
+
+## Fitness Sync Scripts
+| Script | Data Source | What It Writes |
+|--------|-------------|---------------|
+| `scripts/sync-googlefit.py` | Google Fit API | Weight → Baseline Metrics; workouts → Session Log |
+| `scripts/sync-oura.py` | Oura REST API v2 | Readiness, sleep, HRV, resting HR → Recovery Metrics |
+| `scripts/sync-renpho.py` | Renpho CSV export | Body fat %, BMI, muscle mass → Baseline Metrics |
+
+Run these manually before sessions to get fresh data. See `docs/fitness-tracker-setup.md`.
 
 ## Reference Index
 | Resource | Location | Purpose |
