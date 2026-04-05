@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\"memory/'; then echo '\\n[Mr. Bridge] Memory updated — run: git add . && git commit -m \"session: $(date +%Y-%m-%d) — memory update\" && git push'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

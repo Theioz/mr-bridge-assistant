@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-calendar": {
+      "type": "claude_ai",
+      "service": "google-calendar"
+    },
+    "gmail": {
+      "type": "claude_ai",
+      "service": "gmail"
+    }
+  }
+}
