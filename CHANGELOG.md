@@ -9,6 +9,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [0.4.0] — 2026-04-04
+
+### Added
+- Gmail and Google Calendar connected via claude.ai hosted MCP servers (authenticated)
+- `scripts/notify.sh` updated to send Android push notifications via ntfy.sh (dual macOS + Android)
+- `NTFY_TOPIC` added to `.env` template for Android notification setup
+- 10 GitHub Issues created tracking full feature backlog
+- Session close protocol added to rules: update CHANGELOG + README before every commit
+
+### Changed
+- `.mcp.json` cleaned up — removed redundant Gmail/Calendar entries (now handled by claude.ai hosted MCPs), keeping only DeepWiki
+- `.claude/settings.json` hooks format fixed (matcher + hooks array)
+- MCP tool references in `mr-bridge-rules.md` updated to match actual claude.ai tool names
+- Google OAuth credentials removed from `.env` (no longer needed)
+
+### Fixed
+- `.claude/settings.json` hooks format was invalid — corrected to use `matcher` + `hooks` array structure
+
+---
+
 ## [0.3.0] — 2026-04-04
 
 ### Added
@@ -64,7 +84,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Theioz/mr-bridge-assistant/releases/tag/v0.1.0
