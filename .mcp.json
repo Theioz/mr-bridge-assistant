@@ -1,12 +1,26 @@
 {
   "mcpServers": {
     "google-calendar": {
-      "type": "claude_ai",
-      "service": "google-calendar"
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-google-calendar"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
+        "GOOGLE_REFRESH_TOKEN": "${GOOGLE_REFRESH_TOKEN}"
+      }
     },
     "gmail": {
-      "type": "claude_ai",
-      "service": "gmail"
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-gmail"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
+        "GOOGLE_REFRESH_TOKEN": "${GOOGLE_REFRESH_TOKEN}"
+      }
+    },
+    "deepwiki": {
+      "command": "npx",
+      "args": ["-y", "deepwiki-mcp"]
     }
   }
 }

@@ -1,0 +1,3 @@
+[submodule ".claude/references/best-practice"]
+	path = .claude/references/best-practice
+	url = https://github.com/shanraisshan/claude-code-best-practice

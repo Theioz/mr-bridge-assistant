@@ -13,8 +13,8 @@ Execute in this exact order:
 3. Read `memory/meal_log.md`
 4. Read `memory/todo.md`
 5. Read `memory/habits.md`
-6. Fetch today's Google Calendar events (use `mcp__claude_ai_Google_Calendar` tools)
-7. Fetch unread important emails from Gmail (use `mcp__claude_ai_Gmail` tools — filter by: unread, from known contacts or subjects containing: meeting, urgent, invoice, action required, deadline)
+6. Fetch today's Google Calendar events (use `mcp__google-calendar` tools)
+7. Fetch unread important emails from Gmail (use `mcp__gmail` tools — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline)
 8. Deliver session briefing (format below)
 
 ## Session Briefing Format
@@ -22,7 +22,7 @@ Execute in this exact order:
 ## Mr. Bridge — [Day, Date]
 
 ### Schedule Today
-[Calendar events, time + title, or "No events"]
+[Calendar events: time + title, or "No events"]
 
 ### Important Emails
 [Unread emails matching filter, or "Inbox clear"]
@@ -31,8 +31,24 @@ Execute in this exact order:
 [Active tasks from todo.md, or "None"]
 
 ### Accountability — Last 7 Days
-[Habit streak summary from habits.md — hit/missed per habit]
+[Habit summary from habits.md — hit/missed per habit with streak count]
 ```
+
+## Feature Development Protocol
+When planning new features or making non-trivial changes:
+
+1. **Pull latest best practices** before starting:
+   ```bash
+   git submodule update --remote .claude/references/best-practice
+   ```
+2. **Create a feature branch**:
+   ```bash
+   git checkout -b feature/<short-description>
+   ```
+3. Reference `.claude/references/best-practice/` for patterns and conventions
+4. Implement changes on the branch
+5. Open a pull request — do not push directly to `main`
+6. PR title format: `feat: <description>` / `fix: <description>` / `chore: <description>`
 
 ## Behavioral Rules
 - Structured headers and tables over prose
@@ -62,3 +78,9 @@ When operating in voice context (responses will be spoken aloud):
 | `memory/meal_log.md` | Cuisine preferences, recipes, meal prep log |
 | `memory/todo.md` | Tasks, daily accountability, study logs, reading log |
 | `memory/habits.md` | Daily habit registry, streaks, daily log |
+
+## Reference Index
+| Resource | Location | Purpose |
+|----------|----------|---------|
+| Claude Code best practices | `.claude/references/best-practice/` | Patterns for agents, skills, commands, hooks, MCP |
+| Update reference: | `git submodule update --remote .claude/references/best-practice` | Pull latest before feature work |

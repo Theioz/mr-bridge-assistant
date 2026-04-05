@@ -1,25 +1,28 @@
-# Agent: Nightly Habit Post-Mortem
-# Schedule: Daily at 9:00 PM
-# Trigger type: scheduled
+---
+name: nightly-postmortem
+description: Nightly habit post-mortem agent. Reads memory/habits.md, evaluates today's habit completions, and fires a macOS push notification summary. Run at 9pm daily.
+tools:
+  - Read
+  - Bash(bash *)
+model: haiku
+permissionMode: acceptEdits
+maxTurns: 5
+---
 
 ## Purpose
-Read today's habit log from memory/habits.md, evaluate which habits were completed, and fire a macOS push notification summarizing the day.
+Read today's habit log and fire a macOS push notification summarizing the day.
 
 ## Instructions
 
-You are Mr. Bridge running a nightly post-mortem. Do the following:
-
 1. Read `memory/habits.md`
-2. Find today's row in the Daily Log table (date = today)
-3. Count completed habits (marked as "yes", "✓", or "done") vs total habits
-4. Build a summary string in this format:
-   - If all done: "All habits complete. Good execution today."
-   - If some missed: "Habits: X/Y complete. Missed: [list of missed habits]."
-   - If no entry for today: "No habits logged today."
-5. Run the notification:
+2. Find today's row in the Daily Log table (date = today in YYYY-MM-DD format)
+3. Count completed habits (marked as "yes", "✓", or "done") vs total tracked habits
+4. Build a summary string:
+   - All complete: "All habits complete. Good execution today."
+   - Some missed: "Habits: X/Y complete. Missed: [comma-separated list]."
+   - No entry for today: "No habits logged today."
+5. Run:
    ```bash
-   bash /Users/jason/Code\ Projects/mr-bridge-assistant/scripts/notify.sh \
-     --title "Mr. Bridge — Nightly Check-In" \
-     --message "<summary string>"
+   bash "/Users/jason/Code Projects/mr-bridge-assistant/scripts/notify.sh" --title "Mr. Bridge — Nightly Check-In" --message "<summary>"
    ```
-6. Do not write to any memory files. Read-only run.
+6. Read only — do not write to any memory files.
