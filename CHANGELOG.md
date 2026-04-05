@@ -9,6 +9,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [0.5.0] — 2026-04-05
+
+### Added
+- `.github/workflows/weekly-review-nudge.yml` — GitHub Actions cron (Sunday 8pm Pacific) that POSTs to ntfy.sh; fires on all devices regardless of local machine state
+- `.claude/agents/weekly-review.md` — local agent that computes 7-day habit summary, study totals, task delta, and sends headline push notification
+- `.claude/agents/study-timer.md` — timer agent for Japanese and coding sessions; handles forgotten timers with adjustable duration on stop
+- `.claude/commands/weekly-review.md` — `/weekly-review` slash command for on-demand review
+- `.claude/commands/stop-timer.md` — `/stop-timer` slash command to stop active study timer and log duration
+- `memory/timer_state.json` (gitignored) — tracks active study timer state
+- `docs/notifications-setup.md` — full setup guide for Android, macOS, and Windows PC via ntfy-desktop
+- Study timer rules added to `mr-bridge-rules.md` — offer timer only when explicitly starting a session
+- `memory/timer_state.json` added to `.gitignore`
+
+### Changed
+- `mr-bridge-rules.md` updated: fix stale submodule command → `bash scripts/update-references.sh`, add timer_state.json to memory index
+
+---
+
 ## [0.4.0] — 2026-04-04
 
 ### Added
@@ -84,7 +102,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.1.0...v0.2.0
