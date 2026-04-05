@@ -39,10 +39,24 @@ Execute in this exact order:
 ### Accountability — Last 7 Days
 [Habit summary from habits.md — hit/missed per habit with streak count]
 
+### Body Composition (last weigh-in)
+Weight: [X] lb | Body Fat: [X]% | Muscle: [X] lb | BMI: [X] | Visceral: [X] — [date]
+[delta vs previous entry, e.g. "Weight -1.2 lb | Fat -0.3% vs prior"]
+
+### Yesterday's Activity
+[All Session Log rows for yesterday's date — activity, duration, calories. If none: "No workouts logged"]
+
+### Today's Activity
+[All Session Log rows for today's date — activity, duration, calories. If none: "None yet"]
+
 ### Recovery (last night)
 Readiness: [score] | Sleep: [score] | Total: [Xh Ym] | Deep: [Xh Ym] | REM: [Xh Ym] | HRV: [X]ms | RHR: [X] bpm | Active Cal: [X]
 [flag if applicable]
 ```
+
+Body Composition rules:
+- Use the **last Renpho row** in Baseline Metrics (rows with Body Fat % filled in, not weight-only Google Fit rows)
+- Show delta vs the row before it for weight and body fat %
 
 Recovery rules:
 - Use the **last data row** of the Recovery Metrics table in fitness_log.md (bottom of the table). Oura data lags 1 day — yesterday's date is expected and correct.
