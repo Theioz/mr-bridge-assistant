@@ -2,9 +2,13 @@
 """
 Sync Fitbit workout sessions into memory/fitness_log.md Session Log.
 Usage:
-  python3 scripts/sync-fitbit.py            # last 7 days
-  python3 scripts/sync-fitbit.py --days 30  # last 30 days
-  python3 scripts/sync-fitbit.py --setup    # first-time OAuth setup
+  python3 scripts/sync-fitbit.py             # last 7 days
+  python3 scripts/sync-fitbit.py --days 30   # last 30 days
+  python3 scripts/sync-fitbit.py --yes       # skip confirmation
+  python3 scripts/sync-fitbit.py --setup     # first-time OAuth setup
+
+Each activity gets its own row with: date, start time, name, duration,
+calories, avg HR, and HR zone breakdown (if heart rate data available).
 
 First-time setup:
   1. Register app at https://dev.fitbit.com/apps/new
@@ -43,7 +47,10 @@ FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
 FITBIT_API_BASE = "https://api.fitbit.com"
 REDIRECT_URI = "http://localhost:8080"
-SCOPES = "activity"
+SCOPES = "activity heartrate"
+
+SESSION_LOG_HEADER = "| Date | Time | Activity | Duration | Calories | Avg HR | HR Zones | Notes |"
+SESSION_LOG_SEP    = "|------|------|----------|----------|----------|--------|----------|-------|"
 
 
 # --- OAuth helpers ---
@@ -175,51 +182,87 @@ def fitbit_get(access_token, path):
         sys.exit(1)
 
 
+def fmt_hr_zones(zones):
+    """Summarize HR zones as 'Peak: 7m | Cardio: 10m' etc. (skip zero-minute zones)."""
+    if not zones:
+        return "—"
+    parts = []
+    order = ["Peak", "Cardio", "Fat Burn", "Out of Range"]
+    zone_map = {z["name"]: z.get("minutes", 0) for z in zones}
+    for name in order:
+        mins = zone_map.get(name, 0)
+        if mins > 0 and name != "Out of Range":
+            parts.append(f"{name}: {mins}m")
+    return " | ".join(parts) if parts else "—"
+
+
 def fetch_workouts(access_token, start_date, end_date):
-    """Fetch logged workout activities (excludes auto-tracked steps/walking noise)."""
+    """Fetch logged workout activities — one row per activity with full detail."""
     path = (
         f"/1/user/-/activities/list.json"
         f"?afterDate={start_date}&sort=asc&limit=100&offset=0"
     )
     data = fitbit_get(access_token, path)
-    activities = data.get("activities", [])
-
-    # Group by date
-    by_date = {}
-    for a in activities:
-        raw_date = a.get("startTime", a.get("originalStartTime", ""))[:10]
-        name = a.get("activityName", "Unknown")
+    rows = []
+    for a in data.get("activities", []):
+        raw_start = a.get("startTime", a.get("originalStartTime", ""))
+        date = raw_start[:10]
+        if not (start_date <= date <= end_date):
+            continue
         duration_min = round(a.get("duration", 0) / 60000)
         if duration_min < 5:
             continue
-        calories = a.get("calories", "")
-        label = f"{name} ({duration_min} min" + (f", {calories} cal" if calories else "") + ")"
-        by_date.setdefault(raw_date, []).append(label)
-
-    # Filter to date range
-    rows = []
-    for date, acts in sorted(by_date.items()):
-        if start_date <= date <= end_date:
-            rows.append({"date": date, "activities": ", ".join(acts)})
+        time = raw_start[11:16] if len(raw_start) >= 16 else "—"
+        name = a.get("activityName", "Unknown")
+        calories = a.get("calories", "—")
+        avg_hr = a.get("averageHeartRate", "—")
+        hr_zones = fmt_hr_zones(a.get("heartRateZones", []))
+        rows.append({
+            "date": date,
+            "time": time,
+            "name": name,
+            "duration": duration_min,
+            "calories": calories,
+            "avg_hr": avg_hr,
+            "hr_zones": hr_zones,
+            # dedup key
+            "key": f"{date}|{time}|{name}",
+        })
     return rows
 
 
 # --- fitness_log.md helpers ---
 
-def existing_dates_in_section(section_header, log_path):
+def existing_session_keys(log_path):
+    """Return set of 'date|time|activity' keys already in Session Log."""
     if not log_path.exists():
         return set()
     text = log_path.read_text()
-    idx = text.find(section_header)
+    idx = text.find("## Session Log")
     if idx == -1:
         return set()
-    dates = set()
+    keys = set()
     for line in text[idx:].split("\n"):
-        if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —"):
+        if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —") and not line.startswith("|---"):
             parts = [p.strip() for p in line.strip("| \n").split("|")]
-            if parts and parts[0]:
-                dates.add(parts[0])
-    return dates
+            if len(parts) >= 3 and parts[0] and len(parts[0]) == 10:
+                keys.add(f"{parts[0]}|{parts[1]}|{parts[2]}")
+    return keys
+
+
+def ensure_session_log_header(log_path):
+    """Update Session Log table header to rich schema if still on old schema."""
+    text = log_path.read_text()
+    if SESSION_LOG_HEADER in text:
+        return
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line.strip() == "## Session Log":
+            if i + 2 < len(lines) and lines[i + 1].startswith("|"):
+                lines[i + 1] = SESSION_LOG_HEADER
+                lines[i + 2] = SESSION_LOG_SEP
+                break
+    log_path.write_text("\n".join(lines))
 
 
 def insert_rows_after_table(section_header, new_rows, log_path):
@@ -249,6 +292,7 @@ def main():
     parser = argparse.ArgumentParser(description="Sync Fitbit workouts to fitness_log.md")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--setup", action="store_true", help="Run first-time OAuth setup")
+    parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
 
     if args.setup:
@@ -278,8 +322,8 @@ def main():
     print(f"[sync-fitbit] Fetching workouts {start_str} to {end_str}...")
     workout_rows = fetch_workouts(access_token, start_str, end_str)
 
-    existing = existing_dates_in_section("## Session Log", FITNESS_LOG)
-    new_workouts = [r for r in workout_rows if r["date"] not in existing]
+    existing = existing_session_keys(FITNESS_LOG)
+    new_workouts = [r for r in workout_rows if r["key"] not in existing]
 
     if not new_workouts:
         print("[sync-fitbit] No new workout data to add.")
@@ -287,15 +331,19 @@ def main():
 
     print(f"\nNew workout entries ({len(new_workouts)}):")
     for r in new_workouts:
-        print(f"  {r['date']} — {r['activities']}")
+        hr_info = f" | Avg HR: {r['avg_hr']}" if r["avg_hr"] != "—" else ""
+        print(f"  {r['date']} {r['time']} — {r['name']} ({r['duration']} min, {r['calories']} cal{hr_info})")
 
-    confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Aborted.")
-        return
+    if not args.yes:
+        confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return
+
+    ensure_session_log_header(FITNESS_LOG)
 
     rows = [
-        f"| {r['date']} | — | {r['activities']} | |"
+        f"| {r['date']} | {r['time']} | {r['name']} | {r['duration']} min | {r['calories']} cal | {r['avg_hr']} | {r['hr_zones']} | |"
         for r in new_workouts
     ]
     insert_rows_after_table("## Session Log", rows, FITNESS_LOG)

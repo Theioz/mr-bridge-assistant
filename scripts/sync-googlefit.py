@@ -117,6 +117,7 @@ def insert_rows_after_table(section_header, new_rows, log_path):
 def main():
     parser = argparse.ArgumentParser(description="Sync Google Fit weight to fitness_log.md")
     parser.add_argument("--days", type=int, default=7, help="Number of days to fetch (default: 7)")
+    parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
 
     if not FITNESS_LOG.exists():
@@ -144,10 +145,11 @@ def main():
     for r in sorted(new_weight, key=lambda x: x["date"]):
         print(f"  {r['date']} — {r['weight']}")
 
-    confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Aborted.")
-        return
+    if not args.yes:
+        confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return
 
     rows = [
         f"| {r['date']} | {r['weight']} | — | — | — | |"

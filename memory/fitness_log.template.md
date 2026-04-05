@@ -36,14 +36,14 @@
 | | | | |
 
 ## Session Log
-| Date | Day Type | Exercises Completed | Notes |
-|------|----------|---------------------|-------|
-| — | — | — | — |
+| Date | Time | Activity | Duration | Calories | Avg HR | HR Zones | Notes |
+|------|------|----------|----------|----------|--------|----------|-------|
+| — | — | — | — | — | — | — | — |
 
 ## Progression Rules
 -
 
 ## Recovery Metrics
-| Date | Readiness | Sleep Score | Avg HRV | Resting HR | Notes |
-|------|-----------|-------------|---------|------------|-------|
-| — | — | — | — | — | — |
+| Date | Bedtime | Total Sleep | Deep | REM | Avg HRV | Resting HR | Readiness | Sleep Score | Active Cal | Notes |
+|------|---------|-------------|------|-----|---------|------------|-----------|-------------|------------|-------|
+| — | — | — | — | — | — | — | — | — | — | — |

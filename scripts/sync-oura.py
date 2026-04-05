@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 Sync Oura Ring recovery metrics into memory/fitness_log.md.
-Usage: python3 scripts/sync-oura.py [--days 7]
+Usage:
+  python3 scripts/sync-oura.py [--days 7] [--yes]
+
+Pulls per-night detail: total sleep, deep/REM/light breakdown, avg HRV (ms),
+resting HR, bedtime, and active calories for the day.
 
 Requires: python-dotenv
   pip3 install python-dotenv
@@ -24,8 +28,8 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 FITNESS_LOG = ROOT / "memory" / "fitness_log.md"
 RECOVERY_HEADER = "## Recovery Metrics"
-RECOVERY_TABLE_HEADER = "| Date | Readiness | Sleep Score | Avg HRV | Resting HR | Notes |"
-RECOVERY_TABLE_SEP   = "|------|-----------|-------------|---------|------------|-------|"
+RECOVERY_TABLE_HEADER = "| Date | Bedtime | Total Sleep | Deep | REM | Avg HRV | Resting HR | Readiness | Sleep Score | Active Cal | Notes |"
+RECOVERY_TABLE_SEP   = "|------|---------|-------------|------|-----|---------|------------|-----------|-------------|------------|-------|"
 
 
 def oura_get(endpoint, start_date, end_date):
@@ -43,30 +47,61 @@ def oura_get(endpoint, start_date, end_date):
         sys.exit(1)
 
 
-def fetch_readiness(start, end):
-    data = oura_get("daily_readiness", start, end)
-    return {d["day"]: d["score"] for d in data.get("data", [])}
+def fmt_duration(seconds):
+    if not seconds or seconds == "—":
+        return "—"
+    h = int(seconds) // 3600
+    m = (int(seconds) % 3600) // 60
+    return f"{h}h {m:02d}m"
 
 
-def fetch_sleep(start, end):
-    """Returns sleep score and avg HRV (ms) and avg resting HR per day."""
-    data = oura_get("daily_sleep", start, end)
+def fmt_time(iso):
+    """Format ISO datetime to HH:MM local-ish (strip timezone offset)."""
+    if not iso:
+        return "—"
+    try:
+        # e.g. "2026-04-04T22:30:00-07:00" → "22:30"
+        t = iso[11:16]
+        return t
+    except Exception:
+        return "—"
+
+
+def fetch_sleep_detail(start, end):
+    """Detailed per-night sleep data from /sleep endpoint."""
+    data = oura_get("sleep", start, end)
     result = {}
     for d in data.get("data", []):
-        result[d["day"]] = {
-            "score": d.get("score", "—"),
-            "hrv": d.get("contributors", {}).get("hrv_balance", "—"),
+        # Only count long_sleep periods (exclude naps)
+        if d.get("type") not in ("long_sleep", "sleep"):
+            continue
+        day = d.get("day")
+        if not day:
+            continue
+        result[day] = {
+            "bedtime": fmt_time(d.get("bedtime_start")),
+            "total": fmt_duration(d.get("total_sleep_duration")),
+            "deep": fmt_duration(d.get("deep_sleep_duration")),
+            "rem": fmt_duration(d.get("rem_sleep_duration")),
+            "hrv": round(d["average_hrv"], 1) if d.get("average_hrv") else "—",
+            "rhr": d.get("lowest_heart_rate", "—"),
         }
     return result
 
 
-def fetch_resting_hr(start, end):
-    """Returns average resting heart rate per day from daily_readiness contributors."""
+def fetch_readiness(start, end):
     data = oura_get("daily_readiness", start, end)
-    return {
-        d["day"]: d.get("contributors", {}).get("resting_heart_rate", "—")
-        for d in data.get("data", [])
-    }
+    return {d["day"]: d.get("score", "—") for d in data.get("data", [])}
+
+
+def fetch_sleep_scores(start, end):
+    data = oura_get("daily_sleep", start, end)
+    return {d["day"]: d.get("score", "—") for d in data.get("data", [])}
+
+
+def fetch_active_calories(start, end):
+    data = oura_get("daily_activity", start, end)
+    return {d["day"]: d.get("active_calories", "—") for d in data.get("data", [])}
 
 
 def existing_recovery_dates(log_path):
@@ -90,6 +125,18 @@ def ensure_recovery_section(log_path):
     if RECOVERY_HEADER not in text:
         addition = f"\n{RECOVERY_HEADER}\n{RECOVERY_TABLE_HEADER}\n{RECOVERY_TABLE_SEP}\n"
         log_path.write_text(text.rstrip() + "\n" + addition)
+    else:
+        # Update table header if it's the old schema
+        if RECOVERY_TABLE_HEADER not in text:
+            lines = text.split("\n")
+            for i, line in enumerate(lines):
+                if line.strip() == RECOVERY_HEADER:
+                    # Replace next two lines (old header + sep)
+                    if i + 2 < len(lines) and lines[i + 1].startswith("|"):
+                        lines[i + 1] = RECOVERY_TABLE_HEADER
+                        lines[i + 2] = RECOVERY_TABLE_SEP
+                        break
+            log_path.write_text("\n".join(lines))
 
 
 def insert_recovery_rows(new_rows, log_path):
@@ -114,11 +161,12 @@ def insert_recovery_rows(new_rows, log_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Sync Oura recovery metrics to fitness_log.md")
-    parser.add_argument("--days", type=int, default=7, help="Number of days to fetch (default: 7)")
+    parser.add_argument("--days", type=int, default=7)
+    parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
 
     if not FITNESS_LOG.exists():
-        print(f"[error] {FITNESS_LOG} not found. Copy fitness_log.template.md first.")
+        print(f"[error] {FITNESS_LOG} not found.")
         sys.exit(1)
 
     end = datetime.now()
@@ -128,40 +176,45 @@ def main():
 
     print(f"[sync-oura] Fetching {start_str} to {end_str}...")
 
+    sleep_detail = fetch_sleep_detail(start_str, end_str)
     readiness = fetch_readiness(start_str, end_str)
-    sleep = fetch_sleep(start_str, end_str)
-    rhr = fetch_resting_hr(start_str, end_str)
+    sleep_scores = fetch_sleep_scores(start_str, end_str)
+    active_cal = fetch_active_calories(start_str, end_str)
 
-    all_dates = sorted(set(readiness) | set(sleep))
+    all_dates = sorted(set(readiness) | set(sleep_detail))
     existing = existing_recovery_dates(FITNESS_LOG)
     new_dates = [d for d in all_dates if d not in existing]
 
     if not new_dates:
-        print("[sync-oura] No new data to add.")
+        print("[sync-oura] No new data.")
         return
 
     print(f"\nNew recovery entries ({len(new_dates)}):")
     for d in new_dates:
-        r = readiness.get(d, "—")
-        s = sleep.get(d, {}).get("score", "—")
-        h = sleep.get(d, {}).get("hrv", "—")
-        hr = rhr.get(d, "—")
-        print(f"  {d} — Readiness: {r} | Sleep: {s} | HRV: {h} | RHR: {hr}")
+        sd = sleep_detail.get(d, {})
+        print(
+            f"  {d} — Readiness: {readiness.get(d, '—')} | Sleep: {sleep_scores.get(d, '—')} | "
+            f"Total: {sd.get('total', '—')} | Deep: {sd.get('deep', '—')} | REM: {sd.get('rem', '—')} | "
+            f"HRV: {sd.get('hrv', '—')}ms | RHR: {sd.get('rhr', '—')} | Active Cal: {active_cal.get(d, '—')}"
+        )
 
-    confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Aborted.")
-        return
+    if not args.yes:
+        confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return
 
     ensure_recovery_section(FITNESS_LOG)
 
     rows = []
     for d in new_dates:
-        r = readiness.get(d, "—")
-        s = sleep.get(d, {}).get("score", "—")
-        h = sleep.get(d, {}).get("hrv", "—")
-        hr = rhr.get(d, "—")
-        rows.append(f"| {d} | {r} | {s} | {h} | {hr} | |")
+        sd = sleep_detail.get(d, {})
+        rows.append(
+            f"| {d} | {sd.get('bedtime', '—')} | {sd.get('total', '—')} | "
+            f"{sd.get('deep', '—')} | {sd.get('rem', '—')} | {sd.get('hrv', '—')} | "
+            f"{sd.get('rhr', '—')} | {readiness.get(d, '—')} | {sleep_scores.get(d, '—')} | "
+            f"{active_cal.get(d, '—')} | |"
+        )
 
     insert_recovery_rows(rows, FITNESS_LOG)
     print(f"[sync-oura] Added {len(new_dates)} row(s). Commit and push to sync.")
