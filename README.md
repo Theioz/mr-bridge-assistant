@@ -81,19 +81,32 @@ cp memory/habits.template.md memory/habits.md
 ### 2. Set up environment variables
 Create a `.env` file at the project root:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REFRESH_TOKEN=...
-PICOVOICE_ACCESS_KEY=...      # For voice interface
-ELEVENLABS_API_KEY=...        # Optional: higher quality TTS
+NTFY_TOPIC=your-unique-topic   # e.g. mr-bridge-yourname-1234 — pick anything hard to guess
+ANTHROPIC_API_KEY=             # Only needed for voice interface
+PICOVOICE_ACCESS_KEY=          # Only needed for voice interface
 ```
 
-### 3. Open Claude Code in this directory
+### 3. Set up push notifications (Android, macOS, Windows)
+See [docs/notifications-setup.md](docs/notifications-setup.md) for step-by-step instructions.
+
+Short version:
+- **Android/iOS:** Install the [ntfy app](https://ntfy.sh) → subscribe to your `NTFY_TOPIC`
+- **Windows:** Install [ntfy-desktop](https://github.com/Aetherinox/ntfy-desktop) → subscribe to your topic
+- **macOS:** Already works via `scripts/notify.sh` — no extra setup
+
+For the weekly review cloud nudge (Sunday 8pm), add `NTFY_TOPIC` as a GitHub Actions secret:
+repo → Settings → Secrets and variables → Actions → New secret → Name: `NTFY_TOPIC`
+
+### 4. Connect Google Calendar + Gmail
+Open Claude Code in the project directory, then run `/mcp` and authenticate with your Google account. This gives Mr. Bridge access to your calendar and inbox for the session briefing.
+
+### 5. Open Claude Code in this directory
 ```bash
 claude .
 ```
 Mr. Bridge will load all memory files and deliver a session briefing automatically.
+
+> **First time?** If the Claude CLI isn't found, install it: `npm install -g @anthropic-ai/claude-code`
 
 ## Session Workflow
 
@@ -129,12 +142,6 @@ git checkout -b feature/<name>
 
 After implementation, open a PR — do not push directly to `main`.
 Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-bridge-assistant/issues).
-
-## Notifications (Android, macOS, Windows)
-
-See [docs/notifications-setup.md](docs/notifications-setup.md) for full setup. Requires a free ntfy.sh account and `NTFY_TOPIC` in `.env`.
-
-Also add `NTFY_TOPIC` as a GitHub Actions secret for the weekly review cloud nudge (Settings → Secrets → Actions).
 
 ## Voice Interface (Jarvis Mode)
 
