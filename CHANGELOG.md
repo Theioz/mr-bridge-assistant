@@ -9,6 +9,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [0.7.0] — 2026-04-05
+
+### Added
+- `scripts/sync-googlefit.py` — pulls weight and workout sessions from Google Fit REST API; deduplicates and appends to `fitness_log.md` Baseline Metrics + Session Log tables
+- `scripts/sync-oura.py` — pulls daily readiness, sleep score, HRV balance, and resting HR from Oura REST API v2; writes to new Recovery Metrics section in `fitness_log.md`
+- `scripts/sync-renpho.py` — parses Renpho CSV export; writes body fat %, BMI, muscle mass to Baseline Metrics
+- `memory/fitness_log.template.md` — Recovery Metrics section added; Baseline Metrics expanded with BMI and Muscle Mass columns
+- `docs/fitness-tracker-setup.md` — setup guide for all three sync scripts
+- `OURA_ACCESS_TOKEN` added to `.env` template
+
+### Changed
+- Google OAuth refresh token regenerated with fitness scopes (`fitness.body.read`, `fitness.activity.read`, `fitness.sleep.read`)
+- `scripts/sync-googlefit.py` scoped to weight only — workout tracking removed (unreliable due to background noise)
+- `mr-bridge-rules.md` — session briefing now includes Recovery section; Fitness Sync Scripts index updated to include Fitbit
+- `docs/fitness-tracker-setup.md` — Fitbit setup instructions added
+- Issue #12 updated: phases restructured (Google Fit → Oura → Renpho); issue #2 closed as duplicate
+
+---
+
 ## [0.6.0] — 2026-04-05
 
 ### Added

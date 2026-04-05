@@ -5,6 +5,7 @@ __pycache__/
 *.log
 
 # Personal memory files — not for public repo
+renpho_export.csv
 memory/profile.md
 memory/fitness_log.md
 memory/meal_log.md
