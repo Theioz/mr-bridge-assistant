@@ -21,11 +21,12 @@ ROOT = Path(__file__).parent.parent
 FITNESS_LOG = ROOT / "memory" / "fitness_log.md"
 
 # Renpho CSV column name variants (app uses different names by region/version)
-COL_DATE = ["Time", "Date", "Measurement Time"]
-COL_WEIGHT = ["Weight(lbs)", "Weight (lbs)", "Weight(kg)", "Weight (kg)"]
+COL_DATE = ["Date", "Time", "Measurement Time"]
+COL_TIME = ["Time"]  # separate time column (some exports split date/time)
+COL_WEIGHT = ["Weight(lb)", "Weight(lbs)", "Weight (lbs)", "Weight(kg)", "Weight (kg)"]
 COL_BODYFAT = ["Body Fat(%)", "Body Fat (%)", "Body Fat Rate(%)"]
 COL_BMI = ["BMI"]
-COL_MUSCLE = ["Muscle Mass(lbs)", "Muscle Mass (lbs)", "Muscle Mass(kg)", "Muscle Mass (kg)"]
+COL_MUSCLE = ["Muscle Mass(lb)", "Muscle Mass(lbs)", "Muscle Mass (lbs)", "Muscle Mass(kg)", "Muscle Mass (kg)"]
 COL_VISCERAL = ["Visceral Fat", "Visceral Fat Level"]
 
 
@@ -37,12 +38,16 @@ def find_col(headers, candidates):
 
 
 def parse_date(val):
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%m/%d/%Y %H:%M:%S", "%Y-%m-%d"):
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%m/%d/%Y %H:%M:%S",
+        "%Y.%m.%d %H:%M:%S", "%Y.%m.%d", "%Y-%m-%d",
+    ):
         try:
             return datetime.strptime(val.strip(), fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
-    return val.strip()[:10]
+    # fallback: replace dots with dashes and take first 10 chars
+    return val.strip().replace(".", "-")[:10]
 
 
 def existing_dates(log_path):
@@ -52,8 +57,11 @@ def existing_dates(log_path):
     idx = text.find("## Baseline Metrics")
     if idx == -1:
         return set()
+    # Only scan within the Baseline Metrics section (stop at next ##)
+    next_section = text.find("\n##", idx + 1)
+    section_text = text[idx:next_section] if next_section != -1 else text[idx:]
     dates = set()
-    for line in text[idx:].split("\n"):
+    for line in section_text.split("\n"):
         if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —") and not line.startswith("|---"):
             parts = [p.strip() for p in line.strip("| \n").split("|")]
             if parts and parts[0] and len(parts[0]) == 10:
@@ -85,6 +93,7 @@ def insert_rows_after_table(section_header, new_rows, log_path):
 def main():
     parser = argparse.ArgumentParser(description="Sync Renpho CSV export to fitness_log.md")
     parser.add_argument("csv_file", help="Path to Renpho export CSV file")
+    parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
 
     csv_path = Path(args.csv_file)
@@ -99,9 +108,9 @@ def main():
     with open(csv_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         headers = reader.fieldnames or []
-        print(f"[sync-renpho] CSV columns: {', '.join(headers)}")
 
         col_date = find_col(headers, COL_DATE)
+        col_time = find_col(headers, COL_TIME)
         col_weight = find_col(headers, COL_WEIGHT)
         col_fat = find_col(headers, COL_BODYFAT)
         col_bmi = find_col(headers, COL_BMI)
@@ -115,18 +124,27 @@ def main():
         rows = []
         seen_dates = set()
         for row in reader:
-            date = parse_date(row[col_date])
+            # Handle split Date + Time columns (e.g. "2026.04.05" + "07:41:23")
+            date_val = row[col_date].strip()
+            if col_time and col_time != col_date:
+                date = parse_date(date_val)
+            else:
+                date = parse_date(date_val)
+
             if date in seen_dates:
                 continue
             seen_dates.add(date)
-            weight = row.get(col_weight, "—").strip() or "—"
+
+            weight = row.get(col_weight, "—").strip().rstrip("0").rstrip(".") if col_weight else "—"
+            weight = weight or "—"
             fat = row.get(col_fat, "—").strip() or "—"
             bmi = row.get(col_bmi, "—").strip() or "—"
-            muscle = row.get(col_muscle, "—").strip() or "—"
+            muscle = row.get(col_muscle, "—").strip() if col_muscle else "—"
+            muscle = muscle or "—"
             visceral = row.get(col_visceral, "—").strip() or "—"
             rows.append({
-                "date": date, "weight": weight, "fat": fat,
-                "bmi": bmi, "muscle": muscle, "visceral": visceral,
+                "date": date, "weight": f"{weight} lb", "fat": fat,
+                "bmi": bmi, "muscle": f"{muscle} lb", "visceral": visceral,
             })
 
     existing = existing_dates(FITNESS_LOG)
@@ -138,12 +156,13 @@ def main():
 
     print(f"\nNew body composition entries ({len(new_rows)}):")
     for r in sorted(new_rows, key=lambda x: x["date"]):
-        print(f"  {r['date']} — Weight: {r['weight']} | Body Fat: {r['fat']}% | BMI: {r['bmi']} | Muscle: {r['muscle']}")
+        print(f"  {r['date']} — {r['weight']} | Fat: {r['fat']}% | BMI: {r['bmi']} | Muscle: {r['muscle']} | Visceral: {r['visceral']}")
 
-    confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Aborted.")
-        return
+    if not args.yes:
+        confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return
 
     md_rows = [
         f"| {r['date']} | {r['weight']} | {r['fat']}% | {r['bmi']} | {r['muscle']} | visceral: {r['visceral']} |"

@@ -84,11 +84,13 @@ def existing_dates_in_section(section_header, log_path):
     idx = text.find(section_header)
     if idx == -1:
         return set()
+    next_section = text.find("\n##", idx + 1)
+    section_text = text[idx:next_section] if next_section != -1 else text[idx:]
     dates = set()
-    for line in text[idx:].split("\n"):
-        if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —"):
+    for line in section_text.split("\n"):
+        if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —") and not line.startswith("|---"):
             parts = [p.strip() for p in line.strip("| \n").split("|")]
-            if parts and parts[0]:
+            if parts and parts[0] and len(parts[0]) == 10:
                 dates.add(parts[0])
     return dates
 
