@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [0.6.0] — 2026-04-05
+
+### Added
+- `docs/google-oauth-setup.md` — guide for getting client_id/client_secret, regenerating refresh token, publishing the app to remove 7-day expiry, and automatic token refresh pattern using `google-auth` library
+- Google OAuth vars restored to `.env` with explanatory comments (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`)
+
+### Changed
+- Issue #10 updated with Google OAuth prerequisite note and setup instructions
+
+---
+
 ## [0.5.0] — 2026-04-05
 
 ### Added
