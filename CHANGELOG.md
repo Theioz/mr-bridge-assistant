@@ -1,0 +1,70 @@
+# Changelog
+
+All notable changes to Mr. Bridge are documented here.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+
+---
+
+## [Unreleased]
+
+---
+
+## [0.3.0] — 2026-04-04
+
+### Added
+- Git submodule: `shanraisshan/claude-code-best-practice` at `.claude/references/best-practice/`
+- `scripts/update-references.sh` — pull latest best practices before feature sessions
+- `.claude/skills/send-notification/` — reusable macOS notification skill
+- `.claude/skills/log-habit/` — reusable habit logging skill
+- `.claude/commands/log-habit.md` — `/log-habit` slash command
+- `.claude/commands/session-briefing.md` — `/session-briefing` slash command
+- `.claude/hooks/scripts/hooks.py` — Python 3 hook handler (PostToolUse memory commit reminder)
+- `.claude/settings.local.json` added to `.gitignore`
+- Feature branch + PR workflow documented in session rules
+
+### Changed
+- Agent files (`nightly-postmortem`, `morning-nudge`) now have full YAML frontmatter
+- Hooks restructured from inline shell in `settings.json` to Python script
+- `.mcp.json` migrated to standard `npx` stdio format; added DeepWiki MCP server
+- `mr-bridge-rules.md` updated with feature development protocol and reference index
+
+---
+
+## [0.2.0] — 2026-04-04
+
+### Added
+- Google Calendar + Gmail MCP configuration (`.mcp.json`)
+- `.claude/settings.json` with PostToolUse hook for memory commit reminders
+- `memory/habits.md` (gitignored) with 7 daily habits: floss, workout, Japanese, coding, reading, water, sleep
+- `memory/habits.template.md` — public skeleton for habits tracking
+- `scripts/notify.sh` — macOS push notification via `osascript`
+- `.claude/agents/nightly-postmortem.md` — scheduled 9pm habit check-in agent
+- `.claude/agents/morning-nudge.md` — scheduled 8am session nudge agent
+- `voice/` directory: `bridge_voice.py`, `config.py`, `requirements.txt`, `README.md`
+  - Architecture: wake word (Porcupine) → STT (faster-whisper) → Claude API → TTS (say / ElevenLabs)
+
+### Changed
+- `CLAUDE.md` restructured as lean 2-line bootstrap using `@path` import (best practice)
+- Behavioral rules and session protocol moved to `.claude/rules/mr-bridge-rules.md`
+- Session briefing updated to include habit accountability summary
+
+---
+
+## [0.1.0] — 2026-04-04
+
+### Added
+- Initial project structure: `CLAUDE.md`, `README.md`, `.gitignore`, `memory/`
+- `memory/profile.md` (gitignored) — identity, background, preferences, accountability targets
+- `memory/fitness_log.md` (gitignored) — goal: fat loss + strength maintenance, Push/Legs/Pull split
+- `memory/meal_log.md` (gitignored) — 13 recipes across 6 categories imported from personal cookbook
+- `memory/todo.md` (gitignored) — active tasks, daily accountability, study/reading logs
+- Public skeleton templates for all four memory files
+- Privacy structure: personal memory files gitignored, only templates tracked in repo
+- Session bootstrap protocol: load memory → deliver briefing → confirm memory updates → commit/push
+
+---
+
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/Theioz/mr-bridge-assistant/releases/tag/v0.1.0
