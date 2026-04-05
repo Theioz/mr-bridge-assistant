@@ -7,7 +7,7 @@ Your topic is stored in `.env` on your Mac:
 ```
 NTFY_TOPIC=your-unique-topic-here
 ```
-Use the same string across all devices. Pick something hard to guess (e.g. `mr-bridge-jason-7734`) since anyone who knows the topic can read notifications.
+Use the same string across all devices. Pick something hard to guess (e.g. `mr-bridge-[name]-[xxxx]`) since anyone who knows the topic can read notifications.
 
 ---
 
