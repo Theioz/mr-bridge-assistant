@@ -4,8 +4,8 @@ description: Re-run the full Mr. Bridge session briefing on demand — schedule,
 user-invocable: true
 allowed-tools:
   - Read
-  - mcp__google-calendar__*
-  - mcp__gmail__*
+  - mcp__claude_ai_Google_Calendar__*
+  - mcp__claude_ai_Gmail__*
 model: sonnet
 ---
 

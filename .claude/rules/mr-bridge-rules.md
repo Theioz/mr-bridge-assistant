@@ -13,8 +13,8 @@ Execute in this exact order:
 3. Read `memory/meal_log.md`
 4. Read `memory/todo.md`
 5. Read `memory/habits.md`
-6. Fetch today's Google Calendar events (use `mcp__google-calendar` tools)
-7. Fetch unread important emails from Gmail (use `mcp__gmail` tools — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline)
+6. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
+7. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
 8. Deliver session briefing (format below)
 
 ## Session Briefing Format
