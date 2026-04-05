@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Sync weight and workout data from Google Fit into memory/fitness_log.md.
+Sync weight data from Google Fit into memory/fitness_log.md Baseline Metrics.
 Usage: python3 scripts/sync-googlefit.py [--days 7]
+
+Note: Workout data is sourced from Fitbit (scripts/sync-fitbit.py) — Google Fit
+workout tracking is unreliable due to background step/activity noise.
 
 Requires: google-auth, google-auth-oauthlib, python-dotenv
   pip3 install google-auth google-auth-oauthlib python-dotenv
@@ -24,17 +27,6 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 FITNESS_LOG = ROOT / "memory" / "fitness_log.md"
 
-# Google Fit activity type codes → human-readable names
-ACTIVITY_TYPES = {
-    1: "Biking", 7: "Walking", 8: "Running", 9: "Running",
-    10: "Treadmill run", 13: "Hiking", 15: "Jump rope",
-    17: "Kickboxing", 21: "Martial arts", 23: "Pilates",
-    28: "Rowing", 29: "Rowing machine", 33: "Skating",
-    45: "HIIT", 52: "Swimming", 55: "Tennis",
-    59: "Weightlifting", 63: "Yoga", 82: "Strength training",
-    108: "Elliptical", 113: "Stair climbing",
-}
-
 
 def get_credentials():
     creds = Credentials(
@@ -43,10 +35,7 @@ def get_credentials():
         client_id=os.environ["GOOGLE_CLIENT_ID"],
         client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
         token_uri="https://oauth2.googleapis.com/token",
-        scopes=[
-            "https://www.googleapis.com/auth/fitness.body.read",
-            "https://www.googleapis.com/auth/fitness.activity.read",
-        ],
+        scopes=["https://www.googleapis.com/auth/fitness.body.read"],
     )
     creds.refresh(Request())
     return creds
@@ -88,34 +77,6 @@ def fetch_weight(creds, start_ms, end_ms):
     return rows
 
 
-def fetch_workouts(creds, start_ms, end_ms):
-    body = {
-        "aggregateBy": [{"dataTypeName": "com.google.activity.segment"}],
-        "bucketByTime": {"durationMillis": 86400000},
-        "startTimeMillis": start_ms,
-        "endTimeMillis": end_ms,
-    }
-    result = fit_post(creds, "dataset:aggregate", body)
-    rows = []
-    for bucket in result.get("bucket", []):
-        date = datetime.fromtimestamp(
-            int(bucket["startTimeMillis"]) / 1000, tz=timezone.utc
-        ).strftime("%Y-%m-%d")
-        activities = []
-        for dataset in bucket.get("dataset", []):
-            for point in dataset.get("point", []):
-                atype = point["value"][0]["intVal"]
-                start_ns = int(point["startTimeNanos"])
-                end_ns = int(point["endTimeNanos"])
-                duration_min = round((end_ns - start_ns) / 60_000_000_000)
-                if duration_min >= 5:
-                    name = ACTIVITY_TYPES.get(atype, f"Activity {atype}")
-                    activities.append(f"{name} ({duration_min} min)")
-        if activities:
-            rows.append({"date": date, "activities": ", ".join(activities)})
-    return rows
-
-
 def existing_dates_in_section(section_header, log_path):
     if not log_path.exists():
         return set()
@@ -141,7 +102,6 @@ def insert_rows_after_table(section_header, new_rows, log_path):
     if section_line is None:
         print(f"[error] Section '{section_header}' not found in {log_path.name}")
         return False
-    # Find last table row in this section
     last_table_line = section_line
     for i in range(section_line + 1, len(lines)):
         if lines[i].startswith("|"):
@@ -155,7 +115,7 @@ def insert_rows_after_table(section_header, new_rows, log_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync Google Fit data to fitness_log.md")
+    parser = argparse.ArgumentParser(description="Sync Google Fit weight to fitness_log.md")
     parser.add_argument("--days", type=int, default=7, help="Number of days to fetch (default: 7)")
     args = parser.parse_args()
 
@@ -163,7 +123,7 @@ def main():
         print(f"[error] {FITNESS_LOG} not found. Copy fitness_log.template.md first.")
         sys.exit(1)
 
-    print(f"[sync-googlefit] Fetching last {args.days} days from Google Fit...")
+    print(f"[sync-googlefit] Fetching weight for last {args.days} days...")
     creds = get_credentials()
     print("[sync-googlefit] Authenticated.")
 
@@ -173,50 +133,28 @@ def main():
     end_ms = int(now.timestamp() * 1000)
 
     weight_rows = fetch_weight(creds, start_ms, end_ms)
-    workout_rows = fetch_workouts(creds, start_ms, end_ms)
-
     existing_weight = existing_dates_in_section("## Baseline Metrics", FITNESS_LOG)
-    existing_workouts = existing_dates_in_section("## Session Log", FITNESS_LOG)
-
     new_weight = [r for r in weight_rows if r["date"] not in existing_weight]
-    new_workouts = [r for r in workout_rows if r["date"] not in existing_workouts]
 
-    if not new_weight and not new_workouts:
-        print("[sync-googlefit] No new data to add.")
+    if not new_weight:
+        print("[sync-googlefit] No new weight data to add.")
         return
 
-    if new_weight:
-        print(f"\nNew weight entries ({len(new_weight)}):")
-        for r in sorted(new_weight, key=lambda x: x["date"]):
-            print(f"  {r['date']} — {r['weight']}")
-
-    if new_workouts:
-        print(f"\nNew workout entries ({len(new_workouts)}):")
-        for r in sorted(new_workouts, key=lambda x: x["date"]):
-            print(f"  {r['date']} — {r['activities']}")
+    print(f"\nNew weight entries ({len(new_weight)}):")
+    for r in sorted(new_weight, key=lambda x: x["date"]):
+        print(f"  {r['date']} — {r['weight']}")
 
     confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
     if confirm != "y":
         print("Aborted.")
         return
 
-    if new_weight:
-        rows = [
-            f"| {r['date']} | {r['weight']} | — | |"
-            for r in sorted(new_weight, key=lambda x: x["date"])
-        ]
-        insert_rows_after_table("## Baseline Metrics", rows, FITNESS_LOG)
-        print(f"[sync-googlefit] Added {len(new_weight)} weight row(s).")
-
-    if new_workouts:
-        rows = [
-            f"| {r['date']} | — | {r['activities']} | |"
-            for r in sorted(new_workouts, key=lambda x: x["date"])
-        ]
-        insert_rows_after_table("## Session Log", rows, FITNESS_LOG)
-        print(f"[sync-googlefit] Added {len(new_workouts)} workout row(s).")
-
-    print("[sync-googlefit] Done. Commit and push to sync.")
+    rows = [
+        f"| {r['date']} | {r['weight']} | — | — | — | |"
+        for r in sorted(new_weight, key=lambda x: x["date"])
+    ]
+    insert_rows_after_table("## Baseline Metrics", rows, FITNESS_LOG)
+    print(f"[sync-googlefit] Added {len(new_weight)} weight row(s). Commit and push to sync.")
 
 
 if __name__ == "__main__":

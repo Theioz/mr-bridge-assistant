@@ -21,7 +21,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 - Google OAuth refresh token regenerated with fitness scopes (`fitness.body.read`, `fitness.activity.read`, `fitness.sleep.read`)
-- `mr-bridge-rules.md` — session briefing now includes Recovery section (readiness, sleep, HRV, resting HR from most recent Oura data); added Fitness Sync Scripts index; recovery interpretation rules (readiness < 70 → deload flag)
+- `scripts/sync-googlefit.py` scoped to weight only — workout tracking removed (unreliable due to background noise)
+- `mr-bridge-rules.md` — session briefing now includes Recovery section; Fitness Sync Scripts index updated to include Fitbit
+- `docs/fitness-tracker-setup.md` — Fitbit setup instructions added
 - Issue #12 updated: phases restructured (Google Fit → Oura → Renpho); issue #2 closed as duplicate
 
 ---

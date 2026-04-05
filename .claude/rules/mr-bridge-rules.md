@@ -113,7 +113,8 @@ When operating in voice context (responses will be spoken aloud):
 ## Fitness Sync Scripts
 | Script | Data Source | What It Writes |
 |--------|-------------|---------------|
-| `scripts/sync-googlefit.py` | Google Fit API | Weight → Baseline Metrics; workouts → Session Log |
+| `scripts/sync-googlefit.py` | Google Fit API | Weight → Baseline Metrics |
+| `scripts/sync-fitbit.py` | Fitbit API | Workout sessions → Session Log |
 | `scripts/sync-oura.py` | Oura REST API v2 | Readiness, sleep, HRV, resting HR → Recovery Metrics |
 | `scripts/sync-renpho.py` | Renpho CSV export | Body fat %, BMI, muscle mass → Baseline Metrics |
 

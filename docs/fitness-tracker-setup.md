@@ -4,11 +4,11 @@ Three sync scripts pull data into `memory/fitness_log.md`. Run them manually bef
 
 ---
 
-## Google Fit — weight + workouts
+## Google Fit — weight only
 
 **Script:** `scripts/sync-googlefit.py`
 
-Uses the existing Google OAuth credentials in `.env`. Pulls weight (from Renpho via Health Sync) and workout sessions from Google Fit.
+Uses the existing Google OAuth credentials in `.env`. Pulls weight from Google Fit (synced from Renpho via Health Sync). Workout data comes from Fitbit instead — Google Fit workout tracking is unreliable due to background step/activity noise.
 
 **First-time setup:**
 Google Fit scopes were added to the refresh token during setup (see `docs/google-oauth-setup.md`). No additional steps needed.
@@ -16,14 +16,46 @@ Google Fit scopes were added to the refresh token during setup (see `docs/google
 **Run:**
 ```bash
 cd "/Users/jason/Code Projects/mr-bridge-assistant"
-python3 scripts/sync-googlefit.py          # last 7 days (default)
-python3 scripts/sync-googlefit.py --days 30  # last 30 days
+python3 scripts/sync-googlefit.py           # last 7 days (default)
+python3 scripts/sync-googlefit.py --days 30 # last 30 days
 ```
 
 **Prerequisites:**
 ```bash
 pip3 install google-auth google-auth-oauthlib python-dotenv
 ```
+
+---
+
+## Fitbit — workout sessions
+
+**Script:** `scripts/sync-fitbit.py`
+
+Pulls explicitly logged workout sessions from Fitbit API. Uses PKCE OAuth 2.0 — no browser extension needed, callback is captured on localhost:8080.
+
+**First-time setup:**
+1. Go to [dev.fitbit.com/apps/new](https://dev.fitbit.com/apps/new)
+2. Fill in:
+   - **Application Name:** Mr. Bridge
+   - **Application Type:** Personal
+   - **OAuth 2.0 Application Type:** Personal
+   - **Redirect URI:** `http://localhost:8080`
+   - **Default Access Type:** Read Only
+3. Submit → copy **Client ID** and **Client Secret**
+4. Run the setup flow:
+   ```bash
+   python3 scripts/sync-fitbit.py --setup
+   ```
+5. Browser opens → authorize → token is printed
+6. Paste `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, `FITBIT_REFRESH_TOKEN` into `.env`
+
+**Run:**
+```bash
+python3 scripts/sync-fitbit.py           # last 7 days
+python3 scripts/sync-fitbit.py --days 30 # last 30 days
+```
+
+**Note:** Fitbit rotates refresh tokens on each use. The script updates `.env` automatically — no manual action needed.
 
 ---
 
