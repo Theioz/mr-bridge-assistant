@@ -51,7 +51,7 @@ When planning new features or making non-trivial changes:
 
 1. **Pull latest best practices** before starting:
    ```bash
-   git submodule update --remote .claude/references/best-practice
+   bash scripts/update-references.sh
    ```
 2. **Create a feature branch**:
    ```bash
@@ -82,6 +82,13 @@ When operating in voice context (responses will be spoken aloud):
 - Write immediately on confirmation — do not defer
 - After any memory update: "Commit and push to sync across devices"
 
+## Study Timer Rules
+- Only offer to start a timer when Jason explicitly says he's starting a study session (e.g. "starting Japanese now", "about to do boot.dev", "starting a coding session")
+- Ask: "Start a study timer for [subject]?"
+- On confirmation, use the study-timer agent to write `memory/timer_state.json`
+- When Jason says "done", "stopping", or "finished studying", stop the timer and log duration to `memory/todo.md`
+- If a timer is running at session start, flag it in the briefing: "Timer still running: [subject] — started [time]"
+
 ## Memory File Index
 | File | Purpose |
 |------|---------|
@@ -90,6 +97,7 @@ When operating in voice context (responses will be spoken aloud):
 | `memory/meal_log.md` | Cuisine preferences, recipes, meal prep log |
 | `memory/todo.md` | Tasks, daily accountability, study logs, reading log |
 | `memory/habits.md` | Daily habit registry, streaks, daily log |
+| `memory/timer_state.json` | Active study timer state (start time, subject, category) |
 
 ## Reference Index
 | Resource | Location | Purpose |

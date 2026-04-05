@@ -20,10 +20,14 @@ mr-bridge-assistant/
 │   │   └── mr-bridge-rules.md             # Core behavioral rules + session protocol
 │   ├── agents/
 │   │   ├── nightly-postmortem.md          # 9pm habit check-in agent
-│   │   └── morning-nudge.md               # 8am session nudge agent
+│   │   ├── morning-nudge.md               # 8am session nudge agent
+│   │   ├── weekly-review.md               # Sunday 8pm weekly summary agent
+│   │   └── study-timer.md                 # Study session timer agent
 │   ├── commands/
 │   │   ├── log-habit.md                   # /log-habit slash command
-│   │   └── session-briefing.md            # /session-briefing slash command
+│   │   ├── session-briefing.md            # /session-briefing slash command
+│   │   ├── weekly-review.md               # /weekly-review slash command
+│   │   └── stop-timer.md                  # /stop-timer slash command
 │   ├── skills/
 │   │   ├── send-notification/SKILL.md     # macOS push notification skill
 │   │   └── log-habit/SKILL.md             # Habit logging skill
@@ -32,6 +36,13 @@ mr-bridge-assistant/
 │   ├── settings.json                      # Shared hooks config
 │   └── references/
 │       └── best-practice/                 # Submodule: shanraisshan/claude-code-best-practice
+│
+├── .github/
+│   └── workflows/
+│       └── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
+│
+├── docs/
+│   └── notifications-setup.md            # Android, macOS, Windows ntfy setup guide
 │
 ├── memory/                                # Personal files (gitignored — your data stays local)
 │   ├── profile.template.md
@@ -105,6 +116,8 @@ git push
 |---------|-------------|
 | `/log-habit [habits...]` | Log habit completions for today |
 | `/session-briefing` | Re-run the full session briefing on demand |
+| `/weekly-review` | Run the weekly habit + accountability summary |
+| `/stop-timer` | Stop active study timer and log duration |
 
 ## Feature Development Workflow
 
@@ -116,6 +129,12 @@ git checkout -b feature/<name>
 
 After implementation, open a PR — do not push directly to `main`.
 Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-bridge-assistant/issues).
+
+## Notifications (Android, macOS, Windows)
+
+See [docs/notifications-setup.md](docs/notifications-setup.md) for full setup. Requires a free ntfy.sh account and `NTFY_TOPIC` in `.env`.
+
+Also add `NTFY_TOPIC` as a GitHub Actions secret for the weekly review cloud nudge (Settings → Secrets → Actions).
 
 ## Voice Interface (Jarvis Mode)
 
