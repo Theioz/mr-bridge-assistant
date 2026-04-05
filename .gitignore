@@ -13,3 +13,4 @@ memory/habits.md
 
 # Personal Claude Code settings (overrides for local machine only)
 .claude/settings.local.json
+credentials.json
