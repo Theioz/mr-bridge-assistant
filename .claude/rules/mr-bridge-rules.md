@@ -40,16 +40,16 @@ Execute in this exact order:
 [Habit summary from habits.md — hit/missed per habit with streak count]
 
 ### Recovery (last night)
-[From fitness_log.md Recovery Metrics — most recent row]
-Readiness: [score]/100 | Sleep: [score]/100 | HRV: [value] | Resting HR: [value] bpm
-[If no data: "No recovery data — run scripts/sync-oura.py"]
+Readiness: [score] | Sleep: [score] | Total: [Xh Ym] | Deep: [Xh Ym] | REM: [Xh Ym] | HRV: [X]ms | RHR: [X] bpm | Active Cal: [X]
+[flag if applicable]
 ```
 
-Recovery interpretation rules:
-- Readiness < 70 → flag: "Readiness low — consider deload or rest day"
-- Readiness < 50 → flag: "Readiness critical — rest day recommended"
-- HRV balance trending down 3+ consecutive days → flag: "HRV declining — prioritize recovery"
-- Omit Recovery section entirely if fitness_log.md has no Recovery Metrics rows
+Recovery rules:
+- Use the **last data row** of the Recovery Metrics table in fitness_log.md (bottom of the table). Oura data lags 1 day — yesterday's date is expected and correct.
+- Readiness < 70 → append: "Readiness low — consider deload or rest day"
+- Readiness < 50 → append: "Readiness critical — rest day recommended"
+- HRV trending down 3+ consecutive days → append: "HRV declining — prioritize recovery"
+- If Recovery Metrics table has no data rows → show: "No recovery data — run: python3 scripts/sync-oura.py --yes"
 
 ## Session Close Protocol
 Before every commit at end of session:
