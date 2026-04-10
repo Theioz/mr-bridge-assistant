@@ -40,7 +40,7 @@ When asked about current data, be specific about what you know vs. what you'd ne
   }));
 
   const result = streamText({
-    model: anthropic("claude-3-5-sonnet-20241022"),
+    model: anthropic("claude-sonnet-4-6"),
     system: systemPrompt,
     messages: [...contextMessages, ...cleanMessages],
     onError: ({ error }) => {
