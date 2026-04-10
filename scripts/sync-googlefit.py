@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
 """
-Sync weight data from Google Fit into memory/fitness_log.md Baseline Metrics.
-Usage: python3 scripts/sync-googlefit.py [--days 7]
+Sync weight data from Google Fit to Supabase (fitness_log table).
+Usage: python3 scripts/sync-googlefit.py [--days 7] [--yes]
 
 Note: Workout data is sourced from Fitbit (scripts/sync-fitbit.py) — Google Fit
 workout tracking is unreliable due to background step/activity noise.
 
-Requires: google-auth, google-auth-oauthlib, python-dotenv
-  pip3 install google-auth google-auth-oauthlib python-dotenv
+Requires: google-auth, google-auth-oauthlib, python-dotenv, supabase
+  pip3 install google-auth google-auth-oauthlib python-dotenv supabase
 """
+from __future__ import annotations
 
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
-FITNESS_LOG = ROOT / "memory" / "fitness_log.md"
+sys.path.insert(0, str(Path(__file__).parent))
+from _supabase import get_client, upsert, log_sync
 
 
 def get_credentials():
@@ -66,65 +68,27 @@ def fetch_weight(creds, start_ms, end_ms):
     result = fit_post(creds, "dataset:aggregate", body)
     rows = []
     for bucket in result.get("bucket", []):
-        date = datetime.fromtimestamp(
+        date_str = datetime.fromtimestamp(
             int(bucket["startTimeMillis"]) / 1000, tz=timezone.utc
         ).strftime("%Y-%m-%d")
         for dataset in bucket.get("dataset", []):
             for point in dataset.get("point", []):
                 kg = point["value"][0]["fpVal"]
                 lbs = round(kg * 2.20462, 1)
-                rows.append({"date": date, "weight": f"{lbs} lbs ({kg:.1f} kg)"})
+                rows.append({"date": date_str, "weight_lb": lbs})
     return rows
 
 
-def existing_dates_in_section(section_header, log_path):
-    if not log_path.exists():
-        return set()
-    text = log_path.read_text()
-    idx = text.find(section_header)
-    if idx == -1:
-        return set()
-    next_section = text.find("\n##", idx + 1)
-    section_text = text[idx:next_section] if next_section != -1 else text[idx:]
-    dates = set()
-    for line in section_text.split("\n"):
-        if line.startswith("| ") and not line.startswith("| Date") and not line.startswith("| —") and not line.startswith("|---"):
-            parts = [p.strip() for p in line.strip("| \n").split("|")]
-            if parts and parts[0] and len(parts[0]) == 10:
-                dates.add(parts[0])
-    return dates
-
-
-def insert_rows_after_table(section_header, new_rows, log_path):
-    text = log_path.read_text()
-    lines = text.split("\n")
-    section_line = next(
-        (i for i, l in enumerate(lines) if l.strip() == section_header), None
-    )
-    if section_line is None:
-        print(f"[error] Section '{section_header}' not found in {log_path.name}")
-        return False
-    last_table_line = section_line
-    for i in range(section_line + 1, len(lines)):
-        if lines[i].startswith("|"):
-            last_table_line = i
-        elif last_table_line > section_line and not lines[i].startswith("|"):
-            break
-    for j, row in enumerate(new_rows):
-        lines.insert(last_table_line + 1 + j, row)
-    log_path.write_text("\n".join(lines))
-    return True
+def existing_dates(client) -> set:
+    rows = client.table("fitness_log").select("date").eq("source", "google_fit").execute().data
+    return {r["date"] for r in rows}
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync Google Fit weight to fitness_log.md")
-    parser.add_argument("--days", type=int, default=7, help="Number of days to fetch (default: 7)")
+    parser = argparse.ArgumentParser(description="Sync Google Fit weight to Supabase")
+    parser.add_argument("--days", type=int, default=7, help="Days to fetch (default: 7)")
     parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
-
-    if not FITNESS_LOG.exists():
-        print(f"[error] {FITNESS_LOG} not found. Copy fitness_log.template.md first.")
-        sys.exit(1)
 
     print(f"[sync-googlefit] Fetching weight for last {args.days} days...")
     creds = get_credentials()
@@ -136,29 +100,32 @@ def main():
     end_ms = int(now.timestamp() * 1000)
 
     weight_rows = fetch_weight(creds, start_ms, end_ms)
-    existing_weight = existing_dates_in_section("## Baseline Metrics", FITNESS_LOG)
-    new_weight = [r for r in weight_rows if r["date"] not in existing_weight]
+
+    client = get_client()
+    existing = existing_dates(client)
+    new_weight = [r for r in weight_rows if r["date"] not in existing]
 
     if not new_weight:
-        print("[sync-googlefit] No new weight data to add.")
+        print("[sync-googlefit] No new weight data.")
         return
 
     print(f"\nNew weight entries ({len(new_weight)}):")
     for r in sorted(new_weight, key=lambda x: x["date"]):
-        print(f"  {r['date']} — {r['weight']}")
+        print(f"  {r['date']} — {r['weight_lb']} lb")
 
     if not args.yes:
-        confirm = input("\nWrite to fitness_log.md? [y/N] ").strip().lower()
+        confirm = input("\nWrite to Supabase? [y/N] ").strip().lower()
         if confirm != "y":
             print("Aborted.")
             return
 
-    rows = [
-        f"| {r['date']} | {r['weight']} | — | — | — | |"
+    sb_rows = [
+        {"date": r["date"], "weight_lb": r["weight_lb"], "source": "google_fit"}
         for r in sorted(new_weight, key=lambda x: x["date"])
     ]
-    insert_rows_after_table("## Baseline Metrics", rows, FITNESS_LOG)
-    print(f"[sync-googlefit] Added {len(new_weight)} weight row(s). Commit and push to sync.")
+    written = upsert(client, "fitness_log", sb_rows)
+    log_sync(client, "google_fit", "ok", written)
+    print(f"[sync-googlefit] Synced {written} row(s) to Supabase.")
 
 
 if __name__ == "__main__":

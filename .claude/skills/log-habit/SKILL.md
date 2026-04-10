@@ -1,26 +1,32 @@
 ---
 name: log-habit
-description: Logs one or more habit completions to memory/habits.md for today's date. Call when Jason reports completing a habit during a session.
+description: Logs one or more habit completions to Supabase for today's date. Call when Jason reports completing a habit during a session.
 allowed-tools:
-  - Read
-  - Edit
+  - Bash
 user-invocable: false
 ---
 
 ## Task
-Update today's row in the `memory/habits.md` Daily Log table with the provided habit completions.
+Log habit completions to Supabase by running the log_habit script.
 
 ## Instructions
 
-1. Read `memory/habits.md`
-2. Find today's row (YYYY-MM-DD format). If it doesn't exist, add a new row for today with all habits marked "—"
-3. Update the specified habits to "yes" for today's row
-4. Write the updated file using Edit (confirm before writing per memory update rules)
+Run the following command with the habits to log:
+```bash
+python3 scripts/log_habit.py --habits <habit1> <habit2> ... --date <YYYY-MM-DD>
+```
 
-## Habit Columns (in order)
-Floss | Workout | Japanese | Coding | Reading | Water | Sleep
+Use today's date unless a specific date is mentioned.
+
+## Habit name aliases
+- floss → Floss
+- workout → Workout
+- japanese → Japanese study
+- coding → Coding
+- reading → Reading
+- water → Water
+- sleep → Sleep
 
 ## Rules
-- Only update habits explicitly reported as done — leave others as "—"
-- Do not create streak calculations — those are handled separately
+- Only log habits explicitly reported as done
 - Date format: YYYY-MM-DD
