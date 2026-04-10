@@ -9,6 +9,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [0.10.0] — 2026-04-10
+
+### Added
+- `web/src/components/ui/logo.tsx` — MB monogram SVG logo; used in sidebar header and login page
+- `web/src/components/nav.tsx` — replaced fixed bottom nav with a left sidebar: full labels + blue active state on desktop (≥lg), 48px icon-only rail with hover tooltips on mobile; closes issue #27
+- `web/src/app/api/fun-fact/route.ts` — calls Claude Haiku (`claude-haiku-4-5-20251001`, max 150 tokens) for a daily surprising fact; caches result in `profile` table as `key='fun_fact_cache'` (JSON `{fact, date}`); regenerates only when date changes
+- `web/src/app/api/google/calendar/route.ts` — fetches today's Google Calendar events via `googleapis`; OAuth2 with refresh token; returns `[{time, title, location?}]` sorted by start time
+- `web/src/app/api/google/gmail/route.ts` — fetches up to 5 important unread emails (subject filter: meeting / urgent / invoice / action required / deadline); metadata-only fetch for performance; returns `[{from, subject, receivedAt}]`
+- `web/src/components/dashboard/fun-fact.tsx` — full-width Fun Fact card with blue left border, spark icon, loading skeleton, italic text
+- `web/src/components/dashboard/schedule-today.tsx` — Schedule Today card; client component; fetches `/api/google/calendar`; Geist Mono for times; distinct error state
+- `web/src/components/dashboard/important-emails.tsx` — Important Emails card; client component; fetches `/api/google/gmail`; distinct error vs empty states
+- `web/src/components/dashboard/recovery-summary.tsx` — Recovery & Sleep card; color-coded readiness/sleep scores (≥80 green, 60–79 amber, <60 red); Geist Mono for HRV, RHR, sleep totals
+- `web/src/lib/timezone.ts` — timezone-aware date utilities: `todayString`, `getLast7Days`, `daysAgoString`, `startOfTodayRFC3339`, `endOfTodayRFC3339`; reads `USER_TIMEZONE` env var (default `America/Los_Angeles`)
+
+### Changed
+- `web/src/app/(protected)/layout.tsx` — restructured to flex row with sidebar; `ml-12 lg:ml-48` offset; removed `pb-24` bottom nav clearance
+- `web/src/app/(protected)/page.tsx` — full daily briefing layout: Fun Fact (full width) + 2-column grid (Schedule/Emails left; Recovery/Fitness/Habits/Tasks right); server fetches recovery and recent workout; date display uses `USER_TIMEZONE`
+- `web/src/app/layout.tsx` — replaced Inter with Geist Sans + Geist Mono (`next/font/google`); exposes `--font-sans` and `--font-mono` CSS variables
+- `web/src/components/dashboard/fitness-summary.tsx` — added `recentWorkout` prop; shows most recent workout session below body comp; numeric values use Geist Mono
+- `web/src/components/dashboard/habits-summary.tsx` — progress bar fill changed to `bg-blue-500`; counts use Geist Mono
+- `web/src/components/dashboard/tasks-summary.tsx` — task count uses Geist Mono
+- `web/src/components/habits/habit-toggle.tsx` — completed state uses `bg-blue-500` fill with white checkmark (was neutral-100/neutral-950)
+- `web/src/components/tasks/add-task-form.tsx` — submit button changed to `bg-blue-500 hover:bg-blue-400 text-white`
+- `web/src/components/chat/chat-interface.tsx` — send button changed to `bg-blue-500 hover:bg-blue-400 text-white`
+- `web/src/app/login/page.tsx` — added MB logo; sign-in button changed to blue
+- `web/src/components/fitness/body-comp-chart.tsx` — weight line changed to `#3b82f6` (blue-500); added `CartesianGrid` with `#262626` (neutral-800) horizontal lines
+- `web/src/app/(protected)/habits/page.tsx` — `today` and `getLast7Days` now use `timezone.ts` helpers
+- `web/src/app/(protected)/chat/page.tsx` — `today` uses `todayString()` from `timezone.ts`
+- `web/src/app/api/chat/route.ts` — `targetDate` defaults and `sinceStr` now use `todayString()` / `daysAgoString()` from `timezone.ts`
+- `web/src/app/api/google/calendar/route.ts` — `timeMin`/`timeMax` now use `startOfTodayRFC3339()` / `endOfTodayRFC3339()` with proper SF timezone offset (fixes wrong-day event fetch when server runs in UTC)
+- `web/src/app/api/fun-fact/route.ts` — cache date check uses `todayString()` from `timezone.ts`
+- `web/src/lib/types.ts` — `RecoveryMetrics` extended with `total_sleep_hrs`, `deep_hrs`, `rem_hrs`, `active_cal` (columns already existed in Supabase schema)
+- `scripts/sync-oura.py` — removed `new_dates` guard; script now upserts all dates in range instead of skipping existing rows; fixes partial rows (readiness/sleep score present but HRV/deep sleep NULL) never getting backfilled when Oura's API publishes delayed sleep detail
+
+### Fixed
+- Google Calendar API was constructing `timeMin`/`timeMax` from `new Date()` in UTC, causing it to fetch the wrong day's events when server runs in UTC (e.g. Vercel)
+- All `new Date().toISOString().split("T")[0]` calls in server components and API routes returned UTC dates, causing off-by-one date errors for SF users after ~5pm local time
+- Oura sync silently skipped existing rows on re-run, permanently leaving `avg_hrv`, `resting_hr`, `total_sleep_hrs`, `deep_hrs` as NULL when the first write captured only summary scores (Oura API publishes detailed sleep data hours after readiness/sleep scores)
+
+---
+
 ## [0.9.0] — 2026-04-10
 
 ### Added
@@ -191,7 +232,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.6.0...v0.7.0

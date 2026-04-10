@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+import { todayString } from "@/lib/timezone";
 
 const CACHE_KEY = "fun_fact_cache";
 
@@ -13,7 +14,7 @@ interface FunFactCache {
 export async function GET() {
   try {
     const supabase = createServiceClient();
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayString();
 
     // Check cache
     const { data: cached } = await supabase

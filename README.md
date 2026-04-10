@@ -1,11 +1,62 @@
 # Mr. Bridge — Personal Assistant
 
-A personal AI assistant context layer for Claude Code. Syncs fitness, habit, and task data from external APIs into Supabase, delivers a structured session briefing, and tracks accountability across devices.
+A personal AI assistant context layer for Claude Code. Syncs fitness, habit, and task data from external APIs into Supabase, delivers a structured session briefing, and tracks accountability across devices. Includes a full Next.js web interface for real-time access from any browser.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph devices["Devices"]
+        oura["Oura Ring"]
+        fitbit["Fitbit"]
+        gfit["Google Fit"]
+        renpho["Renpho"]
+    end
+
+    subgraph scripts["Sync Scripts"]
+        so["sync-oura"]
+        sf["sync-fitbit"]
+        sg["sync-googlefit"]
+        sr["sync-renpho"]
+    end
+
+    db[("Supabase\n14 tables")]
+
+    subgraph web["Next.js Web App"]
+        rc["api/chat"]
+        rf["api/fun-fact"]
+        rcal["api/calendar"]
+        rmail["api/gmail"]
+        pg["Dashboard · Habits · Tasks · Fitness · Chat"]
+    end
+
+    subgraph ext["External APIs"]
+        cl["Anthropic Claude"]
+        gc["Google Calendar"]
+        gm["Gmail"]
+    end
+
+    oura --> so --> db
+    fitbit --> sf --> db
+    gfit --> sg --> db
+    renpho --> sr --> db
+
+    db --> pg
+    db --> rc
+    rc --> db
+
+    cl --> rc & rf
+    gc --> rcal --> pg
+    gm --> rmail --> pg
+    rf --> pg
+```
 
 ## Purpose
-Mr. Bridge is built to run like infrastructure — frameworks over feelings, quantified over qualitative, no filler. It pulls live data from Supabase at session start and gives you a concise brief before you do anything else. All data is stored in the cloud — accessible from any device, ready for a web interface.
+
+Mr. Bridge runs like infrastructure — structured over casual, quantified over qualitative, no filler. It pulls live data from Supabase at session start and delivers a concise brief before anything else. All live data is stored in the cloud and accessible from Claude Code, the web interface, or any device.
 
 ## File Structure
+
 ```
 mr-bridge-assistant/
 ├── CLAUDE.md                              # Session bootstrap (loads rules via @path)
@@ -26,19 +77,38 @@ mr-bridge-assistant/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── (protected)/               # Auth-gated pages
-│   │   │   │   ├── page.tsx               # Dashboard
+│   │   │   │   ├── layout.tsx             # Protected layout with sidebar
+│   │   │   │   ├── page.tsx               # Daily briefing dashboard
 │   │   │   │   ├── tasks/page.tsx         # Task management
-│   │   │   │   ├── habits/page.tsx        # Habit tracking
+│   │   │   │   ├── habits/page.tsx        # Habit tracking + 7-day history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
 │   │   │   │   └── chat/page.tsx          # Mr. Bridge chat
-│   │   │   ├── api/chat/route.ts          # Claude API + Supabase tool use
+│   │   │   ├── api/
+│   │   │   │   ├── chat/route.ts          # Claude API + Supabase tool use (7 tools)
+│   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
+│   │   │   │   └── google/
+│   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
+│   │   │   │       └── gmail/route.ts     # Important unread emails
 │   │   │   └── login/page.tsx
 │   │   ├── components/
+│   │   │   ├── nav.tsx                    # Left sidebar (desktop labels / mobile icon rail)
+│   │   │   ├── ui/
+│   │   │   │   └── logo.tsx               # MB monogram SVG
 │   │   │   ├── chat/                      # Chat UI with markdown rendering
 │   │   │   ├── tasks/                     # Task CRUD components
-│   │   │   ├── habits/                    # Habit toggle + history
-│   │   │   └── dashboard/                 # Summary cards
+│   │   │   ├── habits/                    # Habit toggle + 7-day history grid
+│   │   │   ├── fitness/                   # Body comp chart (Recharts)
+│   │   │   └── dashboard/
+│   │   │       ├── fun-fact.tsx           # Daily fun fact card
+│   │   │       ├── schedule-today.tsx     # Google Calendar card
+│   │   │       ├── important-emails.tsx   # Gmail card
+│   │   │       ├── recovery-summary.tsx   # Oura recovery & sleep card
+│   │   │       ├── fitness-summary.tsx    # Body comp + last workout card
+│   │   │       ├── habits-summary.tsx     # Today's habit progress card
+│   │   │       ├── tasks-summary.tsx      # Active tasks card
+│   │   │       └── recent-chat.tsx        # Last chat message card
 │   │   └── lib/
+│   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       └── types.ts                   # TypeScript interfaces for all DB tables
 │   └── package.json
@@ -207,13 +277,13 @@ Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-brid
 
 ## Web Interface
 
-A Next.js web app deployed on Vercel providing a full UI for Mr. Bridge:
+A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Chat** — stream responses from Claude claude-sonnet-4-6 with markdown rendering (tables, bold, code blocks)
-- **Tasks** — add, complete, and archive tasks with inline error feedback
-- **Habits** — daily check-in, 7-day history grid
-- **Fitness** — body composition history and workout log
-- **Dashboard** — summary cards across all data sources
+- **Dashboard** — Fun Fact (Claude Haiku), Schedule Today (Google Calendar), Important Emails (Gmail), Recovery & Sleep (Oura), Fitness Snapshot, Habits, Tasks
+- **Chat** — streams responses from Claude Sonnet with markdown rendering
+- **Tasks** — add, complete, and archive tasks
+- **Habits** — daily check-in with blue toggle states, 7-day history grid
+- **Fitness** — body composition chart (Recharts) + workout log
 
 **Local development:**
 ```bash
@@ -228,6 +298,10 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ANTHROPIC_API_KEY=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REFRESH_TOKEN=...
+USER_TIMEZONE=America/Los_Angeles
 ```
 
 ## Voice Interface (Jarvis Mode)

@@ -7,12 +7,16 @@ import type { CalendarEvent } from "@/app/api/google/calendar/route";
 export default function ScheduleToday() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetch("/api/google/calendar")
       .then((r) => r.json())
-      .then((d) => setEvents(d.events ?? []))
-      .catch(() => setEvents([]))
+      .then((d) => {
+        if (d.error) { setError(true); return; }
+        setEvents(d.events ?? []);
+      })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,6 +36,8 @@ export default function ScheduleToday() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <p className="text-sm text-red-400/70">Failed to load — check Google credentials</p>
       ) : events.length > 0 ? (
         <div className="space-y-2.5">
           {events.map((event, i) => (

@@ -1,4 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
+import { todayString, daysAgoString } from "@/lib/timezone";
 import { streamText, tool, jsonSchema, wrapLanguageModel } from "ai";
 import type { LanguageModelV1Middleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -165,7 +166,7 @@ Tools available:
         },
       }),
       execute: async ({ date }) => {
-        const targetDate = date ?? new Date().toISOString().slice(0, 10);
+        const targetDate = date ?? todayString();
         const [registryResult, logsResult] = await Promise.all([
           supabase.from("habit_registry").select("id, name, emoji, category").eq("active", true),
           supabase.from("habits").select("habit_id, completed, notes").eq("date", targetDate),
@@ -197,7 +198,7 @@ Tools available:
         },
       }),
       execute: async ({ name, date, notes }) => {
-        const targetDate = date ?? new Date().toISOString().slice(0, 10);
+        const targetDate = date ?? todayString();
         const { data: habits, error: lookupError } = await supabase
           .from("habit_registry")
           .select("id, name")
@@ -232,9 +233,7 @@ Tools available:
         },
       }),
       execute: async ({ days = 7 }) => {
-        const since = new Date();
-        since.setDate(since.getDate() - days);
-        const sinceStr = since.toISOString().slice(0, 10);
+        const sinceStr = daysAgoString(days);
 
         const [bodyCompResult, workoutsResult, recoveryResult] = await Promise.all([
           supabase

@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
+import { startOfTodayRFC3339, endOfTodayRFC3339 } from "@/lib/timezone";
 
 export interface CalendarEvent {
   time: string;
@@ -33,9 +34,8 @@ export async function GET() {
 
     const calendar = google.calendar({ version: "v3", auth });
 
-    const now = new Date();
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-    const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+    const timeMin = startOfTodayRFC3339();
+    const timeMax = endOfTodayRFC3339();
 
     const res = await calendar.events.list({
       calendarId: "primary",

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import HabitToggle from "@/components/habits/habit-toggle";
 import HabitHistory from "@/components/habits/habit-history";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
+import { todayString, getLast7Days } from "@/lib/timezone";
 
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
@@ -14,17 +15,9 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
   revalidatePath("/");
 }
 
-function getLast7Days(): string[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    return d.toISOString().split("T")[0];
-  });
-}
-
 export default async function HabitsPage() {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayString();
   const last7 = getLast7Days();
 
   const [registryResult, todayLogsResult, historyLogsResult] = await Promise.all([

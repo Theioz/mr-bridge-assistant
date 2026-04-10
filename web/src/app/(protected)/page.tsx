@@ -7,10 +7,11 @@ import FunFact from "@/components/dashboard/fun-fact";
 import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import type { HabitLog, Task, FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
+import { todayString, USER_TZ } from "@/lib/timezone";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayString();
 
   const [
     habitsResult,
@@ -64,6 +65,7 @@ export default async function DashboardPage() {
     weekday: "long",
     month: "long",
     day: "numeric",
+    timeZone: USER_TZ,
   });
 
   return (
