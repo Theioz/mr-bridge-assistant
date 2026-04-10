@@ -7,12 +7,16 @@ import type { EmailSummary } from "@/app/api/google/gmail/route";
 export default function ImportantEmails() {
   const [emails, setEmails] = useState<EmailSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetch("/api/google/gmail")
       .then((r) => r.json())
-      .then((d) => setEmails(d.emails ?? []))
-      .catch(() => setEmails([]))
+      .then((d) => {
+        if (d.error) { setError(true); return; }
+        setEmails(d.emails ?? []);
+      })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,6 +36,8 @@ export default function ImportantEmails() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <p className="text-sm text-red-400/70">Failed to load — check Google credentials</p>
       ) : emails.length > 0 ? (
         <div className="divide-y divide-neutral-800/50">
           {emails.map((email, i) => (

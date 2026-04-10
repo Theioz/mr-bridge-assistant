@@ -118,19 +118,21 @@ def main():
 
     all_dates = sorted(set(readiness) | set(sleep_detail))
 
+    if not all_dates:
+        print("[sync-oura] No data returned from Oura.")
+        return
+
     client = get_client()
     existing = existing_dates(client)
     new_dates = [d for d in all_dates if d not in existing]
+    update_dates = [d for d in all_dates if d in existing]
 
-    if not new_dates:
-        print("[sync-oura] No new data.")
-        return
-
-    print(f"\nNew recovery entries ({len(new_dates)}):")
-    for d in new_dates:
+    print(f"\nRecovery entries to write ({len(new_dates)} new, {len(update_dates)} update):")
+    for d in all_dates:
         sd = sleep_detail.get(d, {})
+        tag = "NEW" if d in new_dates else "UPD"
         print(
-            f"  {d} — Readiness: {readiness.get(d)} | Sleep: {sleep_scores.get(d)} | "
+            f"  [{tag}] {d} — Readiness: {readiness.get(d)} | Sleep: {sleep_scores.get(d)} | "
             f"Total: {sd.get('total_sleep_hrs')}h | HRV: {sd.get('avg_hrv')}ms | "
             f"RHR: {sd.get('resting_hr')} | Active Cal: {active_cal.get(d)}"
         )
@@ -142,7 +144,7 @@ def main():
             return
 
     sb_rows = []
-    for d in new_dates:
+    for d in all_dates:
         sd = sleep_detail.get(d, {})
         sb_rows.append({
             "date": d,
@@ -160,7 +162,7 @@ def main():
 
     written = upsert(client, "recovery_metrics", sb_rows, conflict="date")
     log_sync(client, "oura", "ok", written)
-    print(f"[sync-oura] Synced {written} row(s) to Supabase.")
+    print(f"[sync-oura] Upserted {written} row(s) to Supabase.")
 
 
 if __name__ == "__main__":

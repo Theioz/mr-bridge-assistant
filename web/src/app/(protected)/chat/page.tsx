@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import ChatInterface from "@/components/chat/chat-interface";
 import type { ChatMessage, ChatSession } from "@/lib/types";
+import { todayString } from "@/lib/timezone";
 import type { Message } from "ai";
 
 export default async function ChatPage() {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayString();
 
   // Find or create today's web session
   let session: ChatSession | null = null;
