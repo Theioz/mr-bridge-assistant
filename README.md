@@ -13,48 +13,43 @@ graph TD
         RP[Renpho Scale]
     end
 
-    subgraph Scripts["Sync Scripts (Python)"]
+    subgraph Scripts["Sync Scripts"]
         SO[sync-oura.py]
         SF[sync-fitbit.py]
         SG[sync-googlefit.py]
         SR[sync-renpho.py]
     end
 
-    subgraph DB["Supabase (PostgreSQL)"]
+    subgraph DB["Supabase"]
         RM[(recovery_metrics)]
         WS[(workout_sessions)]
         FL[(fitness_log)]
-        HB[(habits / habit_registry)]
+        HB[(habits)]
         TK[(tasks)]
         PR[(profile)]
-        CS[(chat_sessions / messages)]
+        CS[(chat_messages)]
     end
 
     subgraph Web["Next.js Web App"]
-        subgraph API["API Routes"]
-            CA[/api/chat]
-            FN[/api/fun-fact]
-            GC[/api/google/calendar]
-            GM[/api/google/gmail]
+        subgraph Routes["API Routes"]
+            CA["api/chat"]
+            FN["api/fun-fact"]
+            GC["api/google/calendar"]
+            GM["api/google/gmail"]
         end
         subgraph Pages["Pages"]
-            DB[Dashboard]
-            HP[Habits]
-            TP[Tasks]
-            FP[Fitness]
-            CP[Chat]
+            PD[Dashboard]
+            PH[Habits]
+            PT[Tasks]
+            PF[Fitness]
+            PC[Chat]
         end
     end
 
-    subgraph External["External APIs"]
-        AN[Anthropic Claude API]
-        GCA[Google Calendar API]
-        GMA[Gmail API]
-    end
-
-    subgraph CLI["Claude Code CLI"]
-        CC[Session Start\nBriefing]
-        MCP[MCP Servers\nCalendar · Gmail]
+    subgraph Ext["External APIs"]
+        AN[Anthropic]
+        GCA[Google Calendar]
+        GMA[Gmail]
     end
 
     OF --> SO --> RM
@@ -62,21 +57,16 @@ graph TD
     GF --> SG --> FL
     RP --> SR --> FL
 
-    RM & WS & FL --> DB & FP
-    HB --> DB & HP
-    TK --> DB & TP
-    CS --> CP
+    RM & WS & FL --> PD & PF
+    HB --> PD & PH
+    TK --> PD & PT
+    CS --> PC
     PR --> FN
 
-    AN --> CA
-    AN --> FN
-    GCA --> GC --> DB
-    GMA --> GM --> DB
+    AN --> CA & FN
+    GCA --> GC --> PD
+    GMA --> GM --> PD
     CA --> CS
-
-    DB --> DB
-    DB & RM & WS & FL & HB & TK & PR --> CC
-    GCA & GMA --> MCP --> CC
 ```
 
 ## Purpose
