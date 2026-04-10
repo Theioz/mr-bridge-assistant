@@ -4,36 +4,54 @@ import TaskItem from "@/components/tasks/task-item";
 import AddTaskForm from "@/components/tasks/add-task-form";
 import type { Task } from "@/lib/types";
 
-async function addTask(title: string, priority: string, dueDate: string) {
+async function addTask(title: string, priority: string, dueDate: string): Promise<{ error?: string }> {
   "use server";
-  const supabase = await createClient();
-  await supabase.from("tasks").insert({
-    title,
-    priority: priority || "medium",
-    status: "active",
-    due_date: dueDate || null,
-  });
-  revalidatePath("/tasks");
-  revalidatePath("/");
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("tasks").insert({
+      title,
+      priority: priority || "medium",
+      status: "active",
+      due_date: dueDate || null,
+    });
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to add task" };
+  }
 }
 
-async function completeTask(taskId: string) {
+async function completeTask(taskId: string): Promise<{ error?: string }> {
   "use server";
-  const supabase = await createClient();
-  await supabase
-    .from("tasks")
-    .update({ status: "completed", completed_at: new Date().toISOString() })
-    .eq("id", taskId);
-  revalidatePath("/tasks");
-  revalidatePath("/");
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("tasks")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", taskId);
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to complete task" };
+  }
 }
 
-async function archiveTask(taskId: string) {
+async function archiveTask(taskId: string): Promise<{ error?: string }> {
   "use server";
-  const supabase = await createClient();
-  await supabase.from("tasks").update({ status: "archived" }).eq("id", taskId);
-  revalidatePath("/tasks");
-  revalidatePath("/");
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("tasks").update({ status: "archived" }).eq("id", taskId);
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    revalidatePath("/");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to archive task" };
+  }
 }
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };

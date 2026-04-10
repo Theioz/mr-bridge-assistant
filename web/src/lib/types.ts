@@ -52,10 +52,10 @@ export interface WorkoutSession {
 export interface RecoveryMetrics {
   id: string;
   date: string;
-  hrv_ms: number | null;
+  avg_hrv: number | null;
   resting_hr: number | null;
   sleep_score: number | null;
-  readiness_score: number | null;
+  readiness: number | null;
   source: string | null;
 }
 

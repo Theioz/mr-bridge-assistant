@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { Plus } from "lucide-react";
 
 interface Props {
-  addAction: (title: string, priority: string, dueDate: string) => Promise<void>;
+  addAction: (title: string, priority: string, dueDate: string) => Promise<{ error?: string }>;
 }
 
 export default function AddTaskForm({ addAction }: Props) {
@@ -12,6 +12,7 @@ export default function AddTaskForm({ addAction }: Props) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,8 +24,13 @@ export default function AddTaskForm({ addAction }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    setError(null);
     startTransition(async () => {
-      await addAction(title.trim(), priority, dueDate);
+      const result = await addAction(title.trim(), priority, dueDate);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       setTitle("");
       setPriority("medium");
       setDueDate("");
@@ -71,6 +77,9 @@ export default function AddTaskForm({ addAction }: Props) {
           className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1.5 text-xs text-neutral-300 focus:outline-none flex-1"
         />
       </div>
+      {error && (
+        <p className="text-xs text-red-400">{error}</p>
+      )}
       <div className="flex gap-2 justify-end">
         <button
           type="button"
