@@ -33,7 +33,7 @@ You have access to Jason's habits, fitness, tasks, and personal data stored in S
 When asked about current data, be specific about what you know vs. what you'd need to look up.`;
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-6"),
+    model: anthropic("claude-3-5-sonnet-20241022"),
     system: systemPrompt,
     messages: [...contextMessages, ...messages],
     onFinish: async ({ text }) => {
