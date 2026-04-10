@@ -7,15 +7,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+---
+
+## [0.9.0] — 2026-04-10
+
 ### Added
 - `web/src/app/api/chat/route.ts` — Vercel AI SDK tool use: 7 Supabase tools (`get_tasks`, `add_task`, `complete_task`, `get_habits_today`, `log_habit`, `get_fitness_summary`, `get_profile`) wired into `streamText` with `maxSteps: 5`; closes issue #19
 - `web/src/app/api/chat/route.ts` — overload retry middleware (`wrapLanguageModel`) retries up to 3× with 0/1.5s/3s backoff on Anthropic 529 errors
 - `web/src/components/chat/chat-interface.tsx` — error state display with Retry button when API call fails
+- `web/src/components/chat/message-bubble.tsx` — markdown rendering via `react-markdown` + `remark-gfm`; tables, bold, headers, lists, and code blocks now render correctly; user bubbles unchanged
+- `scripts/_supabase.py` — `urlopen_with_retry()` shared utility: 30s timeout + exponential backoff on HTTP 429/502/503 (up to 3 attempts); imported by all sync scripts
+- `scripts/requirements.txt` — pinned Python dependencies for all sync scripts
+- `supabase/migrations/20260410170000_study_log_unique_constraint.sql` — unique constraint on `study_log(date, subject)` to prevent duplicate entries inflating weekly review totals
 
 ### Changed
-- `web/src/app/login/page.tsx` — switched from magic link (`signInWithOtp`) to email/password (`signInWithPassword`) auth
+- `web/src/app/login/page.tsx` — switched from magic link (`signInWithOtp`) to email/password (`signInWithPassword`) auth; added email format regex validation on submit button
 - `web/src/app/api/chat/route.ts` — `maxDuration` increased from 30s to 60s to cover multi-step tool call latency
 - `web/src/app/api/chat/route.ts` — `onFinish` skips persisting empty assistant responses; context loader filters empty messages to prevent Anthropic 400 errors
+- `web/src/app/api/chat/route.ts` — `onFinish` wrapped in try/catch; DB persist failures are logged instead of crashing silently
+- `web/src/app/api/chat/route.ts` — `add_task` tool validates `due_date` format (`YYYY-MM-DD`) before insert
+- `web/src/lib/types.ts` — `RecoveryMetrics` interface corrected: `hrv_ms` → `avg_hrv`, `readiness_score` → `readiness` to match actual Supabase schema
+- `web/src/app/(protected)/tasks/page.tsx` — `addTask`, `completeTask`, `archiveTask` server actions wrapped in try/catch; return `{ error? }` and surface inline error messages
+- `web/src/components/tasks/add-task-form.tsx` — handles `{ error? }` return from server action; displays inline error on failure
+- `web/src/components/tasks/task-item.tsx` — handles `{ error? }` return from complete/archive actions; displays inline error
+- `scripts/sync-oura.py`, `sync-googlefit.py`, `sync-fitbit.py` — data fetch calls use `urlopen_with_retry`; auth flows get 30s timeout only
+- `scripts/sync-renpho.py` — CSV encoding detection: tries `utf-8-sig` → `utf-8` → `iso-8859-1` before failing
+- `voice/bridge_voice.py` — `atexit` handler registered to delete temp `.wav` files after transcription; `WAKE_WORD` config used instead of hardcoded `"hey siri"`
+
+### Fixed
+- `web/src/app/api/chat/route.ts` — `get_fitness_summary` tool was selecting non-existent columns (`hrv_ms`, `readiness_score`) from `recovery_metrics`; was silently returning nulls
+
+### Chore
+- Main branch protection enabled: direct pushes blocked, force pushes disabled, branch deletion disabled
+- Issue #10 closed (web interface shipped)
 
 ---
 
@@ -167,7 +191,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v0.5.0...v0.6.0

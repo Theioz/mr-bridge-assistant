@@ -19,7 +19,29 @@ mr-bridge-assistant/
 │   ├── config.toml
 │   └── migrations/
 │       ├── 20260410163801_initial_schema.sql
-│       └── 20260410164609_add_unique_constraints.sql
+│       ├── 20260410164609_add_unique_constraints.sql
+│       └── 20260410170000_study_log_unique_constraint.sql
+│
+├── web/                                   # Next.js web interface (deployed on Vercel)
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (protected)/               # Auth-gated pages
+│   │   │   │   ├── page.tsx               # Dashboard
+│   │   │   │   ├── tasks/page.tsx         # Task management
+│   │   │   │   ├── habits/page.tsx        # Habit tracking
+│   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
+│   │   │   │   └── chat/page.tsx          # Mr. Bridge chat
+│   │   │   ├── api/chat/route.ts          # Claude API + Supabase tool use
+│   │   │   └── login/page.tsx
+│   │   ├── components/
+│   │   │   ├── chat/                      # Chat UI with markdown rendering
+│   │   │   ├── tasks/                     # Task CRUD components
+│   │   │   ├── habits/                    # Habit toggle + history
+│   │   │   └── dashboard/                 # Summary cards
+│   │   └── lib/
+│   │       ├── supabase/                  # Client, server, service clients
+│   │       └── types.ts                   # TypeScript interfaces for all DB tables
+│   └── package.json
 │
 ├── .claude/
 │   ├── rules/
@@ -61,7 +83,8 @@ mr-bridge-assistant/
 │   └── habits.template.md
 │
 ├── scripts/
-│   ├── _supabase.py                       # Shared Supabase client helper
+│   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
+│   ├── requirements.txt                   # Pinned Python dependencies
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── migrate_to_supabase.py             # One-time migration: markdown → Supabase
@@ -79,7 +102,7 @@ mr-bridge-assistant/
     └── README.md
 ```
 
-> All live data (habits, tasks, fitness, recovery) is stored in **Supabase** — not local files. `memory/meal_log.md` is still read locally for recipes until the web interface ships.
+> All live data (habits, tasks, fitness, recovery) is stored in **Supabase** — not local files. `memory/meal_log.md` is still read locally for recipes (not yet migrated to Supabase).
 
 ## Getting Started
 
@@ -126,7 +149,7 @@ PICOVOICE_ACCESS_KEY=
 
 ### 4. Install Python dependencies
 ```bash
-pip3 install supabase python-dotenv google-auth google-auth-oauthlib
+pip3 install -r scripts/requirements.txt
 ```
 
 ### 5. Set up your profile and recipes
@@ -179,8 +202,33 @@ bash scripts/update-references.sh   # pull latest best practices
 git checkout -b feature/<name>
 ```
 
-After implementation, open a PR — do not push directly to `main`.
+After implementation, open a PR — direct pushes to `main` are blocked by branch protection.
 Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-bridge-assistant/issues).
+
+## Web Interface
+
+A Next.js web app deployed on Vercel providing a full UI for Mr. Bridge:
+
+- **Chat** — stream responses from Claude claude-sonnet-4-6 with markdown rendering (tables, bold, code blocks)
+- **Tasks** — add, complete, and archive tasks with inline error feedback
+- **Habits** — daily check-in, 7-day history grid
+- **Fitness** — body composition history and workout log
+- **Dashboard** — summary cards across all data sources
+
+**Local development:**
+```bash
+cd web
+npm install
+npm run dev   # http://localhost:3000
+```
+
+Requires `web/.env.local` with:
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+ANTHROPIC_API_KEY=...
+```
 
 ## Voice Interface (Jarvis Mode)
 
