@@ -10,7 +10,8 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAll: (cookiesToSet: { name: string; value: string; options?: any }[]) => {
           // Must update both request and response cookies for token rotation to work
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
