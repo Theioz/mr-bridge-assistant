@@ -32,10 +32,16 @@ Quantify wherever possible. Conservative estimates. Lead with the answer, then r
 You have access to Jason's habits, fitness, tasks, and personal data stored in Supabase.
 When asked about current data, be specific about what you know vs. what you'd need to look up.`;
 
+  // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
+  const cleanMessages = messages.map((m: { role: "user" | "assistant"; content: string }) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
   const result = streamText({
     model: anthropic("claude-3-5-sonnet-20241022"),
     system: systemPrompt,
-    messages: [...contextMessages, ...messages],
+    messages: [...contextMessages, ...cleanMessages],
     onFinish: async ({ text }) => {
       if (!sessionId) return;
 
