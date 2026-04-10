@@ -327,4 +327,30 @@
 | 7 | MED | Changed Description | Enrich `includeGitInstructions` — update to include git status snapshot and env var precedence per official settings page | ✅ COMPLETE (description expanded with git status snapshot and CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS precedence) |
 | 8 | MED | Changed Description | Enrich `language` — add "Also sets the voice dictation language" per official settings page | ✅ COMPLETE (voice dictation detail added) |
 | 9 | MED | Changed Description | Enrich `allowUnsandboxedCommands` — add enterprise policy detail per official settings page | ✅ COMPLETE (expanded with fail-closed behavior and enterprise use case) |
-| 3 | MED | Changed Default | Fix `teammateMode` default from `"auto"` to `"in-process"` per official settings page. Description unchanged | ✅ COMPLETE (default updated in Global Config Settings table) |
+
+---
+
+## [2026-04-08 09:51 PM PKT] Claude Code v2.1.96
+
+| # | Priority | Type | Action | Status |
+|---|----------|------|--------|--------|
+| 1 | HIGH | Missing Env Vars | Add `CLAUDE_CODE_USE_MANTLE`, `ANTHROPIC_BEDROCK_MANTLE_BASE_URL`, `CLAUDE_CODE_SKIP_MANTLE_AUTH` to Common Environment Variables table — Bedrock Mantle endpoint support (v2.1.94). All confirmed on official /en/env-vars page | ✅ COMPLETE (added near related cloud provider vars) |
+| 2 | HIGH | Changed Default | Update Effort Level section — default changed from Medium to High for API-key, Bedrock/Vertex/Foundry, Team, and Enterprise users (v2.1.94). Update table default marker and historical note | ✅ COMPLETE (table updated High as default, historical note expanded with v2.1.94 change) |
+| 3 | HIGH | Version Bump | Update report version badge from v2.1.92 to v2.1.96 | ✅ COMPLETE (badge, header version, and header text updated in Phase 2.6) |
+| 4 | MED | Stale Annotation | Remove "(in v2.1.90 changelog, not yet on official env-vars page)" from `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE` — now confirmed on official /en/env-vars page. Update description to match official wording | ✅ COMPLETE (annotation removed, description updated per official docs) |
+| 5 | MED | Changed Description | Update `CLAUDE_CODE_GLOB_HIDDEN` description to match official: "Set to `false` to exclude dotfiles from Glob results. Included by default. Does not affect `@` file autocomplete, `ls`, Grep, or Read" | ✅ COMPLETE (description rewritten per official env-vars page) |
+
+---
+
+## [2026-04-09 11:39 PM PKT] Claude Code v2.1.97
+
+| # | Priority | Type | Action | Status |
+|---|----------|------|--------|--------|
+| 1 | HIGH | New Setting | Add `sandbox.network.allowMachLookup` to Sandbox Settings table — array, macOS only, XPC/Mach service names with trailing `*` wildcard support. Confirmed on official settings page | ✅ COMPLETE (added after allowManagedDomainsOnly in sandbox network sub-keys) |
+| 2 | HIGH | Display & UX | Add `refreshInterval` field to Status Line Configuration section — optional, re-runs command every N seconds, minimum 1 (v2.1.97). Confirmed on official status line docs | ✅ COMPLETE (added to config table with `padding` field, updated JSON example) |
+| 3 | HIGH | Display & UX | Expand Status Line Input Fields table from 9 to 30+ fields to match official status line docs. Add `model.*`, `workspace.*`, `cost.*`, `session_id`, `session_name`, `transcript_path`, `version`, `output_style.name`, `vim.mode`, `agent.name`, `worktree.*` fields | ✅ COMPLETE (expanded from 9 to 30 fields per official status line documentation) |
+| 4 | HIGH | Version Bump | Update report version badge from v2.1.96 to v2.1.97 | ✅ COMPLETE (badge and header updated in Phase 2.6) |
+| 5 | MED | Field Naming | Fix `current_usage` → `context_window.current_usage` in Status Line Input Fields table | ✅ COMPLETE (renamed with full path and expanded description) |
+| 6 | MED | Ownership Boundary | Add `CCR_FORCE_BUNDLE` to `claude-cli-startup-flags.md` — startup-only var for `claude --remote` bundling. On official /en/env-vars page but not in either file | ✅ COMPLETE (added to CLI startup flags env vars table) |
+| 7 | MED | Changed Description | Update `CLAUDE_CODE_GLOB_NO_IGNORE` description to match official: "Set to `false` to make the Glob tool respect `.gitignore` patterns. By default, Glob returns all matching files including gitignored ones. Does not affect `@` file autocomplete" | ✅ COMPLETE (description rewritten per official env-vars page) |
+| 8 | MED | Changed Description | Update `editorMode` description — remove stale `/vim` reference (removed in v2.1.94), change config label from "Key binding mode" to "Editor mode" per official docs | ✅ COMPLETE (removed /vim reference, config label updated) |
