@@ -14,7 +14,7 @@ interface Props {
 export default function ChatInterface({ sessionId, initialMessages }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload } = useChat({
     api: "/api/chat",
     body: { sessionId },
     initialMessages,
@@ -43,6 +43,21 @@ export default function ChatInterface({ sessionId, initialMessages }: Props) {
                 <span className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:150ms]" />
                 <span className="w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:300ms]" />
               </span>
+            </div>
+          </div>
+        )}
+        {error && !isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-neutral-900 border border-red-900 rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-3">
+              <span className="text-sm text-red-400">
+                {error.message?.includes("overloaded") ? "API overloaded — try again." : "Error — try again."}
+              </span>
+              <button
+                onClick={() => reload()}
+                className="text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-2"
+              >
+                Retry
+              </button>
             </div>
           </div>
         )}
