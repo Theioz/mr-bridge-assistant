@@ -105,7 +105,17 @@ def main():
         print(f"[error] {FITNESS_LOG} not found. Copy fitness_log.template.md first.")
         sys.exit(1)
 
-    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+    for encoding in ("utf-8-sig", "utf-8", "iso-8859-1"):
+        try:
+            open(csv_path, encoding=encoding).read(512)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        print("[error] Could not detect file encoding (tried utf-8-sig, utf-8, iso-8859-1)")
+        sys.exit(1)
+
+    with open(csv_path, newline="", encoding=encoding) as f:
         reader = csv.DictReader(f)
         headers = reader.fieldnames or []
 

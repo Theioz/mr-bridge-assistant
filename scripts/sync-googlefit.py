@@ -27,7 +27,7 @@ from google.oauth2.credentials import Credentials
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, upsert, log_sync
+from _supabase import get_client, upsert, log_sync, urlopen_with_retry
 
 
 def get_credentials():
@@ -51,8 +51,7 @@ def fit_post(creds, endpoint, body):
         "Content-Type": "application/json",
     })
     try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
+        return urlopen_with_retry(req)
     except urllib.error.HTTPError as e:
         print(f"[error] Google Fit API returned {e.code}: {e.read().decode()}")
         sys.exit(1)
