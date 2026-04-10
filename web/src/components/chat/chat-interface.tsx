@@ -75,7 +75,7 @@ export default function ChatInterface({ sessionId, initialMessages }: Props) {
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="bg-neutral-100 text-neutral-950 rounded-xl px-3.5 py-2.5 disabled:opacity-30 hover:bg-white transition-colors"
+          className="bg-blue-500 text-white rounded-xl px-3.5 py-2.5 disabled:opacity-30 hover:bg-blue-400 transition-colors"
         >
           <Send size={16} />
         </button>

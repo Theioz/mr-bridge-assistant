@@ -17,9 +17,11 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <main className="pb-24 max-w-2xl mx-auto px-4">{children}</main>
+    <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
       <Nav />
+      <main className="flex-1 ml-12 lg:ml-48 px-5 lg:px-8 pt-8 pb-8 min-w-0">
+        <div className="max-w-4xl">{children}</div>
+      </main>
     </div>
   );
 }

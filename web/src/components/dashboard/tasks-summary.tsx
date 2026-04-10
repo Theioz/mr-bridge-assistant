@@ -13,7 +13,7 @@ export default function TasksSummary({ tasks }: Props) {
   return (
     <Link href="/tasks" className="block bg-neutral-900 rounded-xl p-4 border border-neutral-800 hover:border-neutral-700 transition-colors">
       <p className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Active tasks</p>
-      <p className="text-2xl font-semibold text-neutral-100">{tasks.length}</p>
+      <p className="text-2xl font-semibold font-[family-name:var(--font-mono)] text-neutral-100">{tasks.length}</p>
       {tasks.length > 0 && (
         <div className="mt-3 flex gap-3 text-xs text-neutral-500">
           {high > 0 && <span><span className="text-red-400">{high}</span> high</span>}
