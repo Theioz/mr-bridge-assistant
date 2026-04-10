@@ -5,68 +5,50 @@ A personal AI assistant context layer for Claude Code. Syncs fitness, habit, and
 ## Architecture
 
 ```mermaid
-graph TD
-    subgraph Sources["Data Sources"]
-        OF[Oura Ring]
-        FB[Fitbit]
-        GF[Google Fit]
-        RP[Renpho Scale]
+flowchart LR
+    subgraph devices["Devices"]
+        oura["Oura Ring"]
+        fitbit["Fitbit"]
+        gfit["Google Fit"]
+        renpho["Renpho"]
     end
 
-    subgraph Scripts["Sync Scripts"]
-        SO[sync-oura.py]
-        SF[sync-fitbit.py]
-        SG[sync-googlefit.py]
-        SR[sync-renpho.py]
+    subgraph scripts["Sync Scripts"]
+        so["sync-oura"]
+        sf["sync-fitbit"]
+        sg["sync-googlefit"]
+        sr["sync-renpho"]
     end
 
-    subgraph DB["Supabase"]
-        RM[(recovery_metrics)]
-        WS[(workout_sessions)]
-        FL[(fitness_log)]
-        HB[(habits)]
-        TK[(tasks)]
-        PR[(profile)]
-        CS[(chat_messages)]
+    db[("Supabase\n14 tables")]
+
+    subgraph web["Next.js Web App"]
+        rc["api/chat"]
+        rf["api/fun-fact"]
+        rcal["api/calendar"]
+        rmail["api/gmail"]
+        pg["Dashboard · Habits · Tasks · Fitness · Chat"]
     end
 
-    subgraph Web["Next.js Web App"]
-        subgraph Routes["API Routes"]
-            CA["api/chat"]
-            FN["api/fun-fact"]
-            GC["api/google/calendar"]
-            GM["api/google/gmail"]
-        end
-        subgraph Pages["Pages"]
-            PD[Dashboard]
-            PH[Habits]
-            PT[Tasks]
-            PF[Fitness]
-            PC[Chat]
-        end
+    subgraph ext["External APIs"]
+        cl["Anthropic Claude"]
+        gc["Google Calendar"]
+        gm["Gmail"]
     end
 
-    subgraph Ext["External APIs"]
-        AN[Anthropic]
-        GCA[Google Calendar]
-        GMA[Gmail]
-    end
+    oura --> so --> db
+    fitbit --> sf --> db
+    gfit --> sg --> db
+    renpho --> sr --> db
 
-    OF --> SO --> RM
-    FB --> SF --> WS
-    GF --> SG --> FL
-    RP --> SR --> FL
+    db --> pg
+    db --> rc
+    rc --> db
 
-    RM & WS & FL --> PD & PF
-    HB --> PD & PH
-    TK --> PD & PT
-    CS --> PC
-    PR --> FN
-
-    AN --> CA & FN
-    GCA --> GC --> PD
-    GMA --> GM --> PD
-    CA --> CS
+    cl --> rc & rf
+    gc --> rcal --> pg
+    gm --> rmail --> pg
+    rf --> pg
 ```
 
 ## Purpose
