@@ -11,6 +11,7 @@ Requires:
   - pip install -r voice/requirements.txt
 """
 
+import atexit
 import os
 import sys
 import struct
@@ -60,10 +61,23 @@ def load_system_prompt() -> str:
     return "\n\n---\n\n".join(parts)
 
 
+_temp_files: list[str] = []
+
+
+@atexit.register
+def _cleanup_temp_files():
+    for path in _temp_files:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def transcribe_audio(audio_data: bytes, sample_rate: int) -> str:
     """Transcribe audio bytes using faster-whisper."""
     model = WhisperModel(WHISPER_MODEL, device=WHISPER_DEVICE)
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        _temp_files.append(f.name)
         import wave
         with wave.open(f.name, "wb") as wf:
             wf.setnchannels(1)
@@ -146,7 +160,7 @@ def main():
     system_prompt = load_system_prompt()
     conversation_history = []
 
-    porcupine = pvporcupine.create(access_key=access_key, keywords=["hey siri"])  # closest built-in; custom wake word via pvporcupine model file
+    porcupine = pvporcupine.create(access_key=access_key, keywords=[WAKE_WORD])
     pa = pyaudio.PyAudio()
     sample_rate = porcupine.sample_rate
     frame_length = porcupine.frame_length
