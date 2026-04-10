@@ -302,3 +302,37 @@ Tracks drift between the README CONCEPTS table and official Claude Code document
 | 2 | HIGH | Missing Concept | Add Claude Code Web row to Hot table — run tasks on cloud infrastructure at claude.ai/code with PR auto-fix and parallel sessions | ✅ COMPLETE (row added after Ultraplan with beta badge, claude.ai/code location, and Web Scheduled Tasks inline link) |
 | 3 | HIGH | Stale URL | Commands URL `/slash-commands` not in official sitemap — redirects to `/skills` page; docs say "commands merged into skills" | ❌ INVALID (RECURRING from 2026-03-10; URL still resolves via redirect; user chose to keep as-is) |
 | 4 | MED | Missing Concept | Add Desktop App row to Hot table — standalone app with visual diff, Dispatch, computer use, and parallel sessions | ❌ INVALID (RECURRING from 2026-03-17; user considers it a platform surface, not a configuration concept) |
+
+---
+
+## [2026-04-08 09:37 PM PKT] Claude Code v2.1.96
+
+| # | Priority | Type | Action | Status |
+|---|----------|------|--------|--------|
+| 1 | HIGH | Stale URL | Commands URL `/slash-commands` not in official sitemap — redirects to `/skills` page; docs say "commands merged into skills" | ❌ INVALID (RECURRING from 2026-03-10; URL still resolves via redirect; user chose to keep as-is) |
+| 2 | MED | Changed Name | "No Flicker Mode" in Hot table — official docs page title is "Fullscreen rendering"; consider renaming or adding subtitle | ❌ INVALID (user chose to keep "No Flicker Mode" per Boris's tweet naming convention; env var is `CLAUDE_CODE_NO_FLICKER`) |
+| 3 | MED | Missing Concept | Add Desktop App row to Hot table — standalone app with visual diff, Dispatch, computer use, and parallel sessions | ❌ INVALID (RECURRING from 2026-03-17; user considers it a platform surface, not a configuration concept) |
+| 4 | LOW | Verification | All 41 external docs URLs validated — no broken links found | ✅ COMPLETE (all URLs return valid pages including /slash-commands redirect) |
+| 5 | LOW | Verification | All local badge file paths validated — no missing files | ✅ COMPLETE (all 20+ badge targets exist on filesystem) |
+| 6 | LOW | Verification | Memory anchor `#organize-rules-with-clauderules` confirmed on /memory page | ✅ COMPLETE (section heading "Organize rules with `.claude/rules/`" exists) |
+| 7 | LOW | Verification | Git Worktrees anchor `#run-parallel-claude-code-sessions-with-git-worktrees` confirmed on /common-workflows page | ✅ COMPLETE (section heading exists) |
+| 8 | LOW | Verification | Auto Mode anchor `#eliminate-prompts-with-auto-mode` confirmed on /permission-modes page | ✅ COMPLETE (section heading exists) |
+| 9 | LOW | Verification | Bundled Skills anchor `#bundled-skills` confirmed on /skills page | ✅ COMPLETE (section heading exists) |
+| 10 | LOW | Verification | All CONCEPTS descriptions checked against official docs — no drift detected | ✅ COMPLETE (all descriptions accurate) |
+
+---
+
+## [2026-04-09 11:37 PM PKT] Claude Code v2.1.97
+
+| # | Priority | Type | Action | Status |
+|---|----------|------|--------|--------|
+| 1 | HIGH | Missing Concept | Add Agent SDK row to Hot table — build production AI agents with Python/TypeScript SDKs (29 docs pages, `/en/agent-sdk/overview`) | ✅ COMPLETE (row added after Claude Code Web with Quickstart and Examples inline links) |
+| 2 | HIGH | Stale URL | Commands URL `/slash-commands` not in official sitemap — redirects to `/skills`; canonical commands reference is now `/en/commands` | ❌ INVALID (RECURRING from 2026-03-10; URL still resolves via redirect; user chose to keep as-is) |
+| 3 | MED | Missing Inline Link | Add Environment Variables (`/env-vars`) inline link to CLI Startup Flags row — new dedicated docs page | ✅ COMPLETE (Env Vars inline link added after Interactive Mode) |
+| 4 | LOW | Verification | All 42 external docs URLs validated against llms.txt sitemap (110 pages) — no broken links found | ✅ COMPLETE (all URLs return valid pages including /slash-commands redirect) |
+| 5 | LOW | Verification | All local badge file paths validated — no missing files (20+ badge targets checked) | ✅ COMPLETE (all badge targets exist on filesystem) |
+| 6 | LOW | Verification | Memory anchor `#organize-rules-with-clauderules` confirmed on /memory page | ✅ COMPLETE (section heading "Organize rules with `.claude/rules/`" exists) |
+| 7 | LOW | Verification | Git Worktrees anchor `#run-parallel-claude-code-sessions-with-git-worktrees` confirmed on /common-workflows page | ✅ COMPLETE (section heading exists) |
+| 8 | LOW | Verification | Auto Mode anchor `#eliminate-prompts-with-auto-mode` confirmed on /permission-modes page | ✅ COMPLETE (section heading exists) |
+| 9 | LOW | Verification | Bundled Skills anchor `#bundled-skills` confirmed on /skills page | ✅ COMPLETE (section heading exists) |
+| 10 | LOW | Verification | All CONCEPTS descriptions checked against official docs — no drift detected | ✅ COMPLETE (all descriptions accurate) |

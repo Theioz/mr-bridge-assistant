@@ -1,9 +1,9 @@
 # Settings Best Practice
 
-![Last Updated](https://img.shields.io/badge/Last_Updated-Apr%2005%2C%202026%2012%3A03%20AM%20PKT-white?style=flat&labelColor=555) ![Version](https://img.shields.io/badge/Claude_Code-v2.1.92-blue?style=flat&labelColor=555)<br>
+![Last Updated](https://img.shields.io/badge/Last_Updated-Apr%2009%2C%202026%2011%3A39%20PM%20PKT-white?style=flat&labelColor=555) ![Version](https://img.shields.io/badge/Claude_Code-v2.1.97-blue?style=flat&labelColor=555)<br>
 [![Implemented](https://img.shields.io/badge/Implemented-2ea44f?style=flat)](../.claude/settings.json)
 
-A comprehensive guide to all available configuration options in Claude Code's `settings.json` files. As of v2.1.92, Claude Code exposes **60+ settings** and **170+ environment variables** (use the `"env"` field in `settings.json` to avoid wrapper scripts).
+A comprehensive guide to all available configuration options in Claude Code's `settings.json` files. As of v2.1.97, Claude Code exposes **60+ settings** and **170+ environment variables** (use the `"env"` field in `settings.json` to avoid wrapper scripts).
 
 <table width="100%">
 <tr>
@@ -385,6 +385,7 @@ Configure bash command sandboxing for security.
 | `sandbox.network.httpProxyPort` | number | - | HTTP proxy port 1-65535 (custom proxy) |
 | `sandbox.network.socksProxyPort` | number | - | SOCKS5 proxy port 1-65535 (custom proxy) |
 | `sandbox.network.allowManagedDomainsOnly` | boolean | `false` | Only allow domains in managed allowlist (managed settings) |
+| `sandbox.network.allowMachLookup` | array | `[]` | (macOS only) Additional XPC/Mach service names the sandbox may look up. Supports a single trailing `*` for prefix matching. Needed for tools that communicate via XPC such as the iOS Simulator or Playwright. Example: `["com.apple.coresimulator.*"]` |
 | `sandbox.filesystem.allowWrite` | array | `[]` | Additional paths where sandboxed commands can write. Arrays are merged across all settings scopes. Also merged with paths from `Edit(...)` allow permission rules. Prefix: `/` (absolute), `~/` (home), `./` or none (project-relative in project settings, `~/.claude`-relative in user settings). The older `//` prefix for absolute paths still works. **Note:** This differs from [Read/Edit permission rules](#tool-permission-syntax), which use `//` for absolute and `/` for project-relative |
 | `sandbox.filesystem.denyWrite` | array | `[]` | Paths where sandboxed commands cannot write. Arrays are merged across all settings scopes. Also merged with paths from `Edit(...)` deny permission rules. Same path prefix conventions as `allowWrite` |
 | `sandbox.filesystem.denyRead` | array | `[]` | Paths where sandboxed commands cannot read. Arrays are merged across all settings scopes. Also merged with paths from `Read(...)` deny permission rules. Same path prefix conventions as `allowWrite` |
@@ -508,8 +509,8 @@ The `/model` command exposes an **effort level** control that adjusts how much r
 
 | Effort Level | Description |
 |-------------|-------------|
-| High | Full reasoning depth, best for complex tasks |
-| Medium (default) | Balanced reasoning, good for everyday tasks |
+| High (default) | Full reasoning depth, best for complex tasks |
+| Medium | Balanced reasoning, good for everyday tasks |
 | Low | Minimal reasoning, fastest responses |
 
 **How to use:**
@@ -517,7 +518,7 @@ The `/model` command exposes an **effort level** control that adjusts how much r
 2. Or run `/model` → select a model → use **← →** arrow keys to adjust
 3. The setting persists via the `effortLevel` key in `settings.json`
 
-**Note:** Effort level is available for Opus 4.6 and Sonnet 4.6 on Max and Team plans. The default was changed from High to Medium in v2.1.68. As of v2.1.75, 1M context window for Opus 4.6 is available by default on Max, Team, and Enterprise plans.
+**Note:** Effort level is available for Opus 4.6 and Sonnet 4.6 on Max and Team plans. The default was changed from High to Medium in v2.1.68, then changed back to **High** for API-key, Bedrock/Vertex/Foundry, Team, and Enterprise users in v2.1.94. As of v2.1.75, 1M context window for Opus 4.6 is available by default on Max, Team, and Enterprise plans.
 
 ### Model Environment Variables
 
@@ -561,7 +562,7 @@ These display preferences are stored in `~/.claude.json`, **not** `settings.json
 |-----|------|---------|-------------|
 | `autoConnectIde` | boolean | `false` | Automatically connect to a running IDE when Claude Code starts from an external terminal. Appears in `/config` as **Auto-connect to IDE (external terminal)** when running outside a VS Code or JetBrains terminal |
 | `autoInstallIdeExtension` | boolean | `true` | Automatically install the Claude Code IDE extension when running from a VS Code terminal. Appears in `/config` as **Auto-install IDE extension**. Can also be disabled via `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` env var |
-| `editorMode` | string | `"normal"` | Key binding mode for the input prompt: `"normal"` or `"vim"`. Written automatically when you run `/vim`. Appears in `/config` as **Key binding mode** |
+| `editorMode` | string | `"normal"` | Key binding mode for the input prompt: `"normal"` or `"vim"`. Appears in `/config` as **Editor mode** |
 | `showTurnDuration` | boolean | `true` | Show turn duration messages after responses (e.g., "Cooked for 1m 6s"). Edit `~/.claude.json` directly to change |
 | `terminalProgressBarEnabled` | boolean | `true` | Show the terminal progress bar in supported terminals (ConEmu, Ghostty 1.2.0+, and iTerm2 3.6.6+). Appears in `/config` as **Terminal progress bar** |
 | `teammateMode` | string | `"in-process"` | How [agent team](https://code.claude.com/docs/en/agent-teams) teammates display: `"auto"` (picks split panes in tmux or iTerm2, in-process otherwise), `"in-process"`, or `"tmux"`. See [choose a display mode](https://code.claude.com/docs/en/agent-teams#choose-a-display-mode) |
@@ -573,26 +574,56 @@ These display preferences are stored in `~/.claude.json`, **not** `settings.json
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh",
-    "padding": 0
+    "padding": 2,
+    "refreshInterval": 5
   }
 }
 ```
 
+| Field | Description |
+|-------|-------------|
+| `type` | Set to `"command"` to run a shell script |
+| `command` | Shell command or script path that generates the status line output |
+| `padding` | Extra horizontal spacing (in characters) added to status line content. Defaults to `0`. Controls relative indentation beyond the interface's built-in spacing |
+| `refreshInterval` | Re-run the command every N seconds in addition to event-driven updates. Minimum is `1`. Useful when the status line shows time-based data (e.g., a clock) or when background subagents change git state while the main session is idle. Leave unset to run only on events (v2.1.97) |
+
 **Status Line Input Fields:**
 
-The status line command receives a JSON object on stdin with these notable fields:
+The status line command receives a JSON object on stdin. For the full JSON schema and examples, see the [Status Line Documentation](https://code.claude.com/docs/en/statusline).
 
 | Field | Description |
 |-------|-------------|
-| `workspace.added_dirs` | Directories added via `/add-dir` |
-| `context_window.used_percentage` | Context window usage percentage |
-| `context_window.remaining_percentage` | Context window remaining percentage |
-| `current_usage` | Current context window token count |
-| `exceeds_200k_tokens` | Whether context exceeds 200k tokens |
+| `model.id`, `model.display_name` | Current model identifier and display name |
+| `cwd`, `workspace.current_dir` | Current working directory (both contain the same value; `workspace.current_dir` preferred) |
+| `workspace.project_dir` | Directory where Claude Code was launched (may differ from `cwd` if working directory changes) |
+| `workspace.added_dirs` | Additional directories added via `/add-dir` or `--add-dir` |
+| `workspace.git_worktree` | Git worktree name when inside a linked worktree created with `git worktree add`. Absent in the main working tree (v2.1.97) |
+| `cost.total_cost_usd` | Total session cost in USD |
+| `cost.total_duration_ms` | Total wall-clock time since session started, in milliseconds |
+| `cost.total_api_duration_ms` | Total time spent waiting for API responses, in milliseconds |
+| `cost.total_lines_added`, `cost.total_lines_removed` | Lines of code changed during the session |
+| `context_window.total_input_tokens`, `context_window.total_output_tokens` | Cumulative token counts across the session |
+| `context_window.context_window_size` | Maximum context window size in tokens (200000 default, 1000000 for extended context) |
+| `context_window.used_percentage` | Pre-calculated percentage of context window used |
+| `context_window.remaining_percentage` | Pre-calculated percentage of context window remaining |
+| `context_window.current_usage` | Token counts from the last API call (input, output, cache tokens) |
+| `exceeds_200k_tokens` | Whether total tokens from the most recent API response exceeds 200k (fixed threshold) |
 | `rate_limits.five_hour.used_percentage` | Five-hour rate limit usage percentage (v2.1.80+) |
-| `rate_limits.five_hour.resets_at` | Five-hour rate limit reset timestamp |
+| `rate_limits.five_hour.resets_at` | Five-hour rate limit reset timestamp (Unix epoch seconds) |
 | `rate_limits.seven_day.used_percentage` | Seven-day rate limit usage percentage |
-| `rate_limits.seven_day.resets_at` | Seven-day rate limit reset timestamp |
+| `rate_limits.seven_day.resets_at` | Seven-day rate limit reset timestamp (Unix epoch seconds) |
+| `session_id` | Unique session identifier |
+| `session_name` | Custom session name set with `--name` or `/rename`. Absent if no custom name set |
+| `transcript_path` | Path to conversation transcript file |
+| `version` | Claude Code version |
+| `output_style.name` | Name of the current output style |
+| `vim.mode` | Current vim mode (`NORMAL` or `INSERT`) when vim mode is enabled |
+| `agent.name` | Agent name when running with `--agent` flag or agent settings |
+| `worktree.name` | Name of the active worktree (present only during `--worktree` sessions) |
+| `worktree.path` | Absolute path to the worktree directory |
+| `worktree.branch` | Git branch name for the worktree. Absent for hook-based worktrees |
+| `worktree.original_cwd` | Directory before entering the worktree |
+| `worktree.original_branch` | Git branch checked out before entering the worktree. Absent for hook-based worktrees |
 
 ### File Suggestion Configuration
 
@@ -686,6 +717,7 @@ Set environment variables for all Claude Code sessions.
 | `CLAUDE_CODE_OAUTH_SCOPES` | Space-separated OAuth scopes the refresh token was issued with (e.g., `"user:profile user:inference user:sessions:claude_code"`). Required when `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` is set |
 | `ANTHROPIC_BASE_URL` | Custom API endpoint |
 | `ANTHROPIC_BEDROCK_BASE_URL` | Override Bedrock endpoint URL |
+| `ANTHROPIC_BEDROCK_MANTLE_BASE_URL` | Override the Bedrock Mantle endpoint URL. See [Mantle endpoint](https://code.claude.com/docs/en/amazon-bedrock#use-the-mantle-endpoint) |
 | `ANTHROPIC_VERTEX_BASE_URL` | Override Vertex AI endpoint URL |
 | `ANTHROPIC_BETAS` | Comma-separated Anthropic beta header values |
 | `ANTHROPIC_VERTEX_PROJECT_ID` | GCP project ID for Vertex AI |
@@ -702,6 +734,7 @@ Set environment variables for all Claude Code sessions.
 | `CLAUDE_CODE_USE_BEDROCK` | Use AWS Bedrock (`1` to enable) |
 | `CLAUDE_CODE_USE_VERTEX` | Use Google Vertex AI (`1` to enable) |
 | `CLAUDE_CODE_USE_FOUNDRY` | Use Microsoft Foundry (`1` to enable) |
+| `CLAUDE_CODE_USE_MANTLE` | Use the Bedrock [Mantle endpoint](https://code.claude.com/docs/en/amazon-bedrock#use-the-mantle-endpoint) (`1` to enable) |
 | `CLAUDE_CODE_USE_POWERSHELL_TOOL` | Set to `1` to enable the PowerShell tool on Windows (opt-in preview). When enabled, Claude can run PowerShell commands natively instead of routing through Git Bash. Only supported on native Windows, not WSL (v2.1.84) |
 | `CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX` | Prefix for auto-generated Remote Control session names. Defaults to the machine hostname |
 | `CLAUDE_CODE_ENABLE_TELEMETRY` | Enable/disable telemetry (`0` or `1`) |
@@ -724,8 +757,8 @@ Set environment variables for all Claude Code sessions.
 | `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` | Disable experimental beta features (`1` to disable) |
 | `CLAUDE_CODE_SHELL` | Override automatic shell detection |
 | `CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS` | Override default file read token limit |
-| `CLAUDE_CODE_GLOB_HIDDEN` | Include dotfiles in Glob results (`1` to enable) |
-| `CLAUDE_CODE_GLOB_NO_IGNORE` | Make Glob ignore `.gitignore` patterns (`1` to enable) |
+| `CLAUDE_CODE_GLOB_HIDDEN` | Set to `false` to exclude dotfiles from results when Claude invokes the Glob tool. Included by default. Does not affect `@` file autocomplete, `ls`, Grep, or Read |
+| `CLAUDE_CODE_GLOB_NO_IGNORE` | Set to `false` to make the Glob tool respect `.gitignore` patterns. By default, Glob returns all matching files including gitignored ones. Does not affect `@` file autocomplete, which has its own `respectGitignore` setting |
 | `CLAUDE_CODE_GLOB_TIMEOUT_SECONDS` | Timeout in seconds for Glob file discovery |
 | `CLAUDE_CODE_ENABLE_TASKS` | Set to `true` to enable task tracking in non-interactive mode (`-p` flag). Tasks are on by default in interactive mode |
 | `CLAUDE_CODE_SIMPLE` | Set to `1` to run with a minimal system prompt and only the Bash, file read, and file edit tools |
@@ -771,6 +804,7 @@ Set environment variables for all Claude Code sessions.
 | `BASH_DEFAULT_TIMEOUT_MS` | Default bash command timeout in ms |
 | `CLAUDE_CODE_SKIP_BEDROCK_AUTH` | Skip AWS auth for Bedrock (`1` to skip) |
 | `CLAUDE_CODE_SKIP_FOUNDRY_AUTH` | Skip Azure auth for Foundry (`1` to skip) |
+| `CLAUDE_CODE_SKIP_MANTLE_AUTH` | Skip AWS authentication for Bedrock Mantle (e.g., when using an LLM gateway) |
 | `CLAUDE_CODE_SKIP_VERTEX_AUTH` | Skip Google auth for Vertex (`1` to skip) |
 | `CLAUDE_CODE_PROXY_RESOLVES_HOSTS` | Allow proxy to perform DNS resolution |
 | `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` | Credential refresh interval in ms for `apiKeyHelper` |
@@ -782,7 +816,7 @@ Set environment variables for all Claude Code sessions.
 | `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL` | Skip auto-adding the official marketplace (`1` to disable) |
 | `CLAUDE_CODE_SYNC_PLUGIN_INSTALL` | Wait for plugin install to complete before first query (`1` to enable) |
 | `CLAUDE_CODE_SYNC_PLUGIN_INSTALL_TIMEOUT_MS` | Timeout in ms for synchronous plugin install |
-| `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE` | Set to `1` to keep the marketplace cache on disk when a `git pull` update fails, instead of deleting and re-cloning *(in v2.1.90 changelog, not yet on official env-vars page)* |
+| `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE` | Set to `1` to keep the existing marketplace cache when a `git pull` fails instead of wiping and re-cloning. Useful in offline or airgapped environments where re-cloning would fail the same way |
 | `CLAUDE_CODE_HIDE_ACCOUNT_INFO` | Hide email/org info from UI *(not in official docs — unverified)* |
 | `CLAUDE_CODE_DISABLE_CRON` | Disable scheduled/cron tasks (`1` to disable) |
 | `DISABLE_INSTALLATION_CHECKS` | Disable installation warnings |
