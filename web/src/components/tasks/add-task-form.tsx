@@ -91,7 +91,7 @@ export default function AddTaskForm({ addAction }: Props) {
         <button
           type="submit"
           disabled={isPending || !title.trim()}
-          className="px-3 py-1.5 text-xs bg-neutral-100 text-neutral-950 rounded-lg font-medium disabled:opacity-40 hover:bg-white transition-colors"
+          className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-lg font-medium disabled:opacity-40 hover:bg-blue-400 transition-colors"
         >
           {isPending ? "Adding..." : "Add"}
         </button>

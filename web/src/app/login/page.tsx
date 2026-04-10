@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import Logo from "@/components/ui/logo";
 
 type State = "idle" | "loading" | "error";
 
@@ -34,9 +35,12 @@ function LoginForm() {
   return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral-100">Mr. Bridge</h1>
-          <p className="mt-1 text-sm text-neutral-500">Personal assistant</p>
+        <div className="flex items-center gap-3">
+          <Logo size={36} />
+          <div>
+            <h1 className="text-2xl font-semibold text-neutral-100">Mr. Bridge</h1>
+            <p className="mt-0.5 text-sm text-neutral-500">Personal assistant</p>
+          </div>
         </div>
 
         {hasAuthError && (
@@ -83,7 +87,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={state === "loading" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password.trim()}
-            className="w-full bg-neutral-100 text-neutral-950 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+            className="w-full bg-blue-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-400 transition-colors"
           >
             {state === "loading" ? "Signing in..." : "Sign in"}
           </button>

@@ -5,6 +5,7 @@ import {
   Line,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
@@ -76,6 +77,7 @@ export default function BodyCompChart({ data }: Props) {
           axisLine={false}
           domain={["auto", "auto"]}
         />
+        <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
         <Tooltip content={<CustomTooltip />} />
         <Legend
           iconType="circle"
@@ -87,7 +89,7 @@ export default function BodyCompChart({ data }: Props) {
           type="monotone"
           dataKey="weight"
           name="Weight (lb)"
-          stroke="#a3a3a3"
+          stroke="#3b82f6"
           strokeWidth={1.5}
           dot={false}
           connectNulls
