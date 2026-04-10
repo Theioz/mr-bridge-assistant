@@ -1,17 +1,40 @@
 """
 Shared Supabase client helper for sync scripts.
 Uses SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
-Import as: from _supabase import get_client, log_sync
+Import as: from _supabase import get_client, log_sync, urlopen_with_retry
 """
 from __future__ import annotations
 
+import json
 import os
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
+
+RETRYABLE_CODES = {429, 502, 503}
+HTTP_TIMEOUT = 30
+
+
+def urlopen_with_retry(req: urllib.request.Request, max_retries: int = 3) -> dict:
+    """Open a urllib request with timeout and exponential backoff on transient errors."""
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            if e.code in RETRYABLE_CODES and attempt < max_retries - 1:
+                wait = 2 ** attempt
+                print(f"[warn] HTTP {e.code} — retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("urlopen_with_retry: exceeded max retries")  # unreachable
 
 
 def get_client():

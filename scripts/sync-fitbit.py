@@ -39,7 +39,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, upsert, log_sync
+from _supabase import get_client, upsert, log_sync, urlopen_with_retry, HTTP_TIMEOUT
 
 FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
@@ -90,7 +90,7 @@ def exchange_code(code, verifier, client_id, client_secret):
         "Authorization": f"Basic {credentials}",
         "Content-Type": "application/x-www-form-urlencoded",
     })
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
         return json.loads(resp.read())
 
 
@@ -105,7 +105,7 @@ def refresh_access_token(client_id, client_secret, refresh_token):
         "Content-Type": "application/x-www-form-urlencoded",
     })
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
             data = json.loads(resp.read())
             if data.get("refresh_token") != refresh_token:
                 update_env_token(data["refresh_token"])
@@ -160,8 +160,7 @@ def fitbit_get(access_token, path):
     url = f"{FITBIT_API_BASE}{path}"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {access_token}"})
     try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
+        return urlopen_with_retry(req)
     except urllib.error.HTTPError as e:
         print(f"[error] Fitbit API {path} returned {e.code}: {e.read().decode()}")
         sys.exit(1)
