@@ -8,20 +8,21 @@
 ## Session Start Protocol
 Execute in this exact order:
 
-1. Run fitness sync scripts to get fresh data (silently, errors are non-fatal — proceed regardless):
+1. Run fitness sync scripts to pull fresh data into Supabase (silently, errors are non-fatal — proceed regardless):
    ```bash
    python3 scripts/sync-googlefit.py --yes
    python3 scripts/sync-oura.py --yes
    python3 scripts/sync-fitbit.py --yes
    ```
-2. Read `memory/profile.md`
-3. Read `memory/fitness_log.md`
-4. Read `memory/meal_log.md`
-5. Read `memory/todo.md`
-6. Read `memory/habits.md`
-7. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
-8. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
-9. Deliver session briefing (format below)
+2. Fetch all briefing data from Supabase:
+   ```bash
+   python3 scripts/fetch_briefing_data.py
+   ```
+   Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, and study log.
+3. Read `memory/meal_log.md` (recipes not yet in Supabase query — still local)
+4. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
+5. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
+6. Deliver session briefing (format below)
 
 ## Session Briefing Format
 ```
@@ -109,9 +110,11 @@ When operating in voice context (responses will be spoken aloud):
 - Spell out numbers and abbreviations
 
 ## Memory Update Rules
-- Always confirm before writing to a memory file
-- Write immediately on confirmation — do not defer
-- After any memory update: "Commit and push to sync across devices"
+- Data is stored in Supabase — do not write to local markdown files for live data
+- `memory/meal_log.md` is still the source for recipes (read-only during briefing)
+- Habit logging: run `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`
+- Task updates: use Supabase directly or a future task management command
+- After any Supabase write: confirm to user what was written and to which table
 
 ## Study Timer Rules
 - Only offer to start a timer when Jason explicitly says he's starting a study session (e.g. "starting Japanese now", "about to do boot.dev", "starting a coding session")
@@ -120,25 +123,22 @@ When operating in voice context (responses will be spoken aloud):
 - When Jason says "done", "stopping", or "finished studying", stop the timer and log duration to `memory/todo.md`
 - If a timer is running at session start, flag it in the briefing: "Timer still running: [subject] — started [time]"
 
-## Memory File Index
-| File | Purpose |
-|------|---------|
-| `memory/profile.md` | Identity, background, preferences, communication style |
-| `memory/fitness_log.md` | Fitness goals, program, session log, baseline metrics, recovery metrics |
-| `memory/meal_log.md` | Cuisine preferences, recipes, meal prep log |
-| `memory/todo.md` | Tasks, daily accountability, study logs, reading log |
-| `memory/habits.md` | Daily habit registry, streaks, daily log |
-| `memory/timer_state.json` | Active study timer state (start time, subject, category) |
+## Data Sources
+All live data is stored in Supabase. Local markdown files are archived originals.
 
-## Fitness Sync Scripts
-| Script | Data Source | What It Writes |
-|--------|-------------|---------------|
-| `scripts/sync-googlefit.py` | Google Fit API | Weight → Baseline Metrics |
-| `scripts/sync-fitbit.py` | Fitbit API | Workout sessions → Session Log |
-| `scripts/sync-oura.py` | Oura REST API v2 | Readiness, sleep, HRV, resting HR → Recovery Metrics |
-| `scripts/sync-renpho.py` | Renpho CSV export | Body fat %, BMI, muscle mass → Baseline Metrics |
+| Supabase Table | Source | Script |
+|----------------|--------|--------|
+| `fitness_log` | Google Fit + Renpho | `sync-googlefit.py`, `sync-renpho.py` |
+| `workout_sessions` | Fitbit | `sync-fitbit.py` |
+| `recovery_metrics` | Oura Ring | `sync-oura.py` |
+| `habits` + `habit_registry` | Manual logging | `log_habit.py` |
+| `tasks` + `study_log` | Manual logging | (future command) |
+| `profile` | Migrated from `profile.md` | (edit via Supabase or future command) |
+| `recipes` | Migrated from `meal_log.md` | (edit via Supabase or future command) |
+| `chat_sessions` + `chat_messages` | Web interface | (future — issue #10) |
+| `timer_state` | Study timer | `study-timer` agent |
 
-Run these manually before sessions to get fresh data. See `docs/fitness-tracker-setup.md`.
+`memory/meal_log.md` — still read during briefing for recipe reference until web interface ships.
 
 ## Reference Index
 | Resource | Location | Purpose |
