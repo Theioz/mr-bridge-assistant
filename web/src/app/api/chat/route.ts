@@ -122,6 +122,9 @@ Tools available:
         },
       }),
       execute: async ({ title, priority, category, due_date }) => {
+        if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
+          return { error: `due_date must be YYYY-MM-DD format, got: "${due_date}"` };
+        }
         const { data, error } = await supabase
           .from("tasks")
           .insert({ title, priority: priority ?? null, category: category ?? null, due_date: due_date ?? null, status: "active" })
@@ -247,7 +250,7 @@ Tools available:
             .order("date", { ascending: false }),
           supabase
             .from("recovery_metrics")
-            .select("date, hrv_ms, resting_hr, sleep_score, readiness_score, source")
+            .select("date, avg_hrv, resting_hr, sleep_score, readiness, source")
             .order("date", { ascending: false })
             .limit(1),
         ]);
@@ -292,23 +295,29 @@ Tools available:
 
       const lastUserMessage = messages[messages.length - 1];
 
-      await supabase.from("chat_messages").insert([
-        {
-          session_id: sessionId,
-          role: "user",
-          content: lastUserMessage.content,
-        },
-        {
-          session_id: sessionId,
-          role: "assistant",
-          content: text,
-        },
-      ]);
+      try {
+        const { error: insertError } = await supabase.from("chat_messages").insert([
+          {
+            session_id: sessionId,
+            role: "user",
+            content: lastUserMessage.content,
+          },
+          {
+            session_id: sessionId,
+            role: "assistant",
+            content: text,
+          },
+        ]);
+        if (insertError) throw insertError;
 
-      await supabase
-        .from("chat_sessions")
-        .update({ last_active_at: new Date().toISOString() })
-        .eq("id", sessionId);
+        const { error: updateError } = await supabase
+          .from("chat_sessions")
+          .update({ last_active_at: new Date().toISOString() })
+          .eq("id", sessionId);
+        if (updateError) throw updateError;
+      } catch (err) {
+        console.error("[chat] onFinish persist error:", err);
+      }
     },
   });
 

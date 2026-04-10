@@ -82,7 +82,7 @@ function LoginForm() {
 
           <button
             type="submit"
-            disabled={state === "loading" || !email.trim() || !password.trim()}
+            disabled={state === "loading" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password.trim()}
             className="w-full bg-neutral-100 text-neutral-950 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
           >
             {state === "loading" ? "Signing in..." : "Sign in"}

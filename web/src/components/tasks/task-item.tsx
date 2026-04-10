@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Check, Archive } from "lucide-react";
 import type { Task } from "@/lib/types";
 
@@ -12,12 +12,13 @@ const priorityConfig = {
 
 interface Props {
   task: Task;
-  completeAction: (id: string) => Promise<void>;
-  archiveAction: (id: string) => Promise<void>;
+  completeAction: (id: string) => Promise<{ error?: string }>;
+  archiveAction: (id: string) => Promise<{ error?: string }>;
 }
 
 export default function TaskItem({ task, completeAction, archiveAction }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const priority = task.priority ? priorityConfig[task.priority] : null;
 
@@ -37,10 +38,15 @@ export default function TaskItem({ task, completeAction, archiveAction }: Props)
             {task.due_date && <span>Due {task.due_date}</span>}
           </p>
         )}
+        {error && <p className="text-xs text-red-400 mt-0.5 ml-3.5">{error}</p>}
       </div>
       <div className="flex gap-1 flex-shrink-0">
         <button
-          onClick={() => startTransition(() => completeAction(task.id))}
+          onClick={() => startTransition(async () => {
+            setError(null);
+            const result = await completeAction(task.id);
+            if (result.error) setError(result.error);
+          })}
           disabled={isPending}
           title="Complete"
           className="p-1.5 rounded-lg text-neutral-500 hover:text-green-400 hover:bg-neutral-800 transition-colors"
@@ -48,7 +54,11 @@ export default function TaskItem({ task, completeAction, archiveAction }: Props)
           <Check size={15} />
         </button>
         <button
-          onClick={() => startTransition(() => archiveAction(task.id))}
+          onClick={() => startTransition(async () => {
+            setError(null);
+            const result = await archiveAction(task.id);
+            if (result.error) setError(result.error);
+          })}
           disabled={isPending}
           title="Archive"
           className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors"
