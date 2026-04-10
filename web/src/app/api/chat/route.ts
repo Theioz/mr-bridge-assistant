@@ -6,6 +6,7 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages, sessionId } = await req.json();
+  console.log("[chat] sessionId:", sessionId, "messages:", messages.length);
 
   const supabase = createServiceClient();
 
@@ -42,6 +43,9 @@ When asked about current data, be specific about what you know vs. what you'd ne
     model: anthropic("claude-3-5-sonnet-20241022"),
     system: systemPrompt,
     messages: [...contextMessages, ...cleanMessages],
+    onError: ({ error }) => {
+      console.error("[chat] streamText error:", JSON.stringify(error));
+    },
     onFinish: async ({ text }) => {
       if (!sessionId) return;
 
