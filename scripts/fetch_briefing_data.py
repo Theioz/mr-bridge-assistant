@@ -157,11 +157,13 @@ def main():
     print("\n## RECOVERY (last night)")
     if recovery:
         r = recovery[0]
+        def v(val, suffix=""):
+            return f"{val}{suffix}" if val is not None else "—"
         print(
-            f"Readiness: {r['readiness']} | Sleep: {r['sleep_score']} | "
+            f"Readiness: {v(r['readiness'])} | Sleep: {v(r['sleep_score'])} | "
             f"Total: {fmt_hrs(r['total_sleep_hrs'])} | Deep: {fmt_hrs(r['deep_hrs'])} | "
-            f"REM: {fmt_hrs(r['rem_hrs'])} | HRV: {r['avg_hrv']}ms | "
-            f"RHR: {r['resting_hr']} bpm | Active Cal: {r['active_cal']} — {r['date']}"
+            f"REM: {fmt_hrs(r['rem_hrs'])} | HRV: {v(r['avg_hrv'], 'ms')} | "
+            f"RHR: {v(r['resting_hr'], ' bpm')} | Active Cal: {v(r['active_cal'])} — {r['date']}"
         )
         if r.get("readiness") and r["readiness"] < 70:
             severity = "critical — rest day recommended" if r["readiness"] < 50 else "low — consider deload or rest day"
