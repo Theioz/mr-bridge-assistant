@@ -141,9 +141,7 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
                       className={`inline-block w-4 h-4 rounded-full transition-all hover:ring-1 hover:ring-neutral-500 ${
                         done === true
                           ? "bg-neutral-100"
-                          : done === false
-                          ? "bg-neutral-800 border border-neutral-700"
-                          : "bg-neutral-850 border border-neutral-800 opacity-40"
+                          : "bg-neutral-800 border border-neutral-700 opacity-50"
                       }`}
                       title={`${h.name} — ${formatHeader(d)}`}
                     />
