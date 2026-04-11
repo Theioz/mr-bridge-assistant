@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Sync Renpho body composition data into memory/fitness_log.md Baseline Metrics.
+DEPRECATED — replaced by GE CS10G smart scale via sync-fitbit.py (body composition)
+and sync-googlefit.py (weight). Retired as of 2026-04-11 (#68).
+
+This script remains for emergency manual CSV re-import only. It writes to the
+legacy memory/fitness_log.md markdown file, not Supabase.
+
+Original purpose: Sync Renpho CSV export into memory/fitness_log.md Baseline Metrics.
 Usage: python3 scripts/sync-renpho.py <path-to-renpho-export.csv>
-
-How to export from Renpho:
-  Renpho app → Me (bottom tab) → Export Data → select date range → export CSV
-  Drop the exported CSV file anywhere and pass its path as the argument.
-
-Extracts: date, weight, body fat %, BMI, muscle mass, visceral fat
-Appends new rows to the Baseline Metrics table (deduplicates by date).
 """
 
 import sys

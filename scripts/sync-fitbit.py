@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """
-Sync Fitbit workout sessions to Supabase (workout_sessions table).
+Sync Fitbit workout sessions + body composition to Supabase.
+  workout_sessions — activity/HR data (unchanged)
+  fitness_log      — body weight, body fat %, BMI (source: "fitbit_body")
+
 Usage:
   python3 scripts/sync-fitbit.py             # last 7 days
   python3 scripts/sync-fitbit.py --days 30
   python3 scripts/sync-fitbit.py --yes       # skip confirmation
-  python3 scripts/sync-fitbit.py --setup     # first-time OAuth setup
+  python3 scripts/sync-fitbit.py --probe     # print body data without writing
+  python3 scripts/sync-fitbit.py --setup     # first-time OAuth setup (required when scope changes)
 
-First-time setup:
+First-time setup / re-auth after scope change:
   1. Register app at https://dev.fitbit.com/apps/new
      - Application type: Personal
      - Redirect URI: http://localhost:8080
   2. Run: python3 scripts/sync-fitbit.py --setup
   3. Paste FITBIT_CLIENT_ID, FITBIT_CLIENT_SECRET, FITBIT_REFRESH_TOKEN into .env
+
+Note: The 'weight' scope was added to fetch body composition data from the GE CS10G
+smart scale. If body endpoints return 401, re-run with --setup to get a new token.
 
 Requires: python-dotenv, supabase
   pip3 install python-dotenv supabase
@@ -45,7 +52,7 @@ FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
 FITBIT_API_BASE = "https://api.fitbit.com"
 REDIRECT_URI = "http://localhost:8080"
-SCOPES = "activity heartrate"
+SCOPES = "activity heartrate weight"
 
 
 # ── OAuth helpers ──────────────────────────────────────────────────────────────
@@ -227,13 +234,88 @@ def existing_keys(client) -> set:
     return {f"{r['date']}|{r['start_time']}|{r['activity']}" for r in rows}
 
 
+# ── Body composition ───────────────────────────────────────────────────────────
+
+def fetch_body_data(access_token, start_date, end_date, raw=False):
+    """Fetch weight, body fat %, and BMI from Fitbit for the given date range.
+
+    Actual Fitbit API response structure (verified from live API):
+      GET /1/user/-/body/log/weight/date/{start}/{end}.json
+        → { "weight": [ { "date": "YYYY-MM-DD", "weight": <float_kg_or_lb>,
+                           "fat": <float_%>, "bmi": <float>, "time": "HH:MM:SS", ... } ] }
+      Fat % is included inline in the weight entries — no separate fat endpoint needed.
+
+    Weight unit: Fitbit returns weight in the user's profile unit (lbs or kg).
+    FITBIT_WEIGHT_UNIT env var overrides: set to "lbs" if your Fitbit profile is imperial,
+    "kg" if metric. Defaults to "kg" (metric) if not set.
+
+    Returns a list of dicts ready to upsert into fitness_log.
+    If raw=True, prints raw API responses and returns [].
+    """
+    # Determine unit. Profile endpoint requires 'profile' scope (not included in 'weight'),
+    # so we rely on FITBIT_WEIGHT_UNIT env var. Default: kg (metric).
+    unit = os.environ.get("FITBIT_WEIGHT_UNIT", "lbs").lower().strip()
+    is_lbs = unit == "lbs"
+
+    try:
+        weight_data = fitbit_get(access_token, f"/1/user/-/body/log/weight/date/{start_date}/{end_date}.json")
+    except SystemExit:
+        print("[sync-fitbit] Could not fetch body weight. If you see 401, re-run with --setup to add 'weight' scope.")
+        return []
+
+    if raw:
+        print(f"\n[raw] /body/log/weight response:\n{json.dumps(weight_data, indent=2)}")
+        return []
+
+    rows = []
+    # Top-level key is "weight" (not "body-weight")
+    for entry in weight_data.get("weight", []):
+        dt = entry.get("date")
+        weight_val = entry.get("weight")
+        if not dt or weight_val is None:
+            continue
+        row: dict = {"date": dt}
+        row["weight_lb"] = round(weight_val if is_lbs else float(weight_val) * 2.20462, 1)
+        fat = entry.get("fat")
+        if fat is not None:
+            row["body_fat_pct"] = round(float(fat), 1)
+        bmi = entry.get("bmi")
+        if bmi is not None:
+            row["bmi"] = round(float(bmi), 1)
+        rows.append(row)
+
+    return rows
+
+
+def existing_body_dates(client) -> set:
+    rows = client.table("fitness_log").select("date").eq("source", "fitbit_body").execute().data
+    return {r["date"] for r in rows}
+
+
+def print_body_probe(rows):
+    if not rows:
+        print("[probe] No body composition data returned from Fitbit for this date range.")
+        return
+    print(f"\n{'Date':<12} {'Weight':>10} {'Fat%':>7} {'BMI':>6}")
+    print("-" * 40)
+    for r in sorted(rows, key=lambda x: x["date"]):
+        print(
+            f"{r['date']:<12}"
+            f" {str(r.get('weight_lb', 'None')) + ' lb' if r.get('weight_lb') is not None else 'None':>10}"
+            f" {str(r.get('body_fat_pct', 'None')) + '%' if r.get('body_fat_pct') is not None else 'None':>7}"
+            f" {str(r.get('bmi', 'None')):>6}"
+        )
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync Fitbit workouts to Supabase")
+    parser = argparse.ArgumentParser(description="Sync Fitbit workouts + body composition to Supabase")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--setup", action="store_true", help="Run first-time OAuth setup")
     parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
+    parser.add_argument("--probe", action="store_true", help="Print body data without writing to Supabase")
+    parser.add_argument("--raw", action="store_true", help="Dump raw API responses for body endpoints (implies --probe)")
     args = parser.parse_args()
 
     if args.setup:
@@ -256,21 +338,50 @@ def main():
     start_str = start.strftime("%Y-%m-%d")
     end_str = end.strftime("%Y-%m-%d")
 
+    # ── Body composition ───────────────────────────────────────────────────────
+    print(f"[sync-fitbit] Fetching body composition {start_str} to {end_str}...")
+    body_rows = fetch_body_data(access_token, start_str, end_str, raw=args.raw)
+
+    if args.probe or args.raw:
+        print(f"\n[probe] Fitbit returned {len(body_rows)} date(s) with body data:")
+        print_body_probe(body_rows)
+        return
+
+    # ── Workouts ───────────────────────────────────────────────────────────────
     print(f"[sync-fitbit] Fetching workouts {start_str} to {end_str}...")
     workout_rows = fetch_workouts(access_token, start_str, end_str)
 
     client = get_client()
+
+    # Write body composition
+    existing_body = existing_body_dates(client)
+    new_body = [r for r in body_rows if r["date"] not in existing_body]
+
+    if new_body:
+        print(f"\nNew body composition entries ({len(new_body)}):")
+        for r in sorted(new_body, key=lambda x: x["date"]):
+            parts = []
+            if r.get("weight_lb") is not None:
+                parts.append(f"weight={r['weight_lb']} lb")
+            if r.get("body_fat_pct") is not None:
+                parts.append(f"fat={r['body_fat_pct']}%")
+            if r.get("bmi") is not None:
+                parts.append(f"BMI={r['bmi']}")
+            print(f"  {r['date']} — {' | '.join(parts) if parts else 'no fields'}")
+
+    # Write workouts
     existing = existing_keys(client)
     new_workouts = [r for r in workout_rows if r["_key"] not in existing]
 
-    if not new_workouts:
-        print("[sync-fitbit] No new workout data.")
-        return
+    if new_workouts:
+        print(f"\nNew workout entries ({len(new_workouts)}):")
+        for r in new_workouts:
+            hr_info = f" | Avg HR: {r['avg_hr']}" if r["avg_hr"] else ""
+            print(f"  {r['date']} {r['start_time']} — {r['activity']} ({r['duration_mins']} min, {r['calories']} cal{hr_info})")
 
-    print(f"\nNew workout entries ({len(new_workouts)}):")
-    for r in new_workouts:
-        hr_info = f" | Avg HR: {r['avg_hr']}" if r["avg_hr"] else ""
-        print(f"  {r['date']} {r['start_time']} — {r['activity']} ({r['duration_mins']} min, {r['calories']} cal{hr_info})")
+    if not new_body and not new_workouts:
+        print("[sync-fitbit] No new data.")
+        return
 
     if not args.yes:
         confirm = input("\nWrite to Supabase? [y/N] ").strip().lower()
@@ -278,11 +389,20 @@ def main():
             print("Aborted.")
             return
 
-    # Strip the internal dedup key before inserting
-    sb_rows = [{k: v for k, v in r.items() if k != "_key"} for r in new_workouts]
-    written = upsert(client, "workout_sessions", sb_rows)
-    log_sync(client, "fitbit", "ok", written)
-    print(f"[sync-fitbit] Synced {written} row(s) to Supabase.")
+    body_written = 0
+    if new_body:
+        sb_body = [{**r, "source": "fitbit_body"} for r in sorted(new_body, key=lambda x: x["date"])]
+        body_written = upsert(client, "fitness_log", sb_body)
+        log_sync(client, "fitbit_body", "ok", body_written)
+        print(f"[sync-fitbit] Synced {body_written} body composition row(s) to fitness_log.")
+
+    workout_written = 0
+    if new_workouts:
+        # Strip the internal dedup key before inserting
+        sb_rows = [{k: v for k, v in r.items() if k != "_key"} for r in new_workouts]
+        workout_written = upsert(client, "workout_sessions", sb_rows)
+        log_sync(client, "fitbit", "ok", workout_written)
+        print(f"[sync-fitbit] Synced {workout_written} workout row(s) to workout_sessions.")
 
 
 if __name__ == "__main__":
