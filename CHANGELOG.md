@@ -8,6 +8,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `.env.example` — root-level environment variable template covering Supabase, Google OAuth, Oura, Fitbit, ntfy.sh, and voice interface; replaces inline README block
+- `web/.env.local.example` — Next.js web app environment variable template; documents `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, Google OAuth, and `USER_TIMEZONE` (previously undocumented)
+
+### Changed
+- `web/src/app/api/chat/route.ts` — added `providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } }` to `streamText` call; system prompt (~600 tokens) is now cached for 5 minutes, reducing input token cost on every message after the first in an active session
+- `web/src/app/api/chat/route.ts` (`get_email_body` tool) — email body now appends `[...email truncated — N more characters not shown]` when content exceeds 4000 chars; Claude can no longer reason about truncated emails as if they are complete
+- `scripts/sync-fitbit.py` (`update_env_token`) — token rotation now writes to `.env.tmp` first, then uses `Path.replace()` for an atomic rename; prevents `.env` corruption if the process is interrupted mid-write
+
+---
+
+### Added
 - `web/src/app/(protected)/habits/page.tsx` — `addHabit` and `archiveHabit` server actions; range-aware data fetching via `?range=7|30|90` search param (default 30); wires up `HabitTodaySection`, `HabitRangeToggle`; closes #45
 - `web/src/components/habits/habit-today-section.tsx` — client component managing manage-mode and add-form state; renders per-habit archive buttons in manage mode; inline add form (emoji, name, category)
 - `web/src/components/habits/habit-range-toggle.tsx` — 7d / 30d / 90d pill selector; updates `?range` URL param via Next.js router

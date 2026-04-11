@@ -118,13 +118,16 @@ def refresh_access_token(client_id, client_secret, refresh_token):
 
 def update_env_token(new_token):
     env_path = ROOT / ".env"
+    tmp_path = ROOT / ".env.tmp"
     text = env_path.read_text()
     lines = text.split("\n")
     for i, line in enumerate(lines):
         if line.startswith("FITBIT_REFRESH_TOKEN="):
             lines[i] = f"FITBIT_REFRESH_TOKEN={new_token}"
             break
-    env_path.write_text("\n".join(lines))
+    # Write to temp file first, then atomically replace — prevents corruption on interrupt
+    tmp_path.write_text("\n".join(lines))
+    tmp_path.replace(env_path)
 
 
 def setup_oauth():

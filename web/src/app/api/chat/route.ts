@@ -425,15 +425,20 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
             }
           }
 
-          const truncated = body ? body.slice(0, 4000) : null;
+          const isTruncated = body ? body.length > 4000 : false;
+          const bodyText = body
+            ? isTruncated
+              ? body.slice(0, 4000) + `\n\n[...email truncated — ${body.length - 4000} more characters not shown]`
+              : body
+            : null;
 
           return {
             id: message_id,
             from: getHeader("From"),
             subject: getHeader("Subject"),
             date: getHeader("Date"),
-            body: truncated ?? "(No readable body found)",
-            truncated: body ? body.length > 4000 : false,
+            body: bodyText ?? "(No readable body found)",
+            truncated: isTruncated,
           };
         } catch (err) {
           return { error: err instanceof Error ? err.message : "Failed to fetch email body" };
@@ -589,6 +594,9 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
   const result = streamText({
     model: wrapLanguageModel({ model: anthropic("claude-sonnet-4-6"), middleware: retryOnOverload }),
     system: systemPrompt,
+    providerOptions: {
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    },
     messages: [...contextMessages, ...cleanMessages],
     tools,
     maxSteps: 5,

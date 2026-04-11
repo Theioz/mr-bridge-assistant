@@ -62,6 +62,7 @@ mr-bridge-assistant/
 ├── CLAUDE.md                              # Session bootstrap (loads rules via @path)
 ├── CHANGELOG.md
 ├── README.md
+├── .env.example                           # Root env var template (Python scripts)
 ├── .gitignore
 ├── .mcp.json                              # MCP servers: DeepWiki (Google Calendar + Gmail via claude.ai hosted MCP)
 ├── .gitmodules
@@ -76,6 +77,7 @@ mr-bridge-assistant/
 │       └── 20260411000001_recovery_metrics_extended.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
+│   ├── .env.local.example                 # Web app env var template (Supabase, Anthropic, Google, timezone)
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── (protected)/               # Auth-gated pages
@@ -201,29 +203,17 @@ supabase db push
 ```
 
 ### 3. Set up environment variables
-Create a `.env` file at the project root:
+Two env files are required — one for Python scripts, one for the web app:
+
+```bash
+# Root — Python sync scripts
+cp .env.example .env
+
+# Web app — Next.js (Vercel reads .env.local)
+cp web/.env.local.example web/.env.local
 ```
-# Supabase
-SUPABASE_URL=https://<your-project-ref>.supabase.co
-SUPABASE_ANON_KEY=<your-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 
-# Notifications
-NTFY_TOPIC=your-unique-topic   # e.g. mr-bridge-yourname-1234
-
-# Fitness integrations (see docs/fitness-tracker-setup.md)
-OURA_ACCESS_TOKEN=
-FITBIT_CLIENT_ID=
-FITBIT_CLIENT_SECRET=
-FITBIT_REFRESH_TOKEN=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REFRESH_TOKEN=
-
-# Voice interface only
-ANTHROPIC_API_KEY=
-PICOVOICE_ACCESS_KEY=
-```
+Fill in each value. See [docs/google-oauth-setup.md](docs/google-oauth-setup.md) for Google credentials, [docs/fitness-tracker-setup.md](docs/fitness-tracker-setup.md) for Oura/Fitbit, and [docs/notifications-setup.md](docs/notifications-setup.md) for `NTFY_TOPIC`.
 
 ### 4. Install Python dependencies
 ```bash
