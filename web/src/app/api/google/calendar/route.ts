@@ -32,7 +32,7 @@ export async function GET() {
     const timeMin = startOfTodayRFC3339();
     const timeMax = endOfTodayRFC3339();
 
-    // List all calendars so events from shared accounts (e.g. leung.ss.jason) are included
+    // List all calendars so events from shared/secondary accounts are included
     const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
     const calendars = calListRes.data.items ?? [];
 

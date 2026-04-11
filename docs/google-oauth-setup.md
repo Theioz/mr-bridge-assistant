@@ -20,7 +20,7 @@ These credentials are **not needed for the Claude Code CLI** (which uses claude.
 Download `credentials.json` from the OAuth client (Actions → Download JSON) and place it at the project root, then run:
 
 ```bash
-cd "/Users/jason/Code Projects/mr-bridge-assistant"
+cd /path/to/mr-bridge-assistant
 python3 - <<'EOF'
 import json
 from google_auth_oauthlib.flow import InstalledAppFlow

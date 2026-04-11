@@ -50,7 +50,7 @@ Optionally install ntfy-desktop for a unified cross-platform experience:
 Once any device is set up, test from your Mac terminal:
 
 ```bash
-cd "/Users/jason/Code Projects/mr-bridge-assistant"
+cd /path/to/mr-bridge-assistant
 bash scripts/notify.sh --title "Mr. Bridge" --message "Test notification"
 ```
 

@@ -23,6 +23,6 @@ Read today's habit log and fire a macOS push notification summarizing the day.
    - No entry for today: "No habits logged today."
 5. Run:
    ```bash
-   bash "/Users/jason/Code Projects/mr-bridge-assistant/scripts/notify.sh" --title "Mr. Bridge — Nightly Check-In" --message "<summary>"
+   bash scripts/notify.sh --title "Mr. Bridge — Nightly Check-In" --message "<summary>"
    ```
 6. Read only — do not write to any memory files.

@@ -68,7 +68,7 @@ Compute a weekly summary of habits, study time, and tasks. Output to terminal an
 
 8. Send push notification (headline only):
 ```bash
-bash "/Users/jason/Code Projects/mr-bridge-assistant/scripts/notify.sh" \
+bash scripts/notify.sh \
   --title "Mr. Bridge — Weekly Review" \
   --message "Habits X% | Workouts X/4 | Japanese Xmin"
 ```

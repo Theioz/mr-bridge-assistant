@@ -186,7 +186,7 @@ mr-bridge-assistant/
 
 ### 1. Clone the repo
 ```bash
-git clone --recurse-submodules https://github.com/Theioz/mr-bridge-assistant.git
+git clone --recurse-submodules https://github.com/<your-username>/mr-bridge-assistant.git
 cd mr-bridge-assistant
 ```
 
@@ -278,7 +278,7 @@ git checkout -b feature/<name>
 ```
 
 After implementation, open a PR — direct pushes to `main` are blocked by branch protection.
-Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-bridge-assistant/issues).
+Feature backlog is tracked via GitHub Issues in your fork.
 
 ## Web Interface
 
@@ -322,3 +322,7 @@ python voice/bridge_voice.py
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
+
+---
+
+<sub>Originally built by [Jason Leung](https://github.com/Theioz).</sub>
