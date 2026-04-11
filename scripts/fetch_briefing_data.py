@@ -8,6 +8,8 @@ Usage: python3 scripts/fetch_briefing_data.py
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -29,23 +31,160 @@ def main():
     yesterday = str(date.today() - timedelta(days=1))
     seven_days_ago = str(date.today() - timedelta(days=7))
 
-    # ── Profile ────────────────────────────────────────────────────────────────
-    profile_rows = client.table("profile").select("key,value").execute().data
-    profile = {r["key"]: r["value"] for r in profile_rows}
+    # ── Query functions (closures) ─────────────────────────────────────────────
 
+    def q_profile():
+        return client.table("profile").select("key,value").execute().data
+
+    def q_tasks():
+        return (
+            client.table("tasks")
+            .select("title,priority,due_date,status")
+            .eq("status", "active")
+            .order("due_date", desc=False)
+            .execute()
+            .data
+        )
+
+    def q_habit_registry():
+        return client.table("habit_registry").select("id,name").eq("active", True).execute().data
+
+    def q_habits():
+        return (
+            client.table("habits")
+            .select("habit_id,date,completed")
+            .gte("date", seven_days_ago)
+            .lte("date", today)
+            .execute()
+            .data
+        )
+
+    def q_fitness_log():
+        return (
+            client.table("fitness_log")
+            .select("date,weight_lb,body_fat_pct,bmi,muscle_mass_lb,visceral_fat,source")
+            .not_.is_("body_fat_pct", "null")
+            .order("date", desc=True)
+            .limit(2)
+            .execute()
+            .data
+        )
+
+    def q_workout_yesterday():
+        return (
+            client.table("workout_sessions")
+            .select("activity,duration_mins,calories,avg_hr,start_time")
+            .eq("date", yesterday)
+            .order("start_time")
+            .execute()
+            .data
+        )
+
+    def q_workout_today():
+        return (
+            client.table("workout_sessions")
+            .select("activity,duration_mins,calories,avg_hr,start_time")
+            .eq("date", today)
+            .order("start_time")
+            .execute()
+            .data
+        )
+
+    def q_recovery():
+        return (
+            client.table("recovery_metrics")
+            .select("*")
+            .order("date", desc=True)
+            .limit(1)
+            .execute()
+            .data
+        )
+
+    def q_study_log():
+        return (
+            client.table("study_log")
+            .select("date,subject,duration_mins,notes")
+            .gte("date", seven_days_ago)
+            .order("date", desc=True)
+            .execute()
+            .data
+        )
+
+    def q_meal_log():
+        return (
+            client.table("meal_log")
+            .select("date,meal_type,notes,recipe_id")
+            .gte("date", seven_days_ago)
+            .order("date", desc=True)
+            .execute()
+            .data
+        )
+
+    def q_recipes(recipe_ids: list):
+        return (
+            client.table("recipes")
+            .select("id,name")
+            .in_("id", recipe_ids)
+            .execute()
+            .data
+        )
+
+    # ── Parallel execution ─────────────────────────────────────────────────────
+
+    tier1 = {
+        "profile":            q_profile,
+        "tasks":              q_tasks,
+        "habit_registry":     q_habit_registry,
+        "fitness_log":        q_fitness_log,
+        "workout_yesterday":  q_workout_yesterday,
+        "workout_today":      q_workout_today,
+        "recovery":           q_recovery,
+        "study_log":          q_study_log,
+        "meal_log":           q_meal_log,
+    }
+
+    results: dict = {}
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        # Tier 1 — all 9 independent queries in parallel
+        futs = {pool.submit(fn): key for key, fn in tier1.items()}
+        for fut in as_completed(futs):
+            key = futs[fut]
+            try:
+                results[key] = fut.result()
+            except Exception as e:
+                print(f"[fetch_briefing_data] Warning: {key} query failed: {e}", file=sys.stderr)
+                results[key] = None
+
+        # Tier 2 — habits (depends on registry for formatting) + recipes (conditional)
+        tier2_futs: dict = {pool.submit(q_habits): "habits"}
+        recipe_ids = []
+        if results.get("meal_log"):
+            recipe_ids = list({m["recipe_id"] for m in results["meal_log"] if m.get("recipe_id")})
+        if recipe_ids:
+            tier2_futs[pool.submit(lambda ids=recipe_ids: q_recipes(ids))] = "recipes"
+        else:
+            results["recipes"] = []
+
+        for fut in as_completed(tier2_futs):
+            key = tier2_futs[fut]
+            try:
+                results[key] = fut.result()
+            except Exception as e:
+                print(f"[fetch_briefing_data] Warning: {key} query failed: {e}", file=sys.stderr)
+                results[key] = None
+
+    # ── Print sections (identical format, fixed order) ─────────────────────────
+
+    # Profile
+    profile_rows = results.get("profile") or []
+    profile = {r["key"]: r["value"] for r in profile_rows}
     print("## PROFILE")
     for k, v in profile.items():
         print(f"- {k}: {v}")
 
-    # ── Active Tasks ───────────────────────────────────────────────────────────
-    tasks = (
-        client.table("tasks")
-        .select("title,priority,due_date,status")
-        .eq("status", "active")
-        .order("due_date", desc=False)
-        .execute()
-        .data
-    )
+    # Active Tasks
+    tasks = results.get("tasks") or []
     print("\n## ACTIVE TASKS")
     if tasks:
         for t in tasks:
@@ -54,37 +193,25 @@ def main():
     else:
         print("- None")
 
-    # ── Habits — last 7 days ───────────────────────────────────────────────────
-    registry = client.table("habit_registry").select("id,name").eq("active", True).execute().data
+    # Habits — last 7 days
+    registry = results.get("habit_registry") or []
     habit_names = {r["id"]: r["name"] for r in registry}
+    habit_logs = results.get("habits") or []
 
-    habit_logs = (
-        client.table("habits")
-        .select("habit_id,date,completed")
-        .gte("date", seven_days_ago)
-        .lte("date", today)
-        .execute()
-        .data
-    )
-
-    # Build {habit_name: [True/False/None for each of last 7 days]}
-    from collections import defaultdict
     habit_by_name: dict[str, dict[str, bool]] = defaultdict(dict)
     for row in habit_logs:
         name = habit_names.get(row["habit_id"], row["habit_id"])
         habit_by_name[name][row["date"]] = row["completed"]
 
     dates_7 = [(date.today() - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
-
     print("\n## HABITS — LAST 7 DAYS")
-    print(f"{'Habit':<20} " + "  ".join(d[5:] for d in dates_7))  # MM-DD headers
-    for name in [r["name"] for r in registry]:
+    print(f"{'Habit':<20} " + "  ".join(d[5:] for d in dates_7))
+    for row in registry:
+        name = row["name"]
         row_data = habit_by_name.get(name, {})
-        cells = []
         streak = 0
         for d in reversed(dates_7):
-            val = row_data.get(d)
-            if val is True:
+            if row_data.get(d) is True:
                 streak += 1
             else:
                 break
@@ -94,17 +221,8 @@ def main():
             day_cells.append("Y" if val is True else ("N" if val is False else "—"))
         print(f"{name:<20} " + "    ".join(day_cells) + f"  (streak: {streak})")
 
-    # ── Body Composition — last 2 Renpho entries ──────────────────────────────
-    body_comp = (
-        client.table("fitness_log")
-        .select("date,weight_lb,body_fat_pct,bmi,muscle_mass_lb,visceral_fat,source")
-        .not_.is_("body_fat_pct", "null")
-        .order("date", desc=True)
-        .limit(2)
-        .execute()
-        .data
-    )
-
+    # Body Composition
+    body_comp = results.get("fitness_log") or []
     print("\n## BODY COMPOSITION (last Renpho entry)")
     if body_comp:
         latest = body_comp[0]
@@ -127,16 +245,10 @@ def main():
     else:
         print("No Renpho data available.")
 
-    # ── Workouts ───────────────────────────────────────────────────────────────
-    for label, day in [("YESTERDAY'S ACTIVITY", yesterday), ("TODAY'S ACTIVITY", today)]:
-        workouts = (
-            client.table("workout_sessions")
-            .select("activity,duration_mins,calories,avg_hr,start_time")
-            .eq("date", day)
-            .order("start_time")
-            .execute()
-            .data
-        )
+    # Workouts
+    for label, key in [("YESTERDAY'S ACTIVITY", "workout_yesterday"), ("TODAY'S ACTIVITY", "workout_today")]:
+        day = yesterday if key == "workout_yesterday" else today
+        workouts = results.get(key) or []
         print(f"\n## {label} ({day})")
         if workouts:
             for w in workouts:
@@ -145,15 +257,8 @@ def main():
         else:
             print("- None")
 
-    # ── Recovery ───────────────────────────────────────────────────────────────
-    recovery = (
-        client.table("recovery_metrics")
-        .select("*")
-        .order("date", desc=True)
-        .limit(1)
-        .execute()
-        .data
-    )
+    # Recovery
+    recovery = results.get("recovery") or []
     print("\n## RECOVERY (last night)")
     if recovery:
         r = recovery[0]
@@ -171,15 +276,8 @@ def main():
     else:
         print("No recovery data. Run: python3 scripts/sync-oura.py --yes")
 
-    # ── Study Log — recent ─────────────────────────────────────────────────────
-    study = (
-        client.table("study_log")
-        .select("date,subject,duration_mins,notes")
-        .gte("date", seven_days_ago)
-        .order("date", desc=True)
-        .execute()
-        .data
-    )
+    # Study Log
+    study = results.get("study_log") or []
     if study:
         print("\n## RECENT STUDY LOG")
         for s in study:
@@ -187,28 +285,12 @@ def main():
             notes = f" — {s['notes']}" if s.get("notes") else ""
             print(f"- {s['date']} | {s['subject']} | {dur}{notes}")
 
-    # ── Meal Log — last 7 days ─────────────────────────────────────────────────
-    meal_logs = (
-        client.table("meal_log")
-        .select("date,meal_type,notes,recipe_id")
-        .gte("date", seven_days_ago)
-        .order("date", desc=True)
-        .execute()
-        .data
-    )
+    # Meal Log
+    meal_logs = results.get("meal_log") or []
     if meal_logs:
-        # Fetch recipe names for any linked recipe_ids
-        recipe_ids = list({m["recipe_id"] for m in meal_logs if m.get("recipe_id")})
         recipe_names: dict[str, str] = {}
-        if recipe_ids:
-            recipes = (
-                client.table("recipes")
-                .select("id,name")
-                .in_("id", recipe_ids)
-                .execute()
-                .data
-            )
-            recipe_names = {r["id"]: r["name"] for r in recipes}
+        for rec in (results.get("recipes") or []):
+            recipe_names[rec["id"]] = rec["name"]
 
         print("\n## RECENT MEALS (last 7 days)")
         for m in meal_logs:

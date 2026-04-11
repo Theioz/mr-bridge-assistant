@@ -23,22 +23,20 @@ After reading the briefing output, check the PROFILE section for a `name` key.
 ## Session Start Protocol
 Execute in this exact order:
 
-1. Run fitness sync scripts to pull fresh data into Supabase (silently, errors are non-fatal — proceed regardless):
+1. Run the fitness sync orchestrator (silently, errors are non-fatal — proceed regardless):
    ```bash
-   python3 scripts/sync-googlefit.py --yes
-   python3 scripts/sync-oura.py --yes
-   python3 scripts/sync-fitbit.py --yes
+   python3 scripts/run-syncs.py
    ```
+   This runs all three sync scripts (google_fit, oura, fitbit) in parallel and skips any source synced within the last 30 minutes.
 2. Fetch all briefing data from Supabase:
    ```bash
    python3 scripts/fetch_briefing_data.py
    ```
    Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, study log, and recent meals.
-3. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
-   — includes your primary calendar and any shared/secondary calendars — note the calendar/account source for each event
-3b. Fetch upcoming birthdays: call `List Calendar Events` for the next **7 days** (timeMin = today, timeMax = today+7 days). Filter for events whose title matches `'s birthday` (case-insensitive) or whose calendar name contains "birthday". For each match, compute days_until = event date − today (0 = today, 1 = tomorrow, etc.). Strip the "'s birthday" suffix when displaying the person's name.
-4. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
-   — note account source when surfacing emails; secondary accounts aggregated via POP3 are labeled (e.g. "Professional") in your primary inbox
+3. Issue the following three external fetches **in a single message turn as parallel tool calls** (they are independent — do not run them sequentially):
+   - **Calendar events**: `List Calendar Events` for today (primary + any shared/secondary calendars) — note calendar/account source for each event
+   - **Upcoming birthdays**: `List Calendar Events` for the next 7 days (timeMin = today, timeMax = today+7 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; strip "'s birthday" suffix for display
+   - **Important unread emails**: `Search Gmail Emails` — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline — note account source; secondary POP3 accounts are labeled (e.g. "Professional") in your primary inbox
 5. Deliver session briefing (format below)
 
 ## Session Briefing Format
