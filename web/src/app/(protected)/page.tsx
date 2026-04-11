@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
-import HabitsSummary from "@/components/dashboard/habits-summary";
+import { revalidatePath } from "next/cache";
+import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import TasksSummary from "@/components/dashboard/tasks-summary";
 import FitnessSummary from "@/components/dashboard/fitness-summary";
 import RecoverySummary from "@/components/dashboard/recovery-summary";
@@ -10,6 +11,16 @@ import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import type { HabitLog, HabitRegistry, Task, FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
 import { todayString, USER_TZ } from "@/lib/timezone";
+import { computeStreaks } from "@/lib/streaks";
+
+async function toggleHabit(habitId: string, date: string, completed: boolean) {
+  "use server";
+  const supabase = await createClient();
+  await supabase
+    .from("habits")
+    .upsert({ habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
+  revalidatePath("/");
+}
 
 function getGreeting(tz: string): string {
   const hour = parseInt(
@@ -20,13 +31,6 @@ function getGreeting(tz: string): string {
   return "Good evening";
 }
 
-function readinessBadgeClass(score: number | null): string {
-  if (score == null) return "";
-  if (score >= 80) return "border-green-800 text-green-400 bg-green-950/40";
-  if (score >= 60) return "border-amber-800 text-amber-400 bg-amber-950/40";
-  return "border-red-800 text-red-400 bg-red-950/40";
-}
-
 export default async function DashboardPage() {
   const supabase = await createClient();
   const today = todayString();
@@ -34,6 +38,7 @@ export default async function DashboardPage() {
   const [
     habitsResult,
     registryResult,
+    allHabitsResult,
     tasksResult,
     fitnessResult,
     prevFitnessResult,
@@ -43,6 +48,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from("habits").select("*").eq("date", today),
     supabase.from("habit_registry").select("id, name, emoji").eq("active", true),
+    supabase.from("habits").select("habit_id, date").eq("completed", true),
     supabase.from("tasks").select("*").eq("status", "active"),
     supabase
       .from("fitness_log")
@@ -80,7 +86,8 @@ export default async function DashboardPage() {
 
   const todayHabits = (habitsResult.data ?? []) as HabitLog[];
   const habitRegistry = (registryResult.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji">[];
-  const totalHabits = habitRegistry.length;
+  const allCompletedHabits = (allHabitsResult.data ?? []) as { habit_id: string; date: string }[];
+  const habitStreaks = computeStreaks(allCompletedHabits, today);
   const tasks = (tasksResult.data ?? []) as Task[];
   const latestFitness = fitnessResult.data as FitnessLog | null;
   const prevFitness = prevFitnessResult.data as FitnessLog | null;
@@ -102,28 +109,27 @@ export default async function DashboardPage() {
       <FunFact />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-100">{greeting}</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
-        </div>
-        {recovery?.readiness != null && (
-          <span className={`text-xs font-[family-name:var(--font-mono)] px-2.5 py-1 rounded-lg border ${readinessBadgeClass(recovery.readiness)}`}>
-            Readiness {recovery.readiness}
-          </span>
-        )}
+      <div>
+        <h1 className="text-xl font-semibold text-neutral-100">{greeting}</h1>
+        <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
       </div>
 
       {/* Bento grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recovery — 2/3 width */}
+        {/* Recovery detail — 2/3 width */}
         <div className="lg:col-span-2">
           <RecoverySummary recovery={recovery} trends={recoveryTrends} />
         </div>
 
-        {/* Right sidebar: Habits + Tasks stacked */}
+        {/* Right sidebar: Habits check-in + Tasks stacked */}
         <div className="flex flex-col gap-4">
-          <HabitsSummary habits={todayHabits} total={totalHabits} registry={habitRegistry} />
+          <HabitsCheckin
+            registry={habitRegistry}
+            todayLogs={todayHabits}
+            streaks={habitStreaks}
+            toggleAction={toggleHabit}
+            date={today}
+          />
           <TasksSummary tasks={tasks} />
         </div>
 
