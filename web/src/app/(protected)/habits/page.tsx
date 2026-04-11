@@ -100,7 +100,7 @@ export default async function HabitsPage({
               <HabitRangeToggle current={range} />
             </Suspense>
           </div>
-          <HabitHistory habits={habits} logs={historyLogs} dates={historyDates} range={range} />
+          <HabitHistory habits={habits} logs={historyLogs} dates={historyDates} range={range} toggleAction={toggleHabit} />
         </section>
       )}
     </div>
