@@ -17,16 +17,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `web/src/components/journal/journal-history.tsx` — past journal entries list grouped by date with prompt labels
 - `supabase/migrations/20260411000000_add_journal_entries.sql` — `journal_entries` table: `date` (UNIQUE), `responses` (JSONB keyed by prompt slug), `free_write`, `metadata`
 - `.claude/agents/journal-reminder.md` — daily 7 PM reminder agent; checks Supabase for today's entry; sends ntfy.sh notification only if not yet journaled; registered as a remote trigger (`trig_01DHh8vJ1NjGcA9y512bwfKy`) firing at 19:00 PDT
+- `docs/gmail-multi-account.md` — setup guide for professional email aggregation via POP3 + App Password; explains Gmail label ID resolution and Calendar sharing steps; closes #11
+- `web/src/components/dashboard/recovery-trends.tsx` — HRV/Readiness combo line chart + stacked sleep bar chart (Recharts, 14-day window); displayed full-width above the dashboard grid; closes #35
+- `web/src/components/dashboard/inline-sparkline.tsx` — mini Recharts sparkline used inside Recovery and Fitness summary cards
 
 ### Changed
 - `web/src/components/nav.tsx` — added Journal nav item with `BookOpen` icon pointing to `/journal`
-- `web/src/lib/types.ts` — added `JournalEntry` and `JournalResponses` interfaces
+- `web/src/lib/types.ts` — added `JournalEntry` and `JournalResponses` interfaces; `RecoveryMetrics` extended with `light_hrs`, `steps`, `activity_score`, `spo2_avg`, `body_temp_delta`
 - `web/src/app/(protected)/layout.tsx` — `max-w-4xl` → `max-w-6xl mx-auto`; centers dashboard content on wide viewports and gives the 3-col bento grid more breathing room; closes #41
 - `web/src/components/dashboard/fun-fact.tsx` — moved from bottom ambient strip to top banner; restyled to `bg-neutral-900 border border-neutral-800 rounded-lg` container
+- `scripts/sync-oura.py` — extended to pull all available Oura API fields: `light_hrs`, `steps`, `activity_score`, `spo2_avg`, `body_temp_delta` as dedicated columns; `awake_hrs`, `efficiency`, `latency_mins`, `avg_breath`, `avg_hr_sleep`, `restless_periods`, `total_calories`, `stress`, `resilience`, `vo2_max` stored in `metadata` JSONB; graceful 404 handling for optional endpoints (`daily_spo2`, `daily_stress`, `daily_resilience`, `vo2_max`); closes #34
+- `supabase/migrations/20260411000001_recovery_metrics_extended.sql` — 5 new columns added to `recovery_metrics`: `light_hrs`, `steps`, `activity_score`, `spo2_avg`, `body_temp_delta`
+- `web/src/app/api/google/calendar/route.ts` — queries all calendars (not just primary) so shared calendar events surface; adds `calendarName` + `isPrimary` fields to response; `toLocaleTimeString` now passes `timeZone: USER_TZ` (fixes events displaying in UTC on Vercel); closes #11, closes #44
+- `web/src/app/api/google/gmail/route.ts` — adds `account` field to `EmailSummary`; fetches full label list and resolves `"Professional"` label name → opaque label ID before checking (Gmail API returns `Label_XXXXXXXXXX` IDs, not display names — previous string match was never matching); closes #11, fixes #39
+- `web/src/components/dashboard/important-emails.tsx` — shows `work` badge on emails from the professional account
+- `web/src/components/dashboard/schedule-today.tsx` — shows `calendarName` for non-primary calendar events; past events dimmed, `now` divider between past and upcoming
+- `web/src/app/(protected)/page.tsx` — bento grid 3-col lg layout; dynamic greeting (morning/afternoon/evening) + readiness badge in header; recovery card full-width above grid; fetches 14-day recovery trend data in parallel; recovery query filters `avg_hrv IS NOT NULL` to show last complete sync record, not today's partial row
+- `web/src/components/dashboard/recovery-summary.tsx` — large readiness/sleep scores (3.25rem/2.5rem), colored accent bar, inline HRV sparkline, status banner
+- `web/src/components/dashboard/recovery-trends.tsx` — chart height 100px → 160px; animations enabled
+- `web/src/components/dashboard/habits-summary.tsx` — individual per-habit pills (green=done, dim=pending) using habit registry join
+- `web/src/components/dashboard/tasks-summary.tsx` — shows top 3 task names with priority-colored left borders + N more count
+- `web/src/components/dashboard/fitness-summary.tsx` — TrendingDown/TrendingUp icons on weight and body fat delta values
+- `.claude/rules/mr-bridge-rules.md` — session protocol steps 4+5 updated with multi-account coverage notes for Gmail and Calendar
 
 ### Fixed
 - Added `export const dynamic = "force-dynamic"` to all 5 protected pages (`/`, `/fitness`, `/habits`, `/tasks`, `/chat`) — prevents Next.js data cache from serving stale Supabase responses on page refresh
 - Added `export const dynamic = "force-dynamic"` to `web/src/app/api/fun-fact/route.ts` — Next.js was caching the route response, preventing the daily date check and AI generation from running; fun fact now refreshes each day
+- `web/src/app/api/google/gmail/route.ts` — professional account detection was silently broken; Gmail label IDs are opaque (`Label_XXXXXXXXXX`), not display names — now resolves label name → ID via the labels list endpoint before filtering
 
 ---
 

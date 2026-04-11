@@ -149,7 +149,8 @@ mr-bridge-assistant/
 ├── docs/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
 │   ├── fitness-tracker-setup.md           # Google Fit, Oura, Fitbit, Renpho setup
-│   └── google-oauth-setup.md             # OAuth token setup + refresh guide
+│   ├── google-oauth-setup.md             # OAuth token setup + refresh guide
+│   └── gmail-multi-account.md            # POP3 aggregation + Calendar sharing setup (App Password, label ID resolution)
 │
 ├── memory/                                # Local files (gitignored, archived originals)
 │   ├── meal_log.md                        # Recipes — read locally during briefing; data also in Supabase `recipes` table
@@ -283,7 +284,7 @@ Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-brid
 
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Dashboard** — Fun Fact (Claude Haiku), Schedule Today (Google Calendar), Important Emails (Gmail), Recovery & Sleep + Trends (Oura), Fitness Snapshot, Habits, Tasks, Recent Chat
+- **Dashboard** — Bento grid (3-col lg): dynamic greeting + readiness badge header; Fun Fact top banner (Claude Haiku); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Fitness Snapshot with delta icons; Habit pills; Task list with priority colors
 - **Chat** — streams responses from Claude Sonnet with markdown rendering
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
