@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
-import { startOfTodayRFC3339, endOfTodayRFC3339 } from "@/lib/timezone";
+import { startOfTodayRFC3339, endOfTodayRFC3339, USER_TZ } from "@/lib/timezone";
 import { getGoogleAuthClient } from "@/lib/google-auth";
 
 export interface CalendarEvent {
@@ -19,6 +19,7 @@ function formatTime(dateTimeStr: string | null | undefined, dateStr: string | nu
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: USER_TZ,
   });
 }
 
