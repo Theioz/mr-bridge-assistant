@@ -16,7 +16,7 @@ import json
 import os
 import sys
 import urllib.error
-import urllib.request  # used for Request construction
+import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -28,26 +28,33 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client, upsert, log_sync, urlopen_with_retry
 
 
-def oura_get(endpoint, start_date, end_date):
+def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = True) -> dict | None:
+    """Fetch an Oura v2 endpoint. Returns None (instead of exiting) when required=False and a 4xx occurs."""
     token = os.environ.get("OURA_ACCESS_TOKEN", "")
     if not token:
         print("[error] OURA_ACCESS_TOKEN not set in .env")
         sys.exit(1)
-    url = f"https://api.ouraring.com/v2/usercollection/{endpoint}?start_date={start_date}&end_date={end_date}"
+    url = (
+        f"https://api.ouraring.com/v2/usercollection/{endpoint}"
+        f"?start_date={start_date}&end_date={end_date}"
+    )
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
     try:
         return urlopen_with_retry(req)
     except urllib.error.HTTPError as e:
+        if not required and e.code in (400, 403, 404, 422):
+            print(f"[info] Oura {endpoint} not available ({e.code}) — skipping")
+            return None
         print(f"[error] Oura API {endpoint} returned {e.code}: {e.read().decode()}")
         sys.exit(1)
 
 
-def fmt_time(iso):
+def fmt_time(iso: str | None) -> str | None:
     """Extract HH:MM:SS from ISO datetime string for Postgres time column."""
     if not iso:
         return None
     try:
-        return iso[11:19]  # "HH:MM:SS"
+        return iso[11:19]
     except Exception:
         return None
 
@@ -58,39 +65,146 @@ def secs_to_hrs(seconds) -> float | None:
     return round(int(seconds) / 3600, 3)
 
 
-def fetch_sleep_detail(start, end) -> dict:
+def secs_to_mins(seconds) -> float | None:
+    if not seconds:
+        return None
+    return round(int(seconds) / 60, 1)
+
+
+# ---------------------------------------------------------------------------
+# Per-endpoint fetchers
+# ---------------------------------------------------------------------------
+
+def fetch_sleep_detail(start: str, end: str) -> dict:
+    """
+    Fetch detailed sleep sessions. Returns dict keyed by day with:
+      bedtime, bedtime_end, total_sleep_hrs, light_hrs, deep_hrs, rem_hrs,
+      awake_hrs, avg_hrv, resting_hr, avg_hr_sleep, avg_breath,
+      efficiency, latency_mins, restless_periods.
+    Only long_sleep sessions are used (main overnight sleep).
+    """
     data = oura_get("sleep", start, end)
-    result = {}
+    result: dict[str, dict] = {}
     for d in data.get("data", []):
-        if d.get("type") not in ("long_sleep", "sleep"):
+        if d.get("type") != "long_sleep":
             continue
         day = d.get("day")
         if not day:
             continue
         result[day] = {
-            "bedtime": fmt_time(d.get("bedtime_start")),
-            "total_sleep_hrs": secs_to_hrs(d.get("total_sleep_duration")),
-            "deep_hrs": secs_to_hrs(d.get("deep_sleep_duration")),
-            "rem_hrs": secs_to_hrs(d.get("rem_sleep_duration")),
-            "avg_hrv": int(round(d["average_hrv"])) if d.get("average_hrv") else None,
-            "resting_hr": d.get("lowest_heart_rate"),
+            "bedtime":          fmt_time(d.get("bedtime_start")),
+            "bedtime_end":      fmt_time(d.get("bedtime_end")),
+            "total_sleep_hrs":  secs_to_hrs(d.get("total_sleep_duration")),
+            "light_hrs":        secs_to_hrs(d.get("light_sleep_duration")),
+            "deep_hrs":         secs_to_hrs(d.get("deep_sleep_duration")),
+            "rem_hrs":          secs_to_hrs(d.get("rem_sleep_duration")),
+            "awake_hrs":        secs_to_hrs(d.get("awake_time")),
+            "avg_hrv":          int(round(d["average_hrv"])) if d.get("average_hrv") else None,
+            "resting_hr":       d.get("lowest_heart_rate"),
+            "avg_hr_sleep":     int(round(d["average_heart_rate"])) if d.get("average_heart_rate") else None,
+            "avg_breath":       round(d["average_breath"], 1) if d.get("average_breath") else None,
+            "efficiency":       d.get("efficiency"),
+            "latency_mins":     secs_to_mins(d.get("latency")),
+            "restless_periods": d.get("restless_periods"),
         }
     return result
 
 
-def fetch_readiness(start, end) -> dict:
+def fetch_readiness(start: str, end: str) -> tuple[dict, dict]:
+    """Returns (score_by_day, body_temp_delta_by_day)."""
     data = oura_get("daily_readiness", start, end)
-    return {d["day"]: d.get("score") for d in data.get("data", [])}
+    scores: dict[str, int | None] = {}
+    body_temp: dict[str, float | None] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        scores[day] = d.get("score")
+        body_temp[day] = d.get("temperature_deviation")
+    return scores, body_temp
 
 
-def fetch_sleep_scores(start, end) -> dict:
+def fetch_sleep_scores(start: str, end: str) -> dict:
     data = oura_get("daily_sleep", start, end)
-    return {d["day"]: d.get("score") for d in data.get("data", [])}
+    return {d["day"]: d.get("score") for d in data.get("data", []) if d.get("day")}
 
 
-def fetch_active_calories(start, end) -> dict:
+def fetch_activity(start: str, end: str) -> dict:
+    """Returns dict keyed by day with active_cal, steps, total_calories, activity_score."""
     data = oura_get("daily_activity", start, end)
-    return {d["day"]: d.get("active_calories") for d in data.get("data", [])}
+    result: dict[str, dict] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        result[day] = {
+            "active_cal":     d.get("active_calories"),
+            "steps":          d.get("steps"),
+            "total_cal":      d.get("total_calories"),
+            "activity_score": d.get("score"),
+        }
+    return result
+
+
+def fetch_spo2(start: str, end: str) -> dict:
+    """Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable."""
+    data = oura_get("daily_spo2", start, end, required=False)
+    if not data:
+        return {}
+    result: dict[str, float | None] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        spo2 = d.get("spo2_percentage") or {}
+        result[day] = spo2.get("average")
+    return result
+
+
+def fetch_stress(start: str, end: str) -> dict:
+    """Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional endpoint."""
+    data = oura_get("daily_stress", start, end, required=False)
+    if not data:
+        return {}
+    result: dict[str, dict] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        result[day] = {
+            "stress_high_mins":     secs_to_mins(d.get("stress_high")),
+            "stress_recovery_mins": secs_to_mins(d.get("recovery_high")),
+            "stress_day_summary":   d.get("day_summary"),
+        }
+    return result
+
+
+def fetch_resilience(start: str, end: str) -> dict:
+    """Returns dict keyed by day with resilience level string. Optional endpoint."""
+    data = oura_get("daily_resilience", start, end, required=False)
+    if not data:
+        return {}
+    result: dict[str, str | None] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        result[day] = d.get("level")
+    return result
+
+
+def fetch_vo2_max(start: str, end: str) -> dict:
+    """Returns dict keyed by day with VO2 max value. Optional endpoint."""
+    data = oura_get("vo2_max", start, end, required=False)
+    if not data:
+        return {}
+    result: dict[str, float | None] = {}
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        result[day] = d.get("vo2_max")
+    return result
 
 
 def existing_dates(client) -> set:
@@ -111,10 +225,14 @@ def main():
 
     print(f"[sync-oura] Fetching {start_str} to {end_str}...")
 
-    sleep_detail = fetch_sleep_detail(start_str, end_str)
-    readiness = fetch_readiness(start_str, end_str)
-    sleep_scores = fetch_sleep_scores(start_str, end_str)
-    active_cal = fetch_active_calories(start_str, end_str)
+    sleep_detail      = fetch_sleep_detail(start_str, end_str)
+    readiness, body_temp = fetch_readiness(start_str, end_str)
+    sleep_scores      = fetch_sleep_scores(start_str, end_str)
+    activity          = fetch_activity(start_str, end_str)
+    spo2              = fetch_spo2(start_str, end_str)
+    stress            = fetch_stress(start_str, end_str)
+    resilience        = fetch_resilience(start_str, end_str)
+    vo2               = fetch_vo2_max(start_str, end_str)
 
     all_dates = sorted(set(readiness) | set(sleep_detail))
 
@@ -124,17 +242,28 @@ def main():
 
     client = get_client()
     existing = existing_dates(client)
-    new_dates = [d for d in all_dates if d not in existing]
+    new_dates    = [d for d in all_dates if d not in existing]
     update_dates = [d for d in all_dates if d in existing]
 
     print(f"\nRecovery entries to write ({len(new_dates)} new, {len(update_dates)} update):")
     for d in all_dates:
-        sd = sleep_detail.get(d, {})
+        sd  = sleep_detail.get(d, {})
+        act = activity.get(d, {})
         tag = "NEW" if d in new_dates else "UPD"
         print(
-            f"  [{tag}] {d} — Readiness: {readiness.get(d)} | Sleep: {sleep_scores.get(d)} | "
-            f"Total: {sd.get('total_sleep_hrs')}h | HRV: {sd.get('avg_hrv')}ms | "
-            f"RHR: {sd.get('resting_hr')} | Active Cal: {active_cal.get(d)}"
+            f"  [{tag}] {d} — "
+            f"Readiness: {readiness.get(d)} | "
+            f"Sleep: {sleep_scores.get(d)} | "
+            f"Total: {sd.get('total_sleep_hrs')}h | "
+            f"Light: {sd.get('light_hrs')}h | "
+            f"Deep: {sd.get('deep_hrs')}h | "
+            f"REM: {sd.get('rem_hrs')}h | "
+            f"HRV: {sd.get('avg_hrv')}ms | "
+            f"RHR: {sd.get('resting_hr')} | "
+            f"SpO2: {spo2.get(d)} | "
+            f"Steps: {act.get('steps')} | "
+            f"Active Cal: {act.get('active_cal')} | "
+            f"VO2: {vo2.get(d)}"
         )
 
     if not args.yes:
@@ -145,19 +274,56 @@ def main():
 
     sb_rows = []
     for d in all_dates:
-        sd = sleep_detail.get(d, {})
+        sd  = sleep_detail.get(d, {})
+        act = activity.get(d, {})
+        st  = stress.get(d, {})
+
+        meta: dict = {}
+        if sd.get("bedtime_end"):
+            meta["bedtime_end"] = sd["bedtime_end"]
+        if sd.get("awake_hrs") is not None:
+            meta["awake_hrs"] = sd["awake_hrs"]
+        if sd.get("efficiency") is not None:
+            meta["sleep_efficiency"] = sd["efficiency"]
+        if sd.get("latency_mins") is not None:
+            meta["latency_mins"] = sd["latency_mins"]
+        if sd.get("avg_breath") is not None:
+            meta["avg_breath"] = sd["avg_breath"]
+        if sd.get("avg_hr_sleep") is not None:
+            meta["avg_hr_sleep"] = sd["avg_hr_sleep"]
+        if sd.get("restless_periods") is not None:
+            meta["restless_periods"] = sd["restless_periods"]
+        if act.get("total_cal") is not None:
+            meta["total_calories"] = act["total_cal"]
+        if st.get("stress_high_mins") is not None:
+            meta["stress_high_mins"] = st["stress_high_mins"]
+        if st.get("stress_recovery_mins") is not None:
+            meta["stress_recovery_mins"] = st["stress_recovery_mins"]
+        if st.get("stress_day_summary"):
+            meta["stress_day_summary"] = st["stress_day_summary"]
+        if resilience.get(d):
+            meta["resilience_level"] = resilience[d]
+        if vo2.get(d) is not None:
+            meta["vo2_max"] = vo2[d]
+
         sb_rows.append({
-            "date": d,
-            "bedtime": sd.get("bedtime"),
+            "date":            d,
+            "bedtime":         sd.get("bedtime"),
             "total_sleep_hrs": sd.get("total_sleep_hrs"),
-            "deep_hrs": sd.get("deep_hrs"),
-            "rem_hrs": sd.get("rem_hrs"),
-            "avg_hrv": sd.get("avg_hrv"),
-            "resting_hr": sd.get("resting_hr"),
-            "readiness": readiness.get(d),
-            "sleep_score": sleep_scores.get(d),
-            "active_cal": active_cal.get(d),
-            "source": "oura",
+            "light_hrs":       sd.get("light_hrs"),
+            "deep_hrs":        sd.get("deep_hrs"),
+            "rem_hrs":         sd.get("rem_hrs"),
+            "avg_hrv":         sd.get("avg_hrv"),
+            "resting_hr":      sd.get("resting_hr"),
+            "readiness":       readiness.get(d),
+            "sleep_score":     sleep_scores.get(d),
+            "active_cal":      act.get("active_cal"),
+            "steps":           act.get("steps"),
+            "activity_score":  act.get("activity_score"),
+            "spo2_avg":        spo2.get(d),
+            "body_temp_delta": body_temp.get(d),
+            "metadata":        meta,
+            "source":          "oura",
         })
 
     written = upsert(client, "recovery_metrics", sb_rows, conflict="date")
