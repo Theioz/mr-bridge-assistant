@@ -35,7 +35,7 @@ Execute in this exact order:
    Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, study log, and recent meals.
 3. Issue the following three external fetches **in a single message turn as parallel tool calls** (they are independent — do not run them sequentially):
    - **Calendar events**: `List Calendar Events` for today (primary + any shared/secondary calendars) — note calendar/account source for each event
-   - **Upcoming birthdays**: `List Calendar Events` for the next 7 days (timeMin = today, timeMax = today+7 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; strip "'s birthday" suffix for display
+   - **Upcoming birthdays**: `List Calendar Events` for the next 60 days (timeMin = today, timeMax = today+60 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; sort ascending; show only the single nearest birthday regardless of how far out it is; strip "'s birthday" suffix for display
    - **Important unread emails**: `Search Gmail Emails` — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline — note account source; secondary POP3 accounts are labeled (e.g. "Professional") in your primary inbox
 5. Deliver session briefing (format below)
 
