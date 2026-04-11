@@ -8,6 +8,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `web/src/app/(protected)/habits/page.tsx` — `addHabit` and `archiveHabit` server actions; range-aware data fetching via `?range=7|30|90` search param (default 30); wires up `HabitTodaySection`, `HabitRangeToggle`; closes #45
+- `web/src/components/habits/habit-today-section.tsx` — client component managing manage-mode and add-form state; renders per-habit archive buttons in manage mode; inline add form (emoji, name, category)
+- `web/src/components/habits/habit-range-toggle.tsx` — 7d / 30d / 90d pill selector; updates `?range` URL param via Next.js router
+- `web/src/lib/timezone.ts` — `getLastNDays(n)` generalizes `getLast7Days`; existing function now delegates to it
+
+### Changed
+- `web/src/components/habits/habit-history.tsx` — headers show readable dates (`Apr 5`) instead of single-letter day initials; 90-day view condenses to weekly columns with completion-count badges (opacity-scaled); accepts `range` prop
+- `web/src/components/habits/habit-toggle.tsx` — adds optional `manageMode` and `archiveAction` props; renders `✕` archive button at row end when in manage mode
 - `get_recipes` chat tool — searches `recipes` table by name or ingredient; returns all saved recipes when no query provided; closes #47
 - `log_meal` chat tool — writes to `meal_log` table with meal type (breakfast/lunch/dinner/snack), optional free-text notes, optional recipe UUID link, and date (defaults to today); closes #47
 - `Recipe` and `MealLog` TypeScript interfaces in `web/src/lib/types.ts`

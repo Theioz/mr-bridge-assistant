@@ -7,13 +7,18 @@ export function todayString(tz = USER_TZ): string {
 
 /**
  * Returns the last N days as YYYY-MM-DD strings in the user's timezone,
- * oldest first. Default 7 days (index 0 = 6 days ago, index 6 = today).
+ * oldest first (index 0 = N-1 days ago, last index = today).
  */
-export function getLast7Days(tz = USER_TZ): string[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86_400_000);
+export function getLastNDays(n: number, tz = USER_TZ): string[] {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.now() - (n - 1 - i) * 86_400_000);
     return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
   });
+}
+
+/** Returns the last 7 days as YYYY-MM-DD strings in the user's timezone. */
+export function getLast7Days(tz = USER_TZ): string[] {
+  return getLastNDays(7, tz);
 }
 
 /** Returns a YYYY-MM-DD string for N days ago in the user's timezone. */

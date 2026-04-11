@@ -82,7 +82,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── layout.tsx             # Protected layout with sidebar
 │   │   │   │   ├── page.tsx               # Daily briefing dashboard
 │   │   │   │   ├── tasks/page.tsx         # Task management
-│   │   │   │   ├── habits/page.tsx        # Habit tracking + 7-day history
+│   │   │   │   ├── habits/page.tsx        # Habit tracking — add/archive + 7/30/90d history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
@@ -99,7 +99,7 @@ mr-bridge-assistant/
 │   │   │   │   └── logo.tsx               # MB monogram SVG
 │   │   │   ├── chat/                      # Chat UI with markdown rendering
 │   │   │   ├── tasks/                     # Task CRUD components
-│   │   │   ├── habits/                    # Habit toggle + 7-day history grid
+│   │   │   ├── habits/                    # Habit toggle, add/archive UI, range-selectable history grid
 │   │   │   ├── fitness/                   # Body comp chart (Recharts)
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
