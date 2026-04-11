@@ -63,7 +63,7 @@ mr-bridge-assistant/
 ├── CHANGELOG.md
 ├── README.md
 ├── .gitignore
-├── .mcp.json                              # MCP servers: Google Calendar, Gmail, DeepWiki
+├── .mcp.json                              # MCP servers: DeepWiki (Google Calendar + Gmail via claude.ai hosted MCP)
 ├── .gitmodules
 │
 ├── supabase/                              # Database schema + migrations
@@ -72,7 +72,8 @@ mr-bridge-assistant/
 │       ├── 20260410163801_initial_schema.sql
 │       ├── 20260410164609_add_unique_constraints.sql
 │       ├── 20260410170000_study_log_unique_constraint.sql
-│       └── 20260411000000_add_journal_entries.sql
+│       ├── 20260411000000_add_journal_entries.sql
+│       └── 20260411000001_recovery_metrics_extended.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── src/
@@ -86,7 +87,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API + Supabase tool use (10 tools)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (10 tools: tasks, habits, fitness, profile, Gmail, Calendar)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
@@ -106,7 +107,9 @@ mr-bridge-assistant/
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── recovery-summary.tsx   # Oura recovery & sleep card
+│   │   │       ├── recovery-trends.tsx    # Sleep & readiness trend charts (Recharts)
 │   │   │       ├── fitness-summary.tsx    # Body comp + last workout card
+│   │   │       ├── inline-sparkline.tsx   # Mini trend sparkline (used in summary cards)
 │   │   │       ├── habits-summary.tsx     # Today's habit progress card
 │   │   │       ├── tasks-summary.tsx      # Active tasks card
 │   │   │       └── recent-chat.tsx        # Last chat message card
@@ -148,8 +151,8 @@ mr-bridge-assistant/
 │   ├── fitness-tracker-setup.md           # Google Fit, Oura, Fitbit, Renpho setup
 │   └── google-oauth-setup.md             # OAuth token setup + refresh guide
 │
-├── memory/                                # Local files (gitignored)
-│   ├── meal_log.md                        # Recipes — still read locally during briefing
+├── memory/                                # Local files (gitignored, archived originals)
+│   ├── meal_log.md                        # Recipes — read locally during briefing; data also in Supabase `recipes` table
 │   ├── profile.template.md
 │   ├── fitness_log.template.md
 │   ├── meal_log.template.md
@@ -176,7 +179,7 @@ mr-bridge-assistant/
     └── README.md
 ```
 
-> All live data (habits, tasks, fitness, recovery) is stored in **Supabase** — not local files. `memory/meal_log.md` is still read locally for recipes (not yet migrated to Supabase).
+> All live data (habits, tasks, fitness, recovery, recipes) is stored in **Supabase** — not local files. `memory/meal_log.md` is also read locally during session briefing until recipe display is added to the web interface.
 
 ## Getting Started
 
@@ -226,16 +229,13 @@ PICOVOICE_ACCESS_KEY=
 pip3 install -r scripts/requirements.txt
 ```
 
-### 5. Set up your profile and recipes
-Copy the meal log template and fill it in (recipes are still read locally):
-```bash
-cp memory/meal_log.template.md memory/meal_log.md
-```
-Add your profile data directly to Supabase via the dashboard or run:
+### 5. Migrate profile and recipes to Supabase
+If you have existing markdown data files, migrate them to Supabase:
 ```bash
 python3 scripts/migrate_to_supabase.py --dry-run   # preview first
-python3 scripts/migrate_to_supabase.py             # migrate from existing markdown files
+python3 scripts/migrate_to_supabase.py             # migrate profile, recipes, habits, tasks, fitness
 ```
+Or add profile data directly via the Supabase dashboard. Recipes populate the `recipes` table; the session briefing also reads `memory/meal_log.md` locally as a fallback until recipe display ships in the web interface.
 
 ### 6. Set up push notifications (Android, macOS, Windows)
 See [docs/notifications-setup.md](docs/notifications-setup.md). Add `NTFY_TOPIC` as a GitHub Actions secret for the Sunday weekly review cloud nudge.
@@ -283,7 +283,7 @@ Feature backlog is tracked via [GitHub Issues](https://github.com/Theioz/mr-brid
 
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Dashboard** — Fun Fact (Claude Haiku), Schedule Today (Google Calendar), Important Emails (Gmail), Recovery & Sleep (Oura), Fitness Snapshot, Habits, Tasks
+- **Dashboard** — Fun Fact (Claude Haiku), Schedule Today (Google Calendar), Important Emails (Gmail), Recovery & Sleep + Trends (Oura), Fitness Snapshot, Habits, Tasks, Recent Chat
 - **Chat** — streams responses from Claude Sonnet with markdown rendering
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
