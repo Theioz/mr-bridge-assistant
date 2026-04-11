@@ -13,7 +13,7 @@ export default async function FitnessPage() {
       .from("fitness_log")
       .select("*")
       .not("body_fat_pct", "is", null)
-      .order("date", { ascending: true })
+      .order("date", { ascending: false })
       .limit(30),
     supabase
       .from("workout_sessions")
@@ -22,7 +22,7 @@ export default async function FitnessPage() {
       .limit(10),
   ]);
 
-  const fitnessData = (fitnessResult.data ?? []) as FitnessLog[];
+  const fitnessData = ((fitnessResult.data ?? []) as FitnessLog[]).reverse();
   const workouts = (workoutsResult.data ?? []) as WorkoutSession[];
   const latest = fitnessData[fitnessData.length - 1] ?? null;
 
