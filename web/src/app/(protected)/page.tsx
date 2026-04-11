@@ -9,6 +9,7 @@ import RecoverySummary from "@/components/dashboard/recovery-summary";
 import FunFact from "@/components/dashboard/fun-fact";
 import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
+import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
 import type { HabitLog, HabitRegistry, Task, FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
 import { todayString, USER_TZ } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
@@ -103,6 +104,9 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-semibold text-neutral-100">{greeting}</h1>
         <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
       </div>
+
+      {/* Upcoming birthday — renders nothing if no birthday in next 60 days */}
+      <UpcomingBirthdayWidget />
 
       {/* Bento grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

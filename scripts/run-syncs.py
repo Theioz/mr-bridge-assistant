@@ -27,6 +27,12 @@ SYNCS: list[tuple[str, list[str]]] = [
     ("fitbit",     ["scripts/sync-fitbit.py",    "--yes"]),
 ]
 
+# Alert scripts run after syncs — order matters (HRV needs fresh Oura data)
+ALERTS: list[list[str]] = [
+    ["scripts/check_hrv_alert.py"],
+    ["scripts/check_daily_alerts.py"],
+]
+
 
 def last_sync_age(client, source: str) -> float | None:
     """Return seconds since last successful sync for source, or None if never."""
@@ -84,6 +90,7 @@ def main() -> None:
 
     if not to_run:
         print("[run-syncs] All syncs up to date.")
+        _run_alerts()
         return
 
     print(f"[run-syncs] Running in parallel: {', '.join(s for s, _ in to_run)}")
@@ -103,6 +110,28 @@ def main() -> None:
                     log_sync(client, source, "ok", 0)
                 except Exception:
                     pass
+
+    _run_alerts()
+
+
+def _run_alerts() -> None:
+    """Run alert scripts sequentially after syncs. Errors are non-fatal."""
+    for cmd in ALERTS:
+        try:
+            result = subprocess.run(
+                [sys.executable] + cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(ROOT),
+            )
+            if result.returncode != 0:
+                print(f"[run-syncs] alert {cmd[0]} FAILED (exit {result.returncode})")
+                if result.stderr.strip():
+                    print(result.stderr.strip())
+            elif result.stdout.strip():
+                print(result.stdout.strip())
+        except Exception as e:
+            print(f"[run-syncs] alert {cmd[0]} error: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
