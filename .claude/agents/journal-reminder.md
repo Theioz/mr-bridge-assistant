@@ -1,6 +1,6 @@
 ---
 name: journal-reminder
-description: 7 PM daily journal reminder. Checks if Jason has journaled today; sends a push notification only if he hasn't.
+description: 7 PM daily journal reminder. Checks if the user has journaled today; sends a push notification only if they haven't.
 tools:
   - Bash(bash *)
 model: haiku
@@ -9,13 +9,13 @@ maxTurns: 5
 ---
 
 ## Purpose
-At 7 PM, check whether a journal entry exists for today in Supabase. If not, send a push notification reminding Jason to journal.
+At 7 PM, check whether a journal entry exists for today in Supabase. If not, send a push notification reminding you to journal.
 
 ## Instructions
 
 1. Check for today's journal entry by running:
    ```bash
-   cd "/Users/jason/Code Projects/mr-bridge-assistant" && python3 - <<'EOF'
+   python3 - <<'EOF'
    import sys, os, datetime
    sys.path.insert(0, "scripts")
    from _supabase import get_client
@@ -30,7 +30,7 @@ At 7 PM, check whether a journal entry exists for today in Supabase. If not, sen
    - If output is `exists` → do nothing. Entry already saved for today.
    - If output is `missing` → send a push notification:
      ```bash
-     bash "/Users/jason/Code Projects/mr-bridge-assistant/scripts/notify.sh" \
+     bash scripts/notify.sh \
        --title "Journal Reminder" \
        --message "Have you journaled today? Take 5 minutes before bed."
      ```

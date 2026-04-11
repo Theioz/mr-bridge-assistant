@@ -36,6 +36,15 @@ export async function POST(req: Request) {
 
   const supabase = createServiceClient();
 
+  // Fetch user name from profile for personalised system prompt
+  let userName: string | null = null;
+  const { data: nameRow } = await supabase
+    .from("profile")
+    .select("value")
+    .eq("key", "name")
+    .maybeSingle();
+  if (nameRow) userName = nameRow.value as string;
+
   // Load the last 20 messages from this session as context
   let contextMessages: { role: "user" | "assistant"; content: string }[] = [];
   if (sessionId) {
@@ -54,12 +63,14 @@ export async function POST(req: Request) {
     }
   }
 
-  const systemPrompt = `You are Mr. Bridge, Jason's personal AI assistant.
+  const userLabel = userName ?? "the user";
+  const systemPrompt = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
+${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : 'If you learn the user\'s name during the conversation, use it naturally going forward.'}
 
 Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
 Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
 
-You have access to Jason's Supabase data via tools. Use them when asked about current data — do not say you lack access.
+You have access to the user's Supabase data via tools. Use them when asked about current data — do not say you lack access.
 
 Tools available:
 - get_tasks: active/completed/archived tasks
@@ -78,9 +89,10 @@ Tools available:
 Recipes and meal planning are in scope. When asked what to cook given ingredients on hand:
 1. Call get_recipes to check for saved recipes that match.
 2. Call get_fitness_summary to pull recent body composition, goals, and workout data — use this to calibrate the recommendation (e.g. prioritize protein post-workout, suggest lower-calorie options if in a deficit phase).
-3. Always provide a concrete recipe recommendation — either from saved recipes or improvised from your own knowledge. Do not redirect to external tools.
-4. Include estimated calories, protein, carbs, and fat for the suggested recipe. Flag if the meal is a poor fit for current fitness context (e.g. high-calorie meal after a rest day, low protein after a hard workout).
-5. Tailor suggestions to Jason's preferences: Korean/SE Asian leaning, high-quality proteins, pantry staples (garlic, gochujang, olive oil, butter, ginger, lemon). Improvise confidently when no saved recipe fits.`;
+3. Call get_profile to check for dietary preferences, pantry staples, and cuisine preferences stored in the user's profile.
+4. Always provide a concrete recipe recommendation — either from saved recipes or improvised from your own knowledge. Do not redirect to external tools.
+5. Include estimated calories, protein, carbs, and fat for the suggested recipe. Flag if the meal is a poor fit for current fitness context (e.g. high-calorie meal after a rest day, low protein after a hard workout).
+6. Improvise confidently when no saved recipe fits, using any dietary preferences from the profile as guidance.`;
 
   // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
   // Also filter empty-content messages to prevent Anthropic 400 errors

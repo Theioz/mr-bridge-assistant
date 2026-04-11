@@ -1,6 +1,6 @@
 # Fitness Tracker Setup
 
-Three sync scripts pull data into `memory/fitness_log.md`. Run them manually before sessions to get fresh data.
+Three sync scripts pull data from fitness APIs and write directly to Supabase. Run them manually before sessions to get fresh data.
 
 ---
 
@@ -15,7 +15,6 @@ Google Fit scopes were added to the refresh token during setup (see `docs/google
 
 **Run:**
 ```bash
-cd "/Users/jason/Code Projects/mr-bridge-assistant"
 python3 scripts/sync-googlefit.py           # last 7 days (default)
 python3 scripts/sync-googlefit.py --days 30 # last 30 days
 ```
@@ -79,7 +78,7 @@ python3 scripts/sync-oura.py           # last 7 days (default)
 python3 scripts/sync-oura.py --days 30  # last 30 days
 ```
 
-**Recovery Metrics written to fitness_log.md:**
+**Recovery Metrics written to `recovery_metrics` table in Supabase:**
 | Column | Source |
 |--------|--------|
 | Readiness | `/daily_readiness` score (0–100) |
@@ -125,9 +124,4 @@ Run Renpho sync after each weigh-in (weekly or as needed):
 python3 scripts/sync-renpho.py ~/Downloads/renpho_export.csv
 ```
 
-After syncing, commit the updated fitness_log.md:
-```bash
-git add memory/fitness_log.md
-git commit -m "sync: fitness data $(date +%Y-%m-%d)"
-git push
-```
+All sync data writes to Supabase — no file commits needed.

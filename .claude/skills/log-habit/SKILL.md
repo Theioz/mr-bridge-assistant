@@ -1,6 +1,6 @@
 ---
 name: log-habit
-description: Logs one or more habit completions to Supabase for today's date. Call when Jason reports completing a habit during a session.
+description: Logs one or more habit completions to Supabase for today's date. Call when the user reports completing a habit during a session.
 allowed-tools:
   - Bash
 user-invocable: false
