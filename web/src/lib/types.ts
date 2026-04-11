@@ -86,3 +86,20 @@ export interface Profile {
   value: string | null;
   updated_at: string;
 }
+
+export interface JournalResponses {
+  best_moment?: string;
+  challenge?: string;
+  small_gratitude?: string;
+  energy_check?: string;
+  tomorrow_focus?: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  responses: JournalResponses;
+  free_write: string | null;
+  created_at: string;
+  updated_at: string;
+}
