@@ -44,6 +44,7 @@ export default async function DashboardPage() {
     supabase
       .from("recovery_metrics")
       .select("*")
+      .not("avg_hrv", "is", null)
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle(),

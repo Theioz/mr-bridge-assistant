@@ -57,9 +57,15 @@ export interface RecoveryMetrics {
   sleep_score: number | null;
   readiness: number | null;
   total_sleep_hrs: number | null;
+  light_hrs: number | null;
   deep_hrs: number | null;
   rem_hrs: number | null;
   active_cal: number | null;
+  steps: number | null;
+  activity_score: number | null;
+  spo2_avg: number | null;
+  body_temp_delta: number | null;
+  metadata: Record<string, unknown> | null;
   source: string | null;
 }
 
