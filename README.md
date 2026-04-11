@@ -27,7 +27,7 @@ flowchart LR
         rf["api/fun-fact"]
         rcal["api/calendar"]
         rmail["api/gmail"]
-        pg["Dashboard · Habits · Tasks · Fitness · Chat"]
+        pg["Dashboard · Habits · Tasks · Fitness · Chat · Journal"]
     end
 
     subgraph ext["External APIs"]
@@ -71,7 +71,8 @@ mr-bridge-assistant/
 │   └── migrations/
 │       ├── 20260410163801_initial_schema.sql
 │       ├── 20260410164609_add_unique_constraints.sql
-│       └── 20260410170000_study_log_unique_constraint.sql
+│       ├── 20260410170000_study_log_unique_constraint.sql
+│       └── 20260411000000_add_journal_entries.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── src/
@@ -82,7 +83,8 @@ mr-bridge-assistant/
 │   │   │   │   ├── tasks/page.tsx         # Task management
 │   │   │   │   ├── habits/page.tsx        # Habit tracking + 7-day history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
-│   │   │   │   └── chat/page.tsx          # Mr. Bridge chat
+│   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
+│   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts          # Claude API + Supabase tool use (7 tools)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
@@ -98,6 +100,7 @@ mr-bridge-assistant/
 │   │   │   ├── tasks/                     # Task CRUD components
 │   │   │   ├── habits/                    # Habit toggle + 7-day history grid
 │   │   │   ├── fitness/                   # Body comp chart (Recharts)
+│   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
 │   │   │       ├── fun-fact.tsx           # Daily fun fact card
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
@@ -120,7 +123,8 @@ mr-bridge-assistant/
 │   │   ├── nightly-postmortem.md          # 9pm habit check-in agent
 │   │   ├── morning-nudge.md               # 8am session nudge agent
 │   │   ├── weekly-review.md               # Sunday 8pm weekly summary agent
-│   │   └── study-timer.md                 # Study session timer agent
+│   │   ├── study-timer.md                 # Study session timer agent
+│   │   └── journal-reminder.md            # 7pm journal reminder (remote trigger)
 │   ├── commands/
 │   │   ├── log-habit.md                   # /log-habit slash command
 │   │   ├── session-briefing.md            # /session-briefing slash command
@@ -284,6 +288,7 @@ A Next.js web app deployed on Vercel providing a full daily briefing UI:
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
 - **Fitness** — body composition chart (Recharts) + workout log
+- **Journal** — guided daily reflection with 5 prompts (one at a time), progress bar, past entries history; 7 PM ntfy.sh reminder if not yet journaled
 
 **Local development:**
 ```bash
