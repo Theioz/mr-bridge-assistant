@@ -9,6 +9,7 @@ export interface CalendarEvent {
   location?: string;
   calendarName: string;
   isPrimary: boolean;
+  isBirthday: boolean;
 }
 
 function formatTime(dateTimeStr: string | null | undefined, dateStr: string | null | undefined): string {
@@ -49,14 +50,21 @@ export async function GET() {
         const isPrimary = cal.primary === true;
         return (res.data.items ?? [])
           .filter((e) => e.status !== "cancelled")
-          .map((e) => ({
-            time: formatTime(e.start?.dateTime, e.start?.date),
-            title: e.summary ?? "(No title)",
-            calendarName: calName,
-            isPrimary,
-            startDateTime: e.start?.dateTime ?? e.start?.date ?? "",
-            ...(e.location ? { location: e.location } : {}),
-          }));
+          .map((e) => {
+            const title = e.summary ?? "(No title)";
+            const isBirthday =
+              /'s birthday$/i.test(title) ||
+              calName.toLowerCase().includes("birthday");
+            return {
+              time: formatTime(e.start?.dateTime, e.start?.date),
+              title,
+              calendarName: calName,
+              isPrimary,
+              isBirthday,
+              startDateTime: e.start?.dateTime ?? e.start?.date ?? "",
+              ...(e.location ? { location: e.location } : {}),
+            };
+          });
       })
     );
 
