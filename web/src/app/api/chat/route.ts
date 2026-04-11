@@ -3,6 +3,8 @@ import { todayString, daysAgoString } from "@/lib/timezone";
 import { streamText, tool, jsonSchema, wrapLanguageModel } from "ai";
 import type { LanguageModelV1Middleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
+import { google } from "googleapis";
+import { getGoogleAuthClient } from "@/lib/google-auth";
 
 const retryOnOverload: LanguageModelV1Middleware = {
   wrapStream: async ({ doStream }) => {
@@ -66,7 +68,10 @@ Tools available:
 - get_habits_today: all active habits + today's completion status
 - log_habit: mark a habit complete for a given date
 - get_fitness_summary: recent body composition, workouts, recovery metrics
-- get_profile: profile key/value store`;
+- get_profile: profile key/value store
+- search_gmail: search Gmail with any query string, returns message IDs + metadata
+- get_email_body: fetch and decode the full plain-text body of an email by message ID
+- create_calendar_event: create a Google Calendar event on the primary calendar`;
 
   // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
   // Also filter empty-content messages to prevent Anthropic 400 errors
@@ -275,6 +280,233 @@ Tools available:
           .order("key", { ascending: true });
         if (error) return { error: error.message };
         return data ?? [];
+      },
+    }),
+
+    search_gmail: tool({
+      description:
+        "Search Gmail using any Gmail query string (e.g. 'from:regal tickets', 'subject:invoice is:unread'). Returns message ID, sender, subject, and date. Use get_email_body to read the full content of a specific message.",
+      parameters: jsonSchema<{ query: string; max_results?: number }>({
+        type: "object",
+        required: ["query"],
+        properties: {
+          query: {
+            type: "string",
+            description: "Gmail search query. Supports all Gmail search operators.",
+          },
+          max_results: {
+            type: "number",
+            description: "Max messages to return. Defaults to 5, max 10.",
+          },
+        },
+      }),
+      execute: async ({ query, max_results = 5 }) => {
+        try {
+          const auth = getGoogleAuthClient();
+          const gmail = google.gmail({ version: "v1", auth });
+
+          const listRes = await gmail.users.messages.list({
+            userId: "me",
+            q: query,
+            maxResults: Math.min(max_results, 10),
+          });
+
+          const messages = listRes.data.messages ?? [];
+          if (messages.length === 0) return { results: [] };
+
+          const getHeader = (
+            headers: { name?: string | null; value?: string | null }[],
+            name: string
+          ) => headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
+
+          const summaries = await Promise.all(
+            messages.map(async (m) => {
+              const msg = await gmail.users.messages.get({
+                userId: "me",
+                id: m.id!,
+                format: "metadata",
+                metadataHeaders: ["From", "Subject", "Date"],
+              });
+              const headers = msg.data.payload?.headers ?? [];
+              return {
+                id: m.id,
+                from: getHeader(headers, "From"),
+                subject: getHeader(headers, "Subject") || "(No subject)",
+                date: getHeader(headers, "Date"),
+              };
+            })
+          );
+
+          return { results: summaries };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Gmail search failed" };
+        }
+      },
+    }),
+
+    get_email_body: tool({
+      description:
+        "Fetch the full text body of a Gmail message by its ID. Use this after search_gmail to read email content. Returns decoded plain text.",
+      parameters: jsonSchema<{ message_id: string }>({
+        type: "object",
+        required: ["message_id"],
+        properties: {
+          message_id: {
+            type: "string",
+            description: "The Gmail message ID from search_gmail results.",
+          },
+        },
+      }),
+      execute: async ({ message_id }) => {
+        try {
+          const auth = getGoogleAuthClient();
+          const gmail = google.gmail({ version: "v1", auth });
+
+          const msg = await gmail.users.messages.get({
+            userId: "me",
+            id: message_id,
+            format: "full",
+          });
+
+          const headers = msg.data.payload?.headers ?? [];
+          const getHeader = (name: string) =>
+            headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
+
+          type Part = {
+            mimeType?: string | null;
+            body?: { data?: string | null } | null;
+            parts?: Part[] | null;
+          };
+
+          function findBody(parts: Part[], mime: string): string | null {
+            for (const part of parts) {
+              if (part.mimeType === mime && part.body?.data) {
+                return Buffer.from(part.body.data, "base64url").toString("utf-8");
+              }
+              if (part.parts) {
+                const found = findBody(part.parts, mime);
+                if (found) return found;
+              }
+            }
+            return null;
+          }
+
+          const payload = msg.data.payload;
+          let body: string | null = null;
+
+          if (payload?.body?.data) {
+            body = Buffer.from(payload.body.data, "base64url").toString("utf-8");
+          } else if (payload?.parts) {
+            body = findBody(payload.parts as Part[], "text/plain");
+            if (!body) {
+              const html = findBody(payload.parts as Part[], "text/html");
+              if (html) body = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            }
+          }
+
+          const truncated = body ? body.slice(0, 4000) : null;
+
+          return {
+            id: message_id,
+            from: getHeader("From"),
+            subject: getHeader("Subject"),
+            date: getHeader("Date"),
+            body: truncated ?? "(No readable body found)",
+            truncated: body ? body.length > 4000 : false,
+          };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Failed to fetch email body" };
+        }
+      },
+    }),
+
+    create_calendar_event: tool({
+      description:
+        "Create a new event on the primary Google Calendar. For timed events, provide date + start_time. For all-day events, set all_day: true and provide only date.",
+      parameters: jsonSchema<{
+        title: string;
+        date: string;
+        start_time?: string;
+        end_time?: string;
+        location?: string;
+        description?: string;
+        all_day?: boolean;
+      }>({
+        type: "object",
+        required: ["title", "date"],
+        properties: {
+          title: { type: "string", description: "Event title/summary." },
+          date: { type: "string", description: "Date in YYYY-MM-DD format." },
+          start_time: {
+            type: "string",
+            description: "Start time in HH:MM (24h) format. Required for timed events.",
+          },
+          end_time: {
+            type: "string",
+            description: "End time in HH:MM (24h) format. Defaults to start_time + 2 hours.",
+          },
+          location: { type: "string", description: "Event location." },
+          description: { type: "string", description: "Event description or notes." },
+          all_day: {
+            type: "boolean",
+            description: "If true, creates an all-day event. start_time and end_time are ignored.",
+          },
+        },
+      }),
+      execute: async ({ title, date, start_time, end_time, location, description, all_day = false }) => {
+        try {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return { error: `date must be YYYY-MM-DD, got: "${date}"` };
+          }
+          if (!all_day && !start_time) {
+            return { error: "start_time is required for timed events. Use all_day: true for all-day events." };
+          }
+
+          const auth = getGoogleAuthClient();
+          const calendar = google.calendar({ version: "v3", auth });
+          const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let eventBody: Record<string, any>;
+
+          if (all_day) {
+            eventBody = {
+              summary: title,
+              start: { date },
+              end: { date },
+              ...(location ? { location } : {}),
+              ...(description ? { description } : {}),
+            };
+          } else {
+            let computedEnd = end_time;
+            if (!computedEnd) {
+              const [h, m] = start_time!.split(":").map(Number);
+              computedEnd = `${String((h + 2) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            }
+            eventBody = {
+              summary: title,
+              start: { dateTime: `${date}T${start_time}:00`, timeZone: tz },
+              end: { dateTime: `${date}T${computedEnd}:00`, timeZone: tz },
+              ...(location ? { location } : {}),
+              ...(description ? { description } : {}),
+            };
+          }
+
+          const res = await calendar.events.insert({
+            calendarId: "primary",
+            requestBody: eventBody,
+          });
+
+          return {
+            id: res.data.id,
+            title: res.data.summary,
+            start: res.data.start,
+            end: res.data.end,
+            link: res.data.htmlLink,
+          };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Failed to create calendar event" };
+        }
       },
     }),
   };

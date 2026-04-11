@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
+import { getGoogleAuthClient } from "@/lib/google-auth";
 
 export interface EmailSummary {
   from: string;
@@ -21,17 +22,7 @@ function getHeader(headers: { name?: string | null; value?: string | null }[], n
 
 export async function GET() {
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-
-    if (!clientId || !clientSecret || !refreshToken) {
-      return NextResponse.json({ emails: [] });
-    }
-
-    const auth = new google.auth.OAuth2(clientId, clientSecret);
-    auth.setCredentials({ refresh_token: refreshToken });
-
+    const auth = getGoogleAuthClient();
     const gmail = google.gmail({ version: "v1", auth });
 
     const listRes = await gmail.users.messages.list({

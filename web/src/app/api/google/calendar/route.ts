@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { startOfTodayRFC3339, endOfTodayRFC3339 } from "@/lib/timezone";
+import { getGoogleAuthClient } from "@/lib/google-auth";
 
 export interface CalendarEvent {
   time: string;
@@ -21,17 +22,7 @@ function formatTime(dateTimeStr: string | null | undefined, dateStr: string | nu
 
 export async function GET() {
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-
-    if (!clientId || !clientSecret || !refreshToken) {
-      return NextResponse.json({ events: [] });
-    }
-
-    const auth = new google.auth.OAuth2(clientId, clientSecret);
-    auth.setCredentials({ refresh_token: refreshToken });
-
+    const auth = getGoogleAuthClient();
     const calendar = google.calendar({ version: "v3", auth });
 
     const timeMin = startOfTodayRFC3339();
