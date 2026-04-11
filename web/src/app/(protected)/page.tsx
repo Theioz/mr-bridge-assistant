@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import TasksSummary from "@/components/dashboard/tasks-summary";
-import FitnessSummary from "@/components/dashboard/fitness-summary";
+import TrendsCard from "@/components/dashboard/trends-card";
 import RecoverySummary from "@/components/dashboard/recovery-summary";
 import FunFact from "@/components/dashboard/fun-fact";
 import ScheduleToday from "@/components/dashboard/schedule-today";
@@ -40,30 +40,15 @@ export default async function DashboardPage() {
     registryResult,
     allHabitsResult,
     tasksResult,
-    fitnessResult,
-    prevFitnessResult,
     recoveryResult,
     recoveryTrendsResult,
+    fitnessTrendsResult,
     workoutResult,
   ] = await Promise.all([
     supabase.from("habits").select("*").eq("date", today),
     supabase.from("habit_registry").select("id, name, emoji").eq("active", true),
     supabase.from("habits").select("habit_id, date").eq("completed", true),
     supabase.from("tasks").select("*").eq("status", "active"),
-    supabase
-      .from("fitness_log")
-      .select("*")
-      .not("body_fat_pct", "is", null)
-      .order("date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("fitness_log")
-      .select("*")
-      .not("body_fat_pct", "is", null)
-      .order("date", { ascending: false })
-      .range(1, 1)
-      .maybeSingle(),
     supabase
       .from("recovery_metrics")
       .select("*")
@@ -75,7 +60,13 @@ export default async function DashboardPage() {
       .from("recovery_metrics")
       .select("date, avg_hrv, readiness, total_sleep_hrs, light_hrs, deep_hrs, rem_hrs")
       .order("date", { ascending: false })
-      .limit(14),
+      .limit(90),
+    supabase
+      .from("fitness_log")
+      .select("date, weight_lb, body_fat_pct")
+      .not("body_fat_pct", "is", null)
+      .order("date", { ascending: true })
+      .limit(90),
     supabase
       .from("workout_sessions")
       .select("*")
@@ -89,10 +80,9 @@ export default async function DashboardPage() {
   const allCompletedHabits = (allHabitsResult.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks = computeStreaks(allCompletedHabits, today);
   const tasks = (tasksResult.data ?? []) as Task[];
-  const latestFitness = fitnessResult.data as FitnessLog | null;
-  const prevFitness = prevFitnessResult.data as FitnessLog | null;
   const recovery = recoveryResult.data as RecoveryMetrics | null;
   const recoveryTrends = ((recoveryTrendsResult.data ?? []) as RecoveryMetrics[]).reverse();
+  const fitnessTrends = (fitnessTrendsResult.data ?? []) as FitnessLog[];
   const recentWorkout = workoutResult.data as WorkoutSession | null;
 
   const greeting = getGreeting(USER_TZ);
@@ -118,7 +108,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recovery detail — 2/3 width */}
         <div className="lg:col-span-2">
-          <RecoverySummary recovery={recovery} trends={recoveryTrends} />
+          <RecoverySummary recovery={recovery} trends={recoveryTrends.slice(-14)} />
         </div>
 
         {/* Right sidebar: Habits check-in + Tasks stacked */}
@@ -133,15 +123,17 @@ export default async function DashboardPage() {
           <TasksSummary tasks={tasks} />
         </div>
 
-        {/* Row 2: Schedule (1 col) + Fitness (2 col) */}
-        <div className="lg:col-span-1">
-          <ScheduleToday />
-        </div>
-        <div className="lg:col-span-2">
-          <FitnessSummary latest={latestFitness} previous={prevFitness} recentWorkout={recentWorkout} />
+        {/* Row 2: Trends — full width */}
+        <div className="lg:col-span-3">
+          <TrendsCard fitnessData={fitnessTrends} recoveryData={recoveryTrends} recentWorkout={recentWorkout} />
         </div>
 
-        {/* Row 3: Emails — full width */}
+        {/* Row 3: Schedule — full width */}
+        <div className="lg:col-span-3">
+          <ScheduleToday />
+        </div>
+
+        {/* Row 4: Emails — full width */}
         <div className="lg:col-span-3">
           <ImportantEmails />
         </div>
