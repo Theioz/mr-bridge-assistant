@@ -18,13 +18,12 @@ Execute in this exact order:
    ```bash
    python3 scripts/fetch_briefing_data.py
    ```
-   Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, and study log.
-3. Read `memory/meal_log.md` (recipes not yet in Supabase query — still local)
-4. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
+   Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, study log, and recent meals.
+3. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
    — includes both personal (jaydud6) and professional (leung.ss.jason, shared) calendars — note the calendar/account source for each event
-5. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
+4. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
    — jaydud6 = personal (primary); leung.ss.jason = professional (aggregated via POP3, Gmail label: "professional") — note account source when surfacing emails
-6. Deliver session briefing (format below)
+5. Deliver session briefing (format below)
 
 ## Session Briefing Format
 ```
@@ -113,7 +112,6 @@ When operating in voice context (responses will be spoken aloud):
 
 ## Memory Update Rules
 - Data is stored in Supabase — do not write to local markdown files for live data
-- `memory/meal_log.md` is still the source for recipes (read-only during briefing)
 - Habit logging: run `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`
 - Task updates: use Supabase directly or a future task management command
 - After any Supabase write: confirm to user what was written and to which table
@@ -136,11 +134,9 @@ All live data is stored in Supabase. Local markdown files are archived originals
 | `habits` + `habit_registry` | Manual logging | `log_habit.py` |
 | `tasks` + `study_log` | Manual logging | (future command) |
 | `profile` | Migrated from `profile.md` | (edit via Supabase or future command) |
-| `recipes` | Migrated from `meal_log.md` | (edit via Supabase or future command) |
+| `recipes` + `meal_log` | Migrated from `meal_log.md` | `get_recipes` / `log_meal` tools (web chat) |
 | `chat_sessions` + `chat_messages` | Web interface | (future — issue #10) |
 | `timer_state` | Study timer | `study-timer` agent |
-
-`memory/meal_log.md` — still read during briefing for recipe reference until web interface ships.
 
 ## Reference Index
 | Resource | Location | Purpose |

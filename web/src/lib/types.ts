@@ -93,6 +93,26 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Recipe {
+  id: string;
+  name: string;
+  cuisine: string | null;
+  ingredients: string | null;
+  instructions: string | null;
+  tags: string[] | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface MealLog {
+  id: string;
+  date: string;
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack' | null;
+  recipe_id: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+}
+
 export interface JournalResponses {
   best_moment?: string;
   challenge?: string;
