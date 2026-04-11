@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createClient } from "@/lib/supabase/server";
 import HabitsSummary from "@/components/dashboard/habits-summary";
 import TasksSummary from "@/components/dashboard/tasks-summary";

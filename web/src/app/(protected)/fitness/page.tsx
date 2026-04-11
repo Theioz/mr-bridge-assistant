@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createClient } from "@/lib/supabase/server";
 import BodyCompChart from "@/components/fitness/body-comp-chart";
 import WorkoutList from "@/components/fitness/workout-list";
