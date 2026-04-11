@@ -47,8 +47,13 @@ export default function ScheduleToday() {
               </span>
               <div className="min-w-0">
                 <p className="text-sm text-neutral-200 leading-snug truncate">{event.title}</p>
-                {event.location && (
-                  <p className="text-xs text-neutral-600 truncate mt-0.5">{event.location}</p>
+                {(event.location || !event.isPrimary) && (
+                  <p className="text-xs text-neutral-600 truncate mt-0.5">
+                    {event.location}
+                    {!event.isPrimary && (
+                      <span className={event.location ? " · " : ""}>{event.calendarName}</span>
+                    )}
+                  </p>
                 )}
               </div>
             </div>

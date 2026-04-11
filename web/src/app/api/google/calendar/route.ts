@@ -7,6 +7,8 @@ export interface CalendarEvent {
   time: string;
   title: string;
   location?: string;
+  calendarName: string;
+  isPrimary: boolean;
 }
 
 function formatTime(dateTimeStr: string | null | undefined, dateStr: string | null | undefined): string {
@@ -28,24 +30,39 @@ export async function GET() {
     const timeMin = startOfTodayRFC3339();
     const timeMax = endOfTodayRFC3339();
 
-    const res = await calendar.events.list({
-      calendarId: "primary",
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: "startTime",
-      maxResults: 10,
-    });
+    // List all calendars so events from shared accounts (e.g. leung.ss.jason) are included
+    const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
+    const calendars = calListRes.data.items ?? [];
 
-    const items = res.data.items ?? [];
+    const allEventArrays = await Promise.all(
+      calendars.map(async (cal) => {
+        const res = await calendar.events.list({
+          calendarId: cal.id!,
+          timeMin,
+          timeMax,
+          singleEvents: true,
+          orderBy: "startTime",
+          maxResults: 10,
+        });
+        const calName = cal.summaryOverride ?? cal.summary ?? cal.id ?? "Unknown";
+        const isPrimary = cal.primary === true;
+        return (res.data.items ?? [])
+          .filter((e) => e.status !== "cancelled")
+          .map((e) => ({
+            time: formatTime(e.start?.dateTime, e.start?.date),
+            title: e.summary ?? "(No title)",
+            calendarName: calName,
+            isPrimary,
+            startDateTime: e.start?.dateTime ?? e.start?.date ?? "",
+            ...(e.location ? { location: e.location } : {}),
+          }));
+      })
+    );
 
-    const events: CalendarEvent[] = items
-      .filter((e) => e.status !== "cancelled")
-      .map((e) => ({
-        time: formatTime(e.start?.dateTime, e.start?.date),
-        title: e.summary ?? "(No title)",
-        ...(e.location ? { location: e.location } : {}),
-      }));
+    const events: CalendarEvent[] = allEventArrays
+      .flat()
+      .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime))
+      .map(({ startDateTime: _dt, ...rest }) => rest);
 
     return NextResponse.json({ events });
   } catch (err) {

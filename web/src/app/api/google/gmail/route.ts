@@ -6,6 +6,7 @@ export interface EmailSummary {
   from: string;
   subject: string;
   receivedAt: string;
+  account: "personal" | "professional";
 }
 
 function parseFrom(raw: string): string {
@@ -45,10 +46,17 @@ export async function GET() {
           metadataHeaders: ["From", "Subject", "Date"],
         });
         const headers = msg.data.payload?.headers ?? [];
+        const labelIds = msg.data.labelIds ?? [];
+        const account: EmailSummary["account"] = labelIds.some(
+          (l) => l.toLowerCase() === "professional"
+        )
+          ? "professional"
+          : "personal";
         return {
           from: parseFrom(getHeader(headers, "From")),
           subject: getHeader(headers, "Subject") || "(No subject)",
           receivedAt: getHeader(headers, "Date"),
+          account,
         };
       })
     );
