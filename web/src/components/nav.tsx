@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MessageSquare, CheckSquare, Activity, ListTodo } from "lucide-react";
+import { LayoutDashboard, MessageSquare, CheckSquare, Activity, ListTodo, BookOpen } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
 const tabs = [
@@ -11,6 +11,7 @@ const tabs = [
   { href: "/habits", label: "Habits", icon: CheckSquare },
   { href: "/fitness", label: "Fitness", icon: Activity },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
+  { href: "/journal", label: "Journal", icon: BookOpen },
 ];
 
 export default function Nav() {
