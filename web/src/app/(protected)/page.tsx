@@ -23,13 +23,12 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
   revalidatePath("/");
 }
 
-function getGreeting(tz: string): string {
+function getGreeting(tz: string, name: string | null): string {
   const hour = parseInt(
     new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: tz })
   );
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  const base = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return name ? `${base}, ${name}` : base;
 }
 
 export default async function DashboardPage() {
@@ -45,6 +44,7 @@ export default async function DashboardPage() {
     recoveryTrendsResult,
     fitnessTrendsResult,
     workoutResult,
+    nameResult,
   ] = await Promise.all([
     supabase.from("habits").select("*").eq("date", today),
     supabase.from("habit_registry").select("id, name, emoji").eq("active", true),
@@ -74,6 +74,7 @@ export default async function DashboardPage() {
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase.from("profile").select("value").eq("key", "name").maybeSingle(),
   ]);
 
   const todayHabits = (habitsResult.data ?? []) as HabitLog[];
@@ -85,8 +86,9 @@ export default async function DashboardPage() {
   const recoveryTrends = ((recoveryTrendsResult.data ?? []) as RecoveryMetrics[]).reverse();
   const fitnessTrends = (fitnessTrendsResult.data ?? []) as FitnessLog[];
   const recentWorkout = workoutResult.data as WorkoutSession | null;
+  const userName = (nameResult.data as { value: string } | null)?.value ?? null;
 
-  const greeting = getGreeting(USER_TZ);
+  const greeting = getGreeting(USER_TZ, userName);
   const dateStr = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
