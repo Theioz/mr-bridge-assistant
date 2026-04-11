@@ -22,6 +22,7 @@ export default async function DashboardPage() {
     fitnessResult,
     prevFitnessResult,
     recoveryResult,
+    recoveryTrendsResult,
     workoutResult,
   ] = await Promise.all([
     supabase.from("habits").select("*").eq("date", today),
@@ -49,6 +50,11 @@ export default async function DashboardPage() {
       .limit(1)
       .maybeSingle(),
     supabase
+      .from("recovery_metrics")
+      .select("date, avg_hrv, readiness, total_sleep_hrs, light_hrs, deep_hrs, rem_hrs")
+      .order("date", { ascending: false })
+      .limit(14),
+    supabase
       .from("workout_sessions")
       .select("*")
       .order("date", { ascending: false })
@@ -62,6 +68,7 @@ export default async function DashboardPage() {
   const latestFitness = fitnessResult.data as FitnessLog | null;
   const prevFitness = prevFitnessResult.data as FitnessLog | null;
   const recovery = recoveryResult.data as RecoveryMetrics | null;
+  const recoveryTrends = ((recoveryTrendsResult.data ?? []) as RecoveryMetrics[]).reverse();
   const recentWorkout = workoutResult.data as WorkoutSession | null;
 
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -80,6 +87,8 @@ export default async function DashboardPage() {
 
       <FunFact />
 
+      <RecoverySummary recovery={recovery} trends={recoveryTrends} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left column */}
         <div className="space-y-4">
@@ -89,7 +98,6 @@ export default async function DashboardPage() {
 
         {/* Right column */}
         <div className="space-y-4">
-          <RecoverySummary recovery={recovery} />
           <FitnessSummary latest={latestFitness} previous={prevFitness} recentWorkout={recentWorkout} />
           <HabitsSummary habits={todayHabits} total={totalHabits} />
           <TasksSummary tasks={tasks} />

@@ -1,7 +1,9 @@
 import type { RecoveryMetrics } from "@/lib/types";
+import RecoveryTrends from "./recovery-trends";
 
 interface Props {
   recovery: RecoveryMetrics | null;
+  trends?: RecoveryMetrics[];
 }
 
 function scoreColor(score: number | null): string {
@@ -18,7 +20,7 @@ function fmtHrs(hrs: number | null): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function RecoverySummary({ recovery }: Props) {
+export default function RecoverySummary({ recovery, trends }: Props) {
   return (
     <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
       <p className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Recovery &amp; Sleep</p>
@@ -71,7 +73,17 @@ export default function RecoverySummary({ recovery }: Props) {
             </div>
           </div>
 
-          <p className="text-xs text-neutral-600">Oura data reflects yesterday · {recovery.date}</p>
+          {(recovery.avg_hrv == null || recovery.sleep_score == null || recovery.readiness == null) && (
+            <p className="text-xs text-amber-600">Some metrics not yet synced — check back later</p>
+          )}
+          <p className="text-xs text-neutral-600">Oura · {recovery.date}</p>
+
+          {trends && trends.length > 0 && (
+            <>
+              <div className="border-t border-neutral-800 my-1" />
+              <RecoveryTrends data={trends} />
+            </>
+          )}
         </div>
       ) : (
         <p className="text-sm text-neutral-600">No recovery data</p>
