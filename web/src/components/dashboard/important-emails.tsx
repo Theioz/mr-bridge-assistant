@@ -42,7 +42,12 @@ export default function ImportantEmails() {
         <div className="divide-y divide-neutral-800/50">
           {emails.map((email, i) => (
             <div key={i} className="py-2 first:pt-0 last:pb-0">
-              <p className="text-xs text-neutral-400 truncate">{email.from}</p>
+              <p className="text-xs text-neutral-400 truncate">
+                {email.from}
+                {email.account === "professional" && (
+                  <span className="ml-1.5 text-neutral-600 text-[10px]">work</span>
+                )}
+              </p>
               <p className="text-sm text-neutral-200 truncate mt-0.5">{email.subject}</p>
             </div>
           ))}
