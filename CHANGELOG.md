@@ -8,6 +8,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `web/src/lib/google-auth.ts` — shared `getGoogleAuthClient()` OAuth2 helper; extracted from duplicated credential setup in dashboard routes
+- `search_gmail` chat tool — flexible Gmail search via query string; returns message id, from, subject, date; closes #30
+- `get_email_body` chat tool — fetches full message by ID; walks MIME tree; decodes base64url; truncates to 4000 chars
+- `create_calendar_event` chat tool — creates timed or all-day events on primary Google Calendar; end_time defaults to start + 2h; returns event link
 - `web/src/app/(protected)/journal/page.tsx` — `/journal` protected page; SSR; loads today's entry and last 14 past entries from Supabase
 - `web/src/components/journal/journal-flow.tsx` — guided one-prompt-at-a-time journal flow; progress bar (1 of 5); Back/Next/Save navigation; pre-fills existing today's entry for editing; upserts on conflict
 - `web/src/components/journal/journal-history.tsx` — past journal entries list grouped by date with prompt labels

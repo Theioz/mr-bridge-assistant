@@ -86,7 +86,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API + Supabase tool use (7 tools)
+│   │   │   │   ├── chat/route.ts          # Claude API + Supabase tool use (10 tools)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
