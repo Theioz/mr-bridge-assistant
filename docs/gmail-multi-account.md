@@ -1,81 +1,111 @@
 # Gmail & Calendar — Multi-Account Setup
 
-Covers how `jaydud6@gmail.com` (personal, primary) and `leung.ss.jason@gmail.com` (professional) are unified into a single Mr. Bridge session.
+Covers how `jaydud6@gmail.com` (personal, primary) and `leung.ss.jason@gmail.com` (professional) are unified into a single Mr. Bridge session. The OAuth token stays on `jaydud6@gmail.com` — no second credential set is required.
 
 ---
 
-## Gmail — "Check mail from other accounts" (POP3 aggregation)
+## Gmail — POP3 aggregation
 
-Professional emails are pulled into the personal inbox. The OAuth token stays on `jaydud6@gmail.com` — no second credential set required.
+Gmail's "Check mail from other accounts" pulls `leung.ss.jason@gmail.com` into `jaydud6@gmail.com` via POP3. Professional emails land in the personal inbox with a `Professional` label, which the dashboard uses to badge them as `work`.
 
-### Setup steps
+> **Note:** Gmailify (Google's OAuth-based import) does not accept normal Google passwords and requires an OAuth flow that is not straightforward to complete. Use POP3 instead.
 
-**1. Enable POP3 on leung.ss.jason**
-- Gmail → Settings → See all settings → Forwarding and POP/IMAP
-- Under "POP Download": select "Enable POP for all mail" (or "for mail that arrives from now on")
-- Save
+### Step 1 — Enable POP3 on leung.ss.jason
 
-**2. Add leung.ss.jason as a mail source in jaydud6**
-- Gmail (jaydud6) → Settings → See all settings → Accounts → "Check mail from other accounts"
-- Click "Add a mail account" → enter `leung.ss.jason@gmail.com`
-- Choose: "Import emails from my other account (Gmailify)" if offered, otherwise use POP3
-- In the label step: check "Label incoming messages" → create or select label `professional`
-- Do NOT check "Archive incoming messages" — professional emails should stay in inbox
+1. Sign into `leung.ss.jason@gmail.com`
+2. Settings (gear) → **See all settings** → **Forwarding and POP/IMAP** tab
+3. Under **POP Download** → select **Enable POP for all mail**
+4. Save changes
 
-**3. Verify**
-- Trigger an immediate pull: Settings → Accounts → "Check mail now" next to leung.ss.jason
-- Send a test email to `leung.ss.jason@gmail.com`; within 30–60 min it should appear in jaydud6's inbox tagged `professional`
+### Step 2 — Generate an App Password for leung.ss.jason
+
+Gmail's POP3 requires an App Password, not your regular account password (this is true even if 2-Step Verification was already enabled).
+
+1. Go to **myaccount.google.com** while signed into `leung.ss.jason@gmail.com`
+2. Security → **2-Step Verification** — enable it if not already on
+3. Search for **"App passwords"** at the top of the page
+4. Create a new App Password (name it anything, e.g. "Mr Bridge POP3")
+5. Copy the 16-character code — you'll use it in the next step
+
+### Step 3 — Add leung.ss.jason as a mail source in jaydud6
+
+1. Sign into `jaydud6@gmail.com`
+2. Settings → **See all settings** → **Accounts and Import** tab
+3. Under **Check mail from other accounts** → click **Add a mail account**
+4. Enter `leung.ss.jason@gmail.com` → Next → select **Import emails from my other account (Gmailify)** if offered, or choose **POP3**
+5. Use these POP3 settings:
+   - **Username:** `leung.ss.jason@gmail.com`
+   - **Password:** the 16-character App Password from Step 2
+   - **POP Server:** `pop.gmail.com`
+   - **Port:** `995`
+   - **Always use a secure connection (SSL):** checked
+6. Check **Label incoming messages** → create label `Professional`
+7. Leave **Archive incoming messages** unchecked (professional = high signal, keep in inbox)
+8. Click **Add Account**
+
+### Step 4 — Verify
+
+- In jaydud6's Gmail settings, click **Check mail now** next to `leung.ss.jason@gmail.com (POP3)` to trigger an immediate pull
+- Send a test email to `leung.ss.jason@gmail.com` with subject `urgent: test`
+- It should appear in `jaydud6@gmail.com`'s inbox within seconds (after "Check mail now") or within 30–60 min on the normal polling schedule
+- Confirm it has the `Professional` label applied
 
 ### Sync delay
-POP3 polls approximately every 30–60 minutes. Not real-time. Acceptable for session briefings. Use "Check mail now" in Settings to force an immediate poll.
+
+POP3 polls approximately every 30–60 minutes. Not real-time. Acceptable for session briefings. Use **Check mail now** in Gmail settings to force an immediate pull.
 
 ### How emails surface in Mr. Bridge
 
-| Email type | Where it comes from | Label in jaydud6 | Appears in dashboard? |
+| Email type | Source | Label in jaydud6 | Dashboard? |
 |---|---|---|---|
 | Personal, high-signal | jaydud6 directly | none | Yes, if subject matches filter |
-| Professional | leung.ss.jason via POP3 | `professional` | Yes, if subject matches filter; shown with "work" badge |
-| Personal, noise | jaydud6 directly | none | No (subject filter blocks it) |
+| Professional | leung.ss.jason via POP3 | `Professional` | Yes, if subject matches filter — shown with `work` badge |
+| Personal, noise | jaydud6 directly | none | No — subject keyword filter blocks it |
 
-The dashboard query: `is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)`
-Professional emails that don't match this filter are still pulled into the inbox but won't surface in the Important Emails card. They're accessible via Gmail directly.
+**Dashboard query:** `is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)`
+
+**How the `work` badge works:** The Gmail API returns internal label IDs (opaque strings like `Label_XXXXXXXXXX`), not display names. On each request, `/api/google/gmail` fetches the full label list first to resolve the `Professional` display name to its internal ID, then checks each message's `labelIds` against that ID. This is why the label name in Gmail settings must match exactly — the code looks for a label named `Professional` (case-insensitive).
 
 ---
 
 ## Google Calendar — Calendar sharing
 
-The professional calendar is shared with the personal account. The existing OAuth token (jaydud6) then sees all calendars via the Google Calendar API — no second auth required. Calendar sharing is real-time (no sync delay).
+The professional calendar is shared with `jaydud6@gmail.com`. The existing OAuth token sees all calendars including shared ones. Calendar sharing is real-time — no sync delay.
 
-### Setup steps
+### Step 1 — Share leung.ss.jason's calendar with jaydud6
 
-**1. Share leung.ss.jason's calendars with jaydud6**
-- Google Calendar (leung.ss.jason) → Settings → click each calendar under "Settings for my calendars"
-- Under "Share with specific people or groups" → Add `jaydud6@gmail.com`
-- Permission: "See all event details"
-- Repeat for each calendar to share (typically: primary + any work project calendars)
+1. Sign into `leung.ss.jason@gmail.com` → **calendar.google.com**
+2. Settings (gear) → **Settings**
+3. In the left sidebar under **Settings for my calendars** → click **Jason Leung** (or the calendar name)
+4. Under **Share with specific people or groups** → click **Add people and groups**
+5. Enter `jaydud6@gmail.com`, set permission to **See all event details** → Send
+6. Repeat for any other calendars to share (work project calendars, etc.)
 
-**2. Accept the shared calendar in jaydud6**
-- Google Calendar (jaydud6) should prompt to accept; or check "Other calendars" in the sidebar
-- The professional calendars appear under "Other calendars" with the leung.ss.jason label
+### Step 2 — Accept the shared calendar in jaydud6
 
-**3. Verify**
-- Create a test event in leung.ss.jason's Google Calendar
-- Confirm it appears in jaydud6's Google Calendar within seconds
-- Open Mr. Bridge web dashboard → Schedule Today card should show the event with the calendar name as source
+- A sharing invite arrives as an email to `jaydud6@gmail.com` — click **Accept**
+- Or: open Google Calendar as jaydud6 and look for the calendar under **Other calendars** in the sidebar
+
+### Step 3 — Verify
+
+1. Create a test event in `leung.ss.jason@gmail.com`'s calendar
+2. Confirm it appears immediately in `jaydud6@gmail.com`'s Google Calendar view
+3. Open the Mr. Bridge web dashboard → Schedule Today card should show the event with the calendar name shown as a subtitle
 
 ### How events surface in Mr. Bridge
 
-The calendar API (`/api/google/calendar`) now lists all calendars accessible to jaydud6 (primary + shared) and unions their events for today. Each event includes:
-- `calendarName` — the name of the calendar it came from
-- `isPrimary` — true only for jaydud6's own primary calendar
+`/api/google/calendar` lists all calendars accessible to `jaydud6@gmail.com` (primary + shared) and unions their events for today. Events are re-sorted by start time after the merge. Each event includes:
 
-Non-primary events show the `calendarName` as a subtitle in the Schedule Today dashboard card, so it's clear which account an event belongs to.
+- `calendarName` — the name of the calendar it came from (e.g. "Jason Leung")
+- `isPrimary` — `true` only for jaydud6's own primary calendar
+
+Non-primary calendar events show the `calendarName` as a subtitle in the Schedule Today dashboard card for source attribution.
 
 ---
 
-## Session Briefing Notes
+## Session Briefing
 
-Steps 4 and 5 of the Session Start Protocol now reflect multi-account coverage:
+Steps 4 and 5 of the Session Start Protocol reflect multi-account coverage:
 
-- **Calendar**: List Calendar Events returns events from all connected calendars. Note the source for any non-primary events.
-- **Gmail**: Search covers both accounts via POP3 aggregation. Professional emails arrive with Gmail label `professional`. Note "personal" or "work" when surfacing emails in the briefing.
+- **Calendar**: `List Calendar Events` returns events from all connected calendars. Note the source for non-primary events.
+- **Gmail**: `Search Gmail Emails` covers both accounts (professional emails arrive via POP3 with label `Professional`). Note "personal" or "work" when surfacing emails in the briefing.
