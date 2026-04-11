@@ -68,8 +68,8 @@ export default function RecoveryTrends({ data }: Props) {
       {/* HRV + Readiness */}
       <div>
         <p className="text-xs text-neutral-500 mb-2">HRV / Readiness — 14 days</p>
-        <ResponsiveContainer width="100%" height={100}>
-          <ComposedChart data={chartData} margin={{ top: 2, right: 8, left: -20, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={160}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
             <YAxis yAxisId="hrv" orientation="left" {...axisProps} domain={["auto", "auto"]} />
@@ -81,9 +81,13 @@ export default function RecoveryTrends({ data }: Props) {
               dataKey="hrv"
               name="HRV (ms)"
               stroke="#3b82f6"
-              strokeWidth={1.5}
+              strokeWidth={2}
               dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
             />
             <Line
               yAxisId="readiness"
@@ -91,9 +95,13 @@ export default function RecoveryTrends({ data }: Props) {
               dataKey="readiness"
               name="Readiness"
               stroke="#a3e635"
-              strokeWidth={1.5}
+              strokeWidth={2}
               dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -102,15 +110,15 @@ export default function RecoveryTrends({ data }: Props) {
       {/* Sleep breakdown */}
       <div>
         <p className="text-xs text-neutral-500 mb-2">Sleep breakdown — 14 days</p>
-        <ResponsiveContainer width="100%" height={100}>
-          <BarChart data={chartData} margin={{ top: 2, right: 8, left: -20, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
             <YAxis {...axisProps} domain={[0, "auto"]} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="light" name="Light (h)" stackId="sleep" fill="#6366f1" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="deep" name="Deep (h)" stackId="sleep" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="rem" name="REM (h)" stackId="sleep" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="light" name="Light (h)" stackId="sleep" fill="#6366f1" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
+            <Bar dataKey="deep" name="Deep (h)" stackId="sleep" fill="#3b82f6" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
+            <Bar dataKey="rem" name="REM (h)" stackId="sleep" fill="#06b6d4" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={600} />
           </BarChart>
         </ResponsiveContainer>
       </div>
