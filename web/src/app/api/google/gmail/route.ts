@@ -26,6 +26,12 @@ export async function GET() {
     const auth = getGoogleAuthClient();
     const gmail = google.gmail({ version: "v1", auth });
 
+    // Resolve the "Professional" label name → internal ID (user labels use opaque IDs, not names)
+    const labelsRes = await gmail.users.labels.list({ userId: "me" });
+    const professionalLabelId = labelsRes.data.labels?.find(
+      (l) => l.name?.toLowerCase() === "professional"
+    )?.id ?? null;
+
     const listRes = await gmail.users.messages.list({
       userId: "me",
       q: 'is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)',
@@ -47,11 +53,10 @@ export async function GET() {
         });
         const headers = msg.data.payload?.headers ?? [];
         const labelIds = msg.data.labelIds ?? [];
-        const account: EmailSummary["account"] = labelIds.some(
-          (l) => l.toLowerCase() === "professional"
-        )
-          ? "professional"
-          : "personal";
+        const account: EmailSummary["account"] =
+          professionalLabelId && labelIds.includes(professionalLabelId)
+            ? "professional"
+            : "personal";
         return {
           from: parseFrom(getHeader(headers, "From")),
           subject: getHeader(headers, "Subject") || "(No subject)",
