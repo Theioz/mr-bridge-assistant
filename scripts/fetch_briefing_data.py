@@ -187,6 +187,34 @@ def main():
             notes = f" — {s['notes']}" if s.get("notes") else ""
             print(f"- {s['date']} | {s['subject']} | {dur}{notes}")
 
+    # ── Meal Log — last 7 days ─────────────────────────────────────────────────
+    meal_logs = (
+        client.table("meal_log")
+        .select("date,meal_type,notes,recipe_id")
+        .gte("date", seven_days_ago)
+        .order("date", desc=True)
+        .execute()
+        .data
+    )
+    if meal_logs:
+        # Fetch recipe names for any linked recipe_ids
+        recipe_ids = list({m["recipe_id"] for m in meal_logs if m.get("recipe_id")})
+        recipe_names: dict[str, str] = {}
+        if recipe_ids:
+            recipes = (
+                client.table("recipes")
+                .select("id,name")
+                .in_("id", recipe_ids)
+                .execute()
+                .data
+            )
+            recipe_names = {r["id"]: r["name"] for r in recipes}
+
+        print("\n## RECENT MEALS (last 7 days)")
+        for m in meal_logs:
+            label = recipe_names.get(m["recipe_id"], m.get("notes") or "—") if m.get("recipe_id") else (m.get("notes") or "—")
+            print(f"- {m['date']} | {m.get('meal_type', '—')} | {label}")
+
 
 if __name__ == "__main__":
     main()

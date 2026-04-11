@@ -8,6 +8,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `get_recipes` chat tool — searches `recipes` table by name or ingredient; returns all saved recipes when no query provided; closes #47
+- `log_meal` chat tool — writes to `meal_log` table with meal type (breakfast/lunch/dinner/snack), optional free-text notes, optional recipe UUID link, and date (defaults to today); closes #47
+- `Recipe` and `MealLog` TypeScript interfaces in `web/src/lib/types.ts`
+
+### Changed
+- `web/src/app/api/chat/route.ts` — system prompt now includes recipes and meal planning as in-scope domains; instructs Claude to check saved recipes, pull fitness context, and include estimated macros with any recipe recommendation; improvises from pantry profile when no saved recipe matches
+- `scripts/fetch_briefing_data.py` — added recent meal log section (last 7 days) from Supabase; resolves recipe names for linked entries
+- `.claude/rules/mr-bridge-rules.md` — removed `memory/meal_log.md` local read from session start protocol (meals now fetched from Supabase via briefing script); updated data sources table for `recipes` + `meal_log`
+
+---
+
 - `web/src/lib/google-auth.ts` — shared `getGoogleAuthClient()` OAuth2 helper; extracted from duplicated credential setup in dashboard routes
 - `search_gmail` chat tool — flexible Gmail search via query string; returns message id, from, subject, date; closes #30
 - `get_email_body` chat tool — fetches full message by ID; walks MIME tree; decodes base64url; truncates to 4000 chars

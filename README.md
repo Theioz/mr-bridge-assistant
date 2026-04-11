@@ -87,7 +87,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (10 tools: tasks, habits, fitness, profile, Gmail, Calendar)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (12 tools: tasks, habits, fitness, profile, Gmail, Calendar, recipes, meals)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
@@ -153,7 +153,7 @@ mr-bridge-assistant/
 │   └── gmail-multi-account.md            # POP3 aggregation + Calendar sharing setup (App Password, label ID resolution)
 │
 ├── memory/                                # Local files (gitignored, archived originals)
-│   ├── meal_log.md                        # Recipes — read locally during briefing; data also in Supabase `recipes` table
+│   ├── meal_log.md                        # Recipes — archived original; data lives in Supabase `recipes` table
 │   ├── profile.template.md
 │   ├── fitness_log.template.md
 │   ├── meal_log.template.md
@@ -180,7 +180,7 @@ mr-bridge-assistant/
     └── README.md
 ```
 
-> All live data (habits, tasks, fitness, recovery, recipes) is stored in **Supabase** — not local files. `memory/meal_log.md` is also read locally during session briefing until recipe display is added to the web interface.
+> All live data (habits, tasks, fitness, recovery, recipes, meals) is stored in **Supabase** — not local files.
 
 ## Getting Started
 

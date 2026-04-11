@@ -71,7 +71,16 @@ Tools available:
 - get_profile: profile key/value store
 - search_gmail: search Gmail with any query string, returns message IDs + metadata
 - get_email_body: fetch and decode the full plain-text body of an email by message ID
-- create_calendar_event: create a Google Calendar event on the primary calendar`;
+- create_calendar_event: create a Google Calendar event on the primary calendar
+- get_recipes: search saved recipes by ingredient, name, or tag; omit query to return all
+- log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link or notes
+
+Recipes and meal planning are in scope. When asked what to cook given ingredients on hand:
+1. Call get_recipes to check for saved recipes that match.
+2. Call get_fitness_summary to pull recent body composition, goals, and workout data — use this to calibrate the recommendation (e.g. prioritize protein post-workout, suggest lower-calorie options if in a deficit phase).
+3. Always provide a concrete recipe recommendation — either from saved recipes or improvised from your own knowledge. Do not redirect to external tools.
+4. Include estimated calories, protein, carbs, and fat for the suggested recipe. Flag if the meal is a poor fit for current fitness context (e.g. high-calorie meal after a rest day, low protein after a hard workout).
+5. Tailor suggestions to Jason's preferences: Korean/SE Asian leaning, high-quality proteins, pantry staples (garlic, gochujang, olive oil, butter, ginger, lemon). Improvise confidently when no saved recipe fits.`;
 
   // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
   // Also filter empty-content messages to prevent Anthropic 400 errors
@@ -507,6 +516,60 @@ Tools available:
         } catch (err) {
           return { error: err instanceof Error ? err.message : "Failed to create calendar event" };
         }
+      },
+    }),
+
+    get_recipes: tool({
+      description: "Search saved recipes by ingredient, name, or tag. Omit query to return all recipes.",
+      parameters: jsonSchema<{ query?: string }>({
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Ingredient, recipe name, or tag to search for." },
+        },
+      }),
+      execute: async ({ query }) => {
+        let req = supabase
+          .from("recipes")
+          .select("id, name, cuisine, ingredients, instructions, tags");
+        if (query) {
+          req = req.or(`name.ilike.%${query}%,ingredients.ilike.%${query}%`);
+        }
+        const { data, error } = await req.order("name");
+        if (error) return { error: error.message };
+        return data ?? [];
+      },
+    }),
+
+    log_meal: tool({
+      description: "Log a meal to the meal_log table.",
+      parameters: jsonSchema<{
+        meal_type: "breakfast" | "lunch" | "dinner" | "snack";
+        notes?: string;
+        recipe_id?: string;
+        date?: string;
+      }>({
+        type: "object",
+        required: ["meal_type"],
+        properties: {
+          meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "Meal type." },
+          notes: { type: "string", description: "Free-text meal description." },
+          recipe_id: { type: "string", description: "UUID of a saved recipe." },
+          date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+        },
+      }),
+      execute: async ({ meal_type, notes, recipe_id, date }) => {
+        const { data, error } = await supabase
+          .from("meal_log")
+          .insert({
+            meal_type,
+            notes: notes ?? null,
+            recipe_id: recipe_id ?? null,
+            date: date ?? todayString(),
+          })
+          .select()
+          .single();
+        if (error) return { error: error.message };
+        return data;
       },
     }),
   };
