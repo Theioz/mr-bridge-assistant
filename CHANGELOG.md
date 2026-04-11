@@ -10,6 +10,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Added
 - `web/src/components/dashboard/trends-card.tsx` — new full-width dashboard card replacing `FitnessSummary`; dual-tab (Body Comp / Recovery) time-series chart with 7d / 30d / 90d window toggle; Body Comp tab shows weight + body fat % on dual axes; Recovery tab shows HRV + readiness on dual axes; recent workout slim row at bottom; closes #72
 
+### Fixed
+- `scripts/sync-googlefit.py` (`get_credentials`) — removed `scopes=FITNESS_SCOPES` from `Credentials()` constructor; passing scopes during refresh caused `invalid_scope: Bad Request` because Google validates the refresh request body scopes against the original grant; the fix lets the stored refresh token determine its own scope; closes #55
+
 ### Changed
 - `web/src/app/(protected)/page.tsx` — replaced `FitnessSummary` (2-col) with `TrendsCard` (full-width row); `ScheduleToday` moved to its own full-width row below; fitness trends query extended to 90 rows ascending; recovery trends query extended from 14 → 90 rows; `RecoverySummary` receives sliced last-14 entries to preserve existing chart label; dropped single-entry `fitnessResult` and `prevFitnessResult` queries
 

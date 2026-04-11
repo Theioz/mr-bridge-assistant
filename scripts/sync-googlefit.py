@@ -87,7 +87,6 @@ def get_credentials():
         client_id=client_id,
         client_secret=client_secret,
         token_uri="https://oauth2.googleapis.com/token",
-        scopes=FITNESS_SCOPES,
     )
     creds.refresh(Request())
     return creds
@@ -211,8 +210,11 @@ def fetch_body_composition(creds, start_ms, end_ms) -> tuple[list[dict], dict[st
 
 
 def existing_dates(client) -> set:
-    rows = client.table("fitness_log").select("date").eq("source", "google_fit").execute().data
-    return {r["date"] for r in rows}
+    # Skip dates that already have body-comp data from a richer source (any row with bf%)
+    # and dates we've already written via google_fit (weight-only)
+    rich = client.table("fitness_log").select("date").not_.is_("body_fat_pct", "null").execute().data
+    gfit = client.table("fitness_log").select("date").eq("source", "google_fit").execute().data
+    return {r["date"] for r in rich} | {r["date"] for r in gfit}
 
 
 def print_probe(rows, type_to_sources):
