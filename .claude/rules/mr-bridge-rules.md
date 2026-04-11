@@ -145,7 +145,7 @@ All live data is stored in Supabase. Local markdown files are archived originals
 
 | Supabase Table | Source | Script |
 |----------------|--------|--------|
-| `fitness_log` | Google Fit + Renpho | `sync-googlefit.py`, `sync-renpho.py` |
+| `fitness_log` | Google Fit (weight) + Fitbit (weight/fat/BMI) | `sync-googlefit.py`, `sync-fitbit.py` |
 | `workout_sessions` | Fitbit | `sync-fitbit.py` |
 | `recovery_metrics` | Oura Ring | `sync-oura.py` |
 | `habits` + `habit_registry` | Manual logging | `log_habit.py` |
