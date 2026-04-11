@@ -21,6 +21,7 @@ Execute in this exact order:
    Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, study log, and recent meals.
 3. Fetch today's Google Calendar events using `List Calendar Events` (claude.ai Google Calendar MCP)
    — includes both personal (jaydud6) and professional (leung.ss.jason, shared) calendars — note the calendar/account source for each event
+3b. Fetch upcoming birthdays: call `List Calendar Events` for the next **7 days** (timeMin = today, timeMax = today+7 days). Filter for events whose title matches `'s birthday` (case-insensitive) or whose calendar name contains "birthday". For each match, compute days_until = event date − today (0 = today, 1 = tomorrow, etc.). Strip the "'s birthday" suffix when displaying the person's name.
 4. Search for important unread emails using `Search Gmail Emails` (claude.ai Gmail MCP) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline
    — jaydud6 = personal (primary); leung.ss.jason = professional (aggregated via POP3, Gmail label: "professional") — note account source when surfacing emails
 5. Deliver session briefing (format below)
@@ -31,6 +32,9 @@ Execute in this exact order:
 
 ### Schedule Today
 [Calendar events: time + title, or "No events"]
+
+### Upcoming Birthdays
+[Name — today / in N days. Omit this section entirely if no birthdays in the next 7 days.]
 
 ### Important Emails
 [Unread emails matching filter, or "Inbox clear"]

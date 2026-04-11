@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, Gift } from "lucide-react";
 import type { CalendarEvent } from "@/app/api/google/calendar/route";
 
 function parseTimeToMinutes(timeStr: string): number | null {
@@ -98,11 +98,13 @@ export default function ScheduleToday() {
               const { event, isPast } = item;
               return (
                 <div key={idx} className={`flex gap-3 items-start transition-opacity ${isPast ? "opacity-40" : ""}`}>
-                  <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px">
-                    {event.time}
+                  <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px flex items-center">
+                    {event.isBirthday
+                      ? <Gift size={12} className="text-rose-400" />
+                      : event.time}
                   </span>
                   <div className="min-w-0">
-                    <p className={`text-sm leading-snug truncate ${isPast ? "text-neutral-400" : "text-neutral-200"}`}>
+                    <p className={`text-sm leading-snug truncate ${isPast ? "text-neutral-400" : event.isBirthday ? "text-rose-300" : "text-neutral-200"}`}>
                       {event.title}
                     </p>
                     {(event.location || !event.isPrimary) && (
@@ -120,11 +122,13 @@ export default function ScheduleToday() {
           ) : (
             events.map((event, i) => (
               <div key={i} className="flex gap-3 items-start">
-                <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px">
-                  {event.time}
+                <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px flex items-center">
+                  {event.isBirthday
+                    ? <Gift size={12} className="text-rose-400" />
+                    : event.time}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm text-neutral-200 leading-snug truncate">{event.title}</p>
+                  <p className={`text-sm leading-snug truncate ${event.isBirthday ? "text-rose-300" : "text-neutral-200"}`}>{event.title}</p>
                   {(event.location || !event.isPrimary) && (
                     <p className="text-xs text-neutral-600 truncate mt-0.5">
                       {event.location}
