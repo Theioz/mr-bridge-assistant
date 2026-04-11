@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";

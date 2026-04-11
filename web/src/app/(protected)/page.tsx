@@ -98,6 +98,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Fun fact banner */}
+      <FunFact />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -138,8 +141,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Fun fact — demoted to ambient strip */}
-      <FunFact />
     </div>
   );
 }
