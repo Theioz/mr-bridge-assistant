@@ -15,22 +15,18 @@ export default function FunFact() {
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800 border-l-2 border-l-blue-500">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles size={13} className="text-blue-400 shrink-0" />
-        <p className="text-xs text-blue-400 uppercase tracking-wide font-medium">Fun Fact</p>
-      </div>
+  if (!loading && !fact) return null;
 
+  return (
+    <div className="flex items-start gap-3 pl-3 border-l border-neutral-800">
+      <Sparkles size={11} className="text-neutral-600 shrink-0 mt-0.5" />
       {loading ? (
-        <div className="space-y-2">
-          <div className="h-3 bg-neutral-800 rounded animate-pulse w-full" />
-          <div className="h-3 bg-neutral-800 rounded animate-pulse w-4/5" />
+        <div className="flex-1 space-y-1.5 py-0.5">
+          <div className="h-2.5 bg-neutral-800 rounded animate-pulse w-3/4" />
+          <div className="h-2.5 bg-neutral-800 rounded animate-pulse w-1/2" />
         </div>
-      ) : fact ? (
-        <p className="text-sm text-neutral-300 italic leading-relaxed">{fact}</p>
       ) : (
-        <p className="text-sm text-neutral-600">No fact available.</p>
+        <p className="text-xs text-neutral-600 italic leading-relaxed">{fact}</p>
       )}
     </div>
   );
