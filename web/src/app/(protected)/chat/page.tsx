@@ -17,7 +17,6 @@ export default async function ChatPage() {
     .from("chat_sessions")
     .select("*")
     .eq("device", "web")
-    .gte("started_at", `${today}T00:00:00`)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
