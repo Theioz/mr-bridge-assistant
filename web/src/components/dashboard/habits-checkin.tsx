@@ -44,27 +44,42 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
   }
 
   return (
-    <div className="bg-neutral-900 rounded-xl border border-neutral-800 p-4">
-      <p className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Habits today</p>
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <p
+        className="text-xs uppercase tracking-widest mb-3"
+        style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+      >
+        Habits today
+      </p>
 
       {/* Progress header */}
       <div className="flex items-baseline gap-1.5 mb-2">
-        <span className="text-2xl font-semibold font-[family-name:var(--font-mono)] text-neutral-100">
+        <span
+          className="font-heading font-bold tabular-nums"
+          style={{ fontSize: 24, color: "var(--color-text)" }}
+        >
           {completedCount}
         </span>
-        <span className="text-neutral-500 text-lg font-normal">/ {total}</span>
+        <span style={{ fontSize: 18, color: "var(--color-text-muted)" }}>/ {total}</span>
       </div>
-      <div className="h-1 bg-neutral-800 rounded-full overflow-hidden mb-4">
+      <div
+        className="h-1 rounded-full overflow-hidden mb-4"
+        style={{ background: "var(--color-border)" }}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-300 ${
-            pct === 100 ? "bg-green-500" : "bg-blue-500"
-          }`}
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all duration-300"
+          style={{
+            width: `${pct}%`,
+            background: pct === 100 ? "var(--color-positive)" : "var(--color-primary)",
+          }}
         />
       </div>
 
       {/* Habit rows */}
-      <div className="space-y-0.5">
+      <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: 200 }}>
         {registry.map((habit) => {
           const done = completedMap.get(habit.id) ?? false;
           const isPending = pendingSet.has(habit.id);
@@ -77,21 +92,33 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
               key={habit.id}
               onClick={() => handleToggle(habit.id)}
               disabled={isPending}
-              className={`w-full flex items-center gap-2 py-1.5 px-1.5 rounded-lg hover:bg-neutral-800/60 transition-colors text-left ${
-                isPending ? "opacity-50" : ""
-              }`}
+              className="w-full flex items-center gap-2 py-1.5 px-1.5 rounded-lg text-left transition-colors"
+              style={{
+                opacity: isPending ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-raised)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+              }}
             >
               {/* Checkbox */}
               <span
-                className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                  done ? "bg-blue-500 border-blue-500" : "border-neutral-600"
-                }`}
+                className="flex items-center justify-center flex-shrink-0 rounded transition-colors"
+                style={{
+                  width: 16,
+                  height: 16,
+                  border: done ? "none" : "1px solid var(--color-text-faint)",
+                  background: done ? "var(--color-primary)" : "transparent",
+                  borderRadius: 4,
+                }}
               >
                 {done && (
-                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                     <path
                       d="M2 6l3 3 5-5"
-                      stroke="currentColor"
+                      stroke="white"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -107,22 +134,27 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
 
               {/* Name */}
               <span
-                className={`text-sm truncate flex-1 min-w-0 transition-colors ${
-                  done ? "text-neutral-600 line-through" : "text-neutral-200"
-                }`}
+                className="text-sm truncate flex-1 min-w-0 transition-colors"
+                style={{
+                  color: done ? "var(--color-text-faint)" : "var(--color-text)",
+                  textDecoration: done ? "line-through" : "none",
+                }}
               >
                 {habit.name}
               </span>
 
-              {/* Streak: current / best */}
-              <span className="flex items-baseline gap-0.5 flex-shrink-0 ml-1 font-[family-name:var(--font-mono)]">
+              {/* Streak */}
+              <span
+                className="flex items-baseline gap-0.5 flex-shrink-0 ml-1 tabular-nums"
+                style={{ fontSize: 11 }}
+              >
                 {currentStreak > 0 ? (
-                  <span className="text-xs text-amber-400">{currentStreak}</span>
+                  <span style={{ color: "var(--color-warning)" }}>{currentStreak}</span>
                 ) : (
-                  <span className="text-xs text-neutral-700">—</span>
+                  <span style={{ color: "var(--color-text-faint)" }}>—</span>
                 )}
                 {bestStreak > 0 && (
-                  <span className="text-[10px] text-neutral-600">/{bestStreak}</span>
+                  <span style={{ color: "var(--color-text-faint)", fontSize: 10 }}>/{bestStreak}</span>
                 )}
               </span>
             </button>
@@ -130,13 +162,17 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
         })}
 
         {registry.length === 0 && (
-          <p className="text-sm text-neutral-600 py-2">No habits configured.</p>
+          <p className="text-sm py-2" style={{ color: "var(--color-text-faint)" }}>
+            No habits configured.
+          </p>
         )}
       </div>
 
       {/* Legend */}
       {registry.length > 0 && (
-        <p className="text-[10px] text-neutral-700 mt-3 text-right">streak / best</p>
+        <p className="text-right mt-3" style={{ fontSize: 10, color: "var(--color-text-faint)" }}>
+          streak / best
+        </p>
       )}
     </div>
   );

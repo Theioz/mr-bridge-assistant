@@ -11,7 +11,7 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
   const today = todayString();
   const { new: forceNew } = await searchParams;
 
-  // Find or create today's web session (used as the write target for new messages)
+  // Find or create today's web session
   let session: ChatSession | null = null;
 
   if (!forceNew) {
@@ -24,9 +24,7 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
       .limit(1)
       .maybeSingle();
 
-    if (existing) {
-      session = existing as ChatSession;
-    }
+    if (existing) session = existing as ChatSession;
   }
 
   if (!session) {
@@ -38,38 +36,41 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
     session = created as ChatSession;
   }
 
-  // Load last 20 messages from the current session only
   let initialMessages: Message[] = [];
   if (session?.id) {
     const { data: msgs } = await supabase
       .from("chat_messages")
-      .select("id, role, content, created_at")
+      .select("id,role,content,created_at")
       .eq("session_id", session.id)
       .in("role", ["user", "assistant"])
       .order("created_at", { ascending: false })
       .limit(20);
 
     if (msgs) {
-      initialMessages = (msgs as ChatMessage[])
-        .reverse()
-        .map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: new Date(m.created_at),
-        }));
+      initialMessages = (msgs as ChatMessage[]).reverse().map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        createdAt: new Date(m.created_at),
+      }));
     }
   }
 
   return (
-    <div className="pt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-neutral-100">Chat</h1>
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <h1
+          className="font-heading font-semibold"
+          style={{ fontSize: 24, color: "var(--color-text)" }}
+        >
+          Chat
+        </h1>
         <a
           href="/chat?new=1"
-          className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+          className="text-xs transition-colors duration-150 hover:text-[#E2E8F0]"
+          style={{ color: "var(--color-text-muted)" }}
         >
-          New chat
+          New session
         </a>
       </div>
       <ChatInterface
