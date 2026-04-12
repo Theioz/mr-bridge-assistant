@@ -10,6 +10,8 @@ import FunFact from "@/components/dashboard/fun-fact";
 import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
+import WeatherCard from "@/components/dashboard/weather-card";
+import DailyInsights from "@/components/dashboard/daily-insights";
 import type { HabitLog, HabitRegistry, Task, FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
 import { todayString, USER_TZ } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
@@ -74,7 +76,7 @@ export default async function DashboardPage() {
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("profile").select("value").eq("key", "name").maybeSingle(),
+    supabase.from("profile").select("key,value").in("key", ["name", "Identity/Name"]),
   ]);
 
   const todayHabits = (habitsResult.data ?? []) as HabitLog[];
@@ -86,7 +88,11 @@ export default async function DashboardPage() {
   const recoveryTrends = ((recoveryTrendsResult.data ?? []) as RecoveryMetrics[]).reverse();
   const fitnessTrends = (fitnessTrendsResult.data ?? []) as FitnessLog[];
   const recentWorkout = workoutResult.data as WorkoutSession | null;
-  const userName = (nameResult.data as { value: string } | null)?.value ?? null;
+  const nameRows = (nameResult.data ?? []) as { key: string; value: string }[];
+  const userName =
+    nameRows.find((r) => r.key === "name")?.value ??
+    nameRows.find((r) => r.key === "Identity/Name")?.value ??
+    null;
 
   const greeting = getGreeting(USER_TZ, userName);
   const dateStr = new Date().toLocaleDateString("en-US", {
@@ -98,13 +104,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* Fun fact banner */}
-      <FunFact />
+      {/* Fun fact + quote — single combined card */}
+      <DailyInsights />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-100">{greeting}</h1>
-        <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
+      {/* Header + weather: side-by-side on sm+, stacked on mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-6">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-100">{greeting}</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
+        </div>
+        <WeatherCard />
       </div>
 
       {/* Upcoming birthday — renders nothing if no birthday in next 60 days */}
