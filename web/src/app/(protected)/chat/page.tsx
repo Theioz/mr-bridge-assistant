@@ -10,13 +10,14 @@ export default async function ChatPage() {
   const supabase = await createClient();
   const today = todayString();
 
-  // Find or create today's web session
+  // Find or create today's web session (used as the write target for new messages)
   let session: ChatSession | null = null;
 
   const { data: existing } = await supabase
     .from("chat_sessions")
     .select("*")
     .eq("device", "web")
+    .gte("started_at", `${today}T00:00:00`)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -32,24 +33,32 @@ export default async function ChatPage() {
     session = created as ChatSession;
   }
 
-  // Load last 20 messages for this session as initial context
+  // Load last 20 messages across all web sessions so history is never lost
   let initialMessages: Message[] = [];
-  if (session) {
+  const { data: sessionIds } = await supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("device", "web");
+
+  if (sessionIds && sessionIds.length > 0) {
+    const ids = sessionIds.map((s: { id: string }) => s.id);
     const { data: msgs } = await supabase
       .from("chat_messages")
       .select("id, role, content, created_at")
-      .eq("session_id", session.id)
+      .in("session_id", ids)
       .in("role", ["user", "assistant"])
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(20);
 
     if (msgs) {
-      initialMessages = (msgs as ChatMessage[]).map((m) => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: new Date(m.created_at),
-      }));
+      initialMessages = (msgs as ChatMessage[])
+        .reverse()
+        .map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          createdAt: new Date(m.created_at),
+        }));
     }
   }
 
