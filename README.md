@@ -93,7 +93,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (12 tools: tasks, habits, fitness, profile, Gmail, Calendar, recipes, meals)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   ├── daily-quote/route.ts   # Claude Haiku motivational quote, cached daily in Supabase
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
@@ -290,7 +290,7 @@ Feature backlog is tracked via GitHub Issues in your fork.
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
 - **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) with live weather inline (temp, condition, high/low, wind, precip, location — via Open-Meteo, no API key); combined Fun Fact + Daily Quote card (Claude Haiku, quote cached daily in Supabase); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
-- **Chat** — streams responses from Claude Sonnet with markdown rendering
+- **Chat** — streams responses from Claude Sonnet with markdown rendering; inline tool status chips show which tools are running (spinner → ✓) while Mr. Bridge works; "New chat" button starts a clean session; 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
 - **Fitness** — body composition chart (Recharts) + workout log

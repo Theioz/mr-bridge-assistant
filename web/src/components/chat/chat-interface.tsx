@@ -4,6 +4,7 @@ import { useChat } from "ai/react";
 import { useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import MessageBubble from "./message-bubble";
+import ToolStatusBar from "./tool-status-bar";
 import type { Message } from "ai";
 
 interface Props {
@@ -35,6 +36,7 @@ export default function ChatInterface({ sessionId, initialMessages }: Props) {
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
+        <ToolStatusBar messages={messages} isLoading={isLoading} />
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl rounded-bl-sm px-4 py-2.5">

@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { todayString, daysAgoString } from "@/lib/timezone";
+import { todayString, daysAgoString, startOfDayRFC3339, endOfDayRFC3339, addDays } from "@/lib/timezone";
 import { streamText, tool, jsonSchema, wrapLanguageModel } from "ai";
 import type { LanguageModelV1Middleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -65,10 +65,12 @@ export async function POST(req: Request) {
 
   const userLabel = userName ?? "the user";
   const systemPrompt = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
+Today's date is ${todayString()}.
 ${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : 'If you learn the user\'s name during the conversation, use it naturally going forward.'}
 
 Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
 Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
+Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
 When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
 When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
 
@@ -84,6 +86,7 @@ Tools available:
 - get_profile: profile key/value store
 - search_gmail: search Gmail with any query string, returns message IDs + metadata
 - get_email_body: fetch and decode the full plain-text body of an email by message ID
+- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
 - create_calendar_event: create a Google Calendar event on the primary calendar
 - get_recipes: search saved recipes by ingredient, name, or tag; omit query to return all
 - log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link or notes
@@ -444,6 +447,84 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           };
         } catch (err) {
           return { error: err instanceof Error ? err.message : "Failed to fetch email body" };
+        }
+      },
+    }),
+
+    list_calendar_events: tool({
+      description:
+        "List events across all Google Calendars for a given date range. Defaults to today only. Use this whenever the user asks what's on their calendar, schedule, or agenda.",
+      parameters: jsonSchema<{ date?: string; days?: number }>({
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "Start date in YYYY-MM-DD format. Defaults to today.",
+          },
+          days: {
+            type: "number",
+            description: "Number of days to include (1 = just the start date). Defaults to 1.",
+          },
+        },
+      }),
+      execute: async ({ date, days = 1 }) => {
+        try {
+          const startDate = date ?? todayString();
+          const endDate = addDays(startDate, Math.max(1, days) - 1);
+
+          const auth = getGoogleAuthClient();
+          const calendar = google.calendar({ version: "v3", auth });
+
+          const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
+          const calendars = calListRes.data.items ?? [];
+
+          const allEventArrays = await Promise.all(
+            calendars.map(async (cal) => {
+              const res = await calendar.events.list({
+                calendarId: cal.id!,
+                timeMin: startOfDayRFC3339(startDate),
+                timeMax: endOfDayRFC3339(endDate),
+                singleEvents: true,
+                orderBy: "startTime",
+                maxResults: 25,
+              });
+              const calName = cal.summaryOverride ?? cal.summary ?? cal.id ?? "Unknown";
+              const calNameLower = calName.toLowerCase();
+              const calendarType = cal.primary
+                ? "primary"
+                : calNameLower.includes("birthday") || calNameLower.includes("contact")
+                ? "birthday"
+                : calNameLower.includes("holiday")
+                ? "holiday"
+                : "other";
+
+              return (res.data.items ?? [])
+                .filter((e) => {
+                  if (e.status === "cancelled") return false;
+                  // Filter out events the user has declined
+                  const selfAttendee = e.attendees?.find((a) => a.self);
+                  if (selfAttendee?.responseStatus === "declined") return false;
+                  return true;
+                })
+                .map((e) => ({
+                  title: e.summary ?? "(No title)",
+                  start: e.start?.dateTime ?? e.start?.date ?? "",
+                  end: e.end?.dateTime ?? e.end?.date ?? "",
+                  allDay: !e.start?.dateTime,
+                  calendar: calName,
+                  calendarType,
+                  location: e.location ?? null,
+                }));
+            })
+          );
+
+          const events = allEventArrays
+            .flat()
+            .sort((a, b) => a.start.localeCompare(b.start));
+
+          return { events, count: events.length };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Failed to list calendar events" };
         }
       },
     }),

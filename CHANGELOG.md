@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- `web/src/components/chat/tool-status-bar.tsx` — inline tool status chips rendered below the last message while Mr. Bridge is working; spinner while tool is executing, ✓ when result arrives, chips disappear when response finishes streaming; reads from `message.parts` (AI SDK v4) with `toolInvocations` fallback; covers all 13 chat tools; closes #64
+- `web/src/app/api/chat/route.ts` — `list_calendar_events` tool: queries all Google Calendars for a given date range (defaults to today); events tagged with `calendarType` (primary / birthday / holiday / other) so the model filters noise; declined invitations excluded server-side; closes gap where the model had no way to read the calendar
+- `web/src/app/(protected)/chat/page.tsx` — "New chat" link in header; navigating to `/chat?new=1` forces a fresh session with no prior context
+
+### Fixed
+- `web/src/app/api/chat/route.ts` — system prompt now includes today's date via `todayString()`; previously the model had no date awareness and passed 2025 dates to calendar tools, returning stale events
+- `web/src/app/api/chat/route.ts` — model no longer narrates before tool calls ("Let me grab that now", etc.); pre-tool text and post-tool response were concatenating without a separator in the streamed content
+- `web/src/lib/timezone.ts` — added `startOfDayRFC3339(date)`, `endOfDayRFC3339(date)`, `addDays(date, n)` helpers; previous calendar implementation used `toLocaleString → new Date()` for RFC 3339 conversion which produced unreliable timezone offsets
+
+### Changed
+- `web/src/app/(protected)/chat/page.tsx` — `initialMessages` now scoped to the current session only; previously loaded across all web sessions, causing stale context to bleed into new chats
+- `web/src/app/api/chat/route.ts` — calendar events include `calendarType` field (primary / birthday / holiday / other); model instructed to surface birthdays as reminders and omit holiday calendars by default
+- `web/src/components/chat/chat-interface.tsx` — imports and renders `ToolStatusBar`
+
 ### Fixed
 - `scripts/sync-oura.py` — `daily_activity` end_date is exclusive; changed `end_str` to `now + 1 day` so today's steps/calories are included in the sync
 - `scripts/sync-oura.py` — `all_dates` union now includes `activity` dates so today's activity row is written even when readiness/sleep haven't finalized yet
