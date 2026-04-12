@@ -10,27 +10,25 @@ flowchart LR
         oura["Oura Ring"]
         fitbit["Fitbit"]
         gfit["Google Fit"]
-        renpho["Renpho"]
     end
 
     subgraph scripts["CLI Sync Scripts\n(session start)"]
         so["sync-oura"]
         sf["sync-fitbit"]
         sg["sync-googlefit"]
-        sr["sync-renpho"]
     end
 
     db[("Supabase\n14 tables")]
 
     subgraph web["Next.js Web App (Vercel)"]
-        cron["api/cron/sync\n(every 30 min)"]
+        cron["api/cron/sync\n(daily 6am PST)"]
         rs["api/sync/oura\napi/sync/fitbit\napi/sync/googlefit"]
         rc["api/chat"]
         rf["api/fun-fact"]
         rq["api/daily-quote"]
         rw["api/weather"]
-        rcal["api/calendar"]
-        rmail["api/gmail"]
+        rcal["api/google/calendar"]
+        rmail["api/google/gmail"]
         pg["Dashboard · Habits · Tasks · Fitness · Chat · Journal"]
     end
 
@@ -44,7 +42,6 @@ flowchart LR
     oura --> so --> db
     fitbit --> sf --> db
     gfit --> sg --> db
-    renpho --> sr --> db
 
     oura & fitbit & gfit --> rs --> db
     cron --> rs
