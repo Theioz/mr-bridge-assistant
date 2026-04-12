@@ -7,7 +7,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Fixed
+### Added (web UI redesign — PR #89)
+- **Design system** — `globals.css` now defines all CSS custom properties (`--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-primary`, `--color-positive`, `--color-warning`, `--color-danger`, `--color-info`, `--color-text`, `--color-text-muted`, `--color-text-faint`); skeleton shimmer keyframe; `prefers-reduced-motion` block disables all transitions and chart animations
+- **Typography** — replaced Geist with DM Sans (headings, `font-heading`) + Inter (body); loaded via Google Fonts `<link>` in layout
+- **Navigation** — `nav.tsx` rebuilt: 240px fixed sidebar on desktop with indigo active state; bottom tab bar (5 items: Dashboard, Habits, Tasks, Chat, Journal) on mobile; `(protected)/layout.tsx` updated with `ml-0 lg:ml-60` and `pb-16 lg:pb-0`
+- **`DashboardHeader`** (`dashboard-header.tsx`) — greeting + inline date/weather (Open-Meteo, no separate card) + single SyncButton + WindowSelector in one row
+- **`HealthBreakdown`** (`health-breakdown.tsx`) — replaces `RecoverySummary` + `WeightTrendChart`; full-width card with readiness/sleep/activity scores, 6-up metrics row (HRV, RHR, total sleep, deep, REM, steps), stress/resilience row; two 50/50 tabbed chart panels: **Fitness** (Weight · Body Fat · Steps · Active Cal) and **Sleep** (Stages · HRV · RHR · SpO₂); vertical divider on desktop only; accent top bar keyed to readiness score
+- **`WindowSelector`** (`ui/window-selector.tsx`) — pill toggle for 7d/14d/30d/90d/1yr; writes `mb-window` cookie and calls `router.refresh()`; `getWindow()` server helper reads cookie with `DEFAULT_WINDOW = "7d"`
+- **`Skeleton`** (`ui/skeleton.tsx`) — shimmer placeholder component; static background when `prefers-reduced-motion` is enabled
+- **`MetricCard`** (`ui/metric-card.tsx`) — KPI card with large DM Sans value, delta arrow, `healthPositiveIsDown` awareness
+- **`WeightTrendChart`** (`dashboard/weight-trend-chart.tsx`) — standalone Recharts LineChart with optional inline weight/BF stat display in card header
+- **`RecentWorkoutsTable`** (`dashboard/recent-workouts-table.tsx`) — compact windowed workout table with "View all →" link
+- **Journal redesign** — `journal-editor.tsx` replaces `journal-flow.tsx`; two tabs: Reflect (all 5 prompts visible at once with filled/unfilled progress dots) and Free Write (open textarea with live word count); auto-save debounced 1.5s; `journal-history.tsx` rebuilt as collapsible accordion with entry preview
+- **Tasks redesign** — `task-item.tsx`: inline click-to-edit title, relative due dates ("overdue", "today", "in 2d"), 44×44px touch targets, archive button; `add-task-form.tsx`: always-visible inline form, priority dot selector (3 × 32px touch targets), date picker; `completed-tasks.tsx`: new collapsible accordion showing last 10 completed tasks
+- **Habits checkin ported to design tokens** — removed all `neutral-*` / `bg-blue-500` Tailwind classes; fixed broken `font-[family-name:var(--font-mono)]` reference (replaced with `tabular-nums`)
+- **`TasksSummary`** dashboard widget — shows all active tasks (was capped at 3) with 160px inner scroll; `HabitsCheckin` has 200px inner scroll
+- **New pages** — `/dashboard` (dedicated route), `/meals` (stub with recent meal log), `/settings` (profile key-values from Supabase)
+- **Fitness page** — new `body-comp-dual-chart.tsx` (dual-axis weight + BF), `workout-freq-chart.tsx` (weekly frequency), `active-cal-chart.tsx` (area chart), `workout-history-table.tsx` (sortable/paginated client component)
+- **Habits page** — new `heatmap.tsx` (90-day GitHub-style grid), `streak-chart.tsx` (horizontal bar, sorted by streak), `radial-completion.tsx` (weekly RadialBarChart per habit)
+- **Chat** — design token colors on input, send button, message bubbles; `message-bubble.tsx` rebuilt with proper dark-mode rendering
+
+### Changed (web UI redesign — PR #89)
+- Dashboard removed: `DailyInsights` fun-fact/quote card, `BriefingStrip` standalone card, `RecentWorkoutsTable` from main dashboard, duplicate `SyncButton` inside `RecoverySummary`, redundant status banner in `RecoverySummary`
+- Dashboard `space-y-5` → `space-y-6`; all grids `gap-5` → `gap-6` for consistent rhythm
+- `recoveryTrendsRes` query now selects `*` (was selecting subset) so all fields (steps, active_cal, spo2_avg, resting_hr) are available to the new chart tabs
+- `fitnessTrendRes` query now includes `body_fat_pct` (was weight-only) to power the Body Fat chart tab
+
+---
+
+### Fixed (pre-redesign)
 - `web/src/components/dashboard/recovery-summary.tsx` — scores row changed to `flex flex-wrap` with `gap-x-6 gap-y-3`; status block uses `w-full sm:w-auto sm:ml-auto` to stack below scores on mobile instead of overflowing; stress row changed to `flex flex-wrap` with `gap-x-4 gap-y-1` so Resilience label wraps rather than overflows at 360–414px; closes #83
 - `web/src/components/dashboard/trends-card.tsx` — tab/window button header changed to `flex flex-col sm:flex-row sm:items-center sm:justify-between` to prevent overflow at 360–414px; closes #83
 - `web/src/components/dashboard/tasks-summary.tsx` — added `min-w-0` to task row flex container so `truncate` on task title clips correctly

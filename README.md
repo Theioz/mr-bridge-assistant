@@ -318,14 +318,20 @@ Feature backlog is tracked via GitHub Issues in your fork.
 
 ## Web Interface
 
-A Next.js web app deployed on Vercel providing a full daily briefing UI:
+A Next.js web app deployed on Vercel. Built against a full design system (DM Sans + Inter, indigo primary, dark CSS custom property tokens). All pages are server-rendered with `force-dynamic`; only chart/interactive components are client components.
 
-- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) with live weather inline (temp, condition, high/low, wind, precip, location — via Open-Meteo, no API key); combined Fun Fact + Daily Quote card (Claude Haiku, quote cached daily in Supabase); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts + **Sync button** (triggers Oura, Fitbit, and Google Fit refresh on demand); Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
-- **Chat** — streams responses from Claude Sonnet with markdown rendering; inline tool status chips show which tools are running (spinner → ✓) while Mr. Bridge works; "New chat" button starts a clean session; 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
-- **Tasks** — add, complete, and archive tasks
-- **Habits** — daily check-in with blue toggle states, 7-day history grid
-- **Fitness** — body composition chart (Recharts) + workout log
-- **Journal** — guided daily reflection with 5 prompts (one at a time), progress bar, past entries history; 7 PM ntfy.sh reminder if not yet journaled
+- **Dashboard** — Personalized greeting with inline date + weather (Open-Meteo, no API key); **Health Breakdown** card (full-width): readiness/sleep/activity scores, 6-up metrics row, stress/resilience row, then two 50/50 tabbed chart panels:
+  - *Fitness* tabs: Weight · Body Fat · Steps · Active Cal
+  - *Sleep* tabs: Sleep Stages · HRV · Resting HR · SpO₂
+  - Window selector (7d/14d/30d/90d/1yr) and single Sync button (triggers Oura, Fitbit, Google Fit on demand) in the header
+  - Habits Today + Active Tasks side-by-side below (fixed height, inner scroll); Schedule Today + Important Emails below that; Upcoming Birthday widget
+- **Chat** — Streams Claude Sonnet responses with markdown rendering; inline tool status chips (spinner → ✓); "New chat" button; 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
+- **Tasks** — Inline title editing, priority dot selector, relative due dates, completed tasks accordion
+- **Habits** — Daily check-in with indigo toggles + streak counts; 90-day heatmap; streak bar chart; weekly radial completion chart
+- **Fitness** — Dual-axis body comp chart (weight + BF%); weekly workout frequency bar chart; active cal area chart; sortable/paginated workout history table
+- **Journal** — Two-tab editor: *Reflect* (all 5 prompts visible, progress dots, 1.5s auto-save) and *Free Write* (open textarea with word count); collapsible history accordion
+- **Meals** — Recent meal log from Supabase (stub; full logging via Chat)
+- **Settings** — Profile key-values from Supabase `profile` table
 
 **Local development:**
 ```bash
