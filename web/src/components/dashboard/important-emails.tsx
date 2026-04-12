@@ -41,7 +41,7 @@ export default function ImportantEmails() {
       ) : emails.length > 0 ? (
         <div className="divide-y divide-neutral-800/50">
           {emails.map((email, i) => (
-            <div key={i} className="py-2 first:pt-0 last:pb-0">
+            <div key={i} className="py-2 first:pt-0 last:pb-0 min-w-0">
               <p className="text-xs text-neutral-400 truncate">
                 {email.from}
                 {email.account === "professional" && (

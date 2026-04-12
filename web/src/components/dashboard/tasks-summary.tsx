@@ -53,7 +53,7 @@ export default function TasksSummary({ tasks }: Props) {
           {topTasks.map((t) => (
             <div
               key={t.id}
-              className={`flex items-center gap-2 border-l-2 pl-2 ${priorityBorder(t.priority)}`}
+              className={`flex items-center gap-2 border-l-2 pl-2 min-w-0 ${priorityBorder(t.priority)}`}
             >
               <p className="text-xs text-neutral-300 truncate flex-1">{t.title}</p>
               {t.due_date && (

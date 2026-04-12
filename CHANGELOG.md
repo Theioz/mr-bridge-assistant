@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- `web/src/components/dashboard/recovery-summary.tsx` — scores row changed to `flex flex-wrap` with `gap-x-6 gap-y-3`; status block uses `w-full sm:w-auto sm:ml-auto` to stack below scores on mobile instead of overflowing; stress row changed to `flex flex-wrap` with `gap-x-4 gap-y-1` so Resilience label wraps rather than overflows at 360–414px; closes #83
+- `web/src/components/dashboard/trends-card.tsx` — tab/window button header changed to `flex flex-col sm:flex-row sm:items-center sm:justify-between` to prevent overflow at 360–414px; closes #83
+- `web/src/components/dashboard/tasks-summary.tsx` — added `min-w-0` to task row flex container so `truncate` on task title clips correctly
+- `web/src/components/dashboard/important-emails.tsx` — added `min-w-0` to per-email container so `truncate` on sender/subject lines clips correctly
+
 ### Added
 - `web/src/app/api/sync/oura/route.ts` — POST endpoint; syncs last 3 days of Oura data (sleep, readiness, activity, spo2, stress, resilience, vo2) into `recovery_metrics`; requires authenticated session; closes #82
 - `web/src/app/api/sync/fitbit/route.ts` — POST endpoint; syncs last 7 days of Fitbit body composition and workouts into `fitness_log` and `workout_sessions`; reads rotating refresh token from Supabase `profile` table; writes back new token after each refresh
