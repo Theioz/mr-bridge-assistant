@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client
+from fetch_weather import fetch_weather, format_weather_line
 
 
 def fmt_hrs(h) -> str:
@@ -120,6 +121,14 @@ def main():
             .data
         )
 
+    def q_weather():
+        # Fetch profile first so fetch_weather doesn't make a second profile query
+        # (profile is fetched in the same tier1 batch; if it races we fall back gracefully)
+        try:
+            return fetch_weather(client=client)
+        except Exception as e:
+            return {"error": str(e)}
+
     def q_recipes(recipe_ids: list):
         return (
             client.table("recipes")
@@ -141,6 +150,7 @@ def main():
         "recovery":           q_recovery,
         "study_log":          q_study_log,
         "meal_log":           q_meal_log,
+        "weather":            q_weather,
     }
 
     results: dict = {}
@@ -182,6 +192,21 @@ def main():
     print("## PROFILE")
     for k, v in profile.items():
         print(f"- {k}: {v}")
+
+    # Weather
+    weather = results.get("weather") or {}
+    print("\n## WEATHER")
+    if weather.get("error"):
+        print(f"Unavailable: {weather['error']}")
+    elif weather:
+        print(format_weather_line(weather))
+        if weather.get("precip_in") and weather["precip_in"] > 0.1:
+            print("Rain expected — plan accordingly")
+        loc = weather.get("location", "")
+        if loc:
+            print(f"Location: {loc}")
+    else:
+        print("Unavailable")
 
     # Active Tasks
     tasks = results.get("tasks") or []

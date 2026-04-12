@@ -31,6 +31,7 @@ SYNCS: list[tuple[str, list[str]]] = [
 ALERTS: list[list[str]] = [
     ["scripts/check_hrv_alert.py"],
     ["scripts/check_daily_alerts.py"],
+    ["scripts/check_weather_alert.py"],
 ]
 
 

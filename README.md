@@ -25,6 +25,8 @@ flowchart LR
     subgraph web["Next.js Web App"]
         rc["api/chat"]
         rf["api/fun-fact"]
+        rq["api/daily-quote"]
+        rw["api/weather"]
         rcal["api/calendar"]
         rmail["api/gmail"]
         pg["Dashboard · Habits · Tasks · Fitness · Chat · Journal"]
@@ -34,6 +36,7 @@ flowchart LR
         cl["Anthropic Claude"]
         gc["Google Calendar"]
         gm["Gmail"]
+        om["Open-Meteo"]
     end
 
     oura --> so --> db
@@ -45,10 +48,11 @@ flowchart LR
     db --> rc
     rc --> db
 
-    cl --> rc & rf
+    cl --> rc & rf & rq
     gc --> rcal --> pg
     gm --> rmail --> pg
-    rf --> pg
+    rf & rq & rw --> pg
+    om --> rw
 ```
 
 ## Purpose
@@ -91,6 +95,8 @@ mr-bridge-assistant/
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts          # Claude API tool use (12 tools: tasks, habits, fitness, profile, Gmail, Calendar, recipes, meals)
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
+│   │   │   │   ├── daily-quote/route.ts   # Claude Haiku motivational quote, cached daily in Supabase
+│   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
@@ -105,7 +111,10 @@ mr-bridge-assistant/
 │   │   │   ├── fitness/                   # Body comp chart (Recharts)
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
-│   │   │       ├── fun-fact.tsx           # Daily fun fact card
+│   │   │       ├── daily-insights.tsx     # Combined fun fact + quote card (single card, responsive divider)
+│   │   │       ├── fun-fact.tsx           # Daily fun fact (used by daily-insights)
+│   │   │       ├── daily-quote.tsx        # Daily motivational quote (used by daily-insights)
+│   │   │       ├── weather-card.tsx       # Weather inline with greeting header (Open-Meteo)
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── recovery-summary.tsx   # Oura recovery & sleep card
@@ -165,7 +174,8 @@ mr-bridge-assistant/
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
 │   ├── requirements.txt                   # Pinned Python dependencies
-│   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data
+│   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
+│   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile; reusable
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── migrate_to_supabase.py             # One-time migration: markdown → Supabase
 │   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
@@ -176,6 +186,7 @@ mr-bridge-assistant/
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_daily_alerts.py              # Task due-date push alerts
+│   ├── check_weather_alert.py             # Severe weather push alerts (precip/thunder/heat/freeze/wind)
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   └── update-references.sh              # Pull latest best practices submodule
 │
@@ -278,7 +289,7 @@ Feature backlog is tracked via GitHub Issues in your fork.
 
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) + readiness badge header; Fun Fact top banner (Claude Haiku); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
+- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) with live weather inline (temp, condition, high/low, wind, precip, location — via Open-Meteo, no API key); combined Fun Fact + Daily Quote card (Claude Haiku, quote cached daily in Supabase); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
 - **Chat** — streams responses from Claude Sonnet with markdown rendering
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
