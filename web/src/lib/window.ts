@@ -12,7 +12,7 @@ export const WINDOW_DAYS: Record<WindowKey, number> = {
 
 export const WINDOW_KEYS: WindowKey[] = ["7d", "14d", "30d", "90d", "1yr"];
 
-const DEFAULT_WINDOW: WindowKey = "7d";
+const DEFAULT_WINDOW: WindowKey = "14d";
 
 /** Read the active window from the mb-window cookie. Server-side only. */
 export async function getWindow(): Promise<{ key: WindowKey; days: number }> {

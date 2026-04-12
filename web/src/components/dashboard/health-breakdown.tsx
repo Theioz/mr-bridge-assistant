@@ -182,8 +182,8 @@ function FitnessChartPanel({
   const chartLabel: Record<FitnessTab, string> = {
     weight:   `Weight — ${windowLabel}`,
     bodyfat:  `Body Fat — ${windowLabel}`,
-    steps:    "Steps — 14d",
-    calories: "Active Cal — 14d",
+    steps:    `Steps — ${windowLabel}`,
+    calories: `Active Cal — ${windowLabel}`,
   };
 
   return (
@@ -263,9 +263,11 @@ function FitnessChartPanel({
 
 function SleepChartPanel({
   trends,
+  windowLabel,
   animate,
 }: {
   trends: RecoveryMetrics[];
+  windowLabel: string;
   animate: boolean;
 }) {
   const hasSpo2 = trends.some((d) => d.spo2_avg != null && d.spo2_avg > 0);
@@ -290,10 +292,10 @@ function SleepChartPanel({
   const spo2Data   = trends.map((d) => ({ date: d.date.slice(5), value: d.spo2_avg }));
 
   const chartLabel: Record<SleepTab, string> = {
-    stages: "Sleep Stages — 14d",
-    hrv:    "HRV — 14d",
-    rhr:    "Resting HR — 14d",
-    spo2:   "SpO₂ — 14d",
+    stages: `Sleep Stages — ${windowLabel}`,
+    hrv:    `HRV — ${windowLabel}`,
+    rhr:    `Resting HR — ${windowLabel}`,
+    spo2:   `SpO₂ — ${windowLabel}`,
   };
 
   return (
@@ -504,7 +506,7 @@ export default function HealthBreakdown({ recovery, trends, fitnessData, windowL
 
               {/* Sleep (border-left only on desktop) */}
               <div className="min-w-0 lg:pl-6 lg:border-l lg:border-[#1E2130]">
-                <SleepChartPanel trends={trends} animate={animate} />
+                <SleepChartPanel trends={trends} windowLabel={windowLabel} animate={animate} />
               </div>
             </div>
           </>

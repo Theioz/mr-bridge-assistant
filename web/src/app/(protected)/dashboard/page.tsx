@@ -58,11 +58,11 @@ export default async function DashboardPage() {
       .select("*")
       .order("date", { ascending: false })
       .limit(1),
-    // 14-day recovery trend (HRV, sleep stages, steps, calories, RHR, SpO2)
+    // Windowed recovery trend (HRV, sleep stages, steps, calories, RHR, SpO2)
     supabase
       .from("recovery_metrics")
       .select("*")
-      .gte("date", daysAgoString(13))
+      .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
     supabase.from("habit_registry").select("id,name,emoji").eq("active", true),
     supabase.from("habits").select("*").eq("date", today),
