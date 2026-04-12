@@ -8,9 +8,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `web/src/app/api/sync/oura/route.ts` — POST endpoint; syncs last 3 days of Oura data (sleep, readiness, activity, spo2, stress, resilience, vo2) into `recovery_metrics`; requires authenticated session; closes #82
+- `web/src/app/api/sync/fitbit/route.ts` — POST endpoint; syncs last 7 days of Fitbit body composition and workouts into `fitness_log` and `workout_sessions`; reads rotating refresh token from Supabase `profile` table; writes back new token after each refresh
+- `web/src/app/api/sync/googlefit/route.ts` — POST endpoint; discovers datasources then aggregates last 7 days of body composition into `fitness_log`; skips dates already covered by a richer source
+- `web/src/app/api/cron/sync/route.ts` — GET endpoint; verifies Vercel `CRON_SECRET`; runs all three syncs in parallel with 30-minute skip window (mirrors `run-syncs.py` logic); each source reports independently so a single failure doesn't block others
+- `web/src/lib/sync/oura.ts`, `fitbit.ts`, `googlefit.ts`, `log.ts` — shared sync library; extracted from route files so cron and user-triggered routes share identical logic; `logSync` + `lastSyncAgeSecs` helpers read/write `sync_log` table
+- `web/src/components/dashboard/sync-button.tsx` — "Sync" button in the Recovery & Sleep card header; calls all three sync routes in parallel; spinner animation while running; shows "Synced HH:MM" on success; triggers `router.refresh()` to reload server component data without a full page reload
+- `web/vercel.json` — Vercel cron schedule (`0 14 * * *`, 6am PST / 7am PDT); calls `/api/cron/sync` daily so overnight Oura/Fitbit/Google Fit data is ready when the dashboard opens; manual Sync button handles on-demand refreshes throughout the day
 - `web/src/app/api/chat/route.ts` — `selectModel()`: tiered model routing; simple CRUD commands (add task, log habit, log meal, create event, get recipes, list tasks, check habits) route to `claude-haiku-4-5-20251001`; complex reasoning requests (analysis, planning, recommendations, fitness goals, meal planning, email synthesis) stay on `claude-sonnet-4-6`; zero-latency heuristic classifier — no extra LLM call; logs selected tier to server console per request; closes #81
 
-### Added
+### Fixed
+- `web/src/app/(protected)/page.tsx` — removed `avg_hrv IS NOT NULL` filter from the recovery query; previously, if Oura hadn't finalized HRV when the sync ran in the morning, the card fell back to two-day-old data instead of showing the most recent (partial) row
+- `web/src/middleware.ts` — `/api/cron/` routes now bypass session redirect; previously Vercel cron requests were redirected to `/login` before reaching the route handler
 - `web/src/components/chat/tool-status-bar.tsx` — inline tool status chips rendered below the last message while Mr. Bridge is working; spinner while tool is executing, ✓ when result arrives, chips disappear when response finishes streaming; reads from `message.parts` (AI SDK v4) with `toolInvocations` fallback; covers all 13 chat tools; closes #64
 - `web/src/app/api/chat/route.ts` — `list_calendar_events` tool: queries all Google Calendars for a given date range (defaults to today); events tagged with `calendarType` (primary / birthday / holiday / other) so the model filters noise; declined invitations excluded server-side; closes gap where the model had no way to read the calendar
 - `web/src/app/(protected)/chat/page.tsx` — "New chat" link in header; navigating to `/chat?new=1` forces a fresh session with no prior context
