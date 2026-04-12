@@ -123,7 +123,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
   return (
     <div className="bg-neutral-900 rounded-xl border border-neutral-800 p-4 h-full">
       {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex gap-1">
           {(["bodycomp", "recovery", "activity"] as Tab[]).map((t) => (
             <button

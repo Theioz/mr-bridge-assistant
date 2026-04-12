@@ -103,7 +103,7 @@ export default function RecoverySummary({ recovery, trends }: Props) {
         {recovery ? (
           <div className="space-y-4">
             {/* Three scores */}
-            <div className={`flex items-end gap-8 rounded-xl p-4 ${scoreBg(recovery.readiness)}`}>
+            <div className={`flex flex-wrap items-end gap-x-6 gap-y-3 rounded-xl p-4 ${scoreBg(recovery.readiness)}`}>
               <div>
                 <p className="text-xs text-neutral-500 uppercase tracking-wide mb-1">Readiness</p>
                 <span className={`text-[3.25rem] font-bold font-[family-name:var(--font-mono)] leading-none ${scoreColor(recovery.readiness)}`}>
@@ -124,7 +124,7 @@ export default function RecoverySummary({ recovery, trends }: Props) {
                   </span>
                 </div>
               )}
-              <div className="ml-auto text-right pb-1">
+              <div className="w-full sm:w-auto sm:ml-auto text-left sm:text-right pb-1">
                 <p className={`text-xs font-medium ${statusColor(recovery.readiness).split(" ")[0]}`}>
                   {statusLabel(recovery.readiness)}
                 </p>
@@ -191,7 +191,7 @@ export default function RecoverySummary({ recovery, trends }: Props) {
 
             {/* Stress row — only if data present */}
             {(meta(recovery, "stress_high_mins") != null || meta(recovery, "stress_day_summary") != null) && (
-              <div className="flex items-center gap-4 text-xs text-neutral-500 pt-1 border-t border-neutral-800/60">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 pt-1 border-t border-neutral-800/60">
                 <span className="uppercase tracking-wide">Stress</span>
                 {meta(recovery, "stress_high_mins") != null && (
                   <span className="font-[family-name:var(--font-mono)] text-neutral-300">
