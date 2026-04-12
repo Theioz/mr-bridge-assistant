@@ -60,3 +60,30 @@ export function startOfTodayRFC3339(tz = USER_TZ): string {
 export function endOfTodayRFC3339(tz = USER_TZ): string {
   return `${todayString(tz)}T23:59:59${tzOffsetString(tz)}`;
 }
+
+/**
+ * Returns an RFC 3339 string for midnight of an arbitrary date in the user's timezone.
+ * date must be a YYYY-MM-DD string.
+ * e.g. startOfDayRFC3339("2026-04-14") → "2026-04-14T00:00:00-07:00"
+ */
+export function startOfDayRFC3339(date: string, tz = USER_TZ): string {
+  return `${date}T00:00:00${tzOffsetString(tz)}`;
+}
+
+/**
+ * Returns an RFC 3339 string for end-of-day of an arbitrary date in the user's timezone.
+ * date must be a YYYY-MM-DD string.
+ */
+export function endOfDayRFC3339(date: string, tz = USER_TZ): string {
+  return `${date}T23:59:59${tzOffsetString(tz)}`;
+}
+
+/**
+ * Adds N days to a YYYY-MM-DD string, returns a new YYYY-MM-DD string.
+ * Uses UTC arithmetic to avoid DST shifts changing the date.
+ */
+export function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}

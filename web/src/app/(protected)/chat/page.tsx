@@ -6,25 +6,30 @@ import type { ChatMessage, ChatSession } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 import type { Message } from "ai";
 
-export default async function ChatPage() {
+export default async function ChatPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
   const supabase = await createClient();
   const today = todayString();
+  const { new: forceNew } = await searchParams;
 
   // Find or create today's web session (used as the write target for new messages)
   let session: ChatSession | null = null;
 
-  const { data: existing } = await supabase
-    .from("chat_sessions")
-    .select("*")
-    .eq("device", "web")
-    .gte("started_at", `${today}T00:00:00`)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (!forceNew) {
+    const { data: existing } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .eq("device", "web")
+      .gte("started_at", `${today}T00:00:00`)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (existing) {
-    session = existing as ChatSession;
-  } else {
+    if (existing) {
+      session = existing as ChatSession;
+    }
+  }
+
+  if (!session) {
     const { data: created } = await supabase
       .from("chat_sessions")
       .insert({ device: "web" })
@@ -33,19 +38,13 @@ export default async function ChatPage() {
     session = created as ChatSession;
   }
 
-  // Load last 20 messages across all web sessions so history is never lost
+  // Load last 20 messages from the current session only
   let initialMessages: Message[] = [];
-  const { data: sessionIds } = await supabase
-    .from("chat_sessions")
-    .select("id")
-    .eq("device", "web");
-
-  if (sessionIds && sessionIds.length > 0) {
-    const ids = sessionIds.map((s: { id: string }) => s.id);
+  if (session?.id) {
     const { data: msgs } = await supabase
       .from("chat_messages")
       .select("id, role, content, created_at")
-      .in("session_id", ids)
+      .eq("session_id", session.id)
       .in("role", ["user", "assistant"])
       .order("created_at", { ascending: false })
       .limit(20);
@@ -64,8 +63,17 @@ export default async function ChatPage() {
 
   return (
     <div className="pt-6">
-      <h1 className="text-xl font-semibold text-neutral-100 mb-4">Chat</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-semibold text-neutral-100">Chat</h1>
+        <a
+          href="/chat?new=1"
+          className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+        >
+          New chat
+        </a>
+      </div>
       <ChatInterface
+        key={session?.id}
         sessionId={session?.id ?? ""}
         initialMessages={initialMessages}
       />
