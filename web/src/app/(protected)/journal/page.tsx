@@ -2,21 +2,27 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import JournalFlow from "@/components/journal/journal-flow";
+import JournalEditor from "@/components/journal/journal-editor";
 import JournalHistory from "@/components/journal/journal-history";
 import type { JournalEntry, JournalResponses } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 
 async function saveJournalEntry(
   date: string,
-  responses: JournalResponses
+  responses: JournalResponses,
+  freeWrite: string
 ): Promise<{ error?: string }> {
   "use server";
   const supabase = await createClient();
   const { error } = await supabase
     .from("journal_entries")
     .upsert(
-      { date, responses, updated_at: new Date().toISOString() },
+      {
+        date,
+        responses,
+        free_write: freeWrite.trim() || null,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "date" }
     );
   if (error) return { error: error.message };
@@ -29,43 +35,53 @@ export default async function JournalPage() {
   const today = todayString();
 
   const [todayResult, historyResult] = await Promise.all([
-    supabase
-      .from("journal_entries")
-      .select("*")
-      .eq("date", today)
-      .maybeSingle(),
+    supabase.from("journal_entries").select("*").eq("date", today).maybeSingle(),
     supabase
       .from("journal_entries")
       .select("*")
       .neq("date", today)
       .order("date", { ascending: false })
-      .limit(14),
+      .limit(30),
   ]);
 
-  const todayEntry = todayResult.data as JournalEntry | null;
+  const todayEntry  = todayResult.data as JournalEntry | null;
   const pastEntries = (historyResult.data ?? []) as JournalEntry[];
 
+  const dateLabel = new Date(today + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <div className="pt-8 space-y-8">
+    <div className="space-y-8 max-w-2xl">
+      {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-neutral-100">Journal</h1>
-        <p className="text-sm text-neutral-500 mt-0.5">
-          {todayEntry ? "Today's entry is saved." : "Take 5 minutes to reflect on today."}
+        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+          Journal
+        </h1>
+        <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+          {dateLabel}
         </p>
       </div>
 
-      <section>
-        <h2 className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Today</h2>
-        <JournalFlow
-          date={today}
-          initialResponses={todayEntry?.responses ?? {}}
-          saveAction={saveJournalEntry}
-        />
-      </section>
+      {/* Today's editor */}
+      <JournalEditor
+        date={today}
+        initialResponses={todayEntry?.responses ?? {}}
+        initialFreeWrite={todayEntry?.free_write ?? ""}
+        saveAction={saveJournalEntry}
+      />
 
+      {/* Past entries */}
       {pastEntries.length > 0 && (
         <section>
-          <h2 className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Past Entries</h2>
+          <p
+            className="text-xs uppercase tracking-widest mb-3"
+            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+          >
+            Past Entries
+          </p>
           <JournalHistory entries={pastEntries} />
         </section>
       )}

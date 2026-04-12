@@ -38,7 +38,11 @@ export default function SyncButton() {
       onClick={handleSync}
       disabled={state === "syncing"}
       title={syncedAt ? `Last synced ${syncedAt}` : "Sync all data sources"}
-      className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-40 transition-colors"
+      className="flex items-center gap-1.5 text-xs disabled:opacity-40 transition-colors"
+      style={{ color: "var(--color-text-faint)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
+      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-faint)")}
+
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

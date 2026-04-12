@@ -1,0 +1,524 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  LineChart, Line,
+  AreaChart, Area,
+  BarChart, Bar,
+  XAxis, YAxis,
+  CartesianGrid, Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import type { RecoveryMetrics } from "@/lib/types";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface FitnessPoint {
+  date: string;
+  weight_lb: number | null;
+  body_fat_pct: number | null;
+}
+
+interface Props {
+  recovery: RecoveryMetrics | null;
+  trends: RecoveryMetrics[];
+  fitnessData: FitnessPoint[];
+  windowLabel: string;
+}
+
+type FitnessTab = "weight" | "bodyfat" | "steps" | "calories";
+type SleepTab   = "stages" | "hrv" | "rhr" | "spo2";
+
+// ── Recharts shared config ───────────────────────────────────────────────────
+
+const TOOLTIP_STYLE = {
+  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
+  labelStyle:   { color: "#E2E8F0", fontSize: 12 },
+  itemStyle:    { color: "#64748B", fontSize: 11 },
+};
+const GRID  = { strokeDasharray: "3 3", stroke: "#1E2130", vertical: false as const };
+const AXIS  = { stroke: "#334155", tick: { fill: "#64748B", fontSize: 10 }, tickLine: false as const, axisLine: false as const };
+const CHART_H = 180;
+
+// ── Score helpers ────────────────────────────────────────────────────────────
+
+function scoreColor(score: number | null): string {
+  if (score == null) return "var(--color-text-muted)";
+  if (score >= 80)   return "var(--color-positive)";
+  if (score >= 60)   return "var(--color-warning)";
+  return "var(--color-danger)";
+}
+
+function scorePanelStyle(score: number | null): React.CSSProperties {
+  if (score == null)
+    return { background: "var(--color-surface-raised)", borderRadius: 12, padding: "16px 20px" };
+  const base = score >= 80 ? "16,185,129" : score >= 60 ? "245,158,11" : "239,68,68";
+  return {
+    background: `rgba(${base},0.10)`,
+    border: `1px solid rgba(${base},0.22)`,
+    borderRadius: 12,
+    padding: "16px 20px",
+  };
+}
+
+function accentColor(score: number | null): string {
+  if (score == null) return "var(--color-border)";
+  if (score >= 80)   return "var(--color-positive)";
+  if (score >= 60)   return "var(--color-warning)";
+  return "var(--color-danger)";
+}
+
+function statusText(score: number | null): string {
+  if (score == null) return "No readiness data";
+  if (score >= 85)   return "Recovery optimal — push hard today";
+  if (score >= 70)   return "Recovery good — normal training";
+  if (score >= 55)   return "Recovery moderate — moderate effort";
+  if (score >= 40)   return "Readiness low — consider deload";
+  return "Readiness critical — rest day recommended";
+}
+
+// ── Formatting helpers ───────────────────────────────────────────────────────
+
+function fmtHrs(hrs: number | null | undefined): string {
+  if (hrs == null) return "—";
+  const h = Math.floor(hrs);
+  const m = Math.round((hrs - h) * 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function fmtNum(n: number | null | undefined, decimals = 0): string {
+  if (n == null) return "—";
+  return decimals > 0 ? n.toFixed(decimals) : Math.round(n).toLocaleString();
+}
+
+function metaVal(recovery: RecoveryMetrics, key: string): number | string | null {
+  const val = recovery.metadata?.[key];
+  if (val == null) return null;
+  if (typeof val === "number" || typeof val === "string") return val;
+  return null;
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+interface MetricProps {
+  label: string;
+  value: string;
+  unit?: string;
+  children?: React.ReactNode;
+}
+
+function Metric({ label, value, unit, children }: MetricProps) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="text-xs shrink-0 tabular-nums" style={{ color: "var(--color-text-muted)", width: "4.5rem" }}>
+        {label}
+      </span>
+      <span className="text-sm shrink-0 tabular-nums" style={{ color: "var(--color-text)" }}>
+        {value}
+        {unit && value !== "—" && (
+          <span className="text-xs ml-0.5" style={{ color: "var(--color-text-muted)" }}>{unit}</span>
+        )}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+interface TabPillsProps<T extends string> {
+  tabs: { key: T; label: string }[];
+  active: T;
+  onSelect: (key: T) => void;
+}
+
+function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>) {
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {tabs.map(({ key, label }) => (
+        <button
+          key={key}
+          onClick={() => onSelect(key)}
+          className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+          style={{
+            background: active === key ? "var(--color-primary)" : "var(--color-surface-raised)",
+            color:      active === key ? "#fff" : "var(--color-text-muted)",
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Fitness chart panel ───────────────────────────────────────────────────────
+
+const FITNESS_TABS: { key: FitnessTab; label: string }[] = [
+  { key: "weight",   label: "Weight"    },
+  { key: "bodyfat",  label: "Body Fat"  },
+  { key: "steps",    label: "Steps"     },
+  { key: "calories", label: "Calories"  },
+];
+
+function FitnessChartPanel({
+  fitnessData,
+  trends,
+  windowLabel,
+  animate,
+}: {
+  fitnessData: FitnessPoint[];
+  trends: RecoveryMetrics[];
+  windowLabel: string;
+  animate: boolean;
+}) {
+  const [tab, setTab] = useState<FitnessTab>("weight");
+
+  const weightData = fitnessData.map((d) => ({ date: d.date.slice(5), value: d.weight_lb }));
+  const bfData     = fitnessData
+    .filter((d) => d.body_fat_pct != null)
+    .map((d) => ({ date: d.date.slice(5), value: d.body_fat_pct }));
+  const stepsData  = trends.map((d) => ({ date: d.date.slice(5), value: d.steps }));
+  const calData    = trends.map((d) => ({ date: d.date.slice(5), value: d.active_cal }));
+
+  const chartLabel: Record<FitnessTab, string> = {
+    weight:   `Weight — ${windowLabel}`,
+    bodyfat:  `Body Fat — ${windowLabel}`,
+    steps:    "Steps — 14d",
+    calories: "Active Cal — 14d",
+  };
+
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+          {chartLabel[tab]}
+        </p>
+        <TabPills tabs={FITNESS_TABS} active={tab} onSelect={setTab} />
+      </div>
+
+      {tab === "weight" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <LineChart data={weightData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} domain={["auto", "auto"]} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v} lb`, "Weight"]} />
+            <Line type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: "#6366F1", strokeWidth: 0 }} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "bodyfat" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <LineChart data={bfData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Body Fat"]} />
+            <Line type="monotone" dataKey="value" stroke="#10B981" strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: "#10B981", strokeWidth: 0 }} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "steps" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <BarChart data={stepsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), "Steps"]} />
+            <Bar dataKey="value" fill="#38BDF8" radius={[3, 3, 0, 0]}
+              isAnimationActive={animate} animationDuration={300} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "calories" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <AreaChart data={calData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} kcal`, "Active Cal"]} />
+            <Area type="monotone" dataKey="value" stroke="#F59E0B" strokeWidth={2}
+              fill="url(#calGrad)" dot={false} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+// ── Sleep chart panel ─────────────────────────────────────────────────────────
+
+function SleepChartPanel({
+  trends,
+  animate,
+}: {
+  trends: RecoveryMetrics[];
+  animate: boolean;
+}) {
+  const hasSpo2 = trends.some((d) => d.spo2_avg != null && d.spo2_avg > 0);
+
+  const SLEEP_TABS: { key: SleepTab; label: string }[] = [
+    { key: "stages", label: "Stages" },
+    { key: "hrv",    label: "HRV"    },
+    { key: "rhr",    label: "RHR"    },
+    ...(hasSpo2 ? [{ key: "spo2" as SleepTab, label: "SpO₂" }] : []),
+  ];
+
+  const [tab, setTab] = useState<SleepTab>("stages");
+
+  const stagesData = trends.map((d) => ({
+    date:  d.date.slice(5),
+    deep:  d.deep_hrs  != null ? parseFloat(d.deep_hrs.toFixed(1))  : null,
+    rem:   d.rem_hrs   != null ? parseFloat(d.rem_hrs.toFixed(1))   : null,
+    light: d.light_hrs != null ? parseFloat(d.light_hrs.toFixed(1)) : null,
+  }));
+  const hrvData    = trends.map((d) => ({ date: d.date.slice(5), value: d.avg_hrv }));
+  const rhrData    = trends.map((d) => ({ date: d.date.slice(5), value: d.resting_hr }));
+  const spo2Data   = trends.map((d) => ({ date: d.date.slice(5), value: d.spo2_avg }));
+
+  const chartLabel: Record<SleepTab, string> = {
+    stages: "Sleep Stages — 14d",
+    hrv:    "HRV — 14d",
+    rhr:    "Resting HR — 14d",
+    spo2:   "SpO₂ — 14d",
+  };
+
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+          {chartLabel[tab]}
+        </p>
+        <TabPills tabs={SLEEP_TABS} active={tab} onSelect={setTab} />
+      </div>
+
+      {tab === "stages" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <BarChart data={stagesData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} />
+            <Tooltip {...TOOLTIP_STYLE}
+              formatter={(v: number, name: string) => {
+                const h = Math.floor(v); const m = Math.round((v - h) * 60);
+                return [m > 0 ? `${h}h ${m}m` : `${h}h`, name];
+              }}
+            />
+            <Bar dataKey="deep"  name="Deep"  fill="#6366F1" stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
+            <Bar dataKey="rem"   name="REM"   fill="#A78BFA" stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
+            <Bar dataKey="light" name="Light" fill="#38BDF8" stackId="s" radius={[3,3,0,0]} isAnimationActive={animate} animationDuration={300} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "hrv" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <AreaChart data={hrvData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="hrvGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} ms`, "HRV"]} />
+            <Area type="monotone" dataKey="value" stroke="#10B981" strokeWidth={2}
+              fill="url(#hrvGrad)" dot={false} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "rhr" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <LineChart data={rhrData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} domain={["auto", "auto"]} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} bpm`, "RHR"]} />
+            <Line type="monotone" dataKey="value" stroke="#EF4444" strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: "#EF4444", strokeWidth: 0 }} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {tab === "spo2" && (
+        <ResponsiveContainer width="100%" height={CHART_H}>
+          <LineChart data={spo2Data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
+            <YAxis {...AXIS} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "SpO₂"]} />
+            <Line type="monotone" dataKey="value" stroke="#38BDF8" strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: "#38BDF8", strokeWidth: 0 }} connectNulls
+              isAnimationActive={animate} animationDuration={300} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export default function HealthBreakdown({ recovery, trends, fitnessData, windowLabel }: Props) {
+  const [animate, setAnimate] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setAnimate(!mq.matches);
+  }, []);
+
+  const accentBg = accentColor(recovery?.readiness ?? null);
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden flex flex-col"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      {/* Colored top bar */}
+      <div style={{ height: 3, background: accentBg, flexShrink: 0 }} />
+
+      <div className="p-5 flex flex-col gap-5">
+        {/* Header */}
+        <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+          Health Breakdown
+        </p>
+
+        {recovery ? (
+          <>
+            {/* Score panel */}
+            <div style={scorePanelStyle(recovery.readiness)}>
+              <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+                {/* Readiness */}
+                <div>
+                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
+                    Readiness
+                  </p>
+                  <span className="font-heading font-bold leading-none" style={{ fontSize: 52, color: scoreColor(recovery.readiness) }}>
+                    {recovery.readiness ?? "—"}
+                  </span>
+                </div>
+
+                {/* Sleep */}
+                <div className="pb-1">
+                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
+                    Sleep
+                  </p>
+                  <span className="font-heading font-bold leading-none" style={{ fontSize: 40, color: scoreColor(recovery.sleep_score) }}>
+                    {recovery.sleep_score ?? "—"}
+                  </span>
+                </div>
+
+                {/* Activity */}
+                {recovery.activity_score != null && (
+                  <div className="pb-1">
+                    <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
+                      Activity
+                    </p>
+                    <span className="font-heading font-bold leading-none" style={{ fontSize: 40, color: scoreColor(recovery.activity_score) }}>
+                      {recovery.activity_score}
+                    </span>
+                  </div>
+                )}
+
+                {/* Status + source */}
+                <div className="ml-auto text-right pb-1">
+                  <p className="text-xs font-medium" style={{ color: scoreColor(recovery.readiness) }}>
+                    {statusText(recovery.readiness)}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
+                    {recovery.source ?? "Oura"} · {recovery.date}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-2.5">
+              <Metric label="HRV"         value={fmtNum(recovery.avg_hrv)}      unit="ms"  />
+              <Metric label="RHR"         value={fmtNum(recovery.resting_hr)}   unit="bpm" />
+              <Metric label="Total Sleep" value={fmtHrs(recovery.total_sleep_hrs)} />
+              <Metric label="Deep"        value={fmtHrs(recovery.deep_hrs)}     />
+              <Metric label="REM"         value={fmtHrs(recovery.rem_hrs)}      />
+              <Metric label="Steps"       value={recovery.steps != null ? recovery.steps.toLocaleString() : "—"} />
+            </div>
+
+            {/* Stress row */}
+            {(metaVal(recovery, "stress_high_mins") != null || metaVal(recovery, "stress_day_summary") != null) && (
+              <div
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-xs"
+                style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+              >
+                <span className="uppercase tracking-widest" style={{ letterSpacing: "0.07em" }}>Stress</span>
+                {metaVal(recovery, "stress_high_mins") != null && (
+                  <span className="tabular-nums" style={{ color: "var(--color-text)" }}>
+                    {metaVal(recovery, "stress_high_mins")}m high
+                    {metaVal(recovery, "stress_recovery_mins") != null && (
+                      <> · {metaVal(recovery, "stress_recovery_mins")}m recovery</>
+                    )}
+                  </span>
+                )}
+                {metaVal(recovery, "stress_day_summary") != null && (
+                  <span className="capitalize" style={{ color: "var(--color-text-muted)" }}>
+                    {String(metaVal(recovery, "stress_day_summary")).replace(/_/g, " ")}
+                  </span>
+                )}
+                {metaVal(recovery, "resilience_level") != null && (
+                  <span className="ml-auto capitalize" style={{ color: "var(--color-text-muted)" }}>
+                    Resilience: {String(metaVal(recovery, "resilience_level")).replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Divider */}
+            <div style={{ borderTop: "1px solid var(--color-border)" }} />
+
+            {/* Two chart panels */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Fitness */}
+              <div className="min-w-0">
+                <FitnessChartPanel
+                  fitnessData={fitnessData}
+                  trends={trends}
+                  windowLabel={windowLabel}
+                  animate={animate}
+                />
+              </div>
+
+              {/* Sleep (border-left only on desktop) */}
+              <div className="min-w-0 lg:pl-6 lg:border-l lg:border-[#1E2130]">
+                <SleepChartPanel trends={trends} animate={animate} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div
+            className="flex items-center justify-center py-10 rounded-xl"
+            style={{ background: "var(--color-surface-raised)" }}
+          >
+            <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
+              No recovery data — run a sync to pull latest from Oura
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

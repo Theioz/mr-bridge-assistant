@@ -221,7 +221,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
-              animationDuration={600}
+              animationDuration={300}
             />
             <Line
               yAxisId="readiness"
@@ -233,7 +233,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
-              animationDuration={600}
+              animationDuration={300}
             />
             <Line
               yAxisId="readiness"
@@ -245,7 +245,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
-              animationDuration={600}
+              animationDuration={300}
               strokeDasharray="4 2"
             />
           </ComposedChart>
@@ -272,7 +272,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               opacity={0.7}
               radius={[2, 2, 0, 0]}
               isAnimationActive
-              animationDuration={600}
+              animationDuration={300}
             />
             <Line
               yAxisId="cal"
@@ -284,7 +284,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0 }}
               connectNulls
-              animationDuration={600}
+              animationDuration={300}
             />
           </ComposedChart>
         </ResponsiveContainer>

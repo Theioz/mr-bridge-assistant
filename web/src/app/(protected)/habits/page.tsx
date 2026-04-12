@@ -2,12 +2,16 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { Suspense } from "react";
+import { HabitHeatmap } from "@/components/habits/heatmap";
+import { StreakChart } from "@/components/habits/streak-chart";
+import { RadialCompletion } from "@/components/habits/radial-completion";
 import HabitHistory from "@/components/habits/habit-history";
 import HabitTodaySection from "@/components/habits/habit-today-section";
-import HabitRangeToggle from "@/components/habits/habit-range-toggle";
+import { WindowSelector } from "@/components/ui/window-selector";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 import { todayString, getLastNDays, daysAgoString } from "@/lib/timezone";
+import { computeStreaks } from "@/lib/streaks";
+import { getWindow } from "@/lib/window";
 
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
@@ -16,7 +20,7 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
     .from("habits")
     .upsert({ habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
   revalidatePath("/habits");
-  revalidatePath("/");
+  revalidatePath("/dashboard");
 }
 
 async function addHabit(name: string, emoji: string, category: string) {
@@ -35,54 +39,71 @@ async function archiveHabit(habitId: string) {
   const supabase = await createClient();
   await supabase.from("habit_registry").update({ active: false }).eq("id", habitId);
   revalidatePath("/habits");
-  revalidatePath("/");
+  revalidatePath("/dashboard");
 }
 
-const VALID_RANGES = [7, 30, 90] as const;
-type Range = (typeof VALID_RANGES)[number];
-
-export default async function HabitsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ range?: string }>;
-}) {
-  const params = await searchParams;
-  const rawRange = Number(params.range ?? 30);
-  const range: Range = (VALID_RANGES as readonly number[]).includes(rawRange)
-    ? (rawRange as Range)
-    : 30;
-
+export default async function HabitsPage() {
   const supabase = await createClient();
   const today = todayString();
-  const historyDates = getLastNDays(range);
+  const { key: windowKey, days } = await getWindow();
 
-  const [registryResult, todayLogsResult, historyLogsResult] = await Promise.all([
-    supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
-    supabase.from("habits").select("*").eq("date", today),
-    range === 90
-      ? supabase
-          .from("habits")
-          .select("*")
-          .gte("date", daysAgoString(89))
-          .lte("date", today)
-      : supabase.from("habits").select("*").in("date", historyDates),
-  ]);
+  // History dates for the table — cap at 90 for display sanity
+  const historyDays = Math.min(days, 90);
+  const historyDates = getLastNDays(historyDays);
+
+  const [registryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
+    await Promise.all([
+      supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
+      supabase.from("habits").select("*").eq("date", today),
+      // Window-based history
+      supabase
+        .from("habits")
+        .select("*")
+        .gte("date", daysAgoString(days - 1))
+        .lte("date", today),
+      // All completed habits for streak computation (all time)
+      supabase
+        .from("habits")
+        .select("habit_id,date")
+        .eq("completed", true)
+        .order("date", { ascending: false }),
+      // Last 7 days for radial completion chart
+      supabase
+        .from("habits")
+        .select("*")
+        .gte("date", daysAgoString(6))
+        .lte("date", today),
+    ]);
 
   const habits = (registryResult.data ?? []) as HabitRegistry[];
   const todayLogs = (todayLogsResult.data ?? []) as HabitLog[];
   const historyLogs = (historyLogsResult.data ?? []) as HabitLog[];
+  const allCompleted = (allCompletedResult.data ?? []) as { habit_id: string; date: string }[];
+  const weekLogs = (weekLogsResult.data ?? []) as HabitLog[];
 
+  const streaks = computeStreaks(allCompleted, today);
   const completed = todayLogs.filter((l) => l.completed).length;
 
+  // Dates for heatmap — use window (capped at 365)
+  const heatmapDays = Math.min(days, 365);
+  const heatmapDates = getLastNDays(heatmapDays);
+
   return (
-    <div className="pt-8 space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-100">Habits</h1>
-        <p className="text-sm text-neutral-500 mt-0.5">
-          {completed} / {habits.length} today
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+            Habits
+          </h1>
+          <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+            {completed} / {habits.length} today
+          </p>
+        </div>
+        <WindowSelector current={windowKey} />
       </div>
 
+      {/* Today's habits */}
       <HabitTodaySection
         habits={habits}
         todayLogs={todayLogs}
@@ -93,15 +114,37 @@ export default async function HabitsPage({
       />
 
       {habits.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs text-neutral-500 uppercase tracking-wide">History</h2>
-            <Suspense fallback={null}>
-              <HabitRangeToggle current={range} />
-            </Suspense>
+        <>
+          {/* Charts: Heatmap (2/3) + Radial (1/3) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <HabitHeatmap habits={habits} logs={historyLogs} dates={heatmapDates} />
+            </div>
+            <div>
+              <RadialCompletion habits={habits} weekLogs={weekLogs} />
+            </div>
           </div>
-          <HabitHistory habits={habits} logs={historyLogs} dates={historyDates} range={range} toggleAction={toggleHabit} />
-        </section>
+
+          {/* Streak chart */}
+          <StreakChart habits={habits} streaks={streaks} />
+
+          {/* History grid */}
+          <section>
+            <p
+              className="text-xs uppercase tracking-widest mb-3"
+              style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+            >
+              History — {windowKey.toUpperCase()} {historyDays < days ? `(showing ${historyDays}d)` : ""}
+            </p>
+            <HabitHistory
+              habits={habits}
+              logs={historyLogs.filter((l) => historyDates.includes(l.date))}
+              dates={historyDates}
+              range={historyDays as 7 | 30 | 90}
+              toggleAction={toggleHabit}
+            />
+          </section>
+        </>
       )}
     </div>
   );

@@ -8,7 +8,7 @@ interface Props {
   height?: number;
 }
 
-export default function InlineSparkline({ data, color = "#3b82f6", height = 24 }: Props) {
+export default function InlineSparkline({ data, color = "var(--color-positive)", height = 24 }: Props) {
   const chartData = data.map((v, i) => ({ i, v }));
   return (
     <ResponsiveContainer width="100%" height={height}>
