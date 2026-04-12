@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ComposedChart,
+  BarChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -20,10 +22,10 @@ interface Props {
   recentWorkout: WorkoutSession | null;
 }
 
-type Tab = "bodycomp" | "recovery";
-type Window = "7d" | "30d" | "90d";
+type Tab = "bodycomp" | "recovery" | "activity";
+type Window = "7d" | "30d" | "90d" | "1y";
 
-const WINDOW_DAYS: Record<Window, number> = { "7d": 7, "30d": 30, "90d": 90 };
+const WINDOW_DAYS: Record<Window, number> = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
 
 interface TooltipProps {
   active?: boolean;
@@ -57,6 +59,12 @@ const gridProps = {
   vertical: false,
 } as const;
 
+const TAB_LABELS: Record<Tab, string> = {
+  bodycomp: "Body Comp",
+  recovery: "Recovery",
+  activity: "Activity",
+};
+
 export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }: Props) {
   const [tab, setTab] = useState<Tab>("bodycomp");
   const [window, setWindow] = useState<Window>("30d");
@@ -87,20 +95,37 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
           date: d.date.slice(5),
           hrv: d.avg_hrv,
           readiness: d.readiness,
+          spo2: d.spo2_avg != null && d.spo2_avg > 0 ? d.spo2_avg : null,
         })),
     [recoveryData, cutoff]
   );
 
-  const hasBodyComp = bodyCompData.length > 0;
-  const hasRecovery = recoveryChartData.length > 0;
-  const isEmpty = tab === "bodycomp" ? !hasBodyComp : !hasRecovery;
+  const activityChartData = useMemo(
+    () =>
+      recoveryData
+        .filter((d) => d.date >= cutoff && (d.steps != null || d.active_cal != null))
+        .map((d) => ({
+          date: d.date.slice(5),
+          steps: d.steps,
+          activeCal: d.active_cal,
+          activityScore: d.activity_score,
+        })),
+    [recoveryData, cutoff]
+  );
+
+  const isEmpty =
+    tab === "bodycomp"
+      ? bodyCompData.length === 0
+      : tab === "recovery"
+      ? recoveryChartData.length === 0
+      : activityChartData.length === 0;
 
   return (
     <div className="bg-neutral-900 rounded-xl border border-neutral-800 p-4 h-full">
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-1">
-          {(["bodycomp", "recovery"] as Tab[]).map((t) => (
+          {(["bodycomp", "recovery", "activity"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -110,12 +135,12 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
                   : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
-              {t === "bodycomp" ? "Body Comp" : "Recovery"}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
         <div className="flex gap-1">
-          {(["7d", "30d", "90d"] as Window[]).map((w) => (
+          {(["7d", "30d", "90d", "1y"] as Window[]).map((w) => (
             <button
               key={w}
               onClick={() => setWindow(w)}
@@ -173,7 +198,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
             />
           </ComposedChart>
         </ResponsiveContainer>
-      ) : (
+      ) : tab === "recovery" ? (
         <ResponsiveContainer width="100%" height={200}>
           <ComposedChart data={recoveryChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
@@ -210,6 +235,57 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
               connectNulls
               animationDuration={600}
             />
+            <Line
+              yAxisId="readiness"
+              type="monotone"
+              dataKey="spo2"
+              name="SpO2 %"
+              stroke="#06b6d4"
+              strokeWidth={1}
+              dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }}
+              connectNulls
+              animationDuration={600}
+              strokeDasharray="4 2"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      ) : (
+        /* Activity tab: steps bars + active cal line */
+        <ResponsiveContainer width="100%" height={200}>
+          <ComposedChart data={activityChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
+            <YAxis yAxisId="steps" orientation="left" {...axisProps} domain={[0, "auto"]} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <YAxis yAxisId="cal" orientation="right" {...axisProps} domain={[0, "auto"]} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              iconType="circle"
+              iconSize={6}
+              wrapperStyle={{ fontSize: "11px", color: "#737373", paddingTop: "8px" }}
+            />
+            <Bar
+              yAxisId="steps"
+              dataKey="steps"
+              name="Steps"
+              fill="#6366f1"
+              opacity={0.7}
+              radius={[2, 2, 0, 0]}
+              isAnimationActive
+              animationDuration={600}
+            />
+            <Line
+              yAxisId="cal"
+              type="monotone"
+              dataKey="activeCal"
+              name="Active Cal"
+              stroke="#f97316"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }}
+              connectNulls
+              animationDuration={600}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       )}
@@ -219,7 +295,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
         <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between">
           <div>
             <p className="text-xs text-neutral-500 mb-0.5">Last workout</p>
-            <p className="text-sm text-neutral-300 font-medium">{recentWorkout.activity}</p>
+            <p className="text-sm text-neutral-300 font-medium capitalize">{recentWorkout.activity}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-[family-name:var(--font-mono)] text-neutral-400">

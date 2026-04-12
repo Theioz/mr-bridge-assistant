@@ -29,7 +29,7 @@ from _supabase import get_client, upsert, log_sync, urlopen_with_retry
 
 
 def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = True) -> dict | None:
-    """Fetch an Oura v2 endpoint. Returns None (instead of exiting) when required=False and a 4xx occurs."""
+    """Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when required=False and a 4xx occurs."""
     token = os.environ.get("OURA_ACCESS_TOKEN", "")
     if not token:
         print("[error] OURA_ACCESS_TOKEN not set in .env")
@@ -43,6 +43,27 @@ def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = Tru
         return urlopen_with_retry(req)
     except urllib.error.HTTPError as e:
         if not required and e.code in (400, 403, 404, 422):
+            print(f"[info] Oura {endpoint} not available ({e.code}) — skipping")
+            return None
+        print(f"[error] Oura API {endpoint} returned {e.code}: {e.read().decode()}")
+        sys.exit(1)
+
+
+def oura_get_datetime(endpoint: str, start_dt: str, end_dt: str) -> dict | None:
+    """Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrate, workout)."""
+    token = os.environ.get("OURA_ACCESS_TOKEN", "")
+    if not token:
+        print("[error] OURA_ACCESS_TOKEN not set in .env")
+        sys.exit(1)
+    url = (
+        f"https://api.ouraring.com/v2/usercollection/{endpoint}"
+        f"?start_datetime={start_dt}&end_datetime={end_dt}"
+    )
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        return urlopen_with_retry(req)
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 403, 404, 422):
             print(f"[info] Oura {endpoint} not available ({e.code}) — skipping")
             return None
         print(f"[error] Oura API {endpoint} returned {e.code}: {e.read().decode()}")
@@ -207,9 +228,108 @@ def fetch_vo2_max(start: str, end: str) -> dict:
     return result
 
 
+def fetch_heartrate(start_dt: str, end_dt: str) -> dict:
+    """
+    Fetch intraday heart rate samples and group by date.
+    Returns dict keyed by date with hr_avg_day, hr_min_day, hr_max_day.
+    Uses datetime params (start_datetime/end_datetime).
+    """
+    data = oura_get_datetime("heartrate", start_dt, end_dt)
+    if not data:
+        return {}
+
+    # Group bpm samples by date
+    by_date: dict[str, list[int]] = {}
+    for item in data.get("data", []):
+        ts = item.get("timestamp", "")
+        bpm = item.get("bpm")
+        if not ts or bpm is None:
+            continue
+        day = ts[:10]  # YYYY-MM-DD
+        by_date.setdefault(day, []).append(bpm)
+
+    result: dict[str, dict] = {}
+    for day, samples in by_date.items():
+        if not samples:
+            continue
+        result[day] = {
+            "hr_avg_day": int(round(sum(samples) / len(samples))),
+            "hr_min_day": min(samples),
+            "hr_max_day": max(samples),
+        }
+    return result
+
+
+def fetch_oura_workouts(start_dt: str, end_dt: str) -> list[dict]:
+    """
+    Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions upsert.
+    Uses datetime params (start_datetime/end_datetime).
+    """
+    data = oura_get_datetime("workout", start_dt, end_dt)
+    if not data:
+        return []
+
+    rows = []
+    for d in data.get("data", []):
+        day = d.get("day")
+        if not day:
+            continue
+        start_iso = d.get("start_datetime", "")
+        end_iso = d.get("end_datetime", "")
+
+        duration_mins = None
+        if start_iso and end_iso:
+            try:
+                fmt = "%Y-%m-%dT%H:%M:%S%z"
+                dt_start = datetime.strptime(start_iso[:19], "%Y-%m-%dT%H:%M:%S")
+                dt_end   = datetime.strptime(end_iso[:19],   "%Y-%m-%dT%H:%M:%S")
+                duration_mins = int((dt_end - dt_start).total_seconds() / 60)
+            except Exception:
+                pass
+
+        rows.append({
+            "date":         day,
+            "start_time":   fmt_time(start_iso),
+            "activity":     d.get("activity") or "unknown",
+            "duration_mins": duration_mins,
+            "calories":     int(d["calories"]) if d.get("calories") is not None else None,
+            "avg_hr":       None,  # Oura workout endpoint doesn't expose avg_hr
+            "notes":        d.get("label"),
+            "source":       "oura",
+            "metadata": {
+                "oura_id":              d.get("id"),
+                "intensity":            d.get("intensity"),
+                "distance_meters":      d.get("distance"),
+                "avg_met":              d.get("average_met_level"),
+                "low_intensity_mins":   secs_to_mins(d.get("low_intensity_time")),
+                "med_intensity_mins":   secs_to_mins(d.get("medium_intensity_time")),
+                "high_intensity_mins":  secs_to_mins(d.get("high_intensity_time")),
+            },
+        })
+    return rows
+
+
 def existing_dates(client) -> set:
     rows = client.table("recovery_metrics").select("date").execute().data
     return {r["date"] for r in rows}
+
+
+def sync_oura_workouts(client, workout_rows: list[dict], start_date: str, end_date: str) -> int:
+    """
+    Replace all oura-source workout_sessions rows in the date range, then insert fresh.
+    Returns number of rows written.
+    """
+    if not workout_rows:
+        return 0
+    # Clear existing oura workouts in the range to avoid duplicates
+    client.table("workout_sessions") \
+        .delete() \
+        .eq("source", "oura") \
+        .gte("date", start_date) \
+        .lte("date", end_date) \
+        .execute()
+    result = client.table("workout_sessions").insert(workout_rows).execute()
+    return len(result.data) if result.data else len(workout_rows)
 
 
 def main():
@@ -218,23 +338,30 @@ def main():
     parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
 
-    end = datetime.now()
-    start = end - timedelta(days=args.days)
+    now = datetime.now()
+    start = now - timedelta(days=args.days)
     start_str = start.strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+    # daily_activity end_date is exclusive — add 1 day to include today
+    end_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    # datetime range for heartrate and workout endpoints
+    start_dt = start.strftime("%Y-%m-%dT00:00:00")
+    end_dt   = now.strftime("%Y-%m-%dT23:59:59")
 
-    print(f"[sync-oura] Fetching {start_str} to {end_str}...")
+    print(f"[sync-oura] Fetching {start_str} to {now.strftime('%Y-%m-%d')}...")
 
-    sleep_detail      = fetch_sleep_detail(start_str, end_str)
+    sleep_detail         = fetch_sleep_detail(start_str, end_str)
     readiness, body_temp = fetch_readiness(start_str, end_str)
-    sleep_scores      = fetch_sleep_scores(start_str, end_str)
-    activity          = fetch_activity(start_str, end_str)
-    spo2              = fetch_spo2(start_str, end_str)
-    stress            = fetch_stress(start_str, end_str)
-    resilience        = fetch_resilience(start_str, end_str)
-    vo2               = fetch_vo2_max(start_str, end_str)
+    sleep_scores         = fetch_sleep_scores(start_str, end_str)
+    activity             = fetch_activity(start_str, end_str)
+    spo2                 = fetch_spo2(start_str, end_str)
+    stress               = fetch_stress(start_str, end_str)
+    resilience           = fetch_resilience(start_str, end_str)
+    vo2                  = fetch_vo2_max(start_str, end_str)
+    heartrate            = fetch_heartrate(start_dt, end_dt)
+    workout_rows         = fetch_oura_workouts(start_dt, end_dt)
 
-    all_dates = sorted(set(readiness) | set(sleep_detail))
+    # Include activity dates so today's steps/calories appear even before readiness is finalized
+    all_dates = sorted(set(readiness) | set(sleep_detail) | set(activity))
 
     if not all_dates:
         print("[sync-oura] No data returned from Oura.")
@@ -249,6 +376,7 @@ def main():
     for d in all_dates:
         sd  = sleep_detail.get(d, {})
         act = activity.get(d, {})
+        hr  = heartrate.get(d, {})
         tag = "NEW" if d in new_dates else "UPD"
         print(
             f"  [{tag}] {d} — "
@@ -263,8 +391,16 @@ def main():
             f"SpO2: {spo2.get(d)} | "
             f"Steps: {act.get('steps')} | "
             f"Active Cal: {act.get('active_cal')} | "
+            f"HR day avg/min/max: {hr.get('hr_avg_day')}/{hr.get('hr_min_day')}/{hr.get('hr_max_day')} | "
             f"VO2: {vo2.get(d)}"
         )
+
+    if workout_rows:
+        print(f"\nOura workouts to write: {len(workout_rows)}")
+        for w in workout_rows:
+            print(f"  {w['date']} — {w['activity']} {w['duration_mins']}min | Cal: {w['calories']} | {w['metadata'].get('intensity')}")
+    else:
+        print("\nOura workouts: none detected in range")
 
     if not args.yes:
         confirm = input("\nWrite to Supabase? [y/N] ").strip().lower()
@@ -277,6 +413,7 @@ def main():
         sd  = sleep_detail.get(d, {})
         act = activity.get(d, {})
         st  = stress.get(d, {})
+        hr  = heartrate.get(d, {})
 
         meta: dict = {}
         if sd.get("bedtime_end"):
@@ -305,6 +442,12 @@ def main():
             meta["resilience_level"] = resilience[d]
         if vo2.get(d) is not None:
             meta["vo2_max"] = vo2[d]
+        if hr.get("hr_avg_day") is not None:
+            meta["hr_avg_day"] = hr["hr_avg_day"]
+        if hr.get("hr_min_day") is not None:
+            meta["hr_min_day"] = hr["hr_min_day"]
+        if hr.get("hr_max_day") is not None:
+            meta["hr_max_day"] = hr["hr_max_day"]
 
         sb_rows.append({
             "date":            d,
@@ -327,8 +470,9 @@ def main():
         })
 
     written = upsert(client, "recovery_metrics", sb_rows, conflict="date")
-    log_sync(client, "oura", "ok", written)
-    print(f"[sync-oura] Upserted {written} row(s) to Supabase.")
+    workout_written = sync_oura_workouts(client, workout_rows, start_str, now.strftime("%Y-%m-%d"))
+    log_sync(client, "oura", "ok", written + workout_written)
+    print(f"[sync-oura] Upserted {written} recovery row(s), {workout_written} workout row(s) to Supabase.")
 
 
 if __name__ == "__main__":

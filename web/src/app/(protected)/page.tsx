@@ -61,15 +61,15 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from("recovery_metrics")
-      .select("date, avg_hrv, readiness, total_sleep_hrs, light_hrs, deep_hrs, rem_hrs")
+      .select("date, avg_hrv, readiness, sleep_score, total_sleep_hrs, light_hrs, deep_hrs, rem_hrs, steps, active_cal, spo2_avg, activity_score, metadata")
       .order("date", { ascending: false })
-      .limit(90),
+      .limit(365),
     supabase
       .from("fitness_log")
       .select("date, weight_lb, body_fat_pct")
       .not("body_fat_pct", "is", null)
       .order("date", { ascending: true })
-      .limit(90),
+      .limit(365),
     supabase
       .from("workout_sessions")
       .select("*")

@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  ComposedChart,
   BarChart,
   Bar,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -56,72 +54,25 @@ export default function RecoveryTrends({ data }: Props) {
 
   const chartData = data.map((d) => ({
     date: d.date.slice(5),
-    hrv: d.avg_hrv,
-    readiness: d.readiness,
     light: d.light_hrs != null ? parseFloat(d.light_hrs.toFixed(1)) : null,
     deep: d.deep_hrs != null ? parseFloat(d.deep_hrs.toFixed(1)) : null,
     rem: d.rem_hrs != null ? parseFloat(d.rem_hrs.toFixed(1)) : null,
   }));
 
   return (
-    <div className="space-y-4 mt-4">
-      {/* HRV + Readiness */}
-      <div>
-        <p className="text-xs text-neutral-500 mb-2">HRV / Readiness — 14 days</p>
-        <ResponsiveContainer width="100%" height={160}>
-          <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
-            <YAxis yAxisId="hrv" orientation="left" {...axisProps} domain={["auto", "auto"]} />
-            <YAxis yAxisId="readiness" orientation="right" {...axisProps} domain={[0, 100]} />
-            <Tooltip content={<CustomTooltip />} />
-            <Line
-              yAxisId="hrv"
-              type="monotone"
-              dataKey="hrv"
-              name="HRV (ms)"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              isAnimationActive
-              animationDuration={800}
-              animationEasing="ease-out"
-            />
-            <Line
-              yAxisId="readiness"
-              type="monotone"
-              dataKey="readiness"
-              name="Readiness"
-              stroke="#a3e635"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              isAnimationActive
-              animationDuration={800}
-              animationEasing="ease-out"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Sleep breakdown */}
-      <div>
-        <p className="text-xs text-neutral-500 mb-2">Sleep breakdown — 14 days</p>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
-            <YAxis {...axisProps} domain={[0, "auto"]} />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="light" name="Light (h)" stackId="sleep" fill="#6366f1" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
-            <Bar dataKey="deep" name="Deep (h)" stackId="sleep" fill="#3b82f6" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
-            <Bar dataKey="rem" name="REM (h)" stackId="sleep" fill="#06b6d4" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={600} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="mt-4">
+      <p className="text-xs text-neutral-500 mb-2">Sleep — 14 days</p>
+      <ResponsiveContainer width="100%" height={160}>
+        <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
+          <YAxis {...axisProps} domain={[0, "auto"]} />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar dataKey="light" name="Light (h)" stackId="sleep" fill="#6366f1" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
+          <Bar dataKey="deep" name="Deep (h)" stackId="sleep" fill="#3b82f6" radius={[0, 0, 0, 0]} isAnimationActive animationDuration={600} />
+          <Bar dataKey="rem" name="REM (h)" stackId="sleep" fill="#06b6d4" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={600} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
