@@ -28,6 +28,45 @@ const retryOnOverload: LanguageModelV1Middleware = {
   },
 };
 
+function selectModel(messages: { role: string; content: unknown }[]): "haiku" | "sonnet" {
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  if (!lastUser || typeof lastUser.content !== "string") return "sonnet";
+  const msg = lastUser.content.toLowerCase().trim();
+  if (!msg) return "sonnet";
+
+  // Gate 1: length
+  if (msg.length > 280) return "sonnet";
+
+  // Gate 2: sentence count
+  const sentences = msg.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  if (sentences.length >= 3) return "sonnet";
+
+  // Gate 3: complex keywords
+  const complexPatterns = [
+    "analyze", "analysis", "recommend", "should i", "what should",
+    "plan", "strategy", "help me", "best way", "optimize", "review",
+    "compare", "versus", " vs ", "summarize", "summary", "trend",
+    "progress", "what do you think", "advice", "suggest", "improve",
+    "breakdown", "fitness goal", "meal plan", "workout plan",
+    "schedule strategy", "is it worth", "explain why",
+  ];
+  if (complexPatterns.some((p) => msg.includes(p))) return "sonnet";
+
+  // Gate 4: simple command patterns
+  const simplePatterns = [
+    /add task/, /create task/, /new task/, /complete task/,
+    /mark.{0,20}done/, /mark.{0,20}complete/, /finish task/,
+    /log habit/, /log.{0,10}meal/, /had.{0,30}for (breakfast|lunch|dinner|snack)/,
+    /create event/, /add event/, /schedule.{0,20}at \d/, /book.{0,20}at \d/,
+    /show.{0,10}tasks/, /list.{0,10}tasks/, /get.{0,10}tasks/, /what.{0,10}tasks/,
+    /check habits/, /show habits/, /get recipes/, /find recipes/, /what.{0,20}recipes/,
+    /my habits today/,
+  ];
+  if (simplePatterns.some((p) => p.test(msg))) return "haiku";
+
+  return "sonnet";
+}
+
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
@@ -674,8 +713,15 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
     }),
   };
 
+  const modelTier = selectModel(messages);
+  console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
+  const selectedModel = wrapLanguageModel({
+    model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
+    middleware: retryOnOverload,
+  });
+
   const result = streamText({
-    model: wrapLanguageModel({ model: anthropic("claude-sonnet-4-6"), middleware: retryOnOverload }),
+    model: selectedModel,
     system: systemPrompt,
     providerOptions: {
       anthropic: { cacheControl: { type: "ephemeral" } },
