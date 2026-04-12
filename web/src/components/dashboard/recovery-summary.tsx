@@ -1,6 +1,7 @@
 import type { RecoveryMetrics } from "@/lib/types";
 import RecoveryTrends from "./recovery-trends";
 import InlineSparkline from "./inline-sparkline";
+import SyncButton from "./sync-button";
 
 interface Props {
   recovery: RecoveryMetrics | null;
@@ -94,7 +95,10 @@ export default function RecoverySummary({ recovery, trends }: Props) {
       <div className={`h-0.5 w-full ${accentBar(recovery?.readiness ?? null)}`} />
 
       <div className="p-5">
-        <p className="text-xs text-neutral-500 uppercase tracking-wide mb-4">Recovery &amp; Sleep</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs text-neutral-500 uppercase tracking-wide">Recovery &amp; Sleep</p>
+          <SyncButton />
+        </div>
 
         {recovery ? (
           <div className="space-y-4">

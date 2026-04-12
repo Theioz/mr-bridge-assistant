@@ -13,7 +13,7 @@ flowchart LR
         renpho["Renpho"]
     end
 
-    subgraph scripts["Sync Scripts"]
+    subgraph scripts["CLI Sync Scripts\n(session start)"]
         so["sync-oura"]
         sf["sync-fitbit"]
         sg["sync-googlefit"]
@@ -22,7 +22,9 @@ flowchart LR
 
     db[("Supabase\n14 tables")]
 
-    subgraph web["Next.js Web App"]
+    subgraph web["Next.js Web App (Vercel)"]
+        cron["api/cron/sync\n(every 30 min)"]
+        rs["api/sync/oura\napi/sync/fitbit\napi/sync/googlefit"]
         rc["api/chat"]
         rf["api/fun-fact"]
         rq["api/daily-quote"]
@@ -43,6 +45,9 @@ flowchart LR
     fitbit --> sf --> db
     gfit --> sg --> db
     renpho --> sr --> db
+
+    oura & fitbit & gfit --> rs --> db
+    cron --> rs
 
     db --> pg
     db --> rc
@@ -94,6 +99,12 @@ mr-bridge-assistant/
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals)
+│   │   │   │   ├── sync/
+│   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics (session auth)
+│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts (session auth; refresh token from profile table)
+│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp (session auth)
+│   │   │   │   ├── cron/
+│   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; 30-min skip window; all 3 sources in parallel
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   ├── daily-quote/route.ts   # Claude Haiku motivational quote, cached daily in Supabase
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
@@ -117,7 +128,8 @@ mr-bridge-assistant/
 │   │   │       ├── weather-card.tsx       # Weather inline with greeting header (Open-Meteo)
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
-│   │   │       ├── recovery-summary.tsx   # Oura: 3 scores (readiness/sleep/activity), metrics grid (HRV, RHR, SpO2, steps, temp Δ, sleep stages, daytime HR), stress row, 14-day sleep chart
+│   │   │       ├── recovery-summary.tsx   # Oura: 3 scores (readiness/sleep/activity), metrics grid (HRV, RHR, SpO2, steps, temp Δ, sleep stages, daytime HR), stress row, 14-day sleep chart; Sync button in header
+│   │   │       ├── sync-button.tsx        # Client component; calls all 3 sync routes in parallel; spinner + router.refresh() on completion
 │   │   │       ├── recovery-trends.tsx    # 14-day stacked sleep breakdown chart (light/deep/REM)
 │   │   │       ├── fitness-summary.tsx    # Body comp + last workout card
 │   │   │       ├── inline-sparkline.tsx   # Mini trend sparkline (used in summary cards)
@@ -127,7 +139,13 @@ mr-bridge-assistant/
 │   │   └── lib/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
-│   │       └── types.ts                   # TypeScript interfaces for all DB tables
+│   │       ├── types.ts                   # TypeScript interfaces for all DB tables
+│   │       └── sync/
+│   │           ├── oura.ts                # syncOura() — all Oura endpoints, upserts recovery_metrics
+│   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; manages rotating refresh token
+│   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
+│   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers for sync_log table
+│   ├── vercel.json                        # Cron: /api/cron/sync every 30 minutes
 │   └── package.json
 │
 ├── .claude/
@@ -289,7 +307,7 @@ Feature backlog is tracked via GitHub Issues in your fork.
 
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) with live weather inline (temp, condition, high/low, wind, precip, location — via Open-Meteo, no API key); combined Fun Fact + Daily Quote card (Claude Haiku, quote cached daily in Supabase); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
+- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) with live weather inline (temp, condition, high/low, wind, precip, location — via Open-Meteo, no API key); combined Fun Fact + Daily Quote card (Claude Haiku, quote cached daily in Supabase); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts + **Sync button** (triggers Oura, Fitbit, and Google Fit refresh on demand); Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
 - **Chat** — streams responses from Claude Sonnet with markdown rendering; inline tool status chips show which tools are running (spinner → ✓) while Mr. Bridge works; "New chat" button starts a clean session; 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
@@ -312,8 +330,26 @@ ANTHROPIC_API_KEY=...
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_REFRESH_TOKEN=...
+GOOGLE_FIT_REFRESH_TOKEN=...
+OURA_ACCESS_TOKEN=...
+FITBIT_CLIENT_ID=...
+FITBIT_CLIENT_SECRET=...
+FITBIT_WEIGHT_UNIT=lbs
 USER_TIMEZONE=America/Los_Angeles
 ```
+
+> **Note:** `FITBIT_REFRESH_TOKEN` is stored in the Supabase `profile` table (key: `fitbit_refresh_token`) rather than as an env var, because Fitbit rotates it on every use. Write it once with:
+> ```bash
+> python3 -c "
+> import sys, os; sys.path.insert(0, 'scripts')
+> from dotenv import load_dotenv; load_dotenv(dotenv_path='.env')
+> from _supabase import get_client
+> get_client().table('profile').upsert({'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='key').execute()
+> print('Done.')
+> "
+> ```
+>
+> The Vercel cron (`*/30 * * * *`) requires `CRON_SECRET` to be set in Vercel environment variables — Vercel generates and manages this automatically when you deploy with `vercel.json` crons enabled.
 
 ## Voice Interface (Jarvis Mode)
 
