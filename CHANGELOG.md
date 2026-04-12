@@ -8,6 +8,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `scripts/fetch_weather.py` — Open-Meteo weather helper (no API key); resolves location from profile in order: `location_lat`/`location_lon` → `location_city` (geocoded) → `Identity/Location` (geocoded via Open-Meteo free geocoding API); `fetch_weather()` accepts optional `profile` dict to skip second Supabase round-trip; `format_weather_line()` produces single-line briefing format; closes #77
+- `scripts/check_weather_alert.py` — once-per-day push notifications for precip >0.2in, thunderstorm (WMO 95–99), high >95°F, low <28°F, wind >30mph; guard via `weather_alert_last_notified` profile key; closes #77
+- `web/src/app/api/weather/route.ts` — Next.js API route; same location resolution logic; 30-minute Next.js cache via `next: { revalidate: 1800 }`
+- `web/src/app/api/daily-quote/route.ts` — Claude Haiku motivational quote; cached daily in Supabase `profile` key `quote_cache` so it's stable all day; strips markdown code fences from model output before JSON parsing
+- `web/src/components/dashboard/weather-card.tsx` — compact weather block inline with dashboard greeting header; responsive (left-aligned on mobile, right-aligned on sm+); icon color-coded by WMO category; amber border for thunderstorm alert state
+- `web/src/components/dashboard/daily-insights.tsx` — replaces separate FunFact and DailyQuote banners with a single combined card; vertical divider on desktop, horizontal divider on mobile; halves top-of-page height on mobile
+- `web/src/components/dashboard/daily-quote.tsx` — standalone quote component (used internally by `daily-insights.tsx`)
+
+### Changed
+- `scripts/fetch_briefing_data.py` — added `q_weather` to tier1 parallel fetch batch; outputs `## WEATHER` section between PROFILE and ACTIVE TASKS; includes "Rain expected" note when precip >0.1in
+- `scripts/run-syncs.py` — `check_weather_alert.py` added to ALERTS list (runs after syncs alongside HRV and task alerts)
+- `web/src/app/(protected)/page.tsx` — greeting header refactored to `flex-col sm:flex-row` with `WeatherCard` inline on the right; FunFact + DailyQuote replaced by combined `DailyInsights` card; name lookup now checks both `name` and `Identity/Name` profile keys (fixes name not displaying when profile uses `Identity/Name` key format)
+- `.claude/rules/mr-bridge-rules.md` — `### Weather` section added to Session Briefing Format; Location Management section added with chat commands for `location_city` override and reset, and web UI hook note for issue #10
+
+### Added
 - `scripts/check_hrv_alert.py` — fires push notification via `notify.sh` when today's HRV drops more than `hrv_alert_threshold`% below 7-day baseline; once-per-day guard via `profile` key `hrv_alert_last_notified`; threshold configurable in Supabase `profile` table (default 20%); closes #60
 - `scripts/check_daily_alerts.py` — fires push notification per active task with `due_date <= today`; distinguishes "due today" vs "overdue"; once-per-day guard via `profile` key `task_alerts_last_notified`; closes #59
 - `scripts/run-syncs.py` — parallel sync orchestrator; runs `sync-oura.py`, `sync-fitbit.py`, `sync-googlefit.py` concurrently; skips any source synced within the last 30 minutes
