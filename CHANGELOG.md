@@ -14,7 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `web/src/app/api/cron/sync/route.ts` — GET endpoint; verifies Vercel `CRON_SECRET`; runs all three syncs in parallel with 30-minute skip window (mirrors `run-syncs.py` logic); each source reports independently so a single failure doesn't block others
 - `web/src/lib/sync/oura.ts`, `fitbit.ts`, `googlefit.ts`, `log.ts` — shared sync library; extracted from route files so cron and user-triggered routes share identical logic; `logSync` + `lastSyncAgeSecs` helpers read/write `sync_log` table
 - `web/src/components/dashboard/sync-button.tsx` — "Sync" button in the Recovery & Sleep card header; calls all three sync routes in parallel; spinner animation while running; shows "Synced HH:MM" on success; triggers `router.refresh()` to reload server component data without a full page reload
-- `web/vercel.json` — Vercel cron schedule (`*/30 * * * *`); calls `/api/cron/sync` every 30 minutes so the web app stays current without requiring a CLI session
+- `web/vercel.json` — Vercel cron schedule (`0 14 * * *`, 6am PST / 7am PDT); calls `/api/cron/sync` daily so overnight Oura/Fitbit/Google Fit data is ready when the dashboard opens; manual Sync button handles on-demand refreshes throughout the day
 - `web/src/app/api/chat/route.ts` — `selectModel()`: tiered model routing; simple CRUD commands (add task, log habit, log meal, create event, get recipes, list tasks, check habits) route to `claude-haiku-4-5-20251001`; complex reasoning requests (analysis, planning, recommendations, fitness goals, meal planning, email synthesis) stay on `claude-sonnet-4-6`; zero-latency heuristic classifier — no extra LLM call; logs selected tier to server console per request; closes #81
 
 ### Fixed

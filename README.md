@@ -145,7 +145,7 @@ mr-bridge-assistant/
 │   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; manages rotating refresh token
 │   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers for sync_log table
-│   ├── vercel.json                        # Cron: /api/cron/sync every 30 minutes
+│   ├── vercel.json                        # Cron: /api/cron/sync daily at 6am PST (0 14 * * *)
 │   └── package.json
 │
 ├── .claude/
