@@ -8,13 +8,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `scripts/check_hrv_alert.py` — fires push notification via `notify.sh` when today's HRV drops more than `hrv_alert_threshold`% below 7-day baseline; once-per-day guard via `profile` key `hrv_alert_last_notified`; threshold configurable in Supabase `profile` table (default 20%); closes #60
+- `scripts/check_daily_alerts.py` — fires push notification per active task with `due_date <= today`; distinguishes "due today" vs "overdue"; once-per-day guard via `profile` key `task_alerts_last_notified`; closes #59
+- `scripts/run-syncs.py` — parallel sync orchestrator; runs `sync-oura.py`, `sync-fitbit.py`, `sync-googlefit.py` concurrently; skips any source synced within the last 30 minutes
+- `web/src/app/api/google/calendar/upcoming-birthday/route.ts` — fetches birthdays from Google Calendar over a 60-day lookahead window; returns nearest upcoming birthday with days-until count
+- `web/src/components/dashboard/upcoming-birthday.tsx` — dashboard card showing nearest upcoming birthday; closes #76
 - `web/src/components/dashboard/trends-card.tsx` — new full-width dashboard card replacing `FitnessSummary`; dual-tab (Body Comp / Recovery) time-series chart with 7d / 30d / 90d window toggle; Body Comp tab shows weight + body fat % on dual axes; Recovery tab shows HRV + readiness on dual axes; recent workout slim row at bottom; closes #72
 
 ### Fixed
+- `web/src/app/(protected)/fitness/page.tsx` — query was returning oldest 30 records instead of most recent 30; added `.order("date", { ascending: false })` + `.limit(30)` then reversed for chart display
 - `scripts/sync-googlefit.py` (`get_credentials`) — removed `scopes=FITNESS_SCOPES` from `Credentials()` constructor; passing scopes during refresh caused `invalid_scope: Bad Request` because Google validates the refresh request body scopes against the original grant; the fix lets the stored refresh token determine its own scope; closes #55
 
 ### Changed
+- `web/src/app/(protected)/page.tsx` — dashboard greeting now reads `name` key from Supabase `profile` table and displays it in the header (e.g. "Good morning, Jason"); falls back to generic greeting if profile name not set; closes #78
 - `web/src/app/(protected)/page.tsx` — replaced `FitnessSummary` (2-col) with `TrendsCard` (full-width row); `ScheduleToday` moved to its own full-width row below; fitness trends query extended to 90 rows ascending; recovery trends query extended from 14 → 90 rows; `RecoverySummary` receives sliced last-14 entries to preserve existing chart label; dropped single-entry `fitnessResult` and `prevFitnessResult` queries
+- `.claude/rules/mr-bridge-rules.md` — birthday briefing lookahead extended from 7 to 60 days; briefing now shows only the single nearest birthday regardless of how far out it is
 
 ---
 

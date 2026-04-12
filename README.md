@@ -168,11 +168,15 @@ mr-bridge-assistant/
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── migrate_to_supabase.py             # One-time migration: markdown → Supabase
+│   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
 │   ├── sync-oura.py                       # Oura recovery metrics → Supabase recovery_metrics
 │   ├── sync-fitbit.py                     # Fitbit workouts → Supabase workout_sessions
-│   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log
-│   ├── notify.sh                          # macOS + Android push notifications
+│   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
+│   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
+│   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
+│   ├── check_daily_alerts.py              # Task due-date push alerts
+│   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   └── update-references.sh              # Pull latest best practices submodule
 │
 └── voice/                                 # Jarvis mode (voice interface)
@@ -274,7 +278,7 @@ Feature backlog is tracked via GitHub Issues in your fork.
 
 A Next.js web app deployed on Vercel providing a full daily briefing UI:
 
-- **Dashboard** — Bento grid (3-col lg): dynamic greeting + readiness badge header; Fun Fact top banner (Claude Haiku); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Fitness Snapshot with delta icons; Habit pills; Task list with priority colors
+- **Dashboard** — Bento grid (3-col lg): personalized greeting (name from Supabase profile) + readiness badge header; Fun Fact top banner (Claude Haiku); Schedule Today with multi-calendar support and past-event dimming; Important Emails with `work` badge for professional account; Upcoming Birthday card; Recovery & Sleep full-width card with HRV sparkline + 14-day trend charts; Body Comp / Recovery unified trends card (tabbed, 7d/30d/90d); Habit pills; Task list with priority colors
 - **Chat** — streams responses from Claude Sonnet with markdown rendering
 - **Tasks** — add, complete, and archive tasks
 - **Habits** — daily check-in with blue toggle states, 7-day history grid
