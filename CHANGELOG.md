@@ -7,7 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- `scripts/sync-oura.py` — `daily_activity` end_date is exclusive; changed `end_str` to `now + 1 day` so today's steps/calories are included in the sync
+- `scripts/sync-oura.py` — `all_dates` union now includes `activity` dates so today's activity row is written even when readiness/sleep haven't finalized yet
+
 ### Added
+- `scripts/sync-oura.py` — `fetch_heartrate()`: fetches intraday HR samples via `heartrate` endpoint (start_datetime/end_datetime params), groups by date, stores `hr_avg_day`, `hr_min_day`, `hr_max_day` in `recovery_metrics.metadata`
+- `scripts/sync-oura.py` — `fetch_oura_workouts()`: fetches Oura-detected workouts via `workout` endpoint; writes to `workout_sessions` table (source=`oura`) with intensity, distance, MET, and zone breakdown in metadata; deduplicates by clearing oura rows in range before re-insert
+- `scripts/sync-oura.py` — `oura_get_datetime()`: new helper for endpoints that use `start_datetime`/`end_datetime` params instead of `start_date`/`end_date`
 - `scripts/fetch_weather.py` — Open-Meteo weather helper (no API key); resolves location from profile in order: `location_lat`/`location_lon` → `location_city` (geocoded) → `Identity/Location` (geocoded via Open-Meteo free geocoding API); `fetch_weather()` accepts optional `profile` dict to skip second Supabase round-trip; `format_weather_line()` produces single-line briefing format; closes #77
 - `scripts/check_weather_alert.py` — once-per-day push notifications for precip >0.2in, thunderstorm (WMO 95–99), high >95°F, low <28°F, wind >30mph; guard via `weather_alert_last_notified` profile key; closes #77
 - `web/src/app/api/weather/route.ts` — Next.js API route; same location resolution logic; 30-minute Next.js cache via `next: { revalidate: 1800 }`

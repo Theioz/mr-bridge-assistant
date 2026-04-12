@@ -117,8 +117,8 @@ mr-bridge-assistant/
 │   │   │       ├── weather-card.tsx       # Weather inline with greeting header (Open-Meteo)
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
-│   │   │       ├── recovery-summary.tsx   # Oura recovery & sleep card
-│   │   │       ├── recovery-trends.tsx    # Sleep & readiness trend charts (Recharts)
+│   │   │       ├── recovery-summary.tsx   # Oura: 3 scores (readiness/sleep/activity), metrics grid (HRV, RHR, SpO2, steps, temp Δ, sleep stages, daytime HR), stress row, 14-day sleep chart
+│   │   │       ├── recovery-trends.tsx    # 14-day stacked sleep breakdown chart (light/deep/REM)
 │   │   │       ├── fitness-summary.tsx    # Body comp + last workout card
 │   │   │       ├── inline-sparkline.tsx   # Mini trend sparkline (used in summary cards)
 │   │   │       ├── habits-summary.tsx     # Today's habit progress card
@@ -180,7 +180,7 @@ mr-bridge-assistant/
 │   ├── migrate_to_supabase.py             # One-time migration: markdown → Supabase
 │   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
-│   ├── sync-oura.py                       # Oura recovery metrics → Supabase recovery_metrics
+│   ├── sync-oura.py                       # Oura Ring sync → recovery_metrics + workout_sessions; endpoints: sleep, readiness, activity, spo2, stress, resilience, heartrate, workout
 │   ├── sync-fitbit.py                     # Fitbit workouts → Supabase workout_sessions
 │   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
