@@ -12,7 +12,7 @@ flowchart LR
         gfit["Google Fit"]
     end
 
-    subgraph scripts["CLI Sync Scripts\n(session start)"]
+    subgraph scripts["Sync Scripts"]
         so["sync-oura"]
         sf["sync-fitbit"]
         sg["sync-googlefit"]
@@ -20,24 +20,40 @@ flowchart LR
 
     db[("Supabase\n14 tables")]
 
-    subgraph web["Next.js Web App (Vercel)"]
-        cron["api/cron/sync\n(daily 6am PST)"]
-        rs["api/sync/oura\napi/sync/fitbit\napi/sync/googlefit"]
+    subgraph web["Next.js · Vercel"]
+        cron["cron/sync\ndaily 6am PST"]
+        rs["sync/oura\nsync/fitbit\nsync/googlefit"]
         rc["api/chat"]
-        rf["api/fun-fact"]
-        rq["api/daily-quote"]
-        rw["api/weather"]
-        rcal["api/google/calendar"]
-        rmail["api/google/gmail"]
-        pg["Dashboard · Habits · Tasks · Fitness · Chat · Journal"]
+        rf["fun-fact"]
+        rq["daily-quote"]
+        rw["weather"]
+        rcal["google/calendar"]
+        rmail["google/gmail"]
+        pg["Dashboard · Habits\nTasks · Fitness\nChat · Journal"]
     end
 
     subgraph ext["External APIs"]
-        cl["Anthropic Claude"]
+        cl["Anthropic"]
         gc["Google Calendar"]
         gm["Gmail"]
         om["Open-Meteo"]
     end
+
+    classDef device   fill:#111318,stroke:#10B981,color:#E2E8F0,stroke-width:1.5px
+    classDef script   fill:#111318,stroke:#6366F1,color:#E2E8F0,stroke-width:1.5px
+    classDef storage  fill:#111318,stroke:#F59E0B,color:#F59E0B,stroke-width:1.5px
+    classDef route    fill:#111318,stroke:#38BDF8,color:#E2E8F0,stroke-width:1.5px
+    classDef page     fill:#181B24,stroke:#6366F1,color:#E2E8F0,stroke-width:2px
+    classDef extapi   fill:#111318,stroke:#475569,color:#94A3B8,stroke-width:1px
+    classDef cron     fill:#111318,stroke:#F59E0B,color:#F59E0B,stroke-width:1px,stroke-dasharray:4 2
+
+    class oura,fitbit,gfit device
+    class so,sf,sg script
+    class db storage
+    class rs,rc,rf,rq,rw,rcal,rmail route
+    class pg page
+    class cl,gc,gm,om extapi
+    class cron cron
 
     oura --> so --> db
     fitbit --> sf --> db
