@@ -203,7 +203,7 @@ mr-bridge-assistant/
 │   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
-│   ├── check_daily_alerts.py              # Task due-date push alerts
+│   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
 │   ├── check_weather_alert.py             # Severe weather push alerts (precip/thunder/heat/freeze/wind)
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   └── update-references.sh              # Pull latest best practices submodule

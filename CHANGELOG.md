@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (task due push notifications — issue #59)
+- **`scripts/check_task_due_alerts.py`** — replaces `check_daily_alerts.py` task alerting; queries active tasks with `due_date <= today`; sends one grouped ntfy.sh notification for overdue tasks and one for due-today tasks; per-task 24-hour deduplication via profile key `task_notif_cache` (JSON dict `{task_id: iso_timestamp}`); only fires when new tasks need notification
+- **`scripts/run-syncs.py`** — ALERTS list updated to invoke `check_task_due_alerts.py` instead of `check_daily_alerts.py`
+
 ### Changed (agent/rule Supabase cleanup — issue #97)
 - **`mr-bridge-rules.md`** — "Pending Tasks" briefing section now references Supabase `tasks` table via `fetch_briefing_data.py`; "Accountability" section references `habits` + `habit_registry` tables via same script; Recovery rules updated to query `recovery_metrics` table (order by date desc, limit 1) instead of `fitness_log.md`; Study Timer Rules updated to use `profile` table for timer state and `study_log` table for duration logging
 - **`agents/weekly-review.md`** — replaced all reads of `memory/habits.md`, `memory/todo.md`, `memory/fitness_log.md`, `memory/timer_state.json` with Supabase queries via `_supabase.py`; updated description and Rules section accordingly
