@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { todayString } from "@/lib/timezone";
 
 interface MealLogBody {
@@ -27,11 +27,14 @@ export async function POST(req: Request) {
     return Response.json({ error: "meal_type must be breakfast, lunch, dinner, or snack" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
     .from("meal_log")
     .insert({
+      user_id: user.id,
       meal_type: body.meal_type,
       notes: body.notes ?? null,
       date: body.date ?? todayString(),
