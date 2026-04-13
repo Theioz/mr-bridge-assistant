@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { GranularityToggle } from "@/components/ui/granularity-toggle";
+import { formatDate, computeDailyTicks, computeWeeklyTicks, daysToWindowKey } from "@/lib/chart-utils";
 
 interface DataPoint {
   date: string;
@@ -42,10 +43,6 @@ function getISOWeekKey(dateStr: string): string {
   const monday = new Date(d);
   monday.setDate(d.getDate() + diff);
   return monday.toISOString().slice(0, 10);
-}
-
-function dayLabel(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function dayOfWeek(dateStr: string): number {
@@ -101,7 +98,7 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
       const dateStr = d.toISOString().slice(0, 10);
       daySlots.push({
         key: dateStr,
-        label: dayLabel(dateStr),
+        label: formatDate(dateStr),
         total: null,
         isMonday: dayOfWeek(dateStr) === 1,
       });
@@ -113,7 +110,11 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
     });
   }
 
-  const showMonday = days > 14;
+  const ticks =
+    granularity === "weekly"
+      ? computeWeeklyTicks(weekSlots.map((s) => s.label), weekCount)
+      : computeDailyTicks(daySlots.map((s) => s.key), daysToWindowKey(days));
+
   const chartData = granularity === "weekly" ? weekSlots : daySlots;
   const dailyGoal = hasGoal ? Math.round(goal! / 7) : null;
 
@@ -166,13 +167,7 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
             tick={{ fill: "#64748B", fontSize: 10 }}
             tickLine={false}
             axisLine={false}
-            interval={0}
-            tickFormatter={(label, index) => {
-              if (granularity === "daily" && showMonday) {
-                return daySlots[index]?.isMonday ? label : "";
-              }
-              return label;
-            }}
+            ticks={ticks}
           />
           <YAxis
             stroke="#334155"

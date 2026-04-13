@@ -9,6 +9,7 @@ import {
 import type { WorkoutSession } from "@/lib/types";
 import Link from "next/link";
 import { GranularityToggle } from "@/components/ui/granularity-toggle";
+import { formatDate, computeDailyTicks, computeWeeklyTicks, daysToWindowKey } from "@/lib/chart-utils";
 
 interface Props {
   sessions: WorkoutSession[];
@@ -44,10 +45,6 @@ function barColor(count: number, goal: number): string {
   if (count >= goal)      return "#10B981"; // green
   if (count === goal - 1) return "#F59E0B"; // amber
   return "#EF4444";                         // red
-}
-
-function dayLabel(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function dayOfWeek(dateStr: string): number {
@@ -103,7 +100,7 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
       const dateStr = d.toISOString().slice(0, 10);
       daySlots.push({
         key: dateStr,
-        label: dayLabel(dateStr),
+        label: formatDate(dateStr),
         count: 0,
         isMonday: dayOfWeek(dateStr) === 1,
       });
@@ -114,7 +111,10 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
     });
   }
 
-  const showMonday = days > 14; // sparse ticks at >14 days
+  const ticks =
+    granularity === "weekly"
+      ? computeWeeklyTicks(weekSlots.map((s) => s.label), weekCount)
+      : computeDailyTicks(daySlots.map((s) => s.key), daysToWindowKey(days));
 
   const chartData = granularity === "weekly" ? weekSlots : daySlots;
 
@@ -164,13 +164,7 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
             tick={{ fill: "#64748B", fontSize: 10 }}
             tickLine={false}
             axisLine={false}
-            interval={0}
-            tickFormatter={(label, index) => {
-              if (granularity === "daily" && showMonday) {
-                return daySlots[index]?.isMonday ? label : "";
-              }
-              return label;
-            }}
+            ticks={ticks}
           />
           <YAxis
             stroke="#334155"
