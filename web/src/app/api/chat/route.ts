@@ -152,13 +152,66 @@ export async function POST(req: Request) {
       .select("role, content")
       .eq("session_id", sessionId)
       .in("role", ["user", "assistant"])
-      .order("created_at", { ascending: true })
+      .order("position", { ascending: true, nullsFirst: false })
       .limit(20);
     if (data) {
       // Filter out empty-content messages — they cause Anthropic 400 errors
       contextMessages = (data as { role: "user" | "assistant"; content: string }[]).filter(
         (m) => m.content.trim() !== ""
       );
+    }
+  }
+
+  // Persist the session and user message immediately — before streaming starts.
+  // This ensures messages survive stream errors, timeouts, or aborts (fix for issue #132).
+  const lastUserMessage = messages[messages.length - 1];
+  const userMessageContent = typeof lastUserMessage?.content === "string"
+    ? lastUserMessage.content
+    : JSON.stringify(lastUserMessage?.content ?? "");
+
+  if (sessionId && userId && userMessageContent.trim()) {
+    try {
+      // Upsert the session — creates it if it doesn't exist yet (lazy session creation
+      // for new chats whose UUID was generated client-side before any DB write).
+      await supabase.from("chat_sessions").upsert(
+        { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
+        { onConflict: "id" }
+      );
+
+      // Dedup guard: skip insert if an identical user message was persisted in the
+      // last 10 seconds (handles retries — same message re-POSTed after a stream error).
+      const { data: recent } = await supabase
+        .from("chat_messages")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("role", "user")
+        .eq("content", userMessageContent)
+        .gte("created_at", new Date(Date.now() - 10_000).toISOString())
+        .limit(1)
+        .maybeSingle();
+
+      if (!recent) {
+        // Derive next position: MAX(position) + 1 within this session.
+        const { data: posRow } = await supabase
+          .from("chat_messages")
+          .select("position")
+          .eq("session_id", sessionId)
+          .order("position", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
+
+        await supabase.from("chat_messages").insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: "user",
+          content: userMessageContent,
+          position: nextPos,
+        });
+      }
+    } catch (err) {
+      // Non-fatal — stream proceeds regardless; worst case the message is missing on refresh
+      console.error("[chat] early user message persist error:", err);
     }
   }
 
@@ -999,34 +1052,33 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
       console.error("[chat] streamText error:", JSON.stringify(error));
     },
     onFinish: async ({ text }) => {
-      if (!sessionId) return;
+      if (!sessionId || !userId) return;
       if (!text.trim()) return; // Don't persist empty assistant responses (failed/tool-only steps)
 
-      const lastUserMessage = messages[messages.length - 1];
-
       try {
-        // Upsert the session — creates it if it doesn't exist yet (lazy session creation
-        // for new chats whose UUID was generated client-side before any DB write).
-        const { error: sessionError } = await supabase.from("chat_sessions").upsert(
+        // Update session last_active_at to reflect completed turn.
+        await supabase.from("chat_sessions").upsert(
           { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
           { onConflict: "id" }
         );
-        if (sessionError) throw sessionError;
 
-        const { error: insertError } = await supabase.from("chat_messages").insert([
-          {
-            session_id: sessionId,
-            user_id: userId,
-            role: "user",
-            content: lastUserMessage.content,
-          },
-          {
-            session_id: sessionId,
-            user_id: userId,
-            role: "assistant",
-            content: text,
-          },
-        ]);
+        // Derive next position so the assistant message sorts after the user message.
+        const { data: posRow } = await supabase
+          .from("chat_messages")
+          .select("position")
+          .eq("session_id", sessionId)
+          .order("position", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
+
+        const { error: insertError } = await supabase.from("chat_messages").insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: "assistant",
+          content: text,
+          position: nextPos,
+        });
         if (insertError) throw insertError;
       } catch (err) {
         console.error("[chat] onFinish persist error:", err);
