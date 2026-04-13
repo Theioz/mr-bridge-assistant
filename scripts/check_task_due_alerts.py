@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CACHE_KEY = "task_notif_cache"
@@ -28,10 +28,11 @@ DEDUP_HOURS = 24
 CLICK_PATH = "/tasks"
 
 
-def get_profile_value(client, key: str) -> str | None:
+def get_profile_value(client, owner_user_id: str, key: str) -> str | None:
     rows = (
         client.table("profile")
         .select("value")
+        .eq("user_id", owner_user_id)
         .eq("key", key)
         .limit(1)
         .execute()
@@ -40,13 +41,16 @@ def get_profile_value(client, key: str) -> str | None:
     return rows[0]["value"] if rows else None
 
 
-def set_profile_value(client, key: str, value: str) -> None:
-    client.table("profile").upsert({"key": key, "value": value}, on_conflict="key").execute()
+def set_profile_value(client, owner_user_id: str, key: str, value: str) -> None:
+    client.table("profile").upsert(
+        {"user_id": owner_user_id, "key": key, "value": value},
+        on_conflict="user_id,key",
+    ).execute()
 
 
-def load_notif_cache(client) -> dict[str, str]:
+def load_notif_cache(client, owner_user_id: str) -> dict[str, str]:
     """Return {task_id: iso_timestamp_last_notified} from profile."""
-    raw = get_profile_value(client, CACHE_KEY)
+    raw = get_profile_value(client, owner_user_id, CACHE_KEY)
     if not raw:
         return {}
     try:
@@ -55,8 +59,8 @@ def load_notif_cache(client) -> dict[str, str]:
         return {}
 
 
-def save_notif_cache(client, cache: dict[str, str]) -> None:
-    set_profile_value(client, CACHE_KEY, json.dumps(cache))
+def save_notif_cache(client, owner_user_id: str, cache: dict[str, str]) -> None:
+    set_profile_value(client, owner_user_id, CACHE_KEY, json.dumps(cache))
 
 
 def needs_notification(task_id: str, cache: dict[str, str]) -> bool:
@@ -85,6 +89,7 @@ def send_notify(title: str, message: str) -> None:
 def main() -> None:
     try:
         client = get_client()
+        owner_user_id = get_owner_user_id()
     except Exception as e:
         print(f"[check_task_due_alerts] Supabase connection error: {e}", file=sys.stderr)
         return
@@ -96,6 +101,7 @@ def main() -> None:
         rows = (
             client.table("tasks")
             .select("id, title, due_date")
+            .eq("user_id", owner_user_id)
             .eq("status", "active")
             .not_("due_date", "is", None)
             .lte("due_date", today_str)
@@ -110,7 +116,7 @@ def main() -> None:
     if not rows:
         return
 
-    cache = load_notif_cache(client)
+    cache = load_notif_cache(client, owner_user_id)
     now_iso = datetime.now(timezone.utc).isoformat()
 
     # Partition tasks that need notification into overdue vs due-today buckets.
@@ -165,7 +171,7 @@ def main() -> None:
             print(f"[check_task_due_alerts] notify error (due today): {e}", file=sys.stderr)
 
     if fired:
-        save_notif_cache(client, cache)
+        save_notif_cache(client, owner_user_id, cache)
         print(
             f"[check_task_due_alerts] Fired {fired} notification(s) "
             f"({len(overdue_labels)} overdue, {len(due_today_labels)} due today)."

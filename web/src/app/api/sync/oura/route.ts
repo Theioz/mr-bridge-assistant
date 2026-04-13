@@ -16,7 +16,7 @@ export async function POST() {
 
   try {
     const db = createServiceClient();
-    const result = await syncOura(db);
+    const result = await syncOura(db, user.id);
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     console.error("[/api/sync/oura]", err);

@@ -18,9 +18,11 @@ import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task } from 
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from("habits")
-    .upsert({ habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
+    .upsert({ user_id: user.id, habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
   revalidatePath("/dashboard");
 }
 

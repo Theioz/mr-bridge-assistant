@@ -49,7 +49,7 @@ export interface OuraSyncResult {
   updated: number;
 }
 
-export async function syncOura(db: SupabaseClient, days = 3): Promise<OuraSyncResult> {
+export async function syncOura(db: SupabaseClient, userId: string, days = 3): Promise<OuraSyncResult> {
   const token = process.env.OURA_ACCESS_TOKEN;
   if (!token) throw new Error("OURA_ACCESS_TOKEN not configured");
 
@@ -182,6 +182,7 @@ export async function syncOura(db: SupabaseClient, days = 3): Promise<OuraSyncRe
     if (vo2[d] != null) meta.vo2_max = vo2[d];
 
     return {
+      user_id: userId,
       date: d,
       bedtime: sd.bedtime ?? null,
       total_sleep_hrs: sd.total_sleep_hrs ?? null,
@@ -202,7 +203,7 @@ export async function syncOura(db: SupabaseClient, days = 3): Promise<OuraSyncRe
     };
   });
 
-  const { error } = await db.from("recovery_metrics").upsert(rows, { onConflict: "date" });
+  const { error } = await db.from("recovery_metrics").upsert(rows, { onConflict: "user_id,date" });
   if (error) throw new Error(error.message);
 
   await logSync(db, "oura", "ok", rows.length);

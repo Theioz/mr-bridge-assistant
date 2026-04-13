@@ -9,9 +9,9 @@ Location is resolved in order:
 
 To set a custom location:
   python3 -c "
-  import sys; sys.path.insert(0,'scripts')
-  from _supabase import get_client; c = get_client()
-  c.table('profile').upsert({'key':'location_city','value':'Seattle, WA'}, on_conflict='key').execute()
+  import sys, os; sys.path.insert(0,'scripts')
+  from _supabase import get_client, get_owner_user_id; c = get_client(); uid = get_owner_user_id()
+  c.table('profile').upsert({'user_id':uid,'key':'location_city','value':'Seattle, WA'}, on_conflict='user_id,key').execute()
   "
 
 Reusable by both fetch_briefing_data.py and check_weather_alert.py.
@@ -28,7 +28,7 @@ from typing import Any
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id, urlopen_with_retry
 
 # WMO Weather Interpretation Code → human-readable condition
 WMO_CONDITIONS: dict[int, str] = {
@@ -119,6 +119,7 @@ def fetch_weather(
     lat: float | None = None,
     lon: float | None = None,
     profile: dict[str, str] | None = None,
+    owner_user_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Fetch weather data and return a structured dict.
@@ -150,7 +151,15 @@ def fetch_weather(
         if profile is None:
             if client is None:
                 client = get_client()
-            rows = client.table("profile").select("key,value").execute().data
+            if owner_user_id is None:
+                try:
+                    owner_user_id = get_owner_user_id()
+                except EnvironmentError:
+                    owner_user_id = None
+            q = client.table("profile").select("key,value")
+            if owner_user_id:
+                q = q.eq("user_id", owner_user_id)
+            rows = q.execute().data
             profile = {r["key"]: r["value"] for r in rows}
 
         raw_lat = profile.get("location_lat")

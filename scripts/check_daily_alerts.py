@@ -24,10 +24,11 @@ NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/tasks"
 
 
-def get_profile_value(client, key: str) -> str | None:
+def get_profile_value(client, owner_user_id: str, key: str) -> str | None:
     rows = (
         client.table("profile")
         .select("value")
+        .eq("user_id", owner_user_id)
         .eq("key", key)
         .limit(1)
         .execute()
@@ -36,13 +37,17 @@ def get_profile_value(client, key: str) -> str | None:
     return rows[0]["value"] if rows else None
 
 
-def set_profile_value(client, key: str, value: str) -> None:
-    client.table("profile").upsert({"key": key, "value": value}, on_conflict="key").execute()
+def set_profile_value(client, owner_user_id: str, key: str, value: str) -> None:
+    client.table("profile").upsert(
+        {"user_id": owner_user_id, "key": key, "value": value},
+        on_conflict="user_id,key",
+    ).execute()
 
 
 def main() -> None:
     try:
         client = get_client()
+        user_id = get_owner_user_id()
     except Exception as e:
         print(f"[check_daily_alerts] Supabase connection error: {e}", file=sys.stderr)
         return
@@ -50,7 +55,7 @@ def main() -> None:
     today_str = date.today().isoformat()
 
     # Once-per-day guard
-    last_notified = get_profile_value(client, "task_alerts_last_notified")
+    last_notified = get_profile_value(client, user_id, "task_alerts_last_notified")
     if last_notified == today_str:
         return
 
@@ -58,7 +63,8 @@ def main() -> None:
     try:
         rows = (
             client.table("tasks")
-            .select("id, name, due_date")
+            .select("id, title, due_date")
+            .eq("user_id", user_id)
             .eq("status", "active")
             .not_("due_date", "is", None)
             .lte("due_date", today_str)
@@ -72,18 +78,13 @@ def main() -> None:
 
     if not rows:
         # Still mark as run so we don't re-query all day
-        set_profile_value(client, "task_alerts_last_notified", today_str)
+        set_profile_value(client, user_id, "task_alerts_last_notified", today_str)
         return
-
-    try:
-        user_id: str | None = get_owner_user_id()
-    except EnvironmentError:
-        user_id = None
 
     fired = 0
     for task in rows:
         due = task.get("due_date", "")
-        name = task.get("name", "(unnamed task)")
+        name = task.get("title", "(unnamed task)")
         is_today = due == today_str
         title = "Task Due Today" if is_today else "Task Overdue"
         message = f"{name} — due {due}" if not is_today else f"{name} — due today"
@@ -94,12 +95,11 @@ def main() -> None:
         try:
             subprocess.run(cmd, check=True)
             fired += 1
-            if user_id:
-                log_notification(client, user_id, "task_due", title, message)
+            log_notification(client, user_id, "task_due", title, message)
         except Exception as e:
             print(f"[check_daily_alerts] notify error for task '{name}': {e}", file=sys.stderr)
 
-    set_profile_value(client, "task_alerts_last_notified", today_str)
+    set_profile_value(client, user_id, "task_alerts_last_notified", today_str)
     if fired:
         print(f"[check_daily_alerts] Fired {fired} task alert(s).")
 

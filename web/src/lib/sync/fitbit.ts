@@ -14,6 +14,7 @@ async function refreshFitbitToken(
   clientId: string,
   clientSecret: string,
   refreshToken: string,
+  userId: string,
 ): Promise<string> {
   const credentials = btoa(`${clientId}:${clientSecret}`);
   const res = await fetch(FITBIT_TOKEN_URL, {
@@ -34,10 +35,13 @@ async function refreshFitbitToken(
   const data = await res.json();
 
   // Save rotated refresh token back to profile table
-  if (data.refresh_token && data.refresh_token !== refreshToken) {
+  if (data.refresh_token && data.refresh_token !== refreshToken && userId) {
     await db
       .from("profile")
-      .upsert({ key: "fitbit_refresh_token", value: data.refresh_token }, { onConflict: "key" });
+      .upsert(
+        { user_id: userId, key: "fitbit_refresh_token", value: data.refresh_token },
+        { onConflict: "user_id,key" },
+      );
   }
 
   return data.access_token as string;
@@ -113,7 +117,7 @@ export interface FitbitSyncResult {
   workoutsWritten: number;
 }
 
-export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> {
+export async function syncFitbit(db: SupabaseClient, userId: string): Promise<FitbitSyncResult> {
   const clientId = process.env.FITBIT_CLIENT_ID;
   const clientSecret = process.env.FITBIT_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
@@ -124,13 +128,14 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
   const { data: tokenRow } = await db
     .from("profile")
     .select("value")
+    .eq("user_id", userId)
     .eq("key", "fitbit_refresh_token")
     .maybeSingle();
 
   const refreshToken = tokenRow?.value as string | undefined;
   if (!refreshToken) throw new Error("fitbit_refresh_token not found in profile table");
 
-  const accessToken = await refreshFitbitToken(db, clientId, clientSecret, refreshToken);
+  const accessToken = await refreshFitbitToken(db, clientId, clientSecret, refreshToken, userId);
 
   const now = new Date();
   const past = new Date(now);
@@ -174,10 +179,12 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
     const { data: existingRich } = await db
       .from("fitness_log")
       .select("date")
+      .eq("user_id", userId)
       .not("body_fat_pct", "is", null);
     const { data: existingFitbit } = await db
       .from("fitness_log")
       .select("date")
+      .eq("user_id", userId)
       .eq("source", "fitbit_body");
 
     const skip = new Set([
@@ -185,7 +192,9 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
       ...((existingFitbit ?? []) as { date: string }[]).map((r) => r.date),
     ]);
 
-    const newRows = bodyRows.filter((r) => !skip.has(r.date as string));
+    const newRows = bodyRows
+      .filter((r) => !skip.has(r.date as string))
+      .map((r) => ({ ...r, user_id: userId }));
     if (newRows.length) {
       const { error } = await db.from("fitness_log").insert(newRows);
       if (error) throw new Error(`fitness_log insert: ${error.message}`);
@@ -228,6 +237,7 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
     const { data: existingWorkouts } = await db
       .from("workout_sessions")
       .select("id,date,start_time,activity,avg_hr,duration_mins")
+      .eq("user_id", userId)
       .eq("source", "fitbit");
 
     const existingList = (existingWorkouts ?? []) as {
@@ -276,7 +286,7 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const newWorkouts = toInsert.map(({ _key, ...rest }) => rest);
+    const newWorkouts = toInsert.map(({ _key, ...rest }) => ({ ...rest, user_id: userId }));
     if (newWorkouts.length) {
       const { error } = await db.from("workout_sessions").insert(newWorkouts);
       if (error) throw new Error(`workout_sessions insert: ${error.message}`);

@@ -126,9 +126,12 @@ export async function POST(req: Request) {
   // Resolve the authenticated user (needed for per-user data scoping)
   const serverClient = await createClient();
   const { data: { user } } = await serverClient.auth.getUser();
-  const userId = user?.id ?? null;
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+  const userId = user.id;
   const demoUserId = process.env.DEMO_USER_ID ?? null;
-  const isDemo = !!(userId && demoUserId && userId === demoUserId);
+  const isDemo = !!(demoUserId && userId === demoUserId);
 
   const supabase = createServiceClient();
 

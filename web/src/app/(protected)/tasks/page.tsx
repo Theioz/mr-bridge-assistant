@@ -12,8 +12,9 @@ async function addTask(title: string, priority: string, dueDate: string): Promis
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
     const { error } = await supabase.from("tasks").insert({
-      user_id: user?.id,
+      user_id: user.id,
       title,
       priority: priority || "medium",
       status: "active",
@@ -83,8 +84,9 @@ async function addSubtask(parentId: string, title: string): Promise<{ error?: st
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
     const { error } = await supabase.from("tasks").insert({
-      user_id: user?.id,
+      user_id: user.id,
       title,
       parent_id: parentId,
       status: "active",

@@ -16,7 +16,7 @@ export async function POST() {
 
   try {
     const db = createServiceClient();
-    const result = await syncFitbit(db);
+    const result = await syncFitbit(db, user.id);
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Sync failed";

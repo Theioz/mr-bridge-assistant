@@ -21,7 +21,7 @@ export async function POST() {
 
   try {
     const db = createServiceClient();
-    const result = await syncGoogleFit(db);
+    const result = await syncGoogleFit(db, user.id);
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     console.error("[/api/sync/googlefit]", err);

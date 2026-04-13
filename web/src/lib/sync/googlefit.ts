@@ -96,7 +96,7 @@ export interface GoogleFitSyncResult {
   written: number;
 }
 
-export async function syncGoogleFit(db: SupabaseClient): Promise<GoogleFitSyncResult> {
+export async function syncGoogleFit(db: SupabaseClient, userId: string): Promise<GoogleFitSyncResult> {
   const accessToken = await getGoogleAccessToken();
 
   // Discover available body datasources
@@ -187,10 +187,12 @@ export async function syncGoogleFit(db: SupabaseClient): Promise<GoogleFitSyncRe
   const { data: existingRich } = await db
     .from("fitness_log")
     .select("date")
+    .eq("user_id", userId)
     .not("body_fat_pct", "is", null);
   const { data: existingGfit } = await db
     .from("fitness_log")
     .select("date")
+    .eq("user_id", userId)
     .eq("source", "google_fit");
 
   const skip = new Set([
@@ -200,7 +202,7 @@ export async function syncGoogleFit(db: SupabaseClient): Promise<GoogleFitSyncRe
 
   const newRows = rows
     .filter((r) => !skip.has(r.date as string))
-    .map((r) => ({ ...r, source: "google_fit" }));
+    .map((r) => ({ ...r, user_id: userId, source: "google_fit" }));
 
   if (!newRows.length) return { written: 0 };
 

@@ -13,9 +13,10 @@ After reading the briefing output, check the PROFILE section for a `name` key.
   python3 - <<'EOF'
   import sys
   sys.path.insert(0, "scripts")
-  from _supabase import get_client
+  from _supabase import get_client, get_owner_user_id
   client = get_client()
-  client.table("profile").upsert({"key": "name", "value": "<name>"}, on_conflict="key").execute()
+  uid = get_owner_user_id()
+  client.table("profile").upsert({"user_id": uid, "key": "name", "value": "<name>"}, on_conflict="user_id,key").execute()
   print("Name saved.")
   EOF
   ```
@@ -145,9 +146,10 @@ When the user says anything like "change my location to X", "set weather to X", 
 python3 - <<'EOF'
 import sys
 sys.path.insert(0, "scripts")
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id
 client = get_client()
-client.table("profile").upsert({"key": "location_city", "value": "<CITY>"}, on_conflict="key").execute()
+uid = get_owner_user_id()
+client.table("profile").upsert({"user_id": uid, "key": "location_city", "value": "<CITY>"}, on_conflict="user_id,key").execute()
 print("Location updated.")
 EOF
 ```
@@ -161,9 +163,10 @@ When the user says "reset my location", "back home", "use my home location", or 
 python3 - <<'EOF'
 import sys
 sys.path.insert(0, "scripts")
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id
 client = get_client()
-client.table("profile").delete().eq("key", "location_city").execute()
+uid = get_owner_user_id()
+client.table("profile").delete().eq("user_id", uid).eq("key", "location_city").execute()
 print("Location reset.")
 EOF
 ```
@@ -198,7 +201,7 @@ All live data is stored in Supabase. Local markdown files are archived originals
 | `tasks` + `study_log` | Manual logging | (future command) |
 | `profile` | Migrated from `profile.md` | (edit via Supabase or future command) |
 | `recipes` + `meal_log` | Migrated from `meal_log.md` | `get_recipes` / `log_meal` tools (web chat) |
-| `chat_sessions` + `chat_messages` | Web interface | (future — issue #10) |
+| `chat_sessions` + `chat_messages` | Web interface | Chat API (`/api/chat`) |
 | `timer_state` | Study timer | `study-timer` agent |
 
 ## Reference Index

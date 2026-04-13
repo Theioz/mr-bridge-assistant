@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 
 export interface WeatherData {
   temp: number | null;
@@ -47,9 +47,14 @@ async function geocode(query: string): Promise<{ lat: number; lon: number; label
 }
 
 export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const supabase = createServiceClient();
-    const { data: profileRows } = await supabase.from("profile").select("key,value");
+    const { data: profileRows } = await supabase.from("profile").select("key,value").eq("user_id", user.id);
     const profile: Record<string, string> = {};
     for (const row of profileRows ?? []) profile[row.key] = row.value;
 

@@ -36,10 +36,13 @@ const DEMO_EVENTS: CalendarEvent[] = [
 void today;
 
 export async function GET() {
-  // Return mock data for demo user
   const serverClient = await createClient();
   const { data: { user } } = await serverClient.auth.getUser();
-  if (user?.id && user.id === process.env.DEMO_USER_ID) {
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Return mock data for demo user
+  if (user.id === process.env.DEMO_USER_ID) {
     return NextResponse.json({ events: DEMO_EVENTS });
   }
 
