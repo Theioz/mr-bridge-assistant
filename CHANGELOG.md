@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (nutrition goal calculator defaults — issue #114)
+- **Default protein option** changed from 0.8 g/lb to 1.0 g/lb; `PROTEIN_OPTIONS` reordered so 1.0 appears first and is selected on first render
+- **Disclaimer line** added below the macro preview in `SuggestedNutritionCard` — faint text noting the estimate is based on goal weight only and that Chat gives a more personalized result
+
 ### Added (7-day trailing average overlays — issue #112)
 - **`trailing7Avg` helper** (`health-breakdown.tsx`) — computes a 7-day trailing average client-side for any `{value: number | null}[]` series; for day N, averages all non-null values in the window [N-6, N]
 - **Weight chart** — second `<Line>` overlaid on the existing LineChart; dashed (`4 2`), muted slate color (`#64748B`), no dots, `connectNulls`; legend shows "Weight" + "7d avg"
