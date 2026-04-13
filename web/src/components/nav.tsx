@@ -16,8 +16,10 @@ import {
   Bell,
   MoreHorizontal,
   X,
+  LogOut,
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import SignOutButton from "@/components/ui/sign-out-button";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
@@ -142,6 +144,11 @@ export default function Nav() {
             Demo account — changes reset nightly
           </div>
         )}
+
+        {/* Sign out — desktop */}
+        <div className="px-3 pb-4 mt-auto" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <SignOutButton />
+        </div>
       </nav>
 
       {/* Demo banner — mobile (above tab bar) */}
@@ -271,6 +278,26 @@ export default function Nav() {
                   </Link>
                 );
               })}
+
+              {/* Sign out — mobile More sheet */}
+              <button
+                onClick={async () => {
+                  setShowMore(false);
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = "/login";
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150"
+                style={{
+                  background: "var(--color-surface-raised)",
+                  color: "var(--color-text-muted)",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <LogOut size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                <span className="text-sm font-medium">Sign out</span>
+              </button>
             </div>
           </div>
         </>

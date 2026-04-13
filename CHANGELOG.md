@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (sign out button — issue #156)
+- **`web/src/components/ui/sign-out-button.tsx`** — new client component; calls `supabase.auth.signOut()` and redirects to `/login`
+- **`web/src/components/nav.tsx`** — desktop sidebar: sign-out section with top border below demo banner; mobile More sheet: Sign Out button as last grid item, inlines sign-out logic to avoid redundant imports
+
 ### Fixed (journal data leak and sync failure — issue #133)
 - **`supabase/migrations/20260413000006_journal_entries_rls_and_constraint.sql`** — `journal_entries` had RLS policies from the multitenancy migration but `ENABLE ROW LEVEL SECURITY` was never called, so all queries returned every user's rows; migration enables RLS so the existing per-user policies take effect
 - **`supabase/migrations/20260413000006_journal_entries_rls_and_constraint.sql`** — unique constraint was `(user_id, date)` (migration 003) but `saveJournalEntry` targeted `onConflict: "date,user_id"`; the column-order mismatch caused upserts to fail when another user had a row for the same date; constraint dropped and recreated as `journal_entries_date_user_id_key UNIQUE (date, user_id)` matching the upsert target
