@@ -49,10 +49,19 @@ export async function POST(req: Request) {
     return Response.json({ error: "File must be an image" }, { status: 400 });
   }
 
-  // Limit to 10 MB to avoid excessive token costs
-  const MAX_SIZE = 10 * 1024 * 1024;
+  // Reject unsupported formats (e.g. HEIC) that Claude cannot process
+  const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!SUPPORTED_TYPES.includes(imageFile.type)) {
+    return Response.json(
+      { error: `Unsupported format: ${imageFile.type}. Use JPEG, PNG, or WebP.` },
+      { status: 415 }
+    );
+  }
+
+  // 4 MB backstop — Vercel's hard limit is 4.5 MB; client compresses first
+  const MAX_SIZE = 4 * 1024 * 1024;
   if (imageFile.size > MAX_SIZE) {
-    return Response.json({ error: "Image must be under 10 MB" }, { status: 400 });
+    return Response.json({ error: "Image must be under 4 MB" }, { status: 413 });
   }
 
   // Read into memory — never stored, analyzed in-transit only

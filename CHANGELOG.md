@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (food photo upload fails on mobile — issue #135)
+- **Client-side compression** — `compressImage` helper in `FoodPhotoAnalyzer.tsx` uses the Canvas API to cap the longest edge at 1920 px and re-encode as JPEG at 0.85 quality before upload; replaces the raw file in FormData so uploads stay well under Vercel's 4.5 MB limit
+- **HEIC early rejection (client)** — if the selected file is `image/heic` or ends in `.heic`, an error is shown immediately with instructions to switch iPhone Camera to "Most Compatible"; no upload is attempted
+- **Safe JSON parsing** — `handleFileChange` checks `content-type` before calling `.json()`; a non-JSON 413 response is detected from the body text and surfaces "Image is too large to upload. Please try a smaller photo."
+- **Server-side size guard lowered to 4 MB** — `MAX_SIZE` in `analyze-photo/route.ts` changed from 10 MB to 4 MB (below Vercel's 4.5 MB cutoff); error message updated to match; returns `413` so the client can detect it
+- **HEIC server-side rejection** — `SUPPORTED_TYPES` check added after file-type validation; unsupported formats return `415 Unsupported Media Type` with a descriptive message
+
 ### Fixed (meal log route missing user_id — issue #136)
 - **`user_id` added to insert payload** — `POST /api/meals/log` now resolves the authenticated user via `supabase.auth.getUser()` and includes `user_id` in the `meal_log` insert; returns `401 Unauthorized` if no session
 - **Service client replaced** — `createServiceClient` swapped for `createClient` from `@/lib/supabase/server` so the route operates under the user's session context
