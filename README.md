@@ -79,8 +79,8 @@ flowchart LR
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, and Oura recovery scores in one view
 - **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 15 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
 - **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
-- **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion
-- **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays
+- **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
+- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); HEIC detection with user-friendly guidance; 7-day meal history

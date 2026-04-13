@@ -7,6 +7,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (subtasks + grocery list UI — issue #144)
+- **`parent_id` column on `tasks`** — migration `20260413000008_tasks_parent_id.sql` adds `parent_id uuid references tasks(id) on delete cascade` and a supporting index; applied to live DB
+- **`Subtask` type** added to `web/src/lib/types.ts`; `Task` extended with `parent_id: string | null` and optional `subtasks?: Subtask[]`
+- **Three new server actions** in `tasks/page.tsx`: `addSubtask` (inserts with `parent_id`), `completeSubtask` (completes sibling-check → auto-completes parent when all done), `deleteSubtask` (hard delete)
+- **`completeTask` now cascades** — after completing the parent, also marks all active subtasks completed
+- **`TaskItem` extended** — progress indicator (`X / Y`) in parent title row (green when all done); chevron expand/collapse (default: expanded ≤3, collapsed >3); inline subtask list with checkbox, editable title, delete button; always-visible "Add item…" input at bottom of expanded list; Enter submits and keeps focus for rapid grocery entry
+- **Dashboard tasks query** and **tasks page active query** both filter `parent_id IS NULL` so subtasks never appear as standalone items
+- **`add_task` chat tool** accepts optional `parent_id`; system prompt updated to instruct the model to call `get_tasks` first when adding list items, then `add_task` with `parent_id`
+
+### Added (daily/weekly toggle on fitness charts — issue #145)
+- **`GranularityToggle` component** — `web/src/components/ui/granularity-toggle.tsx`; `Daily | Weekly` pill toggle matching window-selector style; greyed out with tooltip when `disabled`
+- **`WorkoutFreqChart`** — prop changed from `weekCount` to `days: number`; `granularity` state (`daily`/`weekly`); auto-forces weekly + disables toggle when `days > 90`; daily mode plots one slot per calendar day (green `#10B981` with goal, indigo `#6366F1` without, rest day `#1E2130`); weekly mode retains existing ISO-week bucketing; x-axis shows only Monday ticks at >14d, all days at ≤14d
+- **`ActiveCalGoalChart`** — same prop rename and granularity state; daily mode plots raw `active_cal` values with daily target reference line (`Math.round(goal / 7)`); weekly mode retains week-sum logic; same tick density logic
+- **Fitness page** — replaced hardcoded `weekCount={8}` on both charts with `days={days}` from the window selector cookie
+
+### Fixed (mobile weather H/L wrapping — issue #147)
+- **`DashboardHeader`** — `whiteSpace: "nowrap"` on the H/L `<span>` prevents the string from breaking mid-value; `flex-wrap` + `gap-x-1.5 gap-y-0` on the weather `<p>` allows a clean break after the condition text on very narrow screens
+
 ### Added (notification history center — issue #99)
 - **`notifications` table** — new Supabase table (`id`, `user_id`, `type`, `title`, `body`, `sent_at`, `read_at`) with RLS, per-user composite index on `(user_id, sent_at desc)`, and a partial index for unread rows; migration `20260413000007_notifications.sql` applied to live DB
 - **`log_notification` helper** in `scripts/_supabase.py` — inserts a row after each successful push notification; non-fatal (errors go to stderr only)
