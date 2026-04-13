@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 
 interface Field {
   key: string;
@@ -144,9 +144,11 @@ function suggestMacros(
 function SuggestedNutritionCard({
   values,
   updateAction,
+  deleteAction,
 }: {
   values: Record<string, string>;
   updateAction: (key: string, value: string) => Promise<void>;
+  deleteAction: (key: string) => Promise<void>;
 }) {
   const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
 
@@ -154,8 +156,10 @@ function SuggestedNutritionCard({
   const [proteinPerLb, setProteinPerLb] = useState(1.0);
   const [applied, setApplied]         = useState(false);
   const [isPending, startTransition]  = useTransition();
+  const [isDismissPending, startDismissTransition] = useTransition();
 
   if (!weightGoal || isNaN(weightGoal)) return null;
+  if (values["nutrition_suggestion_dismissed"] === "true") return null;
 
   const calMultiplier = GOAL_MODES.find((m) => m.key === mode)!.multiplier;
   const suggested     = suggestMacros(weightGoal, calMultiplier, proteinPerLb);
@@ -174,13 +178,30 @@ function SuggestedNutritionCard({
     });
   }
 
+  function dismiss() {
+    startDismissTransition(async () => {
+      await updateAction("nutrition_suggestion_dismissed", "true");
+    });
+  }
+
   const activeMode = GOAL_MODES.find((m) => m.key === mode)!;
 
   return (
     <div
-      className="mx-5 my-3 rounded-lg px-4 py-4 flex flex-col gap-3"
+      className="relative mx-5 my-3 rounded-lg px-4 py-4 flex flex-col gap-3"
       style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.22)" }}
     >
+      <button
+        onClick={dismiss}
+        disabled={isDismissPending}
+        title="Dismiss"
+        className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer disabled:opacity-40"
+        style={{ color: "var(--color-text-faint)" }}
+        onMouseOver={(e) => { e.currentTarget.style.color = "var(--color-text-muted)"; }}
+        onMouseOut={(e) => { e.currentTarget.style.color = "var(--color-text-faint)"; }}
+      >
+        <X size={13} />
+      </button>
       {/* Mode + protein controls */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-medium shrink-0" style={{ color: "var(--color-primary)" }}>
@@ -342,6 +363,20 @@ function FieldRow({
   );
 }
 
+function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Promise<void> }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <button
+      onClick={() => startTransition(async () => { await deleteAction("nutrition_suggestion_dismissed"); })}
+      disabled={isPending}
+      className="text-xs cursor-pointer disabled:opacity-40"
+      style={{ color: "var(--color-primary)" }}
+    >
+      {isPending ? <Loader2 size={11} className="animate-spin inline" /> : "Recalculate suggested macros"}
+    </button>
+  );
+}
+
 export function ProfileForm({ values, updateAction, deleteAction }: Props) {
   return (
     <div className="space-y-6">
@@ -389,12 +424,15 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
         className="rounded-xl overflow-hidden"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
             Nutrition Goals
           </p>
+          {values["nutrition_suggestion_dismissed"] === "true" && (
+            <RecalculateLink deleteAction={deleteAction} />
+          )}
         </div>
-        <SuggestedNutritionCard values={values} updateAction={updateAction} />
+        <SuggestedNutritionCard values={values} updateAction={updateAction} deleteAction={deleteAction} />
         {NUTRITION_GOAL_FIELDS.map((field) => (
           <FieldRow
             key={field.key}

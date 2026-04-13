@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (dismissible suggested nutrition card — issue #123)
+- **X button** on `SuggestedNutritionCard` — absolute top-right dismiss button; clicking upserts `nutrition_suggestion_dismissed: "true"` into the `profile` table via the existing `updateAction` server action; disabled state during pending transition
+- **Persistent dismissal** — card reads `values["nutrition_suggestion_dismissed"]` on render (server-loaded); returns null immediately if dismissed, surviving page reloads
+- **"Recalculate suggested macros" link** — rendered in the Nutrition Goals section header only when the card is dismissed; clicking deletes the `nutrition_suggestion_dismissed` key via `deleteAction`, re-showing the card; spinner shown during pending transition
+- No schema migration required — uses the existing key-value `profile` table
+
 ### Added (Sleep & HRV by day in Weekly Review — issue #122)
 - **Weekly Review Recovery card** renamed from "Recovery Averages" to "Sleep & Recovery"
 - **"Sleep by day" row** added below "Readiness by day" — 7-day strip with color-coded score (green ≥80 / yellow ≥60 / red <60) and day number; sourced from `sleep_score` in `recovery_metrics`
