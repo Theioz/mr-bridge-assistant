@@ -68,6 +68,12 @@ const NUTRITION_GOAL_FIELDS: Field[] = [
     placeholder: "e.g. 65",
     hint: "grams per day",
   },
+  {
+    key: "fiber_goal",
+    label: "Fiber Goal",
+    placeholder: "e.g. 30",
+    hint: "grams per day",
+  },
 ];
 
 const FITNESS_GOAL_FIELDS: Field[] = [
@@ -102,15 +108,28 @@ interface SuggestedMacros {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
 }
 
-function suggestMacros(weightGoal: number, bfGoal: number): SuggestedMacros {
-  const leanMass = weightGoal * (1 - bfGoal / 100);
-  const protein = Math.round(leanMass * 1.0);        // 1 g / lb lean mass
-  const fat     = Math.round(weightGoal * 0.40);     // 0.4 g / lb goal weight
-  const calories = Math.round(weightGoal * 15);      // 15× bodyweight — moderate activity
-  const carbs   = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
-  return { calories, protein, carbs, fat };
+function suggestMacros(weightGoal: number): SuggestedMacros {
+  // Calories: goal body weight × 12 — eating for the body you want automatically
+  // creates a deficit vs. current weight. Use × 11 if > 40 lbs to lose.
+  const calories = Math.round(weightGoal * 12);
+
+  // Protein floor: 0.8 g / lb body weight. Research supports 0.7–1.0 g/lb to
+  // preserve and build muscle in a deficit; 0.8 is the conservative starting point.
+  const protein = Math.round(weightGoal * 0.8);
+
+  // Fat: 25% of calories — hormonal baseline; roughly 0.33–0.38 g/lb at this intake.
+  const fat = Math.round((calories * 0.25) / 9);
+
+  // Carbs: fill remaining calories — keeps energy up for training.
+  const carbs = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
+
+  // Fiber: mid-range of 25–35 g/day target for satiety, gut health, blood sugar.
+  const fiber = 30;
+
+  return { calories, protein, carbs, fat, fiber };
 }
 
 function SuggestedNutritionCard({
@@ -121,14 +140,13 @@ function SuggestedNutritionCard({
   updateAction: (key: string, value: string) => Promise<void>;
 }) {
   const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
-  const bfGoal     = parseFloat(values["body_fat_goal_pct"] ?? "");
 
   const [applied, setApplied]     = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  if (!weightGoal || !bfGoal || isNaN(weightGoal) || isNaN(bfGoal)) return null;
+  if (!weightGoal || isNaN(weightGoal)) return null;
 
-  const suggested = suggestMacros(weightGoal, bfGoal);
+  const suggested = suggestMacros(weightGoal);
 
   function applyAll() {
     startTransition(async () => {
@@ -137,6 +155,7 @@ function SuggestedNutritionCard({
         updateAction("protein_goal", String(suggested.protein)),
         updateAction("carbs_goal",   String(suggested.carbs)),
         updateAction("fat_goal",     String(suggested.fat)),
+        updateAction("fiber_goal",   String(suggested.fiber)),
       ]);
       setApplied(true);
       setTimeout(() => setApplied(false), 2500);
@@ -150,13 +169,13 @@ function SuggestedNutritionCard({
     >
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-primary)" }}>
-          Suggested daily macros — based on {weightGoal} lb / {bfGoal}% goal
+          Suggested daily targets — based on {weightGoal} lb goal weight
         </p>
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs · {suggested.fat} g fat
+          {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs · {suggested.fat} g fat · {suggested.fiber} g fiber
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
-          Formula: 1 g protein/lb lean mass · 0.4 g fat/lb goal weight · 15× bodyweight calories · carbs fill remainder
+          Calories: 12× goal weight · Protein: 0.8 g/lb (floor for muscle retention in deficit) · Fat: 25% of calories · Fiber: 30 g/day · Carbs: remainder
         </p>
       </div>
       <button
