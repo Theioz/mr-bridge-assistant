@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (journal entries data leak and broken saves — issue #133)
+- **RLS enabled on `journal_entries`** — migration `20260413000006_journal_entries_rls_and_constraint.sql` calls `alter table journal_entries enable row level security`; the per-user policy added in the multitenancy migration was inert until RLS itself was switched on, meaning any authenticated user could read all entries
+- **Unique constraint fixed for multi-tenancy** — same migration drops `journal_entries_user_id_date_unique` (column order `user_id, date`) and recreates as `journal_entries_date_user_id_key` with `(date, user_id)`; the old single-column `date` constraint was already replaced in `20260413000003`, but this migration normalizes the name and column order to match the upsert conflict target
+- **`saveJournalEntry` now passes `user_id`** — server action in `web/src/app/(protected)/journal/page.tsx` resolves the authenticated user via `supabase.auth.getUser()`, returns `{ error: "Unauthorized" }` if no session, includes `user_id: user.id` in the upsert payload, and uses `onConflict: "date,user_id"` instead of `"date"`
+- **Demo data attribution corrected** — 4 journal entries that were incorrectly attributed to `demo@mr-bridge.app` (backfill assigned wrong owner) were updated to the real owner's `user_id` directly against the live DB
+
 ### Fixed (food photo upload fails on mobile — issue #135)
 - **Client-side compression** — `compressImage` helper in `FoodPhotoAnalyzer.tsx` uses the Canvas API to cap the longest edge at 1920 px and re-encode as JPEG at 0.85 quality before upload; replaces the raw file in FormData so uploads stay well under Vercel's 4.5 MB limit
 - **HEIC early rejection (client)** — if the selected file is `image/heic` or ends in `.heic`, an error is shown immediately with instructions to switch iPhone Camera to "Most Compatible"; no upload is attempted
