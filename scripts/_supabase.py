@@ -1,12 +1,13 @@
 """
 Shared Supabase client helper for sync scripts.
 Uses SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
-Import as: from _supabase import get_client, get_owner_user_id, log_sync, urlopen_with_retry
+Import as: from _supabase import get_client, get_owner_user_id, log_sync, log_notification, urlopen_with_retry
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -66,6 +67,19 @@ def upsert(client, table: str, rows: list[dict], conflict: str | None = None) ->
     kwargs = {"on_conflict": conflict} if conflict else {}
     resp = client.table(table).upsert(rows, **kwargs).execute()
     return len(resp.data)
+
+
+def log_notification(client, user_id: str, type_: str, title: str, body: str | None = None) -> None:
+    """Insert a row into the notifications table. Non-fatal — errors are printed to stderr."""
+    try:
+        client.table("notifications").insert({
+            "user_id": user_id,
+            "type": type_,
+            "title": title,
+            "body": body,
+        }).execute()
+    except Exception as e:
+        print(f"[notify] Failed to log notification: {e}", file=sys.stderr)
 
 
 def log_sync(client, source: str, status: str, records_written: int = 0, error_message: str | None = None):

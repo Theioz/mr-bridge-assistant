@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id, log_notification
 from fetch_weather import fetch_weather
 
 NOTIFY_SCRIPT    = ROOT / "scripts" / "notify.sh"
@@ -51,7 +51,7 @@ def set_profile_value(client, key: str, value: str) -> None:
     client.table("profile").upsert({"key": key, "value": value}, on_conflict="key").execute()
 
 
-def _fire(title: str, message: str) -> bool:
+def _fire(title: str, message: str, client=None, user_id: str | None = None) -> bool:
     app_url = os.environ.get("APP_URL", "").rstrip("/")
     cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
     if app_url:
@@ -59,6 +59,8 @@ def _fire(title: str, message: str) -> bool:
     try:
         subprocess.run(cmd, check=True)
         print(f"[check_weather_alert] Alert fired: {message}")
+        if client and user_id:
+            log_notification(client, user_id, "weather", title, message)
         return True
     except Exception as e:
         print(f"[check_weather_alert] notify error: {e}", file=sys.stderr)
@@ -87,12 +89,18 @@ def main() -> None:
         print(f"[check_weather_alert] Weather fetch error: {e}", file=sys.stderr)
         return
 
+    try:
+        user_id: str | None = get_owner_user_id()
+    except EnvironmentError:
+        user_id = None
+
     # Thunderstorm
     wmo = w.get("wmo_code")
     if wmo is not None and wmo in THUNDER_CODES:
         _fire(
             "Severe Weather Alert",
             f"Thunderstorm forecast today (WMO {wmo}). Check conditions before heading out.",
+            client, user_id,
         )
 
     # Heavy precipitation
@@ -101,6 +109,7 @@ def main() -> None:
         _fire(
             "Rain Alert",
             f'{precip:.1f}" of precipitation forecast today. Plan accordingly.',
+            client, user_id,
         )
 
     # Extreme heat
@@ -109,6 +118,7 @@ def main() -> None:
         _fire(
             "Heat Alert",
             f"High of {high:.0f}°F forecast today. Stay hydrated.",
+            client, user_id,
         )
 
     # Freeze warning
@@ -117,6 +127,7 @@ def main() -> None:
         _fire(
             "Freeze Warning",
             f"Low of {low:.0f}°F tonight. Dress warm.",
+            client, user_id,
         )
 
     # High wind
@@ -125,6 +136,7 @@ def main() -> None:
         _fire(
             "Wind Alert",
             f"Wind speeds of {wind:.0f} mph forecast today.",
+            client, user_id,
         )
 
     set_profile_value(client, "weather_alert_last_notified", today_str)

@@ -13,6 +13,7 @@ import {
   ListTodo,
   BookOpen,
   BarChart2,
+  Bell,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -20,15 +21,16 @@ import Logo from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/fitness",   label: "Fitness",    icon: Activity },
-  { href: "/habits",    label: "Habits",     icon: CheckSquare },
-  { href: "/tasks",     label: "Tasks",      icon: ListTodo },
-  { href: "/weekly",    label: "Weekly",     icon: BarChart2 },
-  { href: "/journal",   label: "Journal",    icon: BookOpen },
-  { href: "/meals",     label: "Meals",      icon: UtensilsCrossed },
-  { href: "/chat",      label: "Chat",       icon: MessageSquare },
-  { href: "/settings",  label: "Settings",   icon: Settings },
+  { href: "/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/fitness",       label: "Fitness",       icon: Activity },
+  { href: "/habits",        label: "Habits",        icon: CheckSquare },
+  { href: "/tasks",         label: "Tasks",         icon: ListTodo },
+  { href: "/weekly",        label: "Weekly",        icon: BarChart2 },
+  { href: "/journal",       label: "Journal",       icon: BookOpen },
+  { href: "/meals",         label: "Meals",         icon: UtensilsCrossed },
+  { href: "/chat",          label: "Chat",          icon: MessageSquare },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings",      label: "Settings",      icon: Settings },
 ];
 
 // 4 primary tabs always visible; the rest live in the More sheet
@@ -45,6 +47,7 @@ export default function Nav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
@@ -54,6 +57,13 @@ export default function Nav() {
       setIsDemo(user?.email === demoEmail);
     });
   }, []);
+
+  useEffect(() => {
+    fetch("/api/notifications/unread-count")
+      .then((r) => r.ok ? r.json() : { count: 0 })
+      .then((d) => setUnreadCount(d.count ?? 0))
+      .catch(() => {});
+  }, [pathname]);
 
   // Is the current page one of the "More" pages? If so, highlight the More button.
   const moreIsActive = MOBILE_MORE.some((item) => isActive(pathname, item.href));
@@ -83,6 +93,7 @@ export default function Nav() {
         <div className="flex flex-col gap-0.5 px-3 overflow-y-auto flex-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
+            const showBadge = href === "/notifications" && unreadCount > 0;
             return (
               <Link
                 key={href}
@@ -93,11 +104,29 @@ export default function Nav() {
                   color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                 }}
               >
-                <Icon
-                  size={18}
-                  strokeWidth={active ? 2 : 1.5}
-                  style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)", flexShrink: 0 }}
-                />
+                <span className="relative" style={{ flexShrink: 0 }}>
+                  <Icon
+                    size={18}
+                    strokeWidth={active ? 2 : 1.5}
+                    style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                  />
+                  {showBadge && (
+                    <span
+                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
+                      style={{
+                        background: "#EF4444",
+                        minWidth: 14,
+                        height: 14,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "0 3px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </span>
                 {label}
               </Link>
             );
@@ -203,6 +232,7 @@ export default function Nav() {
             <div className="px-3 pb-4 grid grid-cols-2 gap-1">
               {MOBILE_MORE.map(({ href, label, icon: Icon }) => {
                 const active = isActive(pathname, href);
+                const showBadge = href === "/notifications" && unreadCount > 0;
                 return (
                   <Link
                     key={href}
@@ -214,11 +244,29 @@ export default function Nav() {
                       color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                     }}
                   >
-                    <Icon
-                      size={18}
-                      strokeWidth={active ? 2 : 1.5}
-                      style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)", flexShrink: 0 }}
-                    />
+                    <span className="relative" style={{ flexShrink: 0 }}>
+                      <Icon
+                        size={18}
+                        strokeWidth={active ? 2 : 1.5}
+                        style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                      />
+                      {showBadge && (
+                        <span
+                          className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
+                          style={{
+                            background: "#EF4444",
+                            minWidth: 14,
+                            height: 14,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            padding: "0 3px",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </span>
                     <span className="text-sm font-medium">{label}</span>
                   </Link>
                 );
