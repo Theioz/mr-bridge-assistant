@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (MB favicon and iOS touch icon — issue #117)
+- **`web/src/app/icon.svg`** — raw SVG monogram logo (solid indigo `#1d4ed8` background, `rx="7"` rounded corners); Next.js App Router auto-wires this as the browser favicon
+- **`web/src/app/apple-icon.png`** — 180×180 PNG rasterized from the SVG for iOS Add to Home Screen; solid `#1d4ed8` background, proportionally scaled paths
+- **`web/public/manifest.json`** — minimal PWA manifest with `start_url: /dashboard`, `display: standalone`, `theme_color: #1d4ed8`
+- **`web/src/app/layout.tsx`** — added `manifest: "/manifest.json"` to Next.js metadata export so browsers and iOS receive the correct `<link rel="manifest">` tag
+
 ### Fixed (nutrition goal calculator defaults — issue #114)
 - **Default protein option** changed from 0.8 g/lb to 1.0 g/lb; `PROTEIN_OPTIONS` reordered so 1.0 appears first and is selected on first render
 - **Disclaimer line** added below the macro preview in `SuggestedNutritionCard` — faint text noting the estimate is based on goal weight only and that Chat gives a more personalized result
