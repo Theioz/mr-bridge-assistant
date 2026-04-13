@@ -10,6 +10,15 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const hasGoogleFitConfig =
+    !!(process.env.GOOGLE_FIT_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID) &&
+    !!(process.env.GOOGLE_FIT_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET) &&
+    !!(process.env.GOOGLE_FIT_REFRESH_TOKEN ?? process.env.GOOGLE_REFRESH_TOKEN);
+
+  if (!hasGoogleFitConfig) {
+    return NextResponse.json({ skipped: true, reason: "Google Fit not configured" });
+  }
+
   try {
     const db = createServiceClient();
     const result = await syncGoogleFit(db);

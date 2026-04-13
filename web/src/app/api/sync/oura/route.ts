@@ -10,6 +10,10 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (!process.env.OURA_ACCESS_TOKEN) {
+    return NextResponse.json({ skipped: true, reason: "OURA_ACCESS_TOKEN not configured" });
+  }
+
   try {
     const db = createServiceClient();
     const result = await syncOura(db);
