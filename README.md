@@ -117,9 +117,9 @@ mr-bridge-assistant/
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals with macros)
 │   │   │   │   ├── sync/
-│   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics (session auth)
-│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts (session auth; refresh token from profile table)
-│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp (session auth)
+│   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics; returns skipped:true if OURA_ACCESS_TOKEN not set
+│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts; refresh token from profile table; returns skipped:true if unconfigured
+│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp; returns skipped:true if Google Fit env vars not set
 │   │   │   │   ├── cron/
 │   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; 30-min skip window; all 3 sources in parallel
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
@@ -134,7 +134,7 @@ mr-bridge-assistant/
 │   │   │   │       └── gmail/route.ts     # Important unread emails
 │   │   │   └── login/page.tsx
 │   │   ├── components/
-│   │   │   ├── nav.tsx                    # Left sidebar (desktop labels / mobile icon rail)
+│   │   │   ├── nav.tsx                    # Left sidebar (desktop); bottom tab bar on mobile: 4 primary tabs (Dashboard, Habits, Tasks, Chat) + More sheet for remaining pages
 │   │   │   ├── ui/
 │   │   │   │   └── logo.tsx               # MB monogram SVG
 │   │   │   ├── chat/                      # Chat UI with markdown rendering
@@ -146,7 +146,6 @@ mr-bridge-assistant/
 │   │   │       ├── daily-insights.tsx     # Combined fun fact + quote card (single card, responsive divider)
 │   │   │       ├── fun-fact.tsx           # Daily fun fact (used by daily-insights)
 │   │   │       ├── daily-quote.tsx        # Daily motivational quote (used by daily-insights)
-│   │   │       ├── weather-card.tsx       # Weather inline with greeting header (Open-Meteo)
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── recovery-summary.tsx   # Oura: 3 scores (readiness/sleep/activity), metrics grid (HRV, RHR, SpO2, steps, temp Δ, sleep stages, daytime HR), stress row, 14-day sleep chart; Sync button in header
