@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (workout deduplication and history UI — issue #127)
+- **`ACTIVITY_ALIASES` map** in `scripts/sync-fitbit.py` and `web/src/lib/sync/fitbit.ts` — normalizes Fitbit variant names to canonical labels before dedup key is built and before DB insert (e.g. "Walking" → "Walk", "Running" → "Run", "Biking" → "Bike"); existing keys in the DB are also normalized during comparison so pre-migration rows are not re-inserted
+- **Time-overlap detection** in both sync paths — before inserting, checks if an existing workout on the same date has a `start_time` within ±5 minutes; prefers the row with HR data, then longer duration; inferior existing rows are deleted and replaced
+- **DB migration** `20260413000001_workout_sessions_unique_constraint.sql` — adds `unique (date, start_time, source)` constraint to `workout_sessions`
+- **`scripts/normalize_workout_activities.py`** — one-time script to normalize activity names in existing rows; run with `--yes` to apply; dry-run by default
+- **Workout history table** (`workout-history-table.tsx`) enhancements:
+  - Start time column — formatted as `h:mm AM/PM` from stored `HH:MM:SS`
+  - End time column — derived as `start_time + duration_mins`, same format
+  - HR Zones secondary line — `metadata.hr_zones` string ("Peak: 3m | Cardio: 12m") shown inline below the date cell when present
+  - Source badge — small pill showing "fitbit" / "manual" with accent color for fitbit
+  - Activity type filter — pill row above the table to filter by activity; resets to page 1 on change
+- **`WorkoutSession` type** (`web/src/lib/types.ts`) — added `metadata: { hr_zones: string | null } | null` field
+
 ### Added (demo account + multi-tenancy — issue #50)
 - **Multi-tenancy migration** — `user_id uuid references auth.users(id)` added to all 14 tables; existing rows backfilled with owner's auth UID; RLS policies updated from `using (true)` → `using (auth.uid() = user_id)`; per-user indexes added
 - **Demo account** — `demo@mr-bridge.app` with realistic seed data: Alex Chen persona, 7 habits at ~60% completion over 30 days, body comp trend arc, 18 workout sessions, 30 recovery nights, 10 tasks, 5 study entries, 4 journal entries, 5 recipes

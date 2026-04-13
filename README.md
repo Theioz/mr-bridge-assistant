@@ -80,7 +80,7 @@ flowchart LR
 - **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 13 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read + write, recipes, meals); slash command autocomplete
 - **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion
-- **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table; goal progress overlays
+- **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals; food photo analyzer (photo → Claude vision → macro estimate → log); 7-day meal history
@@ -456,6 +456,7 @@ mr-bridge-assistant/
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
 │   ├── sync-oura.py                       # Oura Ring → recovery_metrics + workout_sessions
 │   ├── sync-fitbit.py                     # Fitbit workouts + body comp → Supabase
+│   ├── normalize_workout_activities.py    # One-time: normalize activity names to canonical aliases
 │   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)

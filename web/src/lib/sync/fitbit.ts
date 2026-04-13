@@ -71,6 +71,39 @@ function fmtHrZones(zones: Record<string, unknown>[]): string | null {
   return parts.length ? parts.join(" | ") : null;
 }
 
+// Canonical activity names — map Fitbit variants to a single label so dedup
+// keys and history views stay consistent regardless of which name the API returns.
+const ACTIVITY_ALIASES: Record<string, string> = {
+  Walking: "Walk",
+  Running: "Run",
+  Biking: "Bike",
+  Cycling: "Bike",
+  "Outdoor Bike": "Bike",
+  Swimming: "Swim",
+  Hiking: "Hike",
+};
+
+function normalizeActivity(name: string): string {
+  return ACTIVITY_ALIASES[name] ?? name;
+}
+
+function timeToMins(t: string | null): number | null {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function isBetter(
+  newRow: { avg_hr?: number | null; duration_mins?: number | null },
+  exRow: { avg_hr?: number | null; duration_mins?: number | null },
+): boolean {
+  const newHr = newRow.avg_hr != null;
+  const exHr = exRow.avg_hr != null;
+  if (newHr && !exHr) return true;
+  if (!newHr && exHr) return false;
+  return (newRow.duration_mins ?? 0) > (exRow.duration_mins ?? 0);
+}
+
 // ---------------------------------------------------------------------------
 // Main sync function
 // ---------------------------------------------------------------------------
@@ -176,16 +209,17 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
     const calories = a.calories as number | undefined;
     const zones = (a.heartRateZones as Record<string, unknown>[] | undefined) ?? [];
 
+    const activity = normalizeActivity((a.activityName as string) ?? "Unknown");
     workoutRows.push({
       date: dateStr,
       start_time: timeStr,
-      activity: (a.activityName as string) ?? "Unknown",
+      activity,
       duration_mins: durationMin,
       calories: calories != null ? Math.round(calories) : null,
       avg_hr: avgHr != null ? Math.round(avgHr) : null,
       source: "fitbit",
       metadata: { hr_zones: fmtHrZones(zones) },
-      _key: `${dateStr}|${timeStr}|${(a.activityName as string) ?? ""}`,
+      _key: `${dateStr}|${timeStr}|${activity}`,
     });
   }
 
@@ -193,20 +227,56 @@ export async function syncFitbit(db: SupabaseClient): Promise<FitbitSyncResult> 
   if (workoutRows.length) {
     const { data: existingWorkouts } = await db
       .from("workout_sessions")
-      .select("date,start_time,activity")
+      .select("id,date,start_time,activity,avg_hr,duration_mins")
       .eq("source", "fitbit");
 
+    const existingList = (existingWorkouts ?? []) as {
+      id: string;
+      date: string;
+      start_time: string | null;
+      activity: string;
+      avg_hr: number | null;
+      duration_mins: number | null;
+    }[];
+
+    // Exact dedup — normalize existing names to match new canonical keys
     const existingKeys = new Set(
-      ((existingWorkouts ?? []) as { date: string; start_time: string; activity: string }[]).map(
-        (r) => `${r.date}|${r.start_time}|${r.activity}`,
-      ),
+      existingList.map((r) => `${r.date}|${r.start_time}|${normalizeActivity(r.activity)}`),
     );
+    const exactNew = workoutRows.filter((r) => !existingKeys.has(r._key as string));
 
-    const newWorkouts = workoutRows
-      .filter((r) => !existingKeys.has(r._key as string))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .map(({ _key, ...rest }) => rest);
+    // Time-overlap detection (±5 min on same date)
+    const OVERLAP_MINS = 5;
+    const byDate = new Map<string, typeof existingList>();
+    for (const r of existingList) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]);
 
+    const toInsert: Record<string, unknown>[] = [];
+    const toDelete: string[] = [];
+
+    for (const newRow of exactNew) {
+      const newMins = timeToMins(newRow.start_time as string | null);
+      let overlapped = false;
+      for (const ex of byDate.get(newRow.date as string) ?? []) {
+        const exMins = timeToMins(ex.start_time);
+        if (newMins == null || exMins == null) continue;
+        if (Math.abs(newMins - exMins) <= OVERLAP_MINS) {
+          overlapped = true;
+          if (isBetter(newRow as { avg_hr?: number | null; duration_mins?: number | null }, ex)) {
+            toDelete.push(ex.id);
+            toInsert.push(newRow);
+          }
+          break;
+        }
+      }
+      if (!overlapped) toInsert.push(newRow);
+    }
+
+    if (toDelete.length) {
+      await db.from("workout_sessions").delete().in("id", toDelete);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const newWorkouts = toInsert.map(({ _key, ...rest }) => rest);
     if (newWorkouts.length) {
       const { error } = await db.from("workout_sessions").insert(newWorkouts);
       if (error) throw new Error(`workout_sessions insert: ${error.message}`);

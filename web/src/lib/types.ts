@@ -47,6 +47,7 @@ export interface WorkoutSession {
   avg_hr: number | null;
   notes: string | null;
   source: string | null;
+  metadata: { hr_zones: string | null } | null;
 }
 
 export interface RecoveryMetrics {
