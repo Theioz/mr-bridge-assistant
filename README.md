@@ -83,7 +83,7 @@ flowchart LR
 - **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
-- **Meals** — Daily macro summary vs goals; food photo analyzer (photo → Claude vision → macro estimate → log); 7-day meal history
+- **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); HEIC detection with user-friendly guidance; 7-day meal history
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
 
 ---

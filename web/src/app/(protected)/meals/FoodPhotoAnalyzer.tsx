@@ -55,16 +55,75 @@ export default function FoodPhotoAnalyzer() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const MAX_EDGE = 1920;
+        let { width, height } = img;
+        if (width > MAX_EDGE || height > MAX_EDGE) {
+          if (width >= height) {
+            height = Math.round((height * MAX_EDGE) / width);
+            width = MAX_EDGE;
+          } else {
+            width = Math.round((width * MAX_EDGE) / height);
+            height = MAX_EDGE;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas unavailable"));
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Compression failed"));
+          },
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Failed to load image for compression"));
+      };
+      img.src = objectUrl;
+    });
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Reject HEIC — Canvas API cannot decode it in-browser
+    if (
+      file.type === "image/heic" ||
+      file.name.toLowerCase().endsWith(".heic")
+    ) {
+      setErrorMsg(
+        "In your iPhone Camera settings, set format to 'Most Compatible' and try again."
+      );
+      setPhase("error");
+      return;
+    }
 
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setPhase("loading");
 
+    let imageBlob: Blob;
+    try {
+      imageBlob = await compressImage(file);
+    } catch {
+      imageBlob = file;
+    }
+
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", imageBlob, "photo.jpg");
     if (userPrompt.trim()) formData.append("prompt", userPrompt.trim());
 
     try {
@@ -72,10 +131,19 @@ export default function FoodPhotoAnalyzer() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
-      setReview(data as ReviewState);
-      setPhase("review");
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
+        setReview(data as ReviewState);
+        setPhase("review");
+      } else {
+        const text = await res.text();
+        if (res.status === 413 || text.includes("Entity Too Large")) {
+          throw new Error("Image is too large to upload. Please try a smaller photo.");
+        }
+        throw new Error("Analysis failed");
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Analysis failed");
       setPhase("error");
