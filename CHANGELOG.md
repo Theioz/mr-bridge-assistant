@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Removed (migration artifacts — issue #98)
+- **`scripts/migrate_to_supabase.py`** deleted — 608-line one-time migration script; Supabase migration (issue #14) is complete
+- **`memory/*.template.md`** (5 files) deleted — pre-Supabase scaffolding; all live data is in Supabase tables
+- **`.gitmodules`** deleted — empty file; submodule references were converted to git subtrees
+
 ### Removed (dead dashboard components — issue #96)
 - **15 dead dashboard components deleted** — `briefing-strip`, `daily-insights`, `daily-quote`, `fun-fact`, `weather-card`, `weather-widget`, `recovery-summary`, `recovery-trends`, `hrv-trend-chart`, `inline-sparkline`, `hero-readiness`, `recent-chat`, `fitness-summary`, `sleep-stage-chart`, `habits-summary`; removed from UI in PR #89 but left on disk; zero imports confirmed before deletion
 - **`api/daily-quote/`** and **`api/fun-fact/`** route directories deleted; callers removed in PR #89

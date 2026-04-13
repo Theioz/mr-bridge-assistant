@@ -85,7 +85,6 @@ mr-bridge-assistant/
 ├── .env.example                           # Root env var template (Python scripts)
 ├── .gitignore
 ├── .mcp.json                              # MCP servers: DeepWiki (Google Calendar + Gmail via claude.ai hosted MCP)
-├── .gitmodules
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
@@ -189,12 +188,7 @@ mr-bridge-assistant/
 │   └── gmail-multi-account.md            # POP3 aggregation + Calendar sharing setup (App Password, label ID resolution)
 │
 ├── memory/                                # Local files (gitignored, archived originals)
-│   ├── meal_log.md                        # Recipes — archived original; data lives in Supabase `recipes` table
-│   ├── profile.template.md
-│   ├── fitness_log.template.md
-│   ├── meal_log.template.md
-│   ├── todo.template.md
-│   └── habits.template.md
+│   └── meal_log.md                        # Recipes — archived original; data lives in Supabase `recipes` table
 │
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
@@ -202,7 +196,6 @@ mr-bridge-assistant/
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile; reusable
 │   ├── log_habit.py                       # Logs habit completions to Supabase
-│   ├── migrate_to_supabase.py             # One-time migration: markdown → Supabase
 │   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
 │   ├── sync-oura.py                       # Oura Ring sync → recovery_metrics + workout_sessions; endpoints: sleep, readiness, activity, spo2, stress, resilience, heartrate, workout
@@ -260,13 +253,8 @@ Fill in each value. See [docs/google-oauth-setup.md](docs/google-oauth-setup.md)
 pip3 install -r scripts/requirements.txt
 ```
 
-### 5. Migrate profile and recipes to Supabase
-If you have existing markdown data files, migrate them to Supabase:
-```bash
-python3 scripts/migrate_to_supabase.py --dry-run   # preview first
-python3 scripts/migrate_to_supabase.py             # migrate profile, recipes, habits, tasks, fitness
-```
-Or add profile data directly via the Supabase dashboard. Recipes populate the `recipes` table; the session briefing also reads `memory/meal_log.md` locally as a fallback until recipe display ships in the web interface.
+### 5. Populate Supabase
+Add profile data directly via the Supabase dashboard or the web interface Settings page. Recipes populate the `recipes` table; the session briefing reads `memory/meal_log.md` locally as a fallback until recipe display ships in the web interface.
 
 ### 6. Set up push notifications (Android, macOS, Windows)
 See [docs/notifications-setup.md](docs/notifications-setup.md). Add `NTFY_TOPIC` as a GitHub Actions secret for the Sunday weekly review cloud nudge.
