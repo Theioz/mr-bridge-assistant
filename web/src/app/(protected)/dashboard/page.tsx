@@ -7,6 +7,7 @@ import { computeStreaks } from "@/lib/streaks";
 import { getWindow } from "@/lib/window";
 import DashboardHeader from "@/components/dashboard/dashboard-header";
 import HealthBreakdown from "@/components/dashboard/health-breakdown";
+import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
 import ScheduleToday from "@/components/dashboard/schedule-today";
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
     fitnessLatestRes,
     fitnessTrendRes,
     recoveryLatestRes,
+    todayRecoveryRes,
     recoveryTrendsRes,
     habitRegistryRes,
     todayHabitsRes,
@@ -52,11 +54,17 @@ export default async function DashboardPage() {
       .select("date,weight_lb,body_fat_pct")
       .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
-    // Latest full recovery row
+    // Latest full recovery row (yesterday's complete data)
     supabase
       .from("recovery_metrics")
       .select("*")
       .order("date", { ascending: false })
+      .limit(1),
+    // Today's scores only (for the strip above Health Breakdown)
+    supabase
+      .from("recovery_metrics")
+      .select("date,readiness,sleep_score,source")
+      .eq("date", today)
       .limit(1),
     // Windowed recovery trend (HRV, sleep stages, steps, calories, RHR, SpO2)
     supabase
@@ -83,6 +91,12 @@ export default async function DashboardPage() {
   const fitnessRows = (fitnessLatestRes.data ?? []) as Pick<FitnessLog, "date" | "weight_lb" | "body_fat_pct">[];
 
   const latestRecovery = ((recoveryLatestRes.data ?? [])[0] ?? null) as RecoveryMetrics | null;
+  const todayRecoveryRow = (todayRecoveryRes.data ?? [])[0] ?? null;
+  // Hide the strip when today's row IS the latest card (avoid duplicate display)
+  const todayScores =
+    todayRecoveryRow && todayRecoveryRow.date !== latestRecovery?.date
+      ? (todayRecoveryRow as Pick<RecoveryMetrics, "date" | "readiness" | "sleep_score" | "source">)
+      : null;
   const recoveryTrends = (recoveryTrendsRes.data ?? []) as RecoveryMetrics[];
 
   const fitnessData = (fitnessTrendRes.data ?? []) as { date: string; weight_lb: number | null; body_fat_pct: number | null }[];
@@ -122,6 +136,9 @@ export default async function DashboardPage() {
 
       {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
       <UpcomingBirthdayWidget />
+
+      {/* ── Today's scores strip (readiness + sleep, when today ≠ latest card) ── */}
+      {todayScores && <TodayScoresStrip today={todayScores} />}
 
       {/* ── Health Breakdown: full-width, readiness + tabbed charts ─── */}
       <HealthBreakdown
