@@ -10,15 +10,17 @@ import type { Message } from "ai";
 interface Props {
   sessionId: string;
   initialMessages: Message[];
+  onMessageSent?: () => void;
 }
 
-export default function ChatInterface({ sessionId, initialMessages }: Props) {
+export default function ChatInterface({ sessionId, initialMessages, onMessageSent }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload } = useChat({
     api: "/api/chat",
     body: { sessionId },
     initialMessages,
+    onFinish: onMessageSent,
   });
 
   useEffect(() => {
