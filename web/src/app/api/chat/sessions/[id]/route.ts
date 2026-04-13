@@ -18,7 +18,7 @@ export async function GET(
     .select("id, role, content, created_at")
     .eq("session_id", id)
     .in("role", ["user", "assistant"])
-    .order("created_at", { ascending: true })
+    .order("position", { ascending: true, nullsFirst: false })
     .limit(50);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

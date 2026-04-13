@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat de-sync — messages disappear or appear out of order on refresh — issue #132)
+- **Early user message persistence** — user message and session row are now inserted at the start of the POST handler, before `streamText` is called; `onFinish` only inserts the assistant reply; messages now survive stream errors, timeouts, and aborts
+- **`position` column on `chat_messages`** — migration `20260413000005_chat_messages_position.sql` adds a `bigint position` column; each insert derives `MAX(position) + 1` within the session so ordering is deterministic and independent of `created_at` timestamp precision
+- **Ordering by `position ASC`** — both `api/chat/sessions/[id]/route.ts` (history fetch) and the in-request context load in `api/chat/route.ts` now order by `position` instead of `created_at`
+- **Retry dedup guard** — before inserting the user message, the handler checks for an identical message in the same session inserted within the last 10 seconds; duplicate inserts on retry are skipped
+
 ### Added (calendar delete/move, conflict detection, deduplication — issue #129)
 - **`eventId` in `list_calendar_events`** — each returned event now includes `eventId` (Google Calendar event ID); tool description updated so Bridge knows to preserve it for follow-up calls
 - **`delete_calendar_event` tool** — deletes an event by `eventId`; system prompt rule requires Bridge to state title/date/time and obtain explicit user confirmation before calling
