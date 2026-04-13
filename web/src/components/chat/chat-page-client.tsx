@@ -22,6 +22,9 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
     initialSessionId ?? newSessionId()
   );
   const [activeMessages, setActiveMessages] = useState<Message[]>(initialMessages);
+  const [hasMore, setHasMore] = useState(false);
+  const [oldestPosition, setOldestPosition] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Desktop sidebar state — persisted in localStorage
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -83,12 +86,40 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
       }));
       setActiveSessionId(sessionId);
       setActiveMessages(msgs);
+      setHasMore(data.hasMore ?? false);
+      setOldestPosition(data.oldestPosition ?? null);
     } catch {
       // non-fatal
     } finally {
       setLoadingSession(false);
     }
   };
+
+  const handleLoadMore = useCallback(async () => {
+    if (!oldestPosition || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/chat/sessions/${activeSessionId}?before=${oldestPosition}&limit=20`
+      );
+      const data = await res.json();
+      const older: Message[] = (
+        data.messages as { id: string; role: string; content: string; created_at: string }[]
+      ).map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        createdAt: new Date(m.created_at),
+      }));
+      setActiveMessages((prev) => [...older, ...prev]);
+      setHasMore(data.hasMore ?? false);
+      setOldestPosition(data.oldestPosition ?? null);
+    } catch {
+      // non-fatal
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [activeSessionId, oldestPosition, loadingMore]);
 
   // Refresh session list after a message exchange completes (so preview updates)
   const handleMessageSent = useCallback(() => {
@@ -204,6 +235,9 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
               sessionId={activeSessionId}
               initialMessages={activeMessages}
               onMessageSent={handleMessageSent}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={handleLoadMore}
             />
           )}
         </div>
