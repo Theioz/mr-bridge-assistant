@@ -96,7 +96,9 @@ mr-bridge-assistant/
 │       ├── 20260410164609_add_unique_constraints.sql
 │       ├── 20260410170000_study_log_unique_constraint.sql
 │       ├── 20260411000000_add_journal_entries.sql
-│       └── 20260411000001_recovery_metrics_extended.sql
+│       ├── 20260411000001_recovery_metrics_extended.sql
+│       ├── 20260411100000_fitness_log_unique_date_source.sql
+│       └── 20260412000000_add_nutrition_to_meal_log.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── .env.local.example                 # Web app env var template (Supabase, Anthropic, Google, timezone)
@@ -109,9 +111,11 @@ mr-bridge-assistant/
 │   │   │   │   ├── habits/page.tsx        # Habit tracking — add/archive + 7/30/90d history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
+│   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
+│   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: photo upload, ingredient editing, macro review
 │   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals with macros)
 │   │   │   │   ├── sync/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics (session auth)
 │   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts (session auth; refresh token from profile table)
@@ -121,6 +125,10 @@ mr-bridge-assistant/
 │   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
 │   │   │   │   ├── daily-quote/route.ts   # Claude Haiku motivational quote, cached daily in Supabase
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
+│   │   │   │   ├── meals/
+│   │   │   │   │   ├── analyze-photo/route.ts  # POST — Claude vision macro estimation from image; image never stored
+│   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate macros from edited ingredients string (Haiku)
+│   │   │   │   │   └── log/route.ts            # POST — insert meal_log row with full nutrition fields
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
