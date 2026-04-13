@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Archive, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import type { Task, Subtask } from "@/lib/types";
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -25,7 +25,7 @@ interface Props {
   task: Task;
   completeAction:       (id: string) => Promise<{ error?: string }>;
   archiveAction:        (id: string) => Promise<{ error?: string }>;
-  updateAction:         (id: string, title: string) => Promise<{ error?: string }>;
+  updateAction:         (id: string, fields: { title?: string; due_date?: string | null; priority?: string | null }) => Promise<{ error?: string }>;
   addSubtaskAction:     (parentId: string, title: string) => Promise<{ error?: string }>;
   completeSubtaskAction:(id: string) => Promise<{ error?: string }>;
   deleteSubtaskAction:  (id: string) => Promise<{ error?: string }>;
@@ -40,7 +40,7 @@ function SubtaskRow({
   subtask: Subtask;
   completeSubtaskAction: (id: string) => Promise<{ error?: string }>;
   deleteSubtaskAction:   (id: string) => Promise<{ error?: string }>;
-  updateAction:          (id: string, title: string) => Promise<{ error?: string }>;
+  updateAction:          (id: string, fields: { title?: string; due_date?: string | null; priority?: string | null }) => Promise<{ error?: string }>;
 }) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing]       = useState(false);
@@ -55,7 +55,7 @@ function SubtaskRow({
     setEditing(false);
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== subtask.title) {
-      startTransition(async () => { await updateAction(subtask.id, trimmed); });
+      startTransition(async () => { await updateAction(subtask.id, { title: trimmed }); });
     } else {
       setEditTitle(subtask.title);
     }
@@ -157,6 +157,10 @@ export default function TaskItem({
   const [addInput, setAddInput] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
 
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [editDueDate, setEditDueDate]     = useState(task.due_date ?? "");
+  const [editPriority, setEditPriority]   = useState<"high" | "medium" | "low">((task.priority as "high" | "medium" | "low") ?? "medium");
+
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);
@@ -180,7 +184,7 @@ export default function TaskItem({
     setEditing(false);
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== task.title) {
-      startTransition(async () => { await updateAction(task.id, trimmed); });
+      startTransition(async () => { await updateAction(task.id, { title: trimmed }); });
     } else {
       setEditTitle(task.title);
     }
@@ -283,6 +287,16 @@ export default function TaskItem({
           </button>
         )}
 
+        {/* Edit due date / priority */}
+        <button
+          onClick={() => setShowEditPanel((v) => !v)}
+          className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
+          style={{ color: "var(--color-text-muted)" }}
+          title="Edit due date / priority"
+        >
+          <Pencil size={13} />
+        </button>
+
         {/* Archive */}
         <button
           onClick={handleArchive}
@@ -294,6 +308,64 @@ export default function TaskItem({
           <Archive size={13} />
         </button>
       </div>
+
+      {/* Due date / priority edit panel */}
+      {showEditPanel && (
+        <div className="flex items-center gap-3 px-4 pb-3" style={{ marginLeft: 36 }}>
+          {/* Due date */}
+          <input
+            type="date"
+            value={editDueDate}
+            onChange={(e) => setEditDueDate(e.target.value)}
+            className="text-xs rounded-lg px-2 py-1 focus:outline-none"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          />
+          {/* Clear due date */}
+          {editDueDate && (
+            <button onClick={() => setEditDueDate("")} style={{ color: "var(--color-text-faint)" }}>
+              <X size={12} />
+            </button>
+          )}
+          {/* Priority */}
+          <select
+            value={editPriority}
+            onChange={(e) => setEditPriority(e.target.value as "high" | "medium" | "low")}
+            className="text-xs rounded-lg px-2 py-1 focus:outline-none"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          >
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          {/* Save */}
+          <button
+            onClick={() => {
+              setShowEditPanel(false);
+              startTransition(async () => {
+                await updateAction(task.id, {
+                  due_date: editDueDate || null,
+                  priority: editPriority || null,
+                });
+              });
+            }}
+            className="text-xs px-2 py-1 rounded-lg"
+            style={{ background: "var(--color-primary)", color: "white" }}
+          >
+            Save
+          </button>
+          <button onClick={() => setShowEditPanel(false)} style={{ color: "var(--color-text-faint)" }}>
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Subtask list + add input */}
       {expanded && (

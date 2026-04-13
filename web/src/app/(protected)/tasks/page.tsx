@@ -66,13 +66,17 @@ async function archiveTask(taskId: string): Promise<{ error?: string }> {
   }
 }
 
-async function updateTask(taskId: string, title: string): Promise<{ error?: string }> {
+async function updateTask(
+  taskId: string,
+  fields: { title?: string; due_date?: string | null; priority?: string | null }
+): Promise<{ error?: string }> {
   "use server";
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("tasks").update({ title }).eq("id", taskId);
+    const { error } = await supabase.from("tasks").update(fields).eq("id", taskId);
     if (error) return { error: error.message };
     revalidatePath("/tasks");
+    revalidatePath("/dashboard");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to update task" };

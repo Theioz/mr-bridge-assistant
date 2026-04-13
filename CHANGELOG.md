@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (edit task due date and priority — issue #157)
+- **`web/src/app/(protected)/tasks/page.tsx`** — `updateTask` server action now accepts a `fields` object (`title?`, `due_date?`, `priority?`) instead of a bare title string; also revalidates `/dashboard` on update
+- **`web/src/components/tasks/task-item.tsx`** — `updateAction` prop updated to match new fields signature; `SubtaskRow` and `TaskItem` `commitEdit` calls updated accordingly; added `showEditPanel` toggle (Pencil icon, size 13) next to the Archive button; when open, renders an inline row with a date input, a clear-date button, a priority select, and Save/cancel buttons; initializes from current task values
+
 ### Added (sign out button — issue #156)
 - **`web/src/components/ui/sign-out-button.tsx`** — new client component; calls `supabase.auth.signOut()` and redirects to `/login`
 - **`web/src/components/nav.tsx`** — desktop sidebar: sign-out section with top border below demo banner; mobile More sheet: Sign Out button as last grid item, inlines sign-out logic to avoid redundant imports
