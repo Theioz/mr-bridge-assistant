@@ -120,9 +120,9 @@ const GOAL_MODES: { key: GoalMode; label: string; multiplier: number; descriptio
 ];
 
 const PROTEIN_OPTIONS: { value: number; label: string }[] = [
-  { value: 0.8, label: "0.8 g/lb" },
-  { value: 0.9, label: "0.9 g/lb" },
   { value: 1.0, label: "1.0 g/lb" },
+  { value: 0.9, label: "0.9 g/lb" },
+  { value: 0.8, label: "0.8 g/lb" },
 ];
 
 function suggestMacros(
@@ -151,7 +151,7 @@ function SuggestedNutritionCard({
   const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
 
   const [mode, setMode]               = useState<GoalMode>("lose");
-  const [proteinPerLb, setProteinPerLb] = useState(0.8);
+  const [proteinPerLb, setProteinPerLb] = useState(1.0);
   const [applied, setApplied]         = useState(false);
   const [isPending, startTransition]  = useTransition();
 
@@ -230,6 +230,9 @@ function SuggestedNutritionCard({
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
             {activeMode.description} · protein {proteinPerLb} g/lb · fat 25% of calories · carbs fill remainder
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)", opacity: 0.65 }}>
+            Rough estimate based on goal weight only — ask in Chat for a more personalized result.
           </p>
         </div>
         <button
