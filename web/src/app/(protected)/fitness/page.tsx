@@ -6,16 +6,18 @@ import { getWindow } from "@/lib/window";
 import { WindowSelector } from "@/components/ui/window-selector";
 import { BodyCompDualChart } from "@/components/fitness/body-comp-dual-chart";
 import { WorkoutFreqChart } from "@/components/fitness/workout-freq-chart";
-import { ActiveCalChart } from "@/components/fitness/active-cal-chart";
+import { ActiveCalGoalChart } from "@/components/fitness/active-cal-goal-chart";
+import { WeightGoalChart } from "@/components/fitness/weight-goal-chart";
+import { BodyFatGoalChart } from "@/components/fitness/body-fat-goal-chart";
 import { WorkoutHistoryTable } from "@/components/fitness/workout-history-table";
 import type { FitnessLog, WorkoutSession, RecoveryMetrics } from "@/lib/types";
 
 export default async function FitnessPage() {
   const supabase = await createClient();
   const { key: windowKey, days } = await getWindow();
-  const weekCount = Math.max(1, Math.ceil(days / 7));
+  const weekCount = Math.max(8, Math.ceil(days / 7));
 
-  const [fitnessRes, workoutsRes, recoveryRes] = await Promise.all([
+  const [fitnessRes, workoutsRes, recoveryRes, profileRes] = await Promise.all([
     supabase
       .from("fitness_log")
       .select("*")
@@ -25,18 +27,38 @@ export default async function FitnessPage() {
     supabase
       .from("workout_sessions")
       .select("*")
-      .gte("date", daysAgoString(days - 1))
+      .gte("date", daysAgoString((weekCount * 7) - 1))
       .order("date", { ascending: false }),
     supabase
       .from("recovery_metrics")
       .select("date,active_cal")
-      .gte("date", daysAgoString(days - 1))
+      .gte("date", daysAgoString((weekCount * 7) - 1))
       .order("date", { ascending: true }),
+    supabase
+      .from("profile")
+      .select("key,value")
+      .in("key", [
+        "weekly_workout_goal",
+        "weekly_active_cal_goal",
+        "weight_goal_lbs",
+        "body_fat_goal_pct",
+      ]),
   ]);
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
   const workouts = (workoutsRes.data ?? []) as WorkoutSession[];
   const recoveryData = (recoveryRes.data ?? []) as Pick<RecoveryMetrics, "date" | "active_cal">[];
+
+  const goals: Record<string, number | null> = {};
+  for (const row of profileRes.data ?? []) {
+    const n = parseFloat(row.value ?? "");
+    goals[row.key] = isNaN(n) ? null : n;
+  }
+
+  const weeklyWorkoutGoal   = goals["weekly_workout_goal"]   ?? null;
+  const weeklyActiveCalGoal = goals["weekly_active_cal_goal"] ?? null;
+  const weightGoal          = goals["weight_goal_lbs"]        ?? null;
+  const bodyFatGoal         = goals["body_fat_goal_pct"]      ?? null;
 
   const latest = fitnessData[fitnessData.length - 1] ?? null;
 
@@ -57,11 +79,35 @@ export default async function FitnessPage() {
         <WindowSelector current={windowKey} />
       </div>
 
+      {/* Body composition trend */}
       <BodyCompDualChart data={fitnessData} windowLabel={windowKey.toUpperCase()} />
 
+      {/* Weekly frequency + active cal vs goals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WorkoutFreqChart sessions={workouts} weekCount={weekCount} />
-        <ActiveCalChart data={recoveryData} windowLabel={windowKey.toUpperCase()} />
+        <WorkoutFreqChart
+          sessions={workouts}
+          weekCount={8}
+          goal={weeklyWorkoutGoal}
+        />
+        <ActiveCalGoalChart
+          data={recoveryData}
+          goal={weeklyActiveCalGoal}
+          weekCount={8}
+        />
+      </div>
+
+      {/* Weight + body fat progress toward goals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <WeightGoalChart
+          data={fitnessData}
+          goal={weightGoal}
+          windowLabel={windowKey.toUpperCase()}
+        />
+        <BodyFatGoalChart
+          data={fitnessData}
+          goal={bodyFatGoal}
+          windowLabel={windowKey.toUpperCase()}
+        />
       </div>
 
       <WorkoutHistoryTable workouts={workouts} />

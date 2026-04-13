@@ -70,6 +70,117 @@ const NUTRITION_GOAL_FIELDS: Field[] = [
   },
 ];
 
+const FITNESS_GOAL_FIELDS: Field[] = [
+  {
+    key: "weekly_workout_goal",
+    label: "Weekly Workout Goal",
+    placeholder: "e.g. 4",
+    hint: "sessions per week",
+  },
+  {
+    key: "weekly_active_cal_goal",
+    label: "Weekly Active Cal Goal",
+    placeholder: "e.g. 2500",
+    hint: "kcal per week",
+  },
+  {
+    key: "weight_goal_lbs",
+    label: "Target Weight",
+    placeholder: "e.g. 185",
+    hint: "lbs",
+  },
+  {
+    key: "body_fat_goal_pct",
+    label: "Target Body Fat",
+    placeholder: "e.g. 12",
+    hint: "%",
+  },
+];
+
+interface SuggestedMacros {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+function suggestMacros(weightGoal: number, bfGoal: number): SuggestedMacros {
+  const leanMass = weightGoal * (1 - bfGoal / 100);
+  const protein = Math.round(leanMass * 1.0);        // 1 g / lb lean mass
+  const fat     = Math.round(weightGoal * 0.40);     // 0.4 g / lb goal weight
+  const calories = Math.round(weightGoal * 15);      // 15× bodyweight — moderate activity
+  const carbs   = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
+  return { calories, protein, carbs, fat };
+}
+
+function SuggestedNutritionCard({
+  values,
+  updateAction,
+}: {
+  values: Record<string, string>;
+  updateAction: (key: string, value: string) => Promise<void>;
+}) {
+  const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
+  const bfGoal     = parseFloat(values["body_fat_goal_pct"] ?? "");
+
+  const [applied, setApplied]     = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  if (!weightGoal || !bfGoal || isNaN(weightGoal) || isNaN(bfGoal)) return null;
+
+  const suggested = suggestMacros(weightGoal, bfGoal);
+
+  function applyAll() {
+    startTransition(async () => {
+      await Promise.all([
+        updateAction("calorie_goal", String(suggested.calories)),
+        updateAction("protein_goal", String(suggested.protein)),
+        updateAction("carbs_goal",   String(suggested.carbs)),
+        updateAction("fat_goal",     String(suggested.fat)),
+      ]);
+      setApplied(true);
+      setTimeout(() => setApplied(false), 2500);
+    });
+  }
+
+  return (
+    <div
+      className="mx-5 my-3 rounded-lg px-4 py-3 flex items-start justify-between gap-4"
+      style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.22)" }}
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-primary)" }}>
+          Suggested daily macros — based on {weightGoal} lb / {bfGoal}% goal
+        </p>
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs · {suggested.fat} g fat
+        </p>
+        <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
+          Formula: 1 g protein/lb lean mass · 0.4 g fat/lb goal weight · 15× bodyweight calories · carbs fill remainder
+        </p>
+      </div>
+      <button
+        onClick={applyAll}
+        disabled={isPending}
+        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer disabled:opacity-40"
+        style={{
+          background: applied ? "rgba(16,185,129,0.15)" : "var(--color-primary)",
+          color: applied ? "var(--color-positive)" : "#fff",
+          border: applied ? "1px solid rgba(16,185,129,0.3)" : "1px solid var(--color-primary)",
+        }}
+      >
+        {isPending ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : applied ? (
+          <><Check size={12} /> Applied</>
+        ) : (
+          "Apply"
+        )}
+      </button>
+    </div>
+  );
+}
+
 function FieldRow({
   field,
   initialValue,
@@ -183,9 +294,30 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
       >
         <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+            Fitness Goals
+          </p>
+        </div>
+        {FITNESS_GOAL_FIELDS.map((field) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+          />
+        ))}
+      </div>
+
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
             Nutrition Goals
           </p>
         </div>
+        <SuggestedNutritionCard values={values} updateAction={updateAction} />
         {NUTRITION_GOAL_FIELDS.map((field) => (
           <FieldRow
             key={field.key}

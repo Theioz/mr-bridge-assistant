@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (fitness goal progress charts — issue #66)
+- **Fitness Goals section in Settings** — four new fields added to `ProfileForm` in a dedicated "Fitness Goals" card: `weekly_workout_goal` (sessions/week), `weekly_active_cal_goal` (kcal/week), `weight_goal_lbs` (target lbs), `body_fat_goal_pct` (target %); stored as profile key-value pairs; inline save/delete matches existing field pattern
+- **Suggested Nutrition card** — appears in the "Nutrition Goals" section when both `weight_goal_lbs` and `body_fat_goal_pct` are set; computes macros from fitness goals using: 1 g protein/lb lean mass, 0.4 g fat/lb goal weight, 15× bodyweight calories, carbs fill the remainder; one-click "Apply" populates all four nutrition goal fields via server actions
+- **`WorkoutFreqChart`** updated — accepts optional `goal` prop; bars colored green (≥ goal), amber (1 below), red (2+ below) using Recharts `Cell`; dashed `ReferenceLine` at goal; fallback to indigo when no goal set; "Set your goals in Settings →" prompt shown when goal is absent
+- **`ActiveCalGoalChart`** (`web/src/components/fitness/active-cal-goal-chart.tsx`) — replaces the old daily `ActiveCalChart` on the fitness page; aggregates `recovery_metrics.active_cal` into weekly totals across last 8 weeks; area chart with dashed goal `ReferenceLine` and tooltip in kcal; "Set your goals" prompt when goal absent
+- **`WeightGoalChart`** (`web/src/components/fitness/weight-goal-chart.tsx`) — line chart of `weight_lb` from `fitness_log` over the selected window; dashed goal line at `weight_goal_lbs` with inline label; delta badge top-right showing "X.X lb to go" (green) or "X.X lb above goal" (red) vs latest entry; no-data and no-goal states handled
+- **`BodyFatGoalChart`** (`web/src/components/fitness/body-fat-goal-chart.tsx`) — same pattern as WeightGoalChart using `body_fat_pct`; delta badge in % with matching color logic
+- **Fitness page updated** — fetches four goal keys from `profile` table in the same `Promise.all`; workout + active-cal charts always show 8-week window regardless of window selector; weight/body-fat charts use the selected window; all four goal charts laid out in 2-column grids below the existing body comp dual chart
+
 ### Added (slash command autocomplete — issue #63)
 - **`SlashCommandMenu`** (`web/src/components/chat/slash-command-menu.tsx`) — floating suggestion list that renders above the chat input; shows up to 6 commands, scrollable; each row displays the command usage (monospace, primary color) and a short description; keyboard-navigable (↑/↓ arrows, Enter/Tab to select, Escape to dismiss)
 - **Autocomplete trigger** — activates when the user types `/` at the start of the input or after a space; filters the list by prefix match as more characters are typed (e.g. `/w` shows `/weekly`, `/workout`, `/weight`)

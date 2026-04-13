@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 import {
-  BarChart, Bar, Cell,
+  AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
-import type { WorkoutSession } from "@/lib/types";
 import Link from "next/link";
 
+interface DataPoint {
+  date: string;
+  active_cal: number | null;
+}
+
 interface Props {
-  sessions: WorkoutSession[];
-  weekCount?: number;
+  data: DataPoint[];
   goal?: number | null;
+  weekCount?: number;
 }
 
 const TOOLTIP_STYLE = {
@@ -39,13 +43,7 @@ function getISOWeekKey(dateStr: string): string {
   return monday.toISOString().slice(0, 10);
 }
 
-function barColor(count: number, goal: number): string {
-  if (count >= goal)          return "#10B981"; // green
-  if (count === goal - 1)     return "#F59E0B"; // amber
-  return "#EF4444";                             // red
-}
-
-export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
+export function ActiveCalGoalChart({ data, goal, weekCount = 8 }: Props) {
   const [animate, setAnimate] = useState(true);
 
   useEffect(() => {
@@ -53,22 +51,24 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
     setAnimate(!mq.matches);
   }, []);
 
+  // Build 8-week slots
   const now = new Date();
-  const weeks: { key: string; label: string; count: number }[] = [];
+  const weeks: { key: string; label: string; total: number }[] = [];
   for (let i = weekCount - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i * 7);
     const dateStr = d.toISOString().slice(0, 10);
     const key = getISOWeekKey(dateStr);
     if (!weeks.find((w) => w.key === key)) {
-      weeks.push({ key, label: getISOWeekLabel(dateStr), count: 0 });
+      weeks.push({ key, label: getISOWeekLabel(dateStr), total: 0 });
     }
   }
 
-  sessions.forEach((s) => {
-    const key = getISOWeekKey(s.date);
+  data.forEach((d) => {
+    if (d.active_cal == null) return;
+    const key = getISOWeekKey(d.date);
     const slot = weeks.find((w) => w.key === key);
-    if (slot) slot.count++;
+    if (slot) slot.total += d.active_cal;
   });
 
   const hasGoal = goal != null && goal > 0;
@@ -80,11 +80,11 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-          Workout Frequency — {weekCount} Weeks
+          Active Calories — {weekCount} Weeks
         </p>
         {hasGoal && (
           <span className="text-xs tabular-nums" style={{ color: "var(--color-text-faint)" }}>
-            Goal: {goal}/wk
+            Goal: {goal!.toLocaleString()} kcal/wk
           </span>
         )}
       </div>
@@ -99,7 +99,13 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
       )}
 
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={weeks} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <AreaChart data={weeks} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="acal-goal-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#F59E0B" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
           <XAxis
             dataKey="label"
@@ -114,9 +120,12 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
             tick={{ fill: "#64748B", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            allowDecimals={false}
+            domain={[0, "auto"]}
           />
-          <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [v, "Sessions"]} />
+          <Tooltip
+            {...TOOLTIP_STYLE}
+            formatter={(v: number) => [`${Math.round(v).toLocaleString()} kcal`, "Active Cal"]}
+          />
           {hasGoal && (
             <ReferenceLine
               y={goal}
@@ -125,21 +134,18 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
               strokeWidth={1.5}
             />
           )}
-          <Bar
-            dataKey="count"
-            name="Sessions"
-            radius={[3, 3, 0, 0]}
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke="#F59E0B"
+            strokeWidth={2}
+            fill="url(#acal-goal-grad)"
+            dot={false}
+            activeDot={{ r: 4, fill: "#F59E0B", strokeWidth: 0 }}
             isAnimationActive={animate}
             animationDuration={300}
-          >
-            {weeks.map((entry) => (
-              <Cell
-                key={entry.key}
-                fill={hasGoal ? barColor(entry.count, goal!) : "#6366F1"}
-              />
-            ))}
-          </Bar>
-        </BarChart>
+          />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

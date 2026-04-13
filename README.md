@@ -136,7 +136,7 @@ mr-bridge-assistant/
 │   │   │   ├── chat/                      # Chat UI with markdown rendering
 │   │   │   ├── tasks/                     # Task CRUD components
 │   │   │   ├── habits/                    # Habit toggle, add/archive UI, range-selectable history grid
-│   │   │   ├── fitness/                   # Body comp chart (Recharts)
+│   │   │   ├── fitness/                   # Body comp, workout freq, active cal, weight/body fat goal charts (Recharts)
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
