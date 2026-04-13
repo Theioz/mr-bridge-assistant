@@ -4,9 +4,10 @@ import { useState } from "react";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 
 interface Props {
-  habits: HabitRegistry[];
-  logs: HabitLog[];   // all logs for the 90-day window
-  dates: string[];    // ordered list of date strings YYYY-MM-DD (90 days)
+  habits: HabitRegistry[];    // active habits only — used for completion ratio denominator
+  registry: HabitRegistry[];  // all habits including inactive — used for name lookup
+  logs: HabitLog[];           // all logs for the window
+  dates: string[];            // ordered list of date strings YYYY-MM-DD
 }
 
 function fmtDate(d: string) {
@@ -17,7 +18,7 @@ function fmtDate(d: string) {
   });
 }
 
-export function HabitHeatmap({ habits, logs, dates }: Props) {
+export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
   const [tooltip, setTooltip] = useState<{ date: string; names: string[] } | null>(null);
 
   if (habits.length === 0 || dates.length === 0) {
@@ -42,8 +43,8 @@ export function HabitHeatmap({ habits, logs, dates }: Props) {
     completionMap.get(log.date)!.add(log.habit_id);
   }
 
-  // Build habit name map
-  const habitNames = new Map(habits.map((h) => [h.id, h.name]));
+  // Build habit name map from full registry (includes archived habits)
+  const habitNames = new Map(registry.map((h) => [h.id, h.name]));
 
   // Group dates into weeks (columns of 7)
   const weeks: string[][] = [];

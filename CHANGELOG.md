@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (habit heatmap bugs — issue #111)
+- **Tooltip showed UUID instead of habit name** — `HabitHeatmap` now accepts a `registry: HabitRegistry[]` prop (all habits, including inactive) used exclusively for name lookup; the existing `habits` prop (active only) continues to drive the completion ratio denominator; archived habits whose log entries appear in the window now resolve to their correct names
+- **Unchecked habits stayed green on heatmap** — `toggleHabit` server action in `habits/page.tsx` now DELETEs the row on uncheck rather than upserting `completed: false`; eliminates any residual `completed: true` rows that could survive a failed or no-op UPDATE and kept the heatmap cell green
+
 ### Added (conversational profile updates — issue #110)
 - **`update_profile` tool** (`web/src/app/api/chat/route.ts`) — upserts one or more `{key, value}` pairs into the `profile` table; available alongside `get_profile` in the chat assistant; the AI tells the user what it is about to write before calling the tool and confirms each saved key afterward
 - **Canonical key guidance** — system prompt instructs Bridge to use the flat canonical keys (`weight_goal_lbs`, `body_fat_goal_pct`, `weekly_workout_goal`, `weekly_active_cal_goal`, `calorie_goal`, `protein_goal`, `carbs_goal`, `fat_goal`, `fiber_goal`) when writing known fitness/nutrition goals so they surface immediately in the web UI and fitness charts; dot-notation (`sleep.goal.hrs`, `study.goal.mins_per_day`, etc.) for other goal domains
