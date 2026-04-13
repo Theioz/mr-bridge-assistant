@@ -54,6 +54,24 @@ FITBIT_API_BASE = "https://api.fitbit.com"
 REDIRECT_URI = "http://localhost:8080"
 SCOPES = "activity heartrate weight"
 
+# Canonical activity names — map Fitbit variants to a single label so dedup
+# keys and history views stay consistent regardless of which name the API returns.
+ACTIVITY_ALIASES: dict[str, str] = {
+    "Walking": "Walk",
+    "Running": "Run",
+    "Biking": "Bike",
+    "Cycling": "Bike",
+    "Outdoor Bike": "Bike",
+    "Swimming": "Swim",
+    "Hiking": "Hike",
+    "Aerobic Workout": "Aerobic Workout",
+    "Sport": "Sport",
+}
+
+
+def normalize_activity(name: str) -> str:
+    return ACTIVITY_ALIASES.get(name, name)
+
 
 # ── OAuth helpers ──────────────────────────────────────────────────────────────
 
@@ -207,23 +225,28 @@ def fetch_workouts(access_token, start_date, end_date):
         time_str = raw_start[11:19] if len(raw_start) >= 19 else None  # HH:MM:SS
         avg_hr = a.get("averageHeartRate")
         calories = a.get("calories")
+        activity = normalize_activity(a.get("activityName", "Unknown"))
         rows.append({
             "date": date_str,
             "start_time": time_str,
-            "activity": a.get("activityName", "Unknown"),
+            "activity": activity,
             "duration_mins": duration_min,
             "calories": int(calories) if calories else None,
             "avg_hr": int(avg_hr) if avg_hr else None,
             "source": "fitbit",
-            "metadata": {"hr_zones": fmt_hr_zones(a.get("heartRateZones", []))} ,
+            "metadata": {"hr_zones": fmt_hr_zones(a.get("heartRateZones", []))},
             # dedup key (not written to DB)
-            "_key": f"{date_str}|{time_str}|{a.get('activityName', '')}",
+            "_key": f"{date_str}|{time_str}|{activity}",
         })
     return rows
 
 
 def existing_keys(client, user_id: str) -> set:
-    """Build dedup keys from Supabase to avoid re-inserting the same workout."""
+    """Build dedup keys from Supabase to avoid re-inserting the same workout.
+
+    Normalizes activity names from existing rows so pre-migration rows (with
+    un-aliased names like 'Walking') still match the new canonical keys.
+    """
     rows = (
         client.table("workout_sessions")
         .select("date,start_time,activity")
@@ -232,7 +255,88 @@ def existing_keys(client, user_id: str) -> set:
         .execute()
         .data
     )
-    return {f"{r['date']}|{r['start_time']}|{r['activity']}" for r in rows}
+    return {f"{r['date']}|{r['start_time']}|{normalize_activity(r['activity'])}" for r in rows}
+
+
+def fetch_existing_workouts(client, user_id: str, dates: set[str]) -> list[dict]:
+    """Fetch existing workout rows for a set of dates (for overlap detection)."""
+    if not dates:
+        return []
+    rows = (
+        client.table("workout_sessions")
+        .select("id,date,start_time,avg_hr,duration_mins")
+        .eq("source", "fitbit")
+        .eq("user_id", user_id)
+        .in_("date", list(dates))
+        .execute()
+        .data
+    )
+    return rows
+
+
+def _time_to_mins(t: str | None) -> int | None:
+    """Convert HH:MM:SS string to total minutes past midnight."""
+    if not t:
+        return None
+    parts = t.split(":")
+    return int(parts[0]) * 60 + int(parts[1])
+
+
+def _is_better(new_row: dict, existing_row: dict) -> bool:
+    """Return True if new_row is preferable to existing_row.
+
+    Priority: has HR data > no HR data; then longer duration wins.
+    """
+    new_hr = new_row.get("avg_hr") is not None
+    ex_hr = existing_row.get("avg_hr") is not None
+    if new_hr and not ex_hr:
+        return True
+    if not new_hr and ex_hr:
+        return False
+    return (new_row.get("duration_mins") or 0) > (existing_row.get("duration_mins") or 0)
+
+
+def filter_overlapping(
+    new_rows: list[dict],
+    existing_rows: list[dict],
+) -> tuple[list[dict], list[str]]:
+    """Compare new workouts against existing rows for time-overlap (±5 min).
+
+    Returns:
+        to_insert — rows that should be inserted (no overlap, or new row is better)
+        to_delete — IDs of existing rows to delete (replaced by a better new row)
+    """
+    OVERLAP_MINS = 5
+    # Index existing rows by date for quick lookup
+    by_date: dict[str, list[dict]] = {}
+    for r in existing_rows:
+        by_date.setdefault(r["date"], []).append(r)
+
+    to_insert: list[dict] = []
+    to_delete: list[str] = []
+
+    for new in new_rows:
+        new_mins = _time_to_mins(new.get("start_time"))
+        overlapped = False
+        for ex in by_date.get(new["date"], []):
+            ex_mins = _time_to_mins(ex.get("start_time"))
+            if new_mins is None or ex_mins is None:
+                continue
+            if abs(new_mins - ex_mins) <= OVERLAP_MINS:
+                overlapped = True
+                if _is_better(new, ex):
+                    to_delete.append(ex["id"])
+                    to_insert.append(new)
+                else:
+                    print(
+                        f"[sync-fitbit] Skipping {new['date']} {new.get('start_time')} "
+                        f"{new.get('activity')} — existing row preferred (HR/duration)"
+                    )
+                break
+        if not overlapped:
+            to_insert.append(new)
+
+    return to_insert, to_delete
 
 
 # ── Body composition ───────────────────────────────────────────────────────────
@@ -371,17 +475,24 @@ def main():
                 parts.append(f"BMI={r['bmi']}")
             print(f"  {r['date']} — {' | '.join(parts) if parts else 'no fields'}")
 
-    # Write workouts
+    # Write workouts — exact dedup first, then time-overlap check
     existing = existing_keys(client, owner_user_id)
-    new_workouts = [r for r in workout_rows if r["_key"] not in existing]
+    exact_new = [r for r in workout_rows if r["_key"] not in existing]
+
+    # Time-overlap detection: fetch full rows for dates that have candidates
+    candidate_dates = {r["date"] for r in exact_new}
+    existing_detail = fetch_existing_workouts(client, owner_user_id, candidate_dates)
+    new_workouts, ids_to_delete = filter_overlapping(exact_new, existing_detail)
 
     if new_workouts:
         print(f"\nNew workout entries ({len(new_workouts)}):")
         for r in new_workouts:
             hr_info = f" | Avg HR: {r['avg_hr']}" if r["avg_hr"] else ""
             print(f"  {r['date']} {r['start_time']} — {r['activity']} ({r['duration_mins']} min, {r['calories']} cal{hr_info})")
+    if ids_to_delete:
+        print(f"\nWorkouts to replace (overlap, inferior row): {len(ids_to_delete)} row(s)")
 
-    if not new_body and not new_workouts:
+    if not new_body and not new_workouts and not ids_to_delete:
         print("[sync-fitbit] No new data.")
         return
 
@@ -399,6 +510,10 @@ def main():
         print(f"[sync-fitbit] Synced {body_written} body composition row(s) to fitness_log.")
 
     workout_written = 0
+    if ids_to_delete:
+        client.table("workout_sessions").delete().in_("id", ids_to_delete).execute()
+        print(f"[sync-fitbit] Deleted {len(ids_to_delete)} inferior overlap row(s).")
+
     if new_workouts:
         # Strip the internal dedup key before inserting, add user_id
         sb_rows = [{k: v for k, v in r.items() if k != "_key"} | {"user_id": owner_user_id} for r in new_workouts]
