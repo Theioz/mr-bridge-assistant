@@ -24,7 +24,8 @@ export default async function ProtectedLayout({
       <Nav />
       {/* ml-0 on mobile (nav is bottom bar), ml-60 on desktop (240px sidebar) */}
       {/* pb-16 on mobile to clear the 56px bottom tab bar */}
-      <main className="flex-1 ml-0 lg:ml-60 px-5 lg:px-8 pt-8 pb-20 lg:pb-8 min-w-0">
+      {/* pb accounts for 56px tab bar + safe-area-inset-bottom on iOS */}
+      <main className="flex-1 ml-0 lg:ml-60 px-5 lg:px-8 pt-8 pb-[calc(56px+env(safe-area-inset-bottom)+16px)] lg:pb-8 min-w-0">
         <div className="max-w-6xl mx-auto">{children}</div>
       </main>
     </div>

@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (mobile UI + sync — this PR)
+- **Weather layout** — date and weather are now on separate lines in the dashboard header; no more mid-line wrapping or diagonal cut-off of the H/L values on narrow screens
+- **Mobile nav safe area** — added `viewport-fit: cover` to the viewport metadata and `padding-bottom: env(safe-area-inset-bottom)` to the bottom tab bar so it no longer clips behind the iOS home indicator
+- **Bottom nav "More" tab** — replaced the hard-coded 5-item mobile nav with 4 primary tabs (Dashboard, Habits, Tasks, Chat) + a **More** button that opens a bottom sheet with the remaining pages (Fitness, Meals, Journal, Settings); More button highlights when the active page is one of those secondary routes
+- **Sync button no longer shows "Sync failed" for unconfigured sources** — Oura, Fitbit, and Google Fit sync routes now return HTTP 200 `{ skipped: true }` when the required env vars or tokens are absent, instead of throwing a 500; only genuine API/DB errors count as failures
+
 ### Added (food photo analysis — issue #84)
 - **Food photo analysis** — `/meals` page now has an "Analyze Food Photo" card; user selects or captures a photo, Claude vision identifies the dish and extracts an ingredients list with estimated quantities, estimates macros (calories, protein, carbs, fat, fiber, sodium), and presents an editable review before logging
 - **Ingredients-first editing** — review state shows dish name as a header and the ingredients list as the primary editable textarea; "Re-estimate macros" button sends the corrected ingredients back to Claude (Haiku) for a fresh macro calculation; macro numbers are shown read-only with an optional "Edit" toggle for manual overrides

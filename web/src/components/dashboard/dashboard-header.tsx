@@ -41,26 +41,23 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
           {greeting}
         </h1>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-          <span>{dateStr}</span>
-          {weather && (
-            <>
-              <span style={{ color: "var(--color-text-faint)" }}>·</span>
-              <span className="flex items-center gap-1.5">
-                {emoji && <span style={{ fontSize: 14, lineHeight: 1 }}>{emoji}</span>}
-                <span style={{ color: "var(--color-text)" }}>
-                  {weather.temp != null ? `${Math.round(weather.temp)}°` : ""}
-                </span>
-                <span>{weather.condition}</span>
-                {(weather.high != null || weather.low != null) && (
-                  <span style={{ color: "var(--color-text-faint)" }}>
-                    H {weather.high != null ? `${Math.round(weather.high)}°` : "—"} · L {weather.low != null ? `${Math.round(weather.low)}°` : "—"}
-                  </span>
-                )}
-              </span>
-            </>
-          )}
+        <p className="mt-0.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+          {dateStr}
         </p>
+        {weather && (
+          <p className="mt-0.5 flex items-center gap-1.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+            {emoji && <span style={{ fontSize: 14, lineHeight: 1 }}>{emoji}</span>}
+            {weather.temp != null && (
+              <span style={{ color: "var(--color-text)" }}>{Math.round(weather.temp)}°</span>
+            )}
+            <span>{weather.condition}</span>
+            {(weather.high != null || weather.low != null) && (
+              <span style={{ color: "var(--color-text-faint)" }}>
+                · H {weather.high != null ? `${Math.round(weather.high)}°` : "—"} L {weather.low != null ? `${Math.round(weather.low)}°` : "—"}
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Right: sync + window */}
