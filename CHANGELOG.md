@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (food photo analysis — issue #84)
+- **Food photo analysis** — `/meals` page now has an "Analyze Food Photo" card; user selects or captures a photo, Claude vision identifies the dish and extracts an ingredients list with estimated quantities, estimates macros (calories, protein, carbs, fat, fiber, sodium), and presents an editable review before logging
+- **Ingredients-first editing** — review state shows dish name as a header and the ingredients list as the primary editable textarea; "Re-estimate macros" button sends the corrected ingredients back to Claude (Haiku) for a fresh macro calculation; macro numbers are shown read-only with an optional "Edit" toggle for manual overrides
+- **`/api/meals/analyze-photo`** — POST route; accepts `multipart/form-data` image, sends to `claude-sonnet-4-6` via `generateObject`, returns structured food/macro JSON; image is never written to disk or Supabase Storage
+- **`/api/meals/estimate-macros`** — POST route; accepts `{ ingredients }` string, re-estimates macros via `claude-haiku-4-5-20251001`; used by the Re-estimate button in the review flow
+- **`/api/meals/log`** — POST route; inserts a full nutrition row into `meal_log` from the client component (bypasses chat)
+- **`FoodPhotoAnalyzer`** client component — idle → loading (thumbnail preview) → review → saving → done/error state machine; mobile-optimised: no `capture=` attribute (iOS shows native Take Photo / Photo Library sheet), `font-size: 16px` on all inputs to prevent iOS auto-zoom, `minHeight: 48px` touch targets, 2-column macro grid on mobile, full-width Log Meal button
+- **Nutrition columns on `meal_log`** — migration `20260412000000_add_nutrition_to_meal_log.sql` adds `calories`, `protein_g`, `carbs_g`, `fat_g`, `fiber_g`, `sodium_mg`, `source` (all nullable)
+- **Macro display in meal log** — meals page shows inline macro summary (`620 cal · P 42g · C 58g · F 14g`) on any entry that has nutrition data
+- **`log_meal` chat tool extended** — now accepts optional `calories`, `protein_g`, `carbs_g`, `fat_g` so chat-logged meals can carry macros when the user mentions them or Claude can estimate from the description
+
 ### Added (web UI redesign — PR #89)
 - **Design system** — `globals.css` now defines all CSS custom properties (`--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-primary`, `--color-positive`, `--color-warning`, `--color-danger`, `--color-info`, `--color-text`, `--color-text-muted`, `--color-text-faint`); skeleton shimmer keyframe; `prefers-reduced-motion` block disables all transitions and chart animations
 - **Typography** — replaced Geist with DM Sans (headings, `font-heading`) + Inter (body); loaded via Google Fonts `<link>` in layout

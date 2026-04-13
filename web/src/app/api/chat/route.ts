@@ -128,7 +128,7 @@ Tools available:
 - list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
 - create_calendar_event: create a Google Calendar event on the primary calendar
 - get_recipes: search saved recipes by ingredient, name, or tag; omit query to return all
-- log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link or notes
+- log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link, notes, and estimated macros (calories, protein_g, carbs_g, fat_g) — include macros whenever the user mentions them or you can estimate from the food description
 
 Recipes and meal planning are in scope. When asked what to cook given ingredients on hand:
 1. Call get_recipes to check for saved recipes that match.
@@ -680,12 +680,16 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
     }),
 
     log_meal: tool({
-      description: "Log a meal to the meal_log table.",
+      description: "Log a meal to the meal_log table. Include estimated macros (calories, protein_g, carbs_g, fat_g) whenever the user mentions them or you can estimate them from the food description.",
       parameters: jsonSchema<{
         meal_type: "breakfast" | "lunch" | "dinner" | "snack";
         notes?: string;
         recipe_id?: string;
         date?: string;
+        calories?: number;
+        protein_g?: number;
+        carbs_g?: number;
+        fat_g?: number;
       }>({
         type: "object",
         required: ["meal_type"],
@@ -694,9 +698,13 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           notes: { type: "string", description: "Free-text meal description." },
           recipe_id: { type: "string", description: "UUID of a saved recipe." },
           date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+          calories: { type: "number", description: "Estimated calories." },
+          protein_g: { type: "number", description: "Estimated protein in grams." },
+          carbs_g: { type: "number", description: "Estimated carbohydrates in grams." },
+          fat_g: { type: "number", description: "Estimated fat in grams." },
         },
       }),
-      execute: async ({ meal_type, notes, recipe_id, date }) => {
+      execute: async ({ meal_type, notes, recipe_id, date, calories, protein_g, carbs_g, fat_g }) => {
         const { data, error } = await supabase
           .from("meal_log")
           .insert({
@@ -704,6 +712,11 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
             notes: notes ?? null,
             recipe_id: recipe_id ?? null,
             date: date ?? todayString(),
+            calories: calories ?? null,
+            protein_g: protein_g ?? null,
+            carbs_g: carbs_g ?? null,
+            fat_g: fat_g ?? null,
+            source: "chat",
           })
           .select()
           .single();

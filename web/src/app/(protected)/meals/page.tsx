@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { daysAgoString } from "@/lib/timezone";
+import FoodPhotoAnalyzer from "./FoodPhotoAnalyzer";
 
 interface MealRow {
   id: string;
@@ -11,6 +12,10 @@ interface MealRow {
   meal_type: string;
   notes: string | null;
   recipes: { name: string } | null;
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
 }
 
 function fmtDate(d: string) {
@@ -30,7 +35,7 @@ export default async function MealsPage() {
 
   const { data } = await supabase
     .from("meal_log")
-    .select("id, date, meal_type, notes, recipes(name)")
+    .select("id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, recipes(name)")
     .gte("date", daysAgoString(6))
     .order("date", { ascending: false })
     .order("meal_type", { ascending: true });
@@ -56,6 +61,9 @@ export default async function MealsPage() {
         </p>
       </div>
 
+      {/* Photo analyzer */}
+      <FoodPhotoAnalyzer />
+
       {/* Log via chat nudge */}
       <div
         className="flex items-center gap-3 rounded-xl px-4 py-3"
@@ -63,7 +71,7 @@ export default async function MealsPage() {
       >
         <MessageSquare size={16} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
         <p style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
-          Log meals by telling{" "}
+          Or log meals by telling{" "}
           <Link
             href="/chat"
             style={{ color: "var(--color-primary)", textDecoration: "underline", textUnderlineOffset: 2 }}
@@ -101,7 +109,19 @@ export default async function MealsPage() {
                   {fmtDate(date)}
                 </p>
                 <div className="space-y-2">
-                  {dayMeals.map((m) => (
+                  {dayMeals.map((m) => {
+                    const hasMacros = m.calories != null || m.protein_g != null;
+                    const macroStr = hasMacros
+                      ? [
+                          m.calories != null && `${m.calories} cal`,
+                          m.protein_g != null && `P ${m.protein_g}g`,
+                          m.carbs_g != null && `C ${m.carbs_g}g`,
+                          m.fat_g != null && `F ${m.fat_g}g`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : null;
+                    return (
                     <div key={m.id} className="flex items-baseline gap-3">
                       <span
                         style={{
@@ -114,11 +134,19 @@ export default async function MealsPage() {
                       >
                         {m.meal_type}
                       </span>
-                      <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                        {m.recipes?.name ?? m.notes ?? "—"}
-                      </span>
+                      <div>
+                        <span style={{ fontSize: 14, color: "var(--color-text)" }}>
+                          {m.recipes?.name ?? m.notes ?? "—"}
+                        </span>
+                        {macroStr && (
+                          <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
+                            {macroStr}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
