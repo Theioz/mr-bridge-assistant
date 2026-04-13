@@ -36,12 +36,13 @@ async function refreshFitbitToken(
 
   // Save rotated refresh token back to profile table
   if (data.refresh_token && data.refresh_token !== refreshToken && userId) {
-    await db
+    const { error: saveErr } = await db
       .from("profile")
       .upsert(
         { user_id: userId, key: "fitbit_refresh_token", value: data.refresh_token },
         { onConflict: "user_id,key" },
       );
+    if (saveErr) throw new Error(`Failed to save rotated Fitbit token: ${saveErr.message}`);
   }
 
   return data.access_token as string;
