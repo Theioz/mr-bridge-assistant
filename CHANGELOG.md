@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (calendar delete/move, conflict detection, deduplication — issue #129)
+- **`eventId` in `list_calendar_events`** — each returned event now includes `eventId` (Google Calendar event ID); tool description updated so Bridge knows to preserve it for follow-up calls
+- **`delete_calendar_event` tool** — deletes an event by `eventId`; system prompt rule requires Bridge to state title/date/time and obtain explicit user confirmation before calling
+- **`update_calendar_event` tool** — patches an existing event by `eventId`; accepts any subset of `summary`, `start`, `end`, `location`, `description`; system prompt rule requires stating before/after diff and explicit user confirmation
+- **Conflict detection pre-flight** — system prompt rule: before every `create_calendar_event`, Bridge must call `list_calendar_events` for the target date, check for time overlaps, surface any conflict to the user, and wait for explicit confirmation; rule also enforced in the `create_calendar_event` tool description
+- **Deduplication pre-flight** — extended from conflict detection: if an event with a matching title (case-insensitive) already exists on the target date, Bridge surfaces it and asks whether to create another, update the existing one, or skip
+
 ### Added (workout deduplication and history UI — issue #127)
 - **`ACTIVITY_ALIASES` map** in `scripts/sync-fitbit.py` and `web/src/lib/sync/fitbit.ts` — normalizes Fitbit variant names to canonical labels before dedup key is built and before DB insert (e.g. "Walking" → "Walk", "Running" → "Run", "Biking" → "Bike"); existing keys in the DB are also normalized during comparison so pre-migration rows are not re-inserted
 - **Time-overlap detection** in both sync paths — before inserting, checks if an existing workout on the same date has a `start_time` within ±5 minutes; prefers the row with HR data, then longer duration; inferior existing rows are deleted and replaced

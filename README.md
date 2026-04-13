@@ -77,7 +77,7 @@ flowchart LR
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, and Oura recovery scores in one view
-- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 13 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read + write, recipes, meals); slash command autocomplete
+- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 15 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
 - **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion
 - **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays
