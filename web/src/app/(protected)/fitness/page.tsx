@@ -46,8 +46,17 @@ export default async function FitnessPage() {
   ]);
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
-  const workouts = (workoutsRes.data ?? []) as WorkoutSession[];
+  const allWorkouts = (workoutsRes.data ?? []) as WorkoutSession[];
   const recoveryData = (recoveryRes.data ?? []) as Pick<RecoveryMetrics, "date" | "active_cal">[];
+
+  const workouts     = allWorkouts.filter((w) => !/walk/i.test(w.activity));
+  const walkSessions = allWorkouts.filter((w) => /walk/i.test(w.activity));
+
+  // "Walks this week" = last 7 days
+  const weekStart = daysAgoString(6);
+  const walksThisWeek = walkSessions.filter((w) => w.date >= weekStart);
+  const walkCount    = walksThisWeek.length;
+  const walkDuration = walksThisWeek.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
 
   const goals: Record<string, number | null> = {};
   for (const row of profileRes.data ?? []) {
@@ -84,11 +93,31 @@ export default async function FitnessPage() {
 
       {/* Weekly frequency + active cal vs goals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WorkoutFreqChart
-          sessions={workouts}
-          weekCount={8}
-          goal={weeklyWorkoutGoal}
-        />
+        <div className="flex flex-col gap-2">
+          <WorkoutFreqChart
+            sessions={workouts}
+            weekCount={8}
+            goal={weeklyWorkoutGoal}
+          />
+          {walkCount > 0 && (
+            <div
+              className="rounded-lg px-4 py-2.5 flex items-center gap-3"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <span className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+                Walks this week
+              </span>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--color-text)" }}>
+                {walkCount}
+              </span>
+              {walkDuration > 0 && (
+                <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+                  {walkDuration >= 60 ? `${Math.floor(walkDuration / 60)}h ${walkDuration % 60}m` : `${walkDuration}m`}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <ActiveCalGoalChart
           data={recoveryData}
           goal={weeklyActiveCalGoal}
@@ -110,7 +139,7 @@ export default async function FitnessPage() {
         />
       </div>
 
-      <WorkoutHistoryTable workouts={workouts} />
+      <WorkoutHistoryTable workouts={allWorkouts} />
     </div>
   );
 }
