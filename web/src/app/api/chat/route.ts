@@ -752,6 +752,14 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
       const lastUserMessage = messages[messages.length - 1];
 
       try {
+        // Upsert the session — creates it if it doesn't exist yet (lazy session creation
+        // for new chats whose UUID was generated client-side before any DB write).
+        const { error: sessionError } = await supabase.from("chat_sessions").upsert(
+          { id: sessionId, device: "web", last_active_at: new Date().toISOString() },
+          { onConflict: "id" }
+        );
+        if (sessionError) throw sessionError;
+
         const { error: insertError } = await supabase.from("chat_messages").insert([
           {
             session_id: sessionId,
@@ -765,12 +773,6 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           },
         ]);
         if (insertError) throw insertError;
-
-        const { error: updateError } = await supabase
-          .from("chat_sessions")
-          .update({ last_active_at: new Date().toISOString() })
-          .eq("id", sessionId);
-        if (updateError) throw updateError;
       } catch (err) {
         console.error("[chat] onFinish persist error:", err);
       }

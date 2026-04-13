@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (chat session history — issue #62)
+- **Session history panel** — chat page now shows browsable history of all previous conversations; desktop gets a collapsible ~260px left panel (toggle via History icon in chat header, state persisted in `localStorage`); mobile gets a bottom sheet triggered by the same icon
+- **`GET /api/chat/sessions`** — auth-gated route returning all web sessions ordered by `last_active_at` desc, each with a 60-char preview from the first user message; empty sessions are filtered out
+- **`GET /api/chat/sessions/[id]`** — auth-gated route returning the last 50 messages for a session; used when switching to a historical conversation
+- **`ChatPageClient`** (`components/chat/chat-page-client.tsx`) — client shell managing active session state, history panel toggle, session switching (fetches messages on select), and "New chat"; session list is refreshed after each AI response
+- **`SessionSidebar`** (`components/chat/session-sidebar.tsx`) — desktop collapsible panel with "New chat" button pinned at top; sessions grouped by recency with sessions older than 30 days collapsed under an "Older" disclosure; active session highlighted with `--color-primary` left border
+- **`SessionSheet`** (`components/chat/session-sheet.tsx`) — mobile bottom sheet matching the existing More sheet pattern (backdrop, close-on-tap, handle bar, `env(safe-area-inset-bottom)` padding)
+- **Lazy session creation** — "New chat" generates a UUID client-side without a DB write; the chat API route now upserts the session row on first message, so sessions are only persisted when a conversation actually begins
+- **`chat-interface.tsx`** — added optional `onMessageSent` prop (wired to `useChat`'s `onFinish`) so the parent can refresh the session list after each exchange
+- **`chat/page.tsx`** simplified — loads the most recent session for the initial render (no longer pre-creates sessions); renders `ChatPageClient` with `initialSessionId` and `initialMessages`
+
 ### Added (today's scores strip — issue #92)
 - **`TodayScoresStrip` component** — compact single-row card above Health Breakdown showing today's readiness and sleep score fetched separately from the existing card; 2px colored top bar keyed to readiness score; `TODAY` label, color-coded scores with a vertical divider, status text, and `Oura · live · Apr 13` source tag; silently absent when today's row doesn't exist yet
 - **Dashboard fetches two recovery rows** — `dashboard/page.tsx` now queries today's `recovery_metrics` row (`date,readiness,sleep_score,source`) in the same `Promise.all` as all other data; strip is hidden when today's date equals the Health Breakdown card's date (late-night sync case) to avoid showing the same data twice
