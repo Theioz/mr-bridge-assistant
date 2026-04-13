@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (today's scores strip — issue #92)
+- **`TodayScoresStrip` component** — compact single-row card above Health Breakdown showing today's readiness and sleep score fetched separately from the existing card; 2px colored top bar keyed to readiness score; `TODAY` label, color-coded scores with a vertical divider, status text, and `Oura · live · Apr 13` source tag; silently absent when today's row doesn't exist yet
+- **Dashboard fetches two recovery rows** — `dashboard/page.tsx` now queries today's `recovery_metrics` row (`date,readiness,sleep_score,source`) in the same `Promise.all` as all other data; strip is hidden when today's date equals the Health Breakdown card's date (late-night sync case) to avoid showing the same data twice
+
 ### Fixed (mobile UI + sync — this PR)
 - **Weather layout** — date and weather are now on separate lines in the dashboard header; no more mid-line wrapping or diagonal cut-off of the H/L values on narrow screens
 - **Mobile nav safe area** — added `viewport-fit: cover` to the viewport metadata and `padding-bottom: env(safe-area-inset-bottom)` to the bottom tab bar so it no longer clips behind the iOS home indicator
