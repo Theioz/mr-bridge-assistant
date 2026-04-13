@@ -24,8 +24,6 @@ flowchart LR
         cron["cron/sync\ndaily 6am PST"]
         rs["sync/oura\nsync/fitbit\nsync/googlefit"]
         rc["api/chat"]
-        rf["fun-fact"]
-        rq["daily-quote"]
         rw["weather"]
         rcal["google/calendar"]
         rmail["google/gmail"]
@@ -50,7 +48,7 @@ flowchart LR
     class oura,fitbit,gfit device
     class so,sf,sg script
     class db storage
-    class rs,rc,rf,rq,rw,rcal,rmail route
+    class rs,rc,rw,rcal,rmail route
     class pg page
     class cl,gc,gm,om extapi
     class cron cron
@@ -66,10 +64,10 @@ flowchart LR
     db --> rc
     rc --> db
 
-    cl --> rc & rf & rq
+    cl --> rc
     gc --> rcal --> pg
     gm --> rmail --> pg
-    rf & rq & rw --> pg
+    rw --> pg
     om --> rw
 ```
 
@@ -122,8 +120,6 @@ mr-bridge-assistant/
 │   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp; returns skipped:true if Google Fit env vars not set
 │   │   │   │   ├── cron/
 │   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; 30-min skip window; all 3 sources in parallel
-│   │   │   │   ├── fun-fact/route.ts      # Claude Haiku daily fact + Supabase cache
-│   │   │   │   ├── daily-quote/route.ts   # Claude Haiku motivational quote, cached daily in Supabase
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
 │   │   │   │   ├── meals/
 │   │   │   │   │   ├── analyze-photo/route.ts  # POST — Claude vision macro estimation from image; image never stored
@@ -143,19 +139,10 @@ mr-bridge-assistant/
 │   │   │   ├── fitness/                   # Body comp chart (Recharts)
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
-│   │   │       ├── daily-insights.tsx     # Combined fun fact + quote card (single card, responsive divider)
-│   │   │       ├── fun-fact.tsx           # Daily fun fact (used by daily-insights)
-│   │   │       ├── daily-quote.tsx        # Daily motivational quote (used by daily-insights)
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
-│   │   │       ├── recovery-summary.tsx   # Oura: 3 scores (readiness/sleep/activity), metrics grid (HRV, RHR, SpO2, steps, temp Δ, sleep stages, daytime HR), stress row, 14-day sleep chart; Sync button in header
 │   │   │       ├── sync-button.tsx        # Client component; calls all 3 sync routes in parallel; spinner + router.refresh() on completion
-│   │   │       ├── recovery-trends.tsx    # 14-day stacked sleep breakdown chart (light/deep/REM)
-│   │   │       ├── fitness-summary.tsx    # Body comp + last workout card
-│   │   │       ├── inline-sparkline.tsx   # Mini trend sparkline (used in summary cards)
-│   │   │       ├── habits-summary.tsx     # Today's habit progress card
-│   │   │       ├── tasks-summary.tsx      # Active tasks card
-│   │   │       └── recent-chat.tsx        # Last chat message card
+│   │   │       └── tasks-summary.tsx      # Active tasks card
 │   │   └── lib/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
