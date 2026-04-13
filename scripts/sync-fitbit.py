@@ -120,6 +120,7 @@ def exchange_code(code, verifier, client_id, client_secret):
 
 
 def refresh_access_token(client_id, client_secret, refresh_token):
+    """Returns (access_token, new_refresh_token_or_none)."""
     credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     body = urllib.parse.urlencode({
         "grant_type": "refresh_token",
@@ -132,9 +133,11 @@ def refresh_access_token(client_id, client_secret, refresh_token):
     try:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
             data = json.loads(resp.read())
-            if data.get("refresh_token") != refresh_token:
-                update_env_token(data["refresh_token"])
-            return data["access_token"]
+            new_token = data.get("refresh_token")
+            if new_token and new_token != refresh_token:
+                update_env_token(new_token)
+                return data["access_token"], new_token
+            return data["access_token"], None
     except urllib.error.HTTPError as e:
         print(f"[error] Token refresh failed {e.code}: {e.read().decode()}")
         print("Run: python3 scripts/sync-fitbit.py --setup  to re-authenticate")
@@ -436,7 +439,7 @@ def main():
         print("Run: python3 scripts/sync-fitbit.py --setup")
         sys.exit(1)
 
-    access_token = refresh_access_token(client_id, client_secret, refresh_token)
+    access_token, rotated_token = refresh_access_token(client_id, client_secret, refresh_token)
 
     end = datetime.now()
     start = end - timedelta(days=args.days)
@@ -458,6 +461,13 @@ def main():
 
     client = get_client()
     owner_user_id = get_owner_user_id()
+
+    # Keep Supabase profile table in sync with the rotated token so the web app stays valid
+    if rotated_token:
+        client.table("profile").upsert(
+            {"user_id": owner_user_id, "key": "fitbit_refresh_token", "value": rotated_token},
+            on_conflict="user_id,key",
+        ).execute()
 
     # Write body composition
     existing_body = existing_body_dates(client, owner_user_id)
