@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (7-day trailing average overlays — issue #112)
+- **`trailing7Avg` helper** (`health-breakdown.tsx`) — computes a 7-day trailing average client-side for any `{value: number | null}[]` series; for day N, averages all non-null values in the window [N-6, N]
+- **Weight chart** — second `<Line>` overlaid on the existing LineChart; dashed (`4 2`), muted slate color (`#64748B`), no dots, `connectNulls`; legend shows "Weight" + "7d avg"
+- **Body Fat chart** — same pattern as weight; overlay on the existing LineChart
+- **Steps chart** — `BarChart` replaced with `ComposedChart`; dashed `<Line>` overlaid on the bars; legend shows "Steps" + "7d avg"
+- **Active Cal chart** — `AreaChart` replaced with `ComposedChart` (gradient fill preserved); dashed `<Line>` overlaid on the area; legend shows "Active Cal" + "7d avg"
+- HRV and RHR charts unchanged (already smooth signals)
+
 ### Fixed (habit heatmap bugs — issue #111)
 - **Tooltip showed UUID instead of habit name** — `HabitHeatmap` now accepts a `registry: HabitRegistry[]` prop (all habits, including inactive) used exclusively for name lookup; the existing `habits` prop (active only) continues to drive the completion ratio denominator; archived habits whose log entries appear in the window now resolve to their correct names
 - **Unchecked habits stayed green on heatmap** — `toggleHabit` server action in `habits/page.tsx` now DELETEs the row on uncheck rather than upserting `completed: false`; eliminates any residual `completed: true` rows that could survive a failed or no-op UPDATE and kept the heatmap cell green
