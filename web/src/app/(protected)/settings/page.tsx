@@ -7,9 +7,11 @@ import { ProfileForm } from "@/components/settings/profile-form";
 async function updateProfile(key: string, value: string) {
   "use server";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from("profile")
-    .upsert({ key, value }, { onConflict: "key" });
+    .upsert({ user_id: user.id, key, value }, { onConflict: "user_id,key" });
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 }
@@ -17,7 +19,9 @@ async function updateProfile(key: string, value: string) {
 async function deleteProfile(key: string) {
   "use server";
   const supabase = await createClient();
-  await supabase.from("profile").delete().eq("key", key);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("profile").delete().eq("user_id", user.id).eq("key", key);
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 }

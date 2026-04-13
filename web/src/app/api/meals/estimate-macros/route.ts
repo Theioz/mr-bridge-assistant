@@ -1,6 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 20;
 
@@ -22,6 +23,12 @@ const MacroEstimateSchema = z.object({
 export type MacroEstimate = z.infer<typeof MacroEstimateSchema>;
 
 export async function POST(req: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let body: { ingredients: string };
   try {
     body = await req.json();

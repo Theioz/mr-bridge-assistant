@@ -18,7 +18,7 @@ flowchart LR
         sg["sync-googlefit"]
     end
 
-    db[("Supabase\n14 tables")]
+    db[("Supabase\n16 tables")]
 
     subgraph web["Next.js · Vercel"]
         cron["cron/sync\ndaily 6am PST"]
@@ -133,7 +133,7 @@ supabase link --project-ref <your-project-ref>   # ref is the part of the URL af
 supabase db push
 ```
 
-This creates all 14 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, etc.).
+This creates all 16 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, notifications, etc.).
 
 ### Step 3 — Get your Anthropic API key
 
@@ -203,8 +203,9 @@ python3 scripts/sync-fitbit.py --setup
 python3 -c "
 import sys, os; sys.path.insert(0, 'scripts')
 from dotenv import load_dotenv; load_dotenv(dotenv_path='.env')
-from _supabase import get_client
-get_client().table('profile').upsert({'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='key').execute()
+from _supabase import get_client, get_owner_user_id
+uid = get_owner_user_id()
+get_client().table('profile').upsert({'user_id': uid, 'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='user_id,key').execute()
 print('Done.')
 "
 ```
@@ -267,6 +268,7 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
 | `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` *(optional)* |
 | `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
+| `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py` |
 | `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
 
@@ -352,7 +354,16 @@ mr-bridge-assistant/
 │       ├── 20260411000000_add_journal_entries.sql
 │       ├── 20260411000001_recovery_metrics_extended.sql
 │       ├── 20260411100000_fitness_log_unique_date_source.sql
-│       └── 20260412000000_add_nutrition_to_meal_log.sql
+│       ├── 20260412000000_add_nutrition_to_meal_log.sql
+│       ├── 20260413000000_add_user_id_multitenancy.sql
+│       ├── 20260413000001_profile_composite_unique.sql
+│       ├── 20260413000002_composite_unique_constraints.sql
+│       ├── 20260413000003_journal_entries_composite_unique.sql
+│       ├── 20260413000004_workout_sessions_unique_constraint.sql
+│       ├── 20260413000005_chat_messages_position.sql
+│       ├── 20260413000006_journal_entries_rls_and_constraint.sql
+│       ├── 20260413000007_notifications.sql
+│       └── 20260413000008_tasks_parent_id.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── .env.local.example                 # Web app env var template
@@ -371,7 +382,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
 │   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (16 tools)
 │   │   │   │   ├── sync/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
 │   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts

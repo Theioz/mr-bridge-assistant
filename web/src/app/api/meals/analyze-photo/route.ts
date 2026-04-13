@@ -1,6 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 30;
 
@@ -29,6 +30,12 @@ const FoodAnalysisSchema = z.object({
 export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema>;
 
 export async function POST(req: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let formData: FormData;
   try {
     formData = await req.formData();

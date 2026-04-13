@@ -5,7 +5,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-## [Unreleased]
+## [1.0.0] — 2026-04-13
+
+### Fixed (pre-1.0 audit — security and server action correctness)
+- **`web/src/app/api/google/calendar/route.ts`, `gmail/route.ts`, `calendar/upcoming-birthday/route.ts`** — missing auth guard: unauthenticated callers fell through to real Google Calendar/Gmail API and received owner's live data; added `if (!user) return 401` before the demo-user check
+- **`web/src/app/api/meals/analyze-photo/route.ts`, `meals/estimate-macros/route.ts`** — no auth check at all; unauthenticated callers could trigger Anthropic API calls; added auth guard
+- **`web/src/app/api/weather/route.ts`** — no auth check; switched from `createServiceClient` (reads all users' profile rows) to `createClient` with user-scoped `.eq("user_id", user.id)` filter; added `if (!user) return 401`
+- **`web/src/app/api/chat/route.ts`** — unauthenticated callers could reach the Anthropic stream; added `if (!user) return 401`; `userId` is now non-nullable after the guard so all downstream `.eq("user_id", userId)` filters are unconditionally applied
+- **`.gitignore`** — added `.env.local` and `.env.*.local` rules; previously only `.env` was ignored, leaving `web/.env.local` unprotected from accidental `git add`
+- **`web/src/app/(protected)/dashboard/page.tsx`** — `toggleHabit` server action upserted habits without `user_id`; new entries would fail `NOT NULL` constraint; added `getUser()` guard and `user_id: user.id` in upsert payload
+- **`web/src/app/(protected)/habits/page.tsx`** — `toggleHabit` and `addHabit` server actions missing `user_id`; fixed with `getUser()` guard and `user_id: user.id` on all writes
+- **`web/src/app/(protected)/tasks/page.tsx`** — `addTask` and `addSubtask` used `user?.id` (nullable); if auth ever fails these would insert `undefined` into `user_id NOT NULL`; strengthened to `if (!user) return { error: "Unauthorized" }` with non-nullable `user.id`
+
+### Fixed (pre-1.0 audit — multitenancy correctness)
+- **`scripts/check_hrv_alert.py`, `check_weather_alert.py`, `check_task_due_alerts.py`, `check_daily_alerts.py`** — `set_profile_value` / `get_profile_value` helpers updated to pass `user_id` (NOT NULL violation after multitenancy migration) and fix `on_conflict="key"` → `on_conflict="user_id,key"`; all task/recovery queries now filter by `owner_user_id`
+- **`check_daily_alerts.py`** — tasks query used nonexistent `name` column; corrected to `title`
+- **`scripts/fetch_weather.py`** — profile select without user_id filter now scopes to `owner_user_id` when available; docstring example snippet updated with correct upsert pattern
+- **`web/src/lib/sync/oura.ts`, `fitbit.ts`, `googlefit.ts`** — `syncOura`, `syncFitbit`, `syncGoogleFit` functions now require a `userId` string parameter; all DB queries and inserts include `user_id`; `onConflict` strings updated to include `user_id` (e.g. `date` → `user_id,date`); fixes NOT NULL violation on all sync table inserts post-multitenancy migration
+- **`web/src/app/api/sync/{oura,fitbit,googlefit}/route.ts`** — pass `user.id` to sync functions (previously passed none)
+- **`web/src/app/api/cron/sync/route.ts`** — read `OWNER_USER_ID` from env and pass to all sync functions; return 500 if not configured
+- **`web/src/app/(protected)/settings/page.tsx`** — `updateProfile` and `deleteProfile` server actions now fetch the authenticated user and include `user_id` in all profile writes; `onConflict` fixed to `user_id,key`
+- **`web/.env.local.example`** — added `OWNER_USER_ID` variable with setup instructions; Fitbit token bootstrap snippet updated with correct `user_id,key` upsert pattern
+- **`README.md`** — table counts updated (14 → 16); migration list updated to include all 20260413 migrations; `web/.env.local` table gains `OWNER_USER_ID` row; Fitbit token snippet corrected; tool count updated (13 → 16)
+- **`.claude/rules/mr-bridge-rules.md`** — location set/reset code snippets updated to include `user_id` and correct `on_conflict`; name storage snippet updated; Data Sources table updated (`chat_sessions/chat_messages` now points to Chat API, no longer "future"); `chat_sessions` + `chat_messages` table entry updated to reflect shipped state
 
 ### Changed (remove pantry assumption; treat saved recipes as library — issue #152)
 - **System prompt — recipe/meal planning block** — replaced the 6-step "ingredients on hand" flow with a new block that: (1) assumes bare-essential pantry only (salt, pepper, oils, spices, etc.) unless the user specifies ingredients in chat; (2) instructs the assistant to suggest 1–2 recipes from its own knowledge in addition to searching the saved library; (3) asks the user what proteins/produce they have if not stated; (4) removes the step that read pantry staples from the profile

@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { getGoogleAuthClient } from "@/lib/google-auth";
 import { todayString, USER_TZ } from "@/lib/timezone";
+import { createClient } from "@/lib/supabase/server";
 
 export interface UpcomingBirthday {
   name: string;
@@ -37,6 +38,12 @@ function parseEventDate(event: { start?: { date?: string | null; dateTime?: stri
 }
 
 export async function GET() {
+  const serverClient = await createClient();
+  const { data: { user } } = await serverClient.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const auth = getGoogleAuthClient();
     const calendar = google.calendar({ version: "v3", auth });

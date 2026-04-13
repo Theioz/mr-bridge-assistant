@@ -130,9 +130,16 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit]
   );
 
-  // ── Scroll to bottom on new messages (not when prepending older ones) ─
+  // ── Scroll to bottom ─────────────────────────────────────────────────
+  // On mount: snap instantly so the chat opens at the most recent message.
+  // On new messages during the session: smooth scroll.
+  const hasInitialScrolled = useRef(false);
   useEffect(() => {
-    if (!loadingMore) {
+    if (loadingMore) return; // don't jump when prepending older messages
+    if (!hasInitialScrolled.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "instant" });
+      hasInitialScrolled.current = true;
+    } else {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, loadingMore]);

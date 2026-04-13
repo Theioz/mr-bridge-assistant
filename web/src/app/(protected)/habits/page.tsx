@@ -16,10 +16,12 @@ import { getWindow } from "@/lib/window";
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   if (completed) {
     await supabase
       .from("habits")
-      .upsert({ habit_id: habitId, date, completed: true }, { onConflict: "habit_id,date" });
+      .upsert({ user_id: user.id, habit_id: habitId, date, completed: true }, { onConflict: "habit_id,date" });
   } else {
     await supabase
       .from("habits")
@@ -34,7 +36,10 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
 async function addHabit(name: string, emoji: string, category: string) {
   "use server";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase.from("habit_registry").insert({
+    user_id: user.id,
     name: name.trim(),
     emoji: emoji.trim() || null,
     category: category.trim() || null,

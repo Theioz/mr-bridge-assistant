@@ -14,6 +14,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const ownerUserId = process.env.OWNER_USER_ID;
+  if (!ownerUserId) {
+    return NextResponse.json({ error: "OWNER_USER_ID not configured" }, { status: 500 });
+  }
+
   const db = createServiceClient();
   const results: Record<string, unknown> = {};
 
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest) {
 
   if (ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
     tasks.push(
-      syncOura(db)
+      syncOura(db, ownerUserId)
         .then((r) => { results.oura = r; })
         .catch((e) => { results.oura = { error: (e as Error).message }; }),
     );
@@ -44,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   if (fitbitAge === null || fitbitAge >= SKIP_WINDOW_SECS) {
     tasks.push(
-      syncFitbit(db)
+      syncFitbit(db, ownerUserId)
         .then((r) => { results.fitbit = r; })
         .catch((e) => { results.fitbit = { error: (e as Error).message }; }),
     );
@@ -54,7 +59,7 @@ export async function GET(request: NextRequest) {
 
   if (googleFitAge === null || googleFitAge >= SKIP_WINDOW_SECS) {
     tasks.push(
-      syncGoogleFit(db)
+      syncGoogleFit(db, ownerUserId)
         .then((r) => { results.googleFit = r; })
         .catch((e) => { results.googleFit = { error: (e as Error).message }; }),
     );

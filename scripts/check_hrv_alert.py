@@ -25,10 +25,11 @@ CLICK_PATH = "/dashboard"
 DEFAULT_THRESHOLD = 20  # percent
 
 
-def get_profile_value(client, key: str) -> str | None:
+def get_profile_value(client, owner_user_id: str, key: str) -> str | None:
     rows = (
         client.table("profile")
         .select("value")
+        .eq("user_id", owner_user_id)
         .eq("key", key)
         .limit(1)
         .execute()
@@ -37,25 +38,29 @@ def get_profile_value(client, key: str) -> str | None:
     return rows[0]["value"] if rows else None
 
 
-def set_profile_value(client, key: str, value: str) -> None:
-    client.table("profile").upsert({"key": key, "value": value}, on_conflict="key").execute()
+def set_profile_value(client, owner_user_id: str, key: str, value: str) -> None:
+    client.table("profile").upsert(
+        {"user_id": owner_user_id, "key": key, "value": value},
+        on_conflict="user_id,key",
+    ).execute()
 
 
 def main() -> None:
     try:
         client = get_client()
+        owner_user_id = get_owner_user_id()
     except Exception as e:
         print(f"[check_hrv_alert] Supabase connection error: {e}", file=sys.stderr)
         return
 
     # Once-per-day guard
     today_str = date.today().isoformat()
-    last_notified = get_profile_value(client, "hrv_alert_last_notified")
+    last_notified = get_profile_value(client, owner_user_id, "hrv_alert_last_notified")
     if last_notified == today_str:
         return
 
     # Read threshold from profile (default 20%)
-    threshold_raw = get_profile_value(client, "hrv_alert_threshold")
+    threshold_raw = get_profile_value(client, owner_user_id, "hrv_alert_threshold")
     try:
         threshold = float(threshold_raw) if threshold_raw else DEFAULT_THRESHOLD
     except ValueError:
@@ -66,6 +71,7 @@ def main() -> None:
     rows = (
         client.table("recovery_metrics")
         .select("date, avg_hrv")
+        .eq("user_id", owner_user_id)
         .not_("avg_hrv", "is", None)
         .gte("date", cutoff)
         .order("date", desc=True)
@@ -111,10 +117,9 @@ def main() -> None:
         cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
     try:
         subprocess.run(cmd, check=True)
-        set_profile_value(client, "hrv_alert_last_notified", today_str)
+        set_profile_value(client, owner_user_id, "hrv_alert_last_notified", today_str)
         print(f"[check_hrv_alert] Alert fired: {message}")
-        user_id = get_owner_user_id()
-        log_notification(client, user_id, "hrv_alert", title, message)
+        log_notification(client, owner_user_id, "hrv_alert", title, message)
     except Exception as e:
         print(f"[check_hrv_alert] notify error: {e}", file=sys.stderr)
 
