@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (slash command autocomplete — issue #63)
+- **`SlashCommandMenu`** (`web/src/components/chat/slash-command-menu.tsx`) — floating suggestion list that renders above the chat input; shows up to 6 commands, scrollable; each row displays the command usage (monospace, primary color) and a short description; keyboard-navigable (↑/↓ arrows, Enter/Tab to select, Escape to dismiss)
+- **Autocomplete trigger** — activates when the user types `/` at the start of the input or after a space; filters the list by prefix match as more characters are typed (e.g. `/w` shows `/weekly`, `/workout`, `/weight`)
+- **Eight built-in commands** surfaced in the menu: `/weekly`, `/briefing`, `/workout [type]`, `/habit [name]`, `/task [title]`, `/weight [lbs]`, `/meal [description]`, `/journal`
+- **Selection behavior** — selecting a command replaces the current slash token with `/command ` (trailing space, no bracket placeholders) and returns focus to the input for argument entry; mouse hover updates the active row; `onMouseDown` prevents input blur so click completes correctly
+- **Mobile-safe** — menu is positioned `bottom: 100%` relative to the input wrapper, so it naturally sits above the virtual keyboard when it is open
+
 ### Added (daily macro summary — issue #61)
 - **`MacroSummaryCard`** (`web/src/components/meals/MacroSummaryCard.tsx`) — server component rendered at the top of `/meals`; queries today's `meal_log` rows (only those with a non-null `calories` value) and profile goal keys; shows per-macro progress bars (calories, protein, carbs, fat) with green/amber/red color coding (green < 85% consumed, amber 85–100%, red > 100%); displays "X left" or "+X over" beside each bar
 - **Nutrition Goals section in Settings** — four new fields added to `ProfileForm` in a dedicated "Nutrition Goals" card: `calorie_goal` (kcal/day), `protein_goal`, `carbs_goal`, `fat_goal` (g/day); stored as profile key-value pairs; inline save/delete matches existing field pattern

@@ -308,7 +308,7 @@ A Next.js web app deployed on Vercel. Built against a full design system (DM San
   - *Sleep* tabs: Sleep Stages · HRV · Resting HR · SpO₂
   - Window selector (7d/14d/30d/90d/1yr) and single Sync button (triggers Oura, Fitbit, Google Fit on demand) in the header
   - Habits Today + Active Tasks side-by-side below (fixed height, inner scroll); Schedule Today + Important Emails below that; Upcoming Birthday widget
-- **Chat** — Streams Claude Sonnet responses with markdown rendering; inline tool status chips (spinner → ✓); "New chat" button; 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
+- **Chat** — Streams Claude Sonnet responses with markdown rendering; inline tool status chips (spinner → ✓); "New chat" button; slash command autocomplete (type `/` to surface 8 built-in commands, filter by prefix, keyboard-navigable); 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
 - **Tasks** — Inline title editing, priority dot selector, relative due dates, completed tasks accordion
 - **Habits** — Daily check-in with indigo toggles + streak counts; 90-day heatmap; streak bar chart; weekly radial completion chart
 - **Fitness** — Dual-axis body comp chart (weight + BF%); weekly workout frequency bar chart; active cal area chart; sortable/paginated workout history table
