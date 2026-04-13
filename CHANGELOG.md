@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (daily macro summary — issue #61)
+- **`MacroSummaryCard`** (`web/src/components/meals/MacroSummaryCard.tsx`) — server component rendered at the top of `/meals`; queries today's `meal_log` rows (only those with a non-null `calories` value) and profile goal keys; shows per-macro progress bars (calories, protein, carbs, fat) with green/amber/red color coding (green < 85% consumed, amber 85–100%, red > 100%); displays "X left" or "+X over" beside each bar
+- **Nutrition Goals section in Settings** — four new fields added to `ProfileForm` in a dedicated "Nutrition Goals" card: `calorie_goal` (kcal/day), `protein_goal`, `carbs_goal`, `fat_goal` (g/day); stored as profile key-value pairs; inline save/delete matches existing field pattern
+- **No-goals prompt** — when no goal keys exist in profile, the summary card shows a link to Settings rather than an empty state
+
+### Added (photo context prompt — issue #61)
+- **Context field in FoodPhotoAnalyzer** — optional free-text textarea shown before the upload button; content is sent as `prompt` in the FormData and injected into Claude's analysis prompt as "User context"; helps improve macro accuracy when portion size or ingredients are known (e.g. "homemade bowl, ~200g chicken")
+
 ### Added (weekly review page — issue #58)
 - **`/weekly` page** — server-rendered weekly review at `web/src/app/(protected)/weekly/page.tsx`; fetches the last 7 days from Supabase in a single `Promise.all`
 - **Habit completion** — per-habit score (e.g. `5/7`) with current streak and a 7-pill strip showing hit/miss for each day; color-coded green ≥ 6, yellow ≥ 4, red < 4

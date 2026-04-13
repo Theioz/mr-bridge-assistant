@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { daysAgoString } from "@/lib/timezone";
 import FoodPhotoAnalyzer from "./FoodPhotoAnalyzer";
+import MacroSummaryCard from "@/components/meals/MacroSummaryCard";
 
 interface MealRow {
   id: string;
@@ -60,6 +61,9 @@ export default async function MealsPage() {
           Last 7 days
         </p>
       </div>
+
+      {/* Macro summary */}
+      <MacroSummaryCard />
 
       {/* Photo analyzer */}
       <FoodPhotoAnalyzer />

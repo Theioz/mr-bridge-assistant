@@ -39,6 +39,7 @@ export default function FoodPhotoAnalyzer() {
   const [review, setReview] = useState<ReviewState | null>(null);
   const [reestimating, setReestimating] = useState(false);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
+  const [userPrompt, setUserPrompt] = useState<string>("");
 
   function reset() {
     setPhase("idle");
@@ -50,6 +51,7 @@ export default function FoodPhotoAnalyzer() {
     setErrorMsg("");
     setReestimating(false);
     setMacrosExpanded(false);
+    setUserPrompt("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -63,6 +65,7 @@ export default function FoodPhotoAnalyzer() {
 
     const formData = new FormData();
     formData.append("image", file);
+    if (userPrompt.trim()) formData.append("prompt", userPrompt.trim());
 
     try {
       const res = await fetch("/api/meals/analyze-photo", {
@@ -154,6 +157,24 @@ export default function FoodPhotoAnalyzer() {
       {/* IDLE */}
       {phase === "idle" && (
         <div className="flex flex-col gap-3">
+          <div>
+            <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
+              Context <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
+            </label>
+            <textarea
+              value={userPrompt}
+              onChange={(e) => setUserPrompt(e.target.value)}
+              rows={2}
+              placeholder="e.g. This is a homemade bowl with ~200g chicken breast and half-cup rice"
+              autoComplete="off"
+              autoCorrect="off"
+              style={{
+                ...inputStyle,
+                resize: "none",
+                lineHeight: 1.6,
+              }}
+            />
+          </div>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"

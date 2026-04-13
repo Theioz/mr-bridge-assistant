@@ -43,6 +43,33 @@ const EDITABLE_FIELDS: Field[] = [
   },
 ];
 
+const NUTRITION_GOAL_FIELDS: Field[] = [
+  {
+    key: "calorie_goal",
+    label: "Daily Calorie Goal",
+    placeholder: "e.g. 2000",
+    hint: "kcal per day",
+  },
+  {
+    key: "protein_goal",
+    label: "Protein Goal",
+    placeholder: "e.g. 150",
+    hint: "grams per day",
+  },
+  {
+    key: "carbs_goal",
+    label: "Carbs Goal",
+    placeholder: "e.g. 200",
+    hint: "grams per day",
+  },
+  {
+    key: "fat_goal",
+    label: "Fat Goal",
+    placeholder: "e.g. 65",
+    hint: "grams per day",
+  },
+];
+
 function FieldRow({
   field,
   initialValue,
@@ -129,24 +156,46 @@ function FieldRow({
 
 export function ProfileForm({ values, updateAction, deleteAction }: Props) {
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-          Profile
-        </p>
+    <div className="space-y-6">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+            Profile
+          </p>
+        </div>
+        {EDITABLE_FIELDS.map((field) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+          />
+        ))}
       </div>
-      {EDITABLE_FIELDS.map((field) => (
-        <FieldRow
-          key={field.key}
-          field={field}
-          initialValue={values[field.key] ?? ""}
-          updateAction={updateAction}
-          deleteAction={deleteAction}
-        />
-      ))}
+
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+            Nutrition Goals
+          </p>
+        </div>
+        {NUTRITION_GOAL_FIELDS.map((field) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+          />
+        ))}
+      </div>
     </div>
   );
 }
