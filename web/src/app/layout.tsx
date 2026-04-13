@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Mr. Bridge",
   description: "Personal assistant dashboard",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
