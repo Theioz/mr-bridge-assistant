@@ -30,7 +30,7 @@ SYNCS: list[tuple[str, list[str]]] = [
 # Alert scripts run after syncs — order matters (HRV needs fresh Oura data)
 ALERTS: list[list[str]] = [
     ["scripts/check_hrv_alert.py"],
-    ["scripts/check_daily_alerts.py"],
+    ["scripts/check_task_due_alerts.py"],
     ["scripts/check_weather_alert.py"],
 ]
 
