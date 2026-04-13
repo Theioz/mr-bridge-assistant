@@ -54,10 +54,12 @@ export default async function DashboardPage() {
       .select("date,weight_lb,body_fat_pct")
       .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
-    // Latest full recovery row (yesterday's complete data)
+    // Latest full recovery row — capped to before today so a partial same-day
+    // sync row does not replace yesterday's complete data in Health Breakdown
     supabase
       .from("recovery_metrics")
       .select("*")
+      .lt("date", today)
       .order("date", { ascending: false })
       .limit(1),
     // Today's scores only (for the strip above Health Breakdown)
