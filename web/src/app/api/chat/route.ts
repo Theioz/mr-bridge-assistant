@@ -49,6 +49,8 @@ function selectModel(messages: { role: string; content: unknown }[]): "haiku" | 
     "progress", "what do you think", "advice", "suggest", "improve",
     "breakdown", "fitness goal", "meal plan", "workout plan",
     "schedule strategy", "is it worth", "explain why",
+    "set my goal", "save my goal", "update my goal", "set my target",
+    "save that", "save these", "write that to", "lock that in",
   ];
   if (complexPatterns.some((p) => msg.includes(p))) return "sonnet";
 
@@ -123,6 +125,7 @@ Tools available:
 - log_habit: mark a habit complete for a given date
 - get_fitness_summary: recent body composition, workouts, recovery metrics
 - get_profile: profile key/value store
+- update_profile: upsert one or more profile keys — use for goals, preferences, and targets agreed upon in conversation. Always tell the user what you're about to write before calling this, then confirm what was saved. For known fitness/nutrition goals, use the canonical keys so they appear in the web UI: weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal. For other goals (sleep, study, etc.) use dot-notation: sleep.goal.hrs, study.goal.mins_per_day, etc.
 - search_gmail: search Gmail with any query string, returns message IDs + metadata
 - get_email_body: fetch and decode the full plain-text body of an email by message ID
 - list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
@@ -345,6 +348,42 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           .order("key", { ascending: true });
         if (error) return { error: error.message };
         return data ?? [];
+      },
+    }),
+
+    update_profile: tool({
+      description:
+        "Upsert one or more profile key/value pairs. Use when the user explicitly agrees to save a goal, preference, or personal target. " +
+        "For known fitness/nutrition goals use the canonical flat keys (weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, " +
+        "weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal) so they surface in the web UI. " +
+        "For other goals use dot-notation (sleep.goal.hrs, study.goal.mins_per_day, etc.). " +
+        "Always tell the user what you are about to write before calling this tool, then confirm each key that was saved.",
+      parameters: jsonSchema<{ updates: { key: string; value: string }[] }>({
+        type: "object",
+        required: ["updates"],
+        properties: {
+          updates: {
+            type: "array",
+            description: "Key/value pairs to upsert into the profile table.",
+            items: {
+              type: "object",
+              required: ["key", "value"],
+              properties: {
+                key: { type: "string", description: "Profile key." },
+                value: { type: "string", description: "Value to store (always a string)." },
+              },
+            },
+          },
+        },
+      }),
+      execute: async ({ updates }) => {
+        const rows = updates.map(({ key, value }) => ({ key, value }));
+        const { data, error } = await supabase
+          .from("profile")
+          .upsert(rows, { onConflict: "key" })
+          .select("key, value, updated_at");
+        if (error) return { error: error.message };
+        return { written: data ?? [] };
       },
     }),
 
