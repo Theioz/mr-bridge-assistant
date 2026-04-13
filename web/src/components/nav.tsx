@@ -12,6 +12,7 @@ import {
   Settings,
   ListTodo,
   BookOpen,
+  BarChart2,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/fitness",   label: "Fitness",    icon: Activity },
   { href: "/habits",    label: "Habits",     icon: CheckSquare },
   { href: "/tasks",     label: "Tasks",      icon: ListTodo },
+  { href: "/weekly",    label: "Weekly",     icon: BarChart2 },
   { href: "/journal",   label: "Journal",    icon: BookOpen },
   { href: "/meals",     label: "Meals",      icon: UtensilsCrossed },
   { href: "/chat",      label: "Chat",       icon: MessageSquare },

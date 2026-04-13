@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (weekly review page — issue #58)
+- **`/weekly` page** — server-rendered weekly review at `web/src/app/(protected)/weekly/page.tsx`; fetches the last 7 days from Supabase in a single `Promise.all`
+- **Habit completion** — per-habit score (e.g. `5/7`) with current streak and a 7-pill strip showing hit/miss for each day; color-coded green ≥ 6, yellow ≥ 4, red < 4
+- **Tasks** — lists tasks completed this week (via `completed_at`), still-active tasks with optional due date, and a red callout for overdue tasks
+- **Workouts** — session count, total duration, total calories from `workout_sessions`; per-session list with date, activity, duration, and calories
+- **Recovery averages** — average readiness, sleep score, and HRV across available days from `recovery_metrics`; per-day readiness column
+- **Body composition delta** — most recent weight and body fat % from `fitness_log` vs the closest measurement at or before the week start; delta rendered green when negative (improvement), red when positive
+- **Journal count** — entry count for the week from `journal_entries` with a brief consistency label
+- **Nav** — `/weekly` added to `NAV_ITEMS` (desktop sidebar) with `BarChart2` icon; not in `PRIMARY_HREFS` so it appears in the mobile "More" bottom sheet alongside Fitness, Meals, Journal, Settings
+
 ### Added (task due push notifications — issue #59)
 - **`scripts/check_task_due_alerts.py`** — replaces `check_daily_alerts.py` task alerting; queries active tasks with `due_date <= today`; sends one grouped ntfy.sh notification for overdue tasks and one for due-today tasks; per-task 24-hour deduplication via profile key `task_notif_cache` (JSON dict `{task_id: iso_timestamp}`); only fires when new tasks need notification
 - **`scripts/run-syncs.py`** — ALERTS list updated to invoke `check_task_due_alerts.py` instead of `check_daily_alerts.py`
