@@ -85,6 +85,7 @@ export default async function DashboardPage() {
     supabase
       .from("tasks")
       .select("*")
+      .is("parent_id", null)
       .eq("status", "active")
       .order("created_at", { ascending: false }),
   ]);
