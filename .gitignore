@@ -1,18 +1,2 @@
-.DS_Store
-.env
-node_modules/
-__pycache__/
-*.log
-
-# Personal memory files — not for public repo
-renpho_export.csv
-memory/profile.md
-memory/fitness_log.md
-memory/meal_log.md
-memory/todo.md
-memory/habits.md
-memory/timer_state.json
-
-# Personal Claude Code settings (overrides for local machine only)
-.claude/settings.local.json
-credentials.json
+plan/
+.vscode/
