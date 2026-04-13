@@ -210,9 +210,12 @@ export default async function WeeklyPage() {
 
   // ── Workouts ──────────────────────────────────────────────────────────────
 
-  const workouts = (workoutsRes.data ?? []) as Pick<WorkoutSession, "date" | "activity" | "duration_mins" | "calories">[];
-  const totalDuration = workouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
-  const totalCalories = workouts.reduce((s, w) => s + (w.calories ?? 0), 0);
+  const allWorkouts    = (workoutsRes.data ?? []) as Pick<WorkoutSession, "date" | "activity" | "duration_mins" | "calories">[];
+  const workouts       = allWorkouts.filter((w) => !/walk/i.test(w.activity));
+  const walkWorkouts   = allWorkouts.filter((w) => /walk/i.test(w.activity));
+  const totalDuration  = workouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
+  const totalCalories  = workouts.reduce((s, w) => s + (w.calories ?? 0), 0);
+  const walkDuration   = walkWorkouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
 
   // ── Recovery ─────────────────────────────────────────────────────────────
 
@@ -384,11 +387,11 @@ export default async function WeeklyPage() {
 
         {/* Workouts */}
         <Card title="Workouts" accent="var(--color-info)">
-          {workouts.length === 0 ? (
+          {allWorkouts.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No sessions logged this week.</p>
           ) : (
             <div className="flex flex-col gap-4">
-              {/* Summary row */}
+              {/* Summary row — excludes walks */}
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: "Sessions", value: workouts.length.toString() },
@@ -408,27 +411,63 @@ export default async function WeeklyPage() {
                 ))}
               </div>
 
-              {/* Session list */}
-              <div className="flex flex-col gap-1">
-                {workouts.map((w, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span style={{ color: "var(--color-text-muted)", width: "3.5rem", flexShrink: 0, fontSize: 11 }}>
-                      {fmtDate(w.date)}
-                    </span>
-                    <span className="flex-1 truncate" style={{ color: "var(--color-text)" }}>{w.activity}</span>
-                    {w.duration_mins != null && (
-                      <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                        {w.duration_mins}m
+              {/* Session list — excludes walks */}
+              {workouts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {workouts.map((w, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span style={{ color: "var(--color-text-muted)", width: "3.5rem", flexShrink: 0, fontSize: 11 }}>
+                        {fmtDate(w.date)}
                       </span>
-                    )}
-                    {w.calories != null && (
-                      <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                        {Math.round(w.calories)} kcal
+                      <span className="flex-1 truncate" style={{ color: "var(--color-text)" }}>{w.activity}</span>
+                      {w.duration_mins != null && (
+                        <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                          {w.duration_mins}m
+                        </span>
+                      )}
+                      {w.calories != null && (
+                        <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                          {Math.round(w.calories)} kcal
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Walks — secondary row */}
+              {walkWorkouts.length > 0 && (
+                <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+                      Walks
+                    </p>
+                    <span className="text-xs tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
+                      {walkWorkouts.length}
+                    </span>
+                    {walkDuration > 0 && (
+                      <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+                        {walkDuration >= 60 ? `${Math.floor(walkDuration / 60)}h ${walkDuration % 60}m` : `${walkDuration}m`}
                       </span>
                     )}
                   </div>
-                ))}
-              </div>
+                  <div className="flex flex-col gap-1">
+                    {walkWorkouts.map((w, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span style={{ color: "var(--color-text-muted)", width: "3.5rem", flexShrink: 0, fontSize: 11 }}>
+                          {fmtDate(w.date)}
+                        </span>
+                        <span className="flex-1 truncate" style={{ color: "var(--color-text-muted)" }}>{w.activity}</span>
+                        {w.duration_mins != null && (
+                          <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                            {w.duration_mins}m
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
