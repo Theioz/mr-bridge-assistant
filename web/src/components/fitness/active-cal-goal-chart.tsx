@@ -166,9 +166,13 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
             tick={{ fill: "#64748B", fontSize: 10 }}
             tickLine={false}
             axisLine={false}
-            interval={granularity === "daily" && showMonday
-              ? (_, index) => !(daySlots[index]?.isMonday)
-              : 0}
+            interval={0}
+            tickFormatter={(label, index) => {
+              if (granularity === "daily" && showMonday) {
+                return daySlots[index]?.isMonday ? label : "";
+              }
+              return label;
+            }}
           />
           <YAxis
             stroke="#334155"
