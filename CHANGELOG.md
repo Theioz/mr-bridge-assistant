@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (agent/rule Supabase cleanup — issue #97)
+- **`mr-bridge-rules.md`** — "Pending Tasks" briefing section now references Supabase `tasks` table via `fetch_briefing_data.py`; "Accountability" section references `habits` + `habit_registry` tables via same script; Recovery rules updated to query `recovery_metrics` table (order by date desc, limit 1) instead of `fitness_log.md`; Study Timer Rules updated to use `profile` table for timer state and `study_log` table for duration logging
+- **`agents/weekly-review.md`** — replaced all reads of `memory/habits.md`, `memory/todo.md`, `memory/fitness_log.md`, `memory/timer_state.json` with Supabase queries via `_supabase.py`; updated description and Rules section accordingly
+- **`agents/nightly-postmortem.md`** — replaced read of `memory/habits.md` with Supabase query of `habits` + `habit_registry` tables; updated description and tools list
+- **`agents/study-timer.md`** — timer state now upserted to `profile` table (key = `timer_state`, JSON value) instead of `memory/timer_state.json`; completed sessions inserted into `study_log` table instead of written to `memory/todo.md`; updated description and tools list
+- **`commands/stop-timer.md`** — description updated to reference `profile` table for timer state and `study_log` table for log writes
+- **`commands/log-habit.md`** — description updated to clarify writes go to Supabase via `log_habit.py`; removed stale reference to `memory/habits.md`
+
 ### Removed (migration artifacts — issue #98)
 - **`scripts/migrate_to_supabase.py`** deleted — 608-line one-time migration script; Supabase migration (issue #14) is complete
 - **`memory/*.template.md`** (5 files) deleted — pre-Supabase scaffolding; all live data is in Supabase tables

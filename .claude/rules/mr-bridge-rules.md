@@ -57,10 +57,10 @@ Execute in this exact order:
 [Unread emails matching filter, or "Inbox clear"]
 
 ### Pending Tasks
-[Active tasks from todo.md, or "None"]
+[Active tasks from Supabase `tasks` table (status = 'active'), included in `fetch_briefing_data.py` output, or "None"]
 
 ### Accountability — Last 7 Days
-[Habit summary from habits.md — hit/missed per habit with streak count]
+[Habit summary from Supabase `habits` + `habit_registry` tables — hit/missed per habit with streak count, included in `fetch_briefing_data.py` output]
 
 ### Body Composition (last weigh-in)
 Weight: [X] lb | Body Fat: [X]% | Muscle: [X] lb | BMI: [X] | Visceral: [X] — [date]
@@ -82,11 +82,11 @@ Body Composition rules:
 - Show delta vs the row before it for weight and body fat %
 
 Recovery rules:
-- Use the **last data row** of the Recovery Metrics table in fitness_log.md (bottom of the table). Oura data lags 1 day — yesterday's date is expected and correct.
+- Use the **most recent row** from the `recovery_metrics` Supabase table (order by date desc, limit 1), included in `fetch_briefing_data.py` output. Oura data lags 1 day — yesterday's date is expected and correct.
 - Readiness < 70 → append: "Readiness low — consider deload or rest day"
 - Readiness < 50 → append: "Readiness critical — rest day recommended"
 - HRV trending down 3+ consecutive days → append: "HRV declining — prioritize recovery"
-- If Recovery Metrics table has no data rows → show: "No recovery data — run: python3 scripts/sync-oura.py --yes"
+- If no recovery data returned → show: "No recovery data — run: python3 scripts/sync-oura.py --yes"
 
 ## Session Close Protocol
 Before every commit at end of session:
@@ -182,8 +182,8 @@ When the web interface is built (issue #10), expose a Location field in Settings
 ## Study Timer Rules
 - Only offer to start a timer when you explicitly say you're starting a study session (e.g. "starting Japanese now", "about to do boot.dev", "starting a coding session")
 - Ask: "Start a study timer for [subject]?"
-- On confirmation, use the study-timer agent to write `memory/timer_state.json`
-- When you say "done", "stopping", or "finished studying", stop the timer and log duration to `memory/todo.md`
+- On confirmation, use the study-timer agent to upsert timer state to the `profile` table (key = 'timer_state')
+- When you say "done", "stopping", or "finished studying", stop the timer and log duration to the `study_log` Supabase table
 - If a timer is running at session start, flag it in the briefing: "Timer still running: [subject] — started [time]"
 
 ## Data Sources

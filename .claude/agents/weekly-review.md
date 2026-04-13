@@ -1,8 +1,7 @@
 ---
 name: weekly-review
-description: Weekly habit and accountability review agent. Reads last 7 days from memory/habits.md, memory/todo.md, and memory/timer_state.json. Outputs a structured summary and fires a push notification with headline stats. Run Sunday at 8pm or on demand via /weekly-review.
+description: Weekly habit and accountability review agent. Queries last 7 days from Supabase (habits, tasks, study_log, recovery_metrics, profile). Outputs a structured summary and fires a push notification with headline stats. Run Sunday at 8pm or on demand via /weekly-review.
 tools:
-  - Read
   - Bash(bash *)
 model: haiku
 permissionMode: acceptEdits
@@ -14,25 +13,77 @@ Compute a weekly summary of habits, study time, and tasks. Output to terminal an
 
 ## Instructions
 
-1. Determine the week range: today (Sunday) minus 6 days = Monday. Format both as YYYY-MM-DD.
+1. Determine the week range: today (Sunday) minus 6 days = Monday. Format both as YYYY-MM-DD. Set `WEEK_START` and `WEEK_END`.
 
-2. Read `memory/habits.md`
-   - Find the last 7 rows in the Daily Log table (or all rows within the week range)
-   - For each habit column (Floss, Workout, Japanese, Coding, Reading, Water, Sleep), count rows marked "yes", "✓", or "done"
+2. Query Supabase for habit data:
+   ```bash
+   python3 - <<'EOF'
+   import sys
+   sys.path.insert(0, "scripts")
+   from _supabase import get_client
+   from datetime import date, timedelta
+   client = get_client()
+   today = date.today().isoformat()
+   week_start = (date.today() - timedelta(days=6)).isoformat()
+   registry = client.table("habit_registry").select("id,name,target_per_week").eq("active", True).execute().data
+   logs = client.table("habits").select("habit_id,date,completed").gte("date", week_start).lte("date", today).execute().data
+   import json
+   print(json.dumps({"registry": registry, "logs": logs}))
+   EOF
+   ```
+   - For each habit in the registry, count `completed = true` rows within the week range
    - Days with no entry count as missed
-   - Note the target frequency for each habit from the Habit Registry table
+   - Note the `target_per_week` for each habit from the registry
 
-3. Read `memory/todo.md`
-   - Count Active Tasks by status: how many completed this week, how many added, how many still open
-   - From Japanese Study Log: sum Duration values for entries dated within the week range
-   - From Coding Log: sum Duration values for entries dated within the week range
-   - From Reading Log: list titles and pages for entries within the week range
+3. Query Supabase for task counts:
+   ```bash
+   python3 - <<'EOF'
+   import sys
+   sys.path.insert(0, "scripts")
+   from _supabase import get_client
+   from datetime import date, timedelta
+   client = get_client()
+   week_start = (date.today() - timedelta(days=6)).isoformat()
+   today = date.today().isoformat()
+   active = client.table("tasks").select("id,status").eq("status", "active").execute().data
+   completed = client.table("tasks").select("id,updated_at").eq("status", "completed").gte("updated_at", week_start).execute().data
+   import json
+   print(json.dumps({"active_count": len(active), "completed_this_week": len(completed)}))
+   EOF
+   ```
 
-4. Read `memory/timer_state.json` (if it exists)
-   - If `active: true`, calculate how long it has been running
+4. Query Supabase for study log:
+   ```bash
+   python3 - <<'EOF'
+   import sys
+   sys.path.insert(0, "scripts")
+   from _supabase import get_client
+   from datetime import date, timedelta
+   client = get_client()
+   week_start = (date.today() - timedelta(days=6)).isoformat()
+   today = date.today().isoformat()
+   rows = client.table("study_log").select("date,subject,duration_mins,notes").gte("date", week_start).lte("date", today).execute().data
+   import json
+   print(json.dumps(rows))
+   EOF
+   ```
+   - Sum `duration_mins` per subject (Japanese, Coding, Reading)
+   - Count distinct days per subject
+
+5. Query Supabase for active timer state:
+   ```bash
+   python3 - <<'EOF'
+   import sys
+   sys.path.insert(0, "scripts")
+   from _supabase import get_client
+   client = get_client()
+   row = client.table("profile").select("value").eq("key", "timer_state").execute().data
+   import json
+   print(row[0]["value"] if row else "{}")
+   EOF
+   ```
+   - Parse the JSON value; if `active: true`, calculate elapsed time from `started_at`
    - If > 4 hours, include a warning in the summary
-
-5. Check `memory/fitness_log.md` — if session log entries exist for this week, use workout count from there instead of the habit log
 
 6. Build and print the full summary:
 ```
@@ -74,8 +125,8 @@ bash scripts/notify.sh \
 ```
 
 ## Rules
-- Read only — do not write to any memory files
+- Read only — do not write to Supabase
 - Missing days count as missed, not skipped
-- If fitness_log.md has session data for the week, prefer it over habit log for workout count
-- Duration sums: treat entries like "30 min", "45 min", "1 hr" — convert to minutes
+- Workout count: use habit log `completed = true` rows for the Workout habit; `workout_sessions` data is not fetched by this agent
+- Duration sums: `duration_mins` is already in minutes in `study_log`
 - If study logs are empty for the week, report "0 min logged"
