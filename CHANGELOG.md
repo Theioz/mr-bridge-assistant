@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Removed (dead dashboard components — issue #96)
+- **15 dead dashboard components deleted** — `briefing-strip`, `daily-insights`, `daily-quote`, `fun-fact`, `weather-card`, `weather-widget`, `recovery-summary`, `recovery-trends`, `hrv-trend-chart`, `inline-sparkline`, `hero-readiness`, `recent-chat`, `fitness-summary`, `sleep-stage-chart`, `habits-summary`; removed from UI in PR #89 but left on disk; zero imports confirmed before deletion
+- **`api/daily-quote/`** and **`api/fun-fact/`** route directories deleted; callers removed in PR #89
+
 ### Added (chat session history — issue #62)
 - **Session history panel** — chat page now shows browsable history of all previous conversations; desktop gets a collapsible ~260px left panel (toggle via History icon in chat header, state persisted in `localStorage`); mobile gets a bottom sheet triggered by the same icon
 - **`GET /api/chat/sessions`** — auth-gated route returning all web sessions ordered by `last_active_at` desc, each with a 60-char preview from the first user message; empty sessions are filtered out
