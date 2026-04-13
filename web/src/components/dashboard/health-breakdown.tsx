@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
+  ComposedChart,
   LineChart, Line,
   AreaChart, Area,
   BarChart, Bar,
   XAxis, YAxis,
   CartesianGrid, Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import type { RecoveryMetrics } from "@/lib/types";
@@ -39,6 +41,8 @@ const TOOLTIP_STYLE = {
 const GRID  = { strokeDasharray: "3 3", stroke: "#1E2130", vertical: false as const };
 const AXIS  = { stroke: "#334155", tick: { fill: "#64748B", fontSize: 10 }, tickLine: false as const, axisLine: false as const };
 const CHART_H = 180;
+const AVG_LINE = { stroke: "#64748B", strokeWidth: 1.5, strokeDasharray: "4 2", dot: false };
+const LEGEND_STYLE = { fontSize: 10, color: "#64748B", paddingBottom: 4 };
 
 // ── Score helpers ────────────────────────────────────────────────────────────
 
@@ -150,6 +154,17 @@ function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>
   );
 }
 
+// ── Trailing 7-day average ───────────────────────────────────────────────────
+
+function trailing7Avg(data: { value: number | null }[]): (number | null)[] {
+  return data.map((_, i) => {
+    const slice = data.slice(Math.max(0, i - 6), i + 1);
+    const vals = slice.map(d => d.value).filter((v): v is number => v != null);
+    if (vals.length === 0) return null;
+    return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
+  });
+}
+
 // ── Fitness chart panel ───────────────────────────────────────────────────────
 
 const FITNESS_TABS: { key: FitnessTab; label: string }[] = [
@@ -172,12 +187,23 @@ function FitnessChartPanel({
 }) {
   const [tab, setTab] = useState<FitnessTab>("weight");
 
-  const weightData = fitnessData.map((d) => ({ date: d.date.slice(5), value: d.weight_lb }));
-  const bfData     = fitnessData
+  const weightDataRaw = fitnessData.map((d) => ({ date: d.date.slice(5), value: d.weight_lb }));
+  const weightAvgs    = trailing7Avg(weightDataRaw);
+  const weightData    = weightDataRaw.map((d, i) => ({ ...d, avg: weightAvgs[i] }));
+
+  const bfDataRaw  = fitnessData
     .filter((d) => d.body_fat_pct != null)
     .map((d) => ({ date: d.date.slice(5), value: d.body_fat_pct }));
-  const stepsData  = trends.map((d) => ({ date: d.date.slice(5), value: d.steps }));
-  const calData    = trends.map((d) => ({ date: d.date.slice(5), value: d.active_cal }));
+  const bfAvgs     = trailing7Avg(bfDataRaw);
+  const bfData     = bfDataRaw.map((d, i) => ({ ...d, avg: bfAvgs[i] }));
+
+  const stepsDataRaw = trends.map((d) => ({ date: d.date.slice(5), value: d.steps }));
+  const stepsAvgs    = trailing7Avg(stepsDataRaw);
+  const stepsData    = stepsDataRaw.map((d, i) => ({ ...d, avg: stepsAvgs[i] }));
+
+  const calDataRaw = trends.map((d) => ({ date: d.date.slice(5), value: d.active_cal }));
+  const calAvgs    = trailing7Avg(calDataRaw);
+  const calData    = calDataRaw.map((d, i) => ({ ...d, avg: calAvgs[i] }));
 
   const chartLabel: Record<FitnessTab, string> = {
     weight:   `Weight — ${windowLabel}`,
@@ -201,10 +227,13 @@ function FitnessChartPanel({
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} domain={["auto", "auto"]} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v} lb`, "Weight"]} />
-            <Line type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2} dot={false}
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${v} lb`} />
+            <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
+            <Line type="monotone" dataKey="value" name="Weight" stroke="#6366F1" strokeWidth={2} dot={false}
               activeDot={{ r: 4, fill: "#6366F1", strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
+            <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
+              isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       )}
@@ -215,30 +244,36 @@ function FitnessChartPanel({
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Body Fat"]} />
-            <Line type="monotone" dataKey="value" stroke="#10B981" strokeWidth={2} dot={false}
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${(v as number).toFixed(1)}%`} />
+            <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
+            <Line type="monotone" dataKey="value" name="Body Fat" stroke="#10B981" strokeWidth={2} dot={false}
               activeDot={{ r: 4, fill: "#10B981", strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
+            <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
+              isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       )}
 
       {tab === "steps" && (
         <ResponsiveContainer width="100%" height={CHART_H}>
-          <BarChart data={stepsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <ComposedChart data={stepsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), "Steps"]} />
-            <Bar dataKey="value" fill="#38BDF8" radius={[3, 3, 0, 0]}
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => v.toLocaleString()} />
+            <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
+            <Bar dataKey="value" name="Steps" fill="#38BDF8" radius={[3, 3, 0, 0]}
               isAnimationActive={animate} animationDuration={300} />
-          </BarChart>
+            <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
+              isAnimationActive={false} />
+          </ComposedChart>
         </ResponsiveContainer>
       )}
 
       {tab === "calories" && (
         <ResponsiveContainer width="100%" height={CHART_H}>
-          <AreaChart data={calData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <ComposedChart data={calData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.25} />
@@ -248,11 +283,14 @@ function FitnessChartPanel({
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} kcal`, "Active Cal"]} />
-            <Area type="monotone" dataKey="value" stroke="#F59E0B" strokeWidth={2}
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${Math.round(v)} kcal`} />
+            <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
+            <Area type="monotone" dataKey="value" name="Active Cal" stroke="#F59E0B" strokeWidth={2}
               fill="url(#calGrad)" dot={false} connectNulls
               isAnimationActive={animate} animationDuration={300} />
-          </AreaChart>
+            <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
+              isAnimationActive={false} />
+          </ComposedChart>
         </ResponsiveContainer>
       )}
     </div>

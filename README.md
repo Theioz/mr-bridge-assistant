@@ -304,7 +304,7 @@ Feature backlog is tracked via GitHub Issues in your fork.
 A Next.js web app deployed on Vercel. Built against a full design system (DM Sans + Inter, indigo primary, dark CSS custom property tokens). All pages are server-rendered with `force-dynamic`; only chart/interactive components are client components.
 
 - **Dashboard** — Personalized greeting with inline date + weather (Open-Meteo, no API key); **Health Breakdown** card (full-width): readiness/sleep/activity scores, 6-up metrics row, stress/resilience row, then two 50/50 tabbed chart panels:
-  - *Fitness* tabs: Weight · Body Fat · Steps · Active Cal
+  - *Fitness* tabs: Weight · Body Fat · Steps · Active Cal (each with a dashed 7-day trailing average overlay)
   - *Sleep* tabs: Sleep Stages · HRV · Resting HR · SpO₂
   - Window selector (7d/14d/30d/90d/1yr) and single Sync button (triggers Oura, Fitbit, Google Fit on demand) in the header
   - Habits Today + Active Tasks side-by-side below (fixed height, inner scroll); Schedule Today + Important Emails below that; Upcoming Birthday widget
