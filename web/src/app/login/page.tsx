@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import Logo from "@/components/ui/logo";
 
+const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL ?? "";
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
+
 type State = "idle" | "loading" | "error";
 
 function LoginForm() {
@@ -16,20 +19,29 @@ function LoginForm() {
   const hasAuthError = searchParams.get("error") === "auth_error";
   const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function signIn(e: string, p: string) {
     setState("loading");
     setErrorMsg("");
-
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
     if (error) {
       setErrorMsg(error.message);
       setState("error");
     } else {
       router.push("/");
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await signIn(email, password);
+  }
+
+  async function handleDemoLogin() {
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    await signIn(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
   return (
@@ -92,6 +104,29 @@ function LoginForm() {
             {state === "loading" ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        {DEMO_EMAIL && DEMO_PASSWORD && (
+          <div className="pt-2">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-800" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-neutral-950 px-3 text-neutral-600">or</span>
+              </div>
+            </div>
+            <button
+              onClick={handleDemoLogin}
+              disabled={state === "loading"}
+              className="mt-4 w-full border border-neutral-700 text-neutral-300 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:border-neutral-500 hover:text-neutral-100 transition-colors"
+            >
+              Try the demo
+            </button>
+            <p className="mt-2 text-center text-xs text-neutral-600">
+              Fictional persona · read-write · resets nightly
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

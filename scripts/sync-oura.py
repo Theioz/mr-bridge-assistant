@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, upsert, log_sync, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
 
 
 def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = True) -> dict | None:
@@ -309,22 +309,23 @@ def fetch_oura_workouts(start_dt: str, end_dt: str) -> list[dict]:
     return rows
 
 
-def existing_dates(client) -> set:
-    rows = client.table("recovery_metrics").select("date").execute().data
+def existing_dates(client, user_id: str) -> set:
+    rows = client.table("recovery_metrics").select("date").eq("user_id", user_id).execute().data
     return {r["date"] for r in rows}
 
 
-def sync_oura_workouts(client, workout_rows: list[dict], start_date: str, end_date: str) -> int:
+def sync_oura_workouts(client, workout_rows: list[dict], start_date: str, end_date: str, user_id: str) -> int:
     """
     Replace all oura-source workout_sessions rows in the date range, then insert fresh.
     Returns number of rows written.
     """
     if not workout_rows:
         return 0
-    # Clear existing oura workouts in the range to avoid duplicates
+    # Clear existing oura workouts in the range to avoid duplicates (owner only)
     client.table("workout_sessions") \
         .delete() \
         .eq("source", "oura") \
+        .eq("user_id", user_id) \
         .gte("date", start_date) \
         .lte("date", end_date) \
         .execute()
@@ -368,7 +369,8 @@ def main():
         return
 
     client = get_client()
-    existing = existing_dates(client)
+    owner_user_id = get_owner_user_id()
+    existing = existing_dates(client, owner_user_id)
     new_dates    = [d for d in all_dates if d not in existing]
     update_dates = [d for d in all_dates if d in existing]
 
@@ -450,6 +452,7 @@ def main():
             meta["hr_max_day"] = hr["hr_max_day"]
 
         sb_rows.append({
+            "user_id":         owner_user_id,
             "date":            d,
             "bedtime":         sd.get("bedtime"),
             "total_sleep_hrs": sd.get("total_sleep_hrs"),
@@ -470,7 +473,9 @@ def main():
         })
 
     written = upsert(client, "recovery_metrics", sb_rows, conflict="date")
-    workout_written = sync_oura_workouts(client, workout_rows, start_str, now.strftime("%Y-%m-%d"))
+    # Add user_id to workout rows before inserting
+    workout_rows_with_uid = [{**r, "user_id": owner_user_id} for r in workout_rows]
+    workout_written = sync_oura_workouts(client, workout_rows_with_uid, start_str, now.strftime("%Y-%m-%d"), owner_user_id)
     log_sync(client, "oura", "ok", written + workout_written)
     print(f"[sync-oura] Upserted {written} recovery row(s), {workout_written} workout row(s) to Supabase.")
 

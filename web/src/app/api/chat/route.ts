@@ -1,10 +1,58 @@
 import { anthropic } from "@ai-sdk/anthropic";
+import { createGroq } from "@ai-sdk/groq";
 import { todayString, daysAgoString, startOfDayRFC3339, endOfDayRFC3339, addDays } from "@/lib/timezone";
 import { streamText, tool, jsonSchema, wrapLanguageModel } from "ai";
 import type { LanguageModelV1Middleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+
+// ── Demo mock data ───────────────────────────────────────────────────────────
+const DEMO_EMAILS = [
+  {
+    id: "demo-email-1",
+    from: "UPS Tracking <tracking@ups.com>",
+    subject: "Your package is out for delivery today",
+    date: "Mon, 13 Apr 2026 08:14:00 -0700",
+    body: "Hi Alex, your package is out for delivery today. Estimated delivery: today by 8pm. Track at ups.com.",
+  },
+  {
+    id: "demo-email-2",
+    from: "Alaska Airlines <noreply@alaskaair.com>",
+    subject: "Flight Confirmation: SFO → SEA Apr 20",
+    date: "Thu, 10 Apr 2026 11:02:00 -0700",
+    body: "Your flight AS 321 on April 20 from San Francisco (SFO) to Seattle (SEA) is confirmed. Departs 7:45am, arrives 9:50am. Confirmation code: KXZP94.",
+  },
+  {
+    id: "demo-email-3",
+    from: "Figma <notifications@figma.com>",
+    subject: "Action required: Accept team invite from Lena Park",
+    date: "Mon, 13 Apr 2026 09:47:00 -0700",
+    body: "Lena Park has invited you to join the 'Product Design' team on Figma. Click here to accept.",
+  },
+  {
+    id: "demo-email-4",
+    from: "Hacker News Digest <digest@hackernewsdigest.com>",
+    subject: "Top stories: Llama 4 benchmarks, SQLite as a backend",
+    date: "Mon, 13 Apr 2026 06:30:00 -0700",
+    body: "Top HN stories this week: Llama 4 beats GPT-4o on several benchmarks; SQLite as production backend — when it makes sense; Cloudflare Workers hits 100M active deployments.",
+  },
+  {
+    id: "demo-email-5",
+    from: "DocuSign <dse@docusign.net>",
+    subject: "Invoice #4421 — please sign",
+    date: "Fri, 11 Apr 2026 15:12:00 -0700",
+    body: "Alex Chen, a document has been sent to you for signature by Acme Corp. Invoice #4421 for $1,240.00 is ready for your review. This request will expire in 7 days.",
+  },
+];
+
+const DEMO_CALENDAR_EVENTS = [
+  { title: "Morning run", start: `${new Date().toISOString().slice(0, 10)}T06:30:00`, end: `${new Date().toISOString().slice(0, 10)}T07:15:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
+  { title: "Team standup", start: `${new Date().toISOString().slice(0, 10)}T09:00:00`, end: `${new Date().toISOString().slice(0, 10)}T09:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
+  { title: "Lunch w/ Priya", start: `${new Date().toISOString().slice(0, 10)}T12:30:00`, end: `${new Date().toISOString().slice(0, 10)}T13:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Tartine Manufactory" },
+  { title: "Gym — push day", start: `${new Date().toISOString().slice(0, 10)}T18:00:00`, end: `${new Date().toISOString().slice(0, 10)}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
+];
 
 const retryOnOverload: LanguageModelV1Middleware = {
   wrapStream: async ({ doStream }) => {
@@ -75,16 +123,26 @@ export async function POST(req: Request) {
   const { messages, sessionId } = await req.json();
   console.log("[chat] sessionId:", sessionId, "messages:", messages.length);
 
+  // Resolve the authenticated user (needed for per-user data scoping)
+  const serverClient = await createClient();
+  const { data: { user } } = await serverClient.auth.getUser();
+  const userId = user?.id ?? null;
+  const demoUserId = process.env.DEMO_USER_ID ?? null;
+  const isDemo = !!(userId && demoUserId && userId === demoUserId);
+
   const supabase = createServiceClient();
 
   // Fetch user name from profile for personalised system prompt
   let userName: string | null = null;
-  const { data: nameRow } = await supabase
-    .from("profile")
-    .select("value")
-    .eq("key", "name")
-    .maybeSingle();
-  if (nameRow) userName = nameRow.value as string;
+  if (userId) {
+    const { data: nameRow } = await supabase
+      .from("profile")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("key", "name")
+      .maybeSingle();
+    if (nameRow) userName = nameRow.value as string;
+  }
 
   // Load the last 20 messages from this session as context
   let contextMessages: { role: "user" | "assistant"; content: string }[] = [];
@@ -104,8 +162,28 @@ export async function POST(req: Request) {
     }
   }
 
-  const userLabel = userName ?? "the user";
-  const systemPrompt = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
+  const userLabel = userName ?? (isDemo ? "Alex" : "the user");
+  const systemPrompt = isDemo
+    ? `You are Mr. Bridge, a personal AI assistant. Today's date is ${todayString()}.
+You are currently running in demo mode for a fictional persona: Alex Chen, a software engineer based in San Francisco.
+Address the user as "Alex" — naturally in conversation, not robotically after every sentence.
+
+Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
+Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
+Do not narrate before calling tools. Call the tool directly and respond after.
+
+This is a demo account with realistic but fictional data. All data changes are reset nightly.
+You have access to Alex's demo data via tools: tasks, habits, fitness, recovery, profile, recipes, meal log, Gmail (simulated), and Calendar (simulated).
+
+Tools available:
+- get_tasks, add_task, complete_task
+- get_habits_today, log_habit
+- get_fitness_summary
+- get_profile, update_profile
+- search_gmail, get_email_body (returns demo emails)
+- list_calendar_events, create_calendar_event (returns demo events)
+- get_recipes, log_meal`
+    : `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
 ${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : 'If you learn the user\'s name during the conversation, use it naturally going forward.'}
 
@@ -164,11 +242,13 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ status = "active" }) => {
-        const { data, error } = await supabase
+        let q = supabase
           .from("tasks")
           .select("id, title, priority, status, due_date, category, completed_at, created_at")
           .eq("status", status)
           .order("created_at", { ascending: false });
+        if (userId) q = q.eq("user_id", userId);
+        const { data, error } = await q;
         if (error) return { error: error.message };
         return data ?? [];
       },
@@ -201,7 +281,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         }
         const { data, error } = await supabase
           .from("tasks")
-          .insert({ title, priority: priority ?? null, category: category ?? null, due_date: due_date ?? null, status: "active" })
+          .insert({ user_id: userId, title, priority: priority ?? null, category: category ?? null, due_date: due_date ?? null, status: "active" })
           .select("id, title, priority, status, due_date, category, created_at")
           .single();
         if (error) return { error: error.message };
@@ -219,12 +299,12 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ id }) => {
-        const { data, error } = await supabase
+        let q = supabase
           .from("tasks")
           .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("id", id)
-          .select("id, title, status, completed_at")
-          .single();
+          .eq("id", id);
+        if (userId) q = q.eq("user_id", userId);
+        const { data, error } = await q.select("id, title, status, completed_at").single();
         if (error) return { error: error.message };
         return data;
       },
@@ -240,10 +320,10 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
       }),
       execute: async ({ date }) => {
         const targetDate = date ?? todayString();
-        const [registryResult, logsResult] = await Promise.all([
-          supabase.from("habit_registry").select("id, name, emoji, category").eq("active", true),
-          supabase.from("habits").select("habit_id, completed, notes").eq("date", targetDate),
-        ]);
+        let regQ = supabase.from("habit_registry").select("id, name, emoji, category").eq("active", true);
+        let logQ = supabase.from("habits").select("habit_id, completed, notes").eq("date", targetDate);
+        if (userId) { regQ = regQ.eq("user_id", userId); logQ = logQ.eq("user_id", userId); }
+        const [registryResult, logsResult] = await Promise.all([regQ, logQ]);
         if (registryResult.error) return { error: registryResult.error.message };
         const logMap = new Map(
           (logsResult.data ?? []).map((l: { habit_id: string; completed: boolean; notes: string | null }) => [l.habit_id, l])
@@ -272,19 +352,21 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
       }),
       execute: async ({ name, date, notes }) => {
         const targetDate = date ?? todayString();
-        const { data: habits, error: lookupError } = await supabase
+        let habQ = supabase
           .from("habit_registry")
           .select("id, name")
           .ilike("name", `%${name}%`)
           .eq("active", true)
           .limit(1);
+        if (userId) habQ = habQ.eq("user_id", userId);
+        const { data: habits, error: lookupError } = await habQ;
         if (lookupError) return { error: lookupError.message };
         if (!habits || habits.length === 0) return { error: `No active habit matching "${name}" found.` };
         const habit = habits[0];
         const { data, error } = await supabase
           .from("habits")
           .upsert(
-            { habit_id: habit.id, date: targetDate, completed: true, notes: notes ?? null },
+            { user_id: userId, habit_id: habit.id, date: targetDate, completed: true, notes: notes ?? null },
             { onConflict: "habit_id,date" }
           )
           .select("habit_id, date, completed, notes")
@@ -308,24 +390,25 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
       execute: async ({ days = 7 }) => {
         const sinceStr = daysAgoString(days);
 
-        const [bodyCompResult, workoutsResult, recoveryResult] = await Promise.all([
-          supabase
-            .from("fitness_log")
-            .select("date, weight_lb, body_fat_pct, bmi, muscle_mass_lb, visceral_fat, source")
-            .not("body_fat_pct", "is", null)
-            .order("date", { ascending: false })
-            .limit(2),
-          supabase
-            .from("workout_sessions")
-            .select("date, activity, duration_mins, calories, avg_hr, notes")
-            .gte("date", sinceStr)
-            .order("date", { ascending: false }),
-          supabase
-            .from("recovery_metrics")
-            .select("date, avg_hrv, resting_hr, sleep_score, readiness, source")
-            .order("date", { ascending: false })
-            .limit(1),
-        ]);
+        let bodyQ = supabase
+          .from("fitness_log")
+          .select("date, weight_lb, body_fat_pct, bmi, muscle_mass_lb, visceral_fat, source")
+          .not("body_fat_pct", "is", null)
+          .order("date", { ascending: false })
+          .limit(2);
+        let workQ = supabase
+          .from("workout_sessions")
+          .select("date, activity, duration_mins, calories, avg_hr, notes")
+          .gte("date", sinceStr)
+          .order("date", { ascending: false });
+        let recQ = supabase
+          .from("recovery_metrics")
+          .select("date, avg_hrv, resting_hr, sleep_score, readiness, source")
+          .order("date", { ascending: false })
+          .limit(1);
+        if (userId) { bodyQ = bodyQ.eq("user_id", userId); workQ = workQ.eq("user_id", userId); recQ = recQ.eq("user_id", userId); }
+
+        const [bodyCompResult, workoutsResult, recoveryResult] = await Promise.all([bodyQ, workQ, recQ]);
 
         return {
           body_composition: bodyCompResult.data ?? [],
@@ -342,10 +425,9 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         properties: {},
       }),
       execute: async () => {
-        const { data, error } = await supabase
-          .from("profile")
-          .select("key, value, updated_at")
-          .order("key", { ascending: true });
+        let q = supabase.from("profile").select("key, value, updated_at").order("key", { ascending: true });
+        if (userId) q = q.eq("user_id", userId);
+        const { data, error } = await q;
         if (error) return { error: error.message };
         return data ?? [];
       },
@@ -377,10 +459,10 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ updates }) => {
-        const rows = updates.map(({ key, value }) => ({ key, value }));
+        const rows = updates.map(({ key, value }) => ({ key, value, ...(userId ? { user_id: userId } : {}) }));
         const { data, error } = await supabase
           .from("profile")
-          .upsert(rows, { onConflict: "key" })
+          .upsert(rows, { onConflict: "user_id,key" })
           .select("key, value, updated_at");
         if (error) return { error: error.message };
         return { written: data ?? [] };
@@ -405,6 +487,14 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ query, max_results = 5 }) => {
+        if (isDemo) {
+          // Return mock emails filtered loosely by query keywords
+          const q = query.toLowerCase();
+          const mockEmails = DEMO_EMAILS.filter((e) =>
+            !q || e.subject.toLowerCase().includes(q.split(" ")[0]) || q.includes("unread") || q.includes("subject:")
+          ).slice(0, Math.min(max_results, 5));
+          return { results: mockEmails };
+        }
         try {
           const auth = getGoogleAuthClient();
           const gmail = google.gmail({ version: "v1", auth });
@@ -462,6 +552,11 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ message_id }) => {
+        if (isDemo) {
+          const email = DEMO_EMAILS.find((e) => e.id === message_id);
+          if (!email) return { error: "Email not found" };
+          return { id: message_id, from: email.from, subject: email.subject, date: email.date, body: email.body ?? email.subject, truncated: false };
+        }
         try {
           const auth = getGoogleAuthClient();
           const gmail = google.gmail({ version: "v1", auth });
@@ -546,6 +641,9 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ date, days = 1 }) => {
+        if (isDemo) {
+          return { events: DEMO_CALENDAR_EVENTS, count: DEMO_CALENDAR_EVENTS.length };
+        }
         try {
           const startDate = date ?? todayString();
           const endDate = addDays(startDate, Math.max(1, days) - 1);
@@ -641,6 +739,9 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         },
       }),
       execute: async ({ title, date, start_time, end_time, location, description, all_day = false }) => {
+        if (isDemo) {
+          return { id: `demo-${Date.now()}`, title, start: { date, dateTime: start_time ? `${date}T${start_time}:00` : date }, end: { date, dateTime: end_time ? `${date}T${end_time}:00` : date }, note: "Demo mode — event not saved to real calendar." };
+        }
         try {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             return { error: `date must be YYYY-MM-DD, got: "${date}"` };
@@ -709,6 +810,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         let req = supabase
           .from("recipes")
           .select("id, name, cuisine, ingredients, instructions, tags");
+        if (userId) req = req.eq("user_id", userId);
         if (query) {
           req = req.or(`name.ilike.%${query}%,ingredients.ilike.%${query}%`);
         }
@@ -747,6 +849,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         const { data, error } = await supabase
           .from("meal_log")
           .insert({
+            user_id: userId,
             meal_type,
             notes: notes ?? null,
             recipe_id: recipe_id ?? null,
@@ -765,19 +868,25 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
     }),
   };
 
-  const modelTier = selectModel(messages);
-  console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
-  const selectedModel = wrapLanguageModel({
-    model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
-    middleware: retryOnOverload,
-  });
+  // Select model: demo → Groq Llama (free tier); real user → Anthropic tier selection
+  let selectedModel;
+  if (isDemo) {
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+    selectedModel = groq("llama-3.3-70b-versatile");
+    console.log(`[chat] model=groq/llama-3.3-70b-versatile (demo) session=${sessionId}`);
+  } else {
+    const modelTier = selectModel(messages);
+    console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
+    selectedModel = wrapLanguageModel({
+      model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
+      middleware: retryOnOverload,
+    });
+  }
 
-  const result = streamText({
-    model: selectedModel,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const streamOptions: Parameters<typeof streamText>[0] = {
+    model: selectedModel as any,
     system: systemPrompt,
-    providerOptions: {
-      anthropic: { cacheControl: { type: "ephemeral" } },
-    },
     messages: [...contextMessages, ...cleanMessages],
     tools,
     maxSteps: 25,
@@ -794,7 +903,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         // Upsert the session — creates it if it doesn't exist yet (lazy session creation
         // for new chats whose UUID was generated client-side before any DB write).
         const { error: sessionError } = await supabase.from("chat_sessions").upsert(
-          { id: sessionId, device: "web", last_active_at: new Date().toISOString() },
+          { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
           { onConflict: "id" }
         );
         if (sessionError) throw sessionError;
@@ -802,11 +911,13 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         const { error: insertError } = await supabase.from("chat_messages").insert([
           {
             session_id: sessionId,
+            user_id: userId,
             role: "user",
             content: lastUserMessage.content,
           },
           {
             session_id: sessionId,
+            user_id: userId,
             role: "assistant",
             content: text,
           },
@@ -816,7 +927,16 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
         console.error("[chat] onFinish persist error:", err);
       }
     },
-  });
+  };
+
+  // Only pass Anthropic cache options for non-demo (Groq doesn't support providerOptions)
+  if (!isDemo) {
+    streamOptions.providerOptions = {
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    };
+  }
+
+  const result = streamText(streamOptions);
 
   return result.toDataStreamResponse();
 }

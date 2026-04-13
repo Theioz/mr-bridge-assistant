@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (demo account + multi-tenancy — issue #50)
+- **Multi-tenancy migration** — `user_id uuid references auth.users(id)` added to all 14 tables; existing rows backfilled with owner's auth UID; RLS policies updated from `using (true)` → `using (auth.uid() = user_id)`; per-user indexes added
+- **Demo account** — `demo@mr-bridge.app` with realistic seed data: Alex Chen persona, 7 habits at ~60% completion over 30 days, body comp trend arc, 18 workout sessions, 30 recovery nights, 10 tasks, 5 study entries, 4 journal entries, 5 recipes
+- **Groq chat for demo** — demo user's chat route swaps Anthropic for Groq Llama 3.3-70b (free tier); same tool interface, simplified Alex Chen system prompt
+- **Mock Gmail + Calendar** — `/api/google/gmail` and `/api/google/calendar` return hardcoded demo data for the demo user; chat tools do the same
+- **Nightly reset** — `scripts/reset_demo.py` wipes + reseeds; `/api/cron/reset-demo/route.ts` is `CRON_SECRET`-protected; Vercel cron at 3 AM PT
+- **Login UX** — "Try the demo" button auto-fills and signs in when `NEXT_PUBLIC_DEMO_EMAIL/PASSWORD` are set
+- **Demo banner** — shown in sidebar (desktop) and above tab bar (mobile) when signed in as demo user
+- **Python scripts** — `sync-oura.py`, `sync-fitbit.py`, `sync-googlefit.py`, `fetch_briefing_data.py`, `log_habit.py` now require `OWNER_USER_ID` in `.env` and filter all queries by it
+- **`scripts/print_owner_id.py`** — prints owner's Supabase UUID for use as `OWNER_USER_ID`
+- **README** — Demo account section (credentials, real vs mocked); Self-Hosting section (rename checklist, env var table, setup steps)
+
 ### Added (dismissible suggested nutrition card — issue #123)
 - **X button** on `SuggestedNutritionCard` — absolute top-right dismiss button; clicking upserts `nutrition_suggestion_dismissed: "true"` into the `profile` table via the existing `updateAction` server action; disabled state during pending transition
 - **Persistent dismissal** — card reads `values["nutrition_suggestion_dismissed"]` on render (server-loaded); returns null immediately if dismissed, surviving page reloads

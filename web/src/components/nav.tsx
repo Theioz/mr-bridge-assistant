@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Activity,
@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard",  icon: LayoutDashboard },
@@ -43,6 +44,16 @@ function isActive(pathname: string, href: string) {
 export default function Nav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+    if (!demoEmail) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsDemo(user?.email === demoEmail);
+    });
+  }, []);
 
   // Is the current page one of the "More" pages? If so, highlight the More button.
   const moreIsActive = MOBILE_MORE.some((item) => isActive(pathname, item.href));
@@ -92,7 +103,27 @@ export default function Nav() {
             );
           })}
         </div>
+
+        {/* Demo banner — desktop */}
+        {isDemo && (
+          <div
+            className="mx-3 mb-4 px-3 py-2.5 rounded-lg text-xs"
+            style={{ background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+          >
+            Demo account — changes reset nightly
+          </div>
+        )}
       </nav>
+
+      {/* Demo banner — mobile (above tab bar) */}
+      {isDemo && (
+        <div
+          className="lg:hidden fixed left-0 right-0 z-40 px-4 py-1.5 text-center text-xs"
+          style={{ bottom: 56, background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+        >
+          Demo account — changes reset nightly
+        </div>
+      )}
 
       {/* ── Mobile bottom tab bar (< lg) ────────────────────────────── */}
       <nav

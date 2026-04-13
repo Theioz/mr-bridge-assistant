@@ -1,7 +1,7 @@
 """
 Shared Supabase client helper for sync scripts.
 Uses SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
-Import as: from _supabase import get_client, log_sync, urlopen_with_retry
+Import as: from _supabase import get_client, get_owner_user_id, log_sync, urlopen_with_retry
 """
 from __future__ import annotations
 
@@ -44,6 +44,20 @@ def get_client():
     if not url or not key:
         raise EnvironmentError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env")
     return create_client(url, key)
+
+
+def get_owner_user_id() -> str:
+    """Return the real owner's user UUID from OWNER_USER_ID env var.
+    Raises if not set — sync scripts must never write rows without a user_id
+    to avoid touching demo data or writing orphaned rows.
+    """
+    uid = os.environ.get("OWNER_USER_ID", "")
+    if not uid:
+        raise EnvironmentError(
+            "OWNER_USER_ID must be set in .env. "
+            "Run: python3 scripts/print_owner_id.py to get your Supabase auth UID."
+        )
+    return uid
 
 
 def upsert(client, table: str, rows: list[dict], conflict: str | None = None) -> int:

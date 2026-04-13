@@ -15,7 +15,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, log_sync
+from _supabase import get_client, get_owner_user_id, log_sync
 
 HABIT_ALIASES = {
     "floss": "Floss",
@@ -36,9 +36,10 @@ def main():
     args = parser.parse_args()
 
     client = get_client()
+    owner_user_id = get_owner_user_id()
 
-    # Fetch habit registry
-    registry = client.table("habit_registry").select("id,name").execute().data
+    # Fetch habit registry (owner only)
+    registry = client.table("habit_registry").select("id,name").eq("user_id", owner_user_id).execute().data
     habit_id_map = {r["name"].lower(): r["id"] for r in registry}
 
     rows = []
@@ -52,6 +53,7 @@ def main():
             unrecognized.append(h)
             continue
         rows.append({
+            "user_id": owner_user_id,
             "habit_id": hid,
             "date": args.date,
             "completed": True,

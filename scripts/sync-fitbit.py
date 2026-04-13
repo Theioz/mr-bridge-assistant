@@ -46,7 +46,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, upsert, log_sync, urlopen_with_retry, HTTP_TIMEOUT
+from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry, HTTP_TIMEOUT
 
 FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
@@ -222,12 +222,13 @@ def fetch_workouts(access_token, start_date, end_date):
     return rows
 
 
-def existing_keys(client) -> set:
+def existing_keys(client, user_id: str) -> set:
     """Build dedup keys from Supabase to avoid re-inserting the same workout."""
     rows = (
         client.table("workout_sessions")
         .select("date,start_time,activity")
         .eq("source", "fitbit")
+        .eq("user_id", user_id)
         .execute()
         .data
     )
@@ -287,8 +288,8 @@ def fetch_body_data(access_token, start_date, end_date, raw=False):
     return rows
 
 
-def existing_body_dates(client) -> set:
-    rows = client.table("fitness_log").select("date").eq("source", "fitbit_body").execute().data
+def existing_body_dates(client, user_id: str) -> set:
+    rows = client.table("fitness_log").select("date").eq("source", "fitbit_body").eq("user_id", user_id).execute().data
     return {r["date"] for r in rows}
 
 
@@ -352,9 +353,10 @@ def main():
     workout_rows = fetch_workouts(access_token, start_str, end_str)
 
     client = get_client()
+    owner_user_id = get_owner_user_id()
 
     # Write body composition
-    existing_body = existing_body_dates(client)
+    existing_body = existing_body_dates(client, owner_user_id)
     new_body = [r for r in body_rows if r["date"] not in existing_body]
 
     if new_body:
@@ -370,7 +372,7 @@ def main():
             print(f"  {r['date']} — {' | '.join(parts) if parts else 'no fields'}")
 
     # Write workouts
-    existing = existing_keys(client)
+    existing = existing_keys(client, owner_user_id)
     new_workouts = [r for r in workout_rows if r["_key"] not in existing]
 
     if new_workouts:
@@ -391,15 +393,15 @@ def main():
 
     body_written = 0
     if new_body:
-        sb_body = [{**r, "source": "fitbit_body"} for r in sorted(new_body, key=lambda x: x["date"])]
+        sb_body = [{**r, "source": "fitbit_body", "user_id": owner_user_id} for r in sorted(new_body, key=lambda x: x["date"])]
         body_written = upsert(client, "fitness_log", sb_body)
         log_sync(client, "fitbit_body", "ok", body_written)
         print(f"[sync-fitbit] Synced {body_written} body composition row(s) to fitness_log.")
 
     workout_written = 0
     if new_workouts:
-        # Strip the internal dedup key before inserting
-        sb_rows = [{k: v for k, v in r.items() if k != "_key"} for r in new_workouts]
+        # Strip the internal dedup key before inserting, add user_id
+        sb_rows = [{k: v for k, v in r.items() if k != "_key"} | {"user_id": owner_user_id} for r in new_workouts]
         workout_written = upsert(client, "workout_sessions", sb_rows)
         log_sync(client, "fitbit", "ok", workout_written)
         print(f"[sync-fitbit] Synced {workout_written} workout row(s) to workout_sessions.")

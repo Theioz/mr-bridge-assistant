@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+import { createClient } from "@/lib/supabase/server";
 
 export interface EmailSummary {
   from: string;
@@ -21,7 +22,21 @@ function getHeader(headers: { name?: string | null; value?: string | null }[], n
   return headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
 }
 
+const DEMO_EMAILS: EmailSummary[] = [
+  { from: "UPS Tracking", subject: "Your package is out for delivery today",        receivedAt: "Mon, 13 Apr 2026 08:14:00 -0700", account: "personal" },
+  { from: "Alaska Airlines", subject: "Flight Confirmation: SFO → SEA Apr 20",     receivedAt: "Thu, 10 Apr 2026 11:02:00 -0700", account: "personal" },
+  { from: "Figma",          subject: "Action required: Accept team invite",         receivedAt: "Mon, 13 Apr 2026 09:47:00 -0700", account: "professional" },
+  { from: "DocuSign",       subject: "Invoice #4421 — please sign",                 receivedAt: "Fri, 11 Apr 2026 15:12:00 -0700", account: "professional" },
+];
+
 export async function GET() {
+  // Return mock data for demo user
+  const serverClient = await createClient();
+  const { data: { user } } = await serverClient.auth.getUser();
+  if (user?.id && user.id === process.env.DEMO_USER_ID) {
+    return NextResponse.json({ emails: DEMO_EMAILS });
+  }
+
   try {
     const auth = getGoogleAuthClient();
     const gmail = google.gmail({ version: "v1", auth });
