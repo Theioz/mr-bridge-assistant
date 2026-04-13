@@ -15,6 +15,13 @@ export interface HabitLog {
   notes: string | null;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  status: "active" | "completed" | "archived";
+  created_at: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -24,6 +31,8 @@ export interface Task {
   category: string | null;
   completed_at: string | null;
   created_at: string;
+  parent_id: string | null;
+  subtasks?: Subtask[];
 }
 
 export interface FitnessLog {

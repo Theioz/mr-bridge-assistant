@@ -45,14 +45,14 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
           {dateStr}
         </p>
         {weather && (
-          <p className="mt-0.5 flex items-center gap-1.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
             {emoji && <span style={{ fontSize: 14, lineHeight: 1 }}>{emoji}</span>}
             {weather.temp != null && (
               <span style={{ color: "var(--color-text)" }}>{Math.round(weather.temp)}°</span>
             )}
             <span>{weather.condition}</span>
             {(weather.high != null || weather.low != null) && (
-              <span style={{ color: "var(--color-text-faint)" }}>
+              <span style={{ color: "var(--color-text-faint)", whiteSpace: "nowrap" }}>
                 · H {weather.high != null ? `${Math.round(weather.high)}°` : "—"} L {weather.low != null ? `${Math.round(weather.low)}°` : "—"}
               </span>
             )}

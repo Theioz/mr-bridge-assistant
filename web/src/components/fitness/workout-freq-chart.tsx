@@ -8,10 +8,11 @@ import {
 } from "recharts";
 import type { WorkoutSession } from "@/lib/types";
 import Link from "next/link";
+import { GranularityToggle } from "@/components/ui/granularity-toggle";
 
 interface Props {
   sessions: WorkoutSession[];
-  weekCount?: number;
+  days: number;
   goal?: number | null;
 }
 
@@ -40,13 +41,31 @@ function getISOWeekKey(dateStr: string): string {
 }
 
 function barColor(count: number, goal: number): string {
-  if (count >= goal)          return "#10B981"; // green
-  if (count === goal - 1)     return "#F59E0B"; // amber
-  return "#EF4444";                             // red
+  if (count >= goal)      return "#10B981"; // green
+  if (count === goal - 1) return "#F59E0B"; // amber
+  return "#EF4444";                         // red
 }
 
-export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
+function dayLabel(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function dayOfWeek(dateStr: string): number {
+  return new Date(dateStr + "T00:00:00").getDay(); // 0 = Sunday, 1 = Monday
+}
+
+export function WorkoutFreqChart({ sessions, days, goal }: Props) {
   const [animate, setAnimate] = useState(true);
+  const weekCount = Math.ceil(days / 7);
+  const forceWeekly = days > 90;
+  const [granularity, setGranularity] = useState<"daily" | "weekly">(
+    forceWeekly ? "weekly" : "daily"
+  );
+
+  // When days changes and > 90, force back to weekly
+  useEffect(() => {
+    if (forceWeekly) setGranularity("weekly");
+  }, [forceWeekly]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -54,24 +73,50 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
   }, []);
 
   const now = new Date();
-  const weeks: { key: string; label: string; count: number }[] = [];
-  for (let i = weekCount - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i * 7);
-    const dateStr = d.toISOString().slice(0, 10);
-    const key = getISOWeekKey(dateStr);
-    if (!weeks.find((w) => w.key === key)) {
-      weeks.push({ key, label: getISOWeekLabel(dateStr), count: 0 });
+  const hasGoal = goal != null && goal > 0;
+
+  // ── Weekly mode ──────────────────────────────────────────────────────────
+  const weekSlots: { key: string; label: string; count: number }[] = [];
+  if (granularity === "weekly") {
+    for (let i = weekCount - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i * 7);
+      const dateStr = d.toISOString().slice(0, 10);
+      const key = getISOWeekKey(dateStr);
+      if (!weekSlots.find((w) => w.key === key)) {
+        weekSlots.push({ key, label: getISOWeekLabel(dateStr), count: 0 });
+      }
     }
+    sessions.forEach((s) => {
+      const key = getISOWeekKey(s.date);
+      const slot = weekSlots.find((w) => w.key === key);
+      if (slot) slot.count++;
+    });
   }
 
-  sessions.forEach((s) => {
-    const key = getISOWeekKey(s.date);
-    const slot = weeks.find((w) => w.key === key);
-    if (slot) slot.count++;
-  });
+  // ── Daily mode ───────────────────────────────────────────────────────────
+  const daySlots: { key: string; label: string; count: number; isMonday: boolean }[] = [];
+  if (granularity === "daily") {
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      daySlots.push({
+        key: dateStr,
+        label: dayLabel(dateStr),
+        count: 0,
+        isMonday: dayOfWeek(dateStr) === 1,
+      });
+    }
+    const sessionSet = new Set(sessions.map((s) => s.date));
+    daySlots.forEach((slot) => {
+      if (sessionSet.has(slot.key)) slot.count = 1;
+    });
+  }
 
-  const hasGoal = goal != null && goal > 0;
+  const showMonday = days > 14; // sparse ticks at >14 days
+
+  const chartData = granularity === "weekly" ? weekSlots : daySlots;
 
   return (
     <div
@@ -80,13 +125,25 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-          Workout Frequency — {weekCount} Weeks
+          Workout Frequency — {granularity === "daily" ? "Daily" : "Weekly"}
         </p>
-        {hasGoal && (
-          <span className="text-xs tabular-nums" style={{ color: "var(--color-text-faint)" }}>
-            Goal: {goal}/wk
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {hasGoal && granularity === "weekly" && (
+            <span className="text-xs tabular-nums" style={{ color: "var(--color-text-faint)" }}>
+              Goal: {goal}/wk
+            </span>
+          )}
+          {hasGoal && granularity === "daily" && (
+            <span className="text-xs tabular-nums" style={{ color: "var(--color-text-faint)" }}>
+              Goal: {goal}/wk
+            </span>
+          )}
+          <GranularityToggle
+            value={granularity}
+            onChange={setGranularity}
+            disabled={forceWeekly}
+          />
+        </div>
       </div>
 
       {!hasGoal && (
@@ -99,7 +156,7 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
       )}
 
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={weeks} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <BarChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
           <XAxis
             dataKey="label"
@@ -108,6 +165,12 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
             tickLine={false}
             axisLine={false}
             interval={0}
+            tickFormatter={(label, index) => {
+              if (granularity === "daily" && showMonday) {
+                return daySlots[index]?.isMonday ? label : "";
+              }
+              return label;
+            }}
           />
           <YAxis
             stroke="#334155"
@@ -116,8 +179,11 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
             axisLine={false}
             allowDecimals={false}
           />
-          <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [v, "Sessions"]} />
-          {hasGoal && (
+          <Tooltip
+            {...TOOLTIP_STYLE}
+            formatter={(v: number) => [v, granularity === "daily" ? "Workout" : "Sessions"]}
+          />
+          {hasGoal && granularity === "weekly" && (
             <ReferenceLine
               y={goal}
               stroke="#64748B"
@@ -127,17 +193,27 @@ export function WorkoutFreqChart({ sessions, weekCount = 8, goal }: Props) {
           )}
           <Bar
             dataKey="count"
-            name="Sessions"
+            name={granularity === "daily" ? "Workout" : "Sessions"}
             radius={[3, 3, 0, 0]}
             isAnimationActive={animate}
             animationDuration={300}
           >
-            {weeks.map((entry) => (
-              <Cell
-                key={entry.key}
-                fill={hasGoal ? barColor(entry.count, goal!) : "#6366F1"}
-              />
-            ))}
+            {chartData.map((entry) => {
+              if (granularity === "daily") {
+                return (
+                  <Cell
+                    key={entry.key}
+                    fill={entry.count > 0 ? (hasGoal ? "#10B981" : "#6366F1") : "#1E2130"}
+                  />
+                );
+              }
+              return (
+                <Cell
+                  key={entry.key}
+                  fill={hasGoal ? barColor(entry.count, goal!) : "#6366F1"}
+                />
+              );
+            })}
           </Bar>
         </BarChart>
       </ResponsiveContainer>

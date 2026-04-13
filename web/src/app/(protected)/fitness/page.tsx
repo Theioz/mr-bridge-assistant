@@ -15,7 +15,7 @@ import type { FitnessLog, WorkoutSession, RecoveryMetrics } from "@/lib/types";
 export default async function FitnessPage() {
   const supabase = await createClient();
   const { key: windowKey, days } = await getWindow();
-  const weekCount = Math.max(8, Math.ceil(days / 7));
+  const weekCount = Math.ceil(days / 7);
 
   const [fitnessRes, workoutsRes, recoveryRes, profileRes] = await Promise.all([
     supabase
@@ -96,7 +96,7 @@ export default async function FitnessPage() {
         <div className="flex flex-col gap-2">
           <WorkoutFreqChart
             sessions={workouts}
-            weekCount={8}
+            days={days}
             goal={weeklyWorkoutGoal}
           />
           {walkCount > 0 && (
@@ -121,7 +121,7 @@ export default async function FitnessPage() {
         <ActiveCalGoalChart
           data={recoveryData}
           goal={weeklyActiveCalGoal}
-          weekCount={8}
+          days={days}
         />
       </div>
 

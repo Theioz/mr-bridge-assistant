@@ -11,7 +11,9 @@ async function addTask(title: string, priority: string, dueDate: string): Promis
   "use server";
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("tasks").insert({
+      user_id: user?.id,
       title,
       priority: priority || "medium",
       status: "active",
@@ -35,6 +37,12 @@ async function completeTask(taskId: string): Promise<{ error?: string }> {
       .update({ status: "completed", completed_at: new Date().toISOString() })
       .eq("id", taskId);
     if (error) return { error: error.message };
+    // Also complete any active subtasks
+    await supabase
+      .from("tasks")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("parent_id", taskId)
+      .eq("status", "active");
     revalidatePath("/tasks");
     revalidatePath("/dashboard");
     return {};
@@ -70,16 +78,93 @@ async function updateTask(taskId: string, title: string): Promise<{ error?: stri
   }
 }
 
+async function addSubtask(parentId: string, title: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("tasks").insert({
+      user_id: user?.id,
+      title,
+      parent_id: parentId,
+      status: "active",
+      priority: null,
+      due_date: null,
+    });
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to add subtask" };
+  }
+}
+
+async function completeSubtask(id: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    // Get parent_id before completing
+    const { data: subtask } = await supabase
+      .from("tasks")
+      .select("parent_id")
+      .eq("id", id)
+      .single();
+    const { error } = await supabase
+      .from("tasks")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) return { error: error.message };
+    // Check if all siblings are now completed — if so, complete parent
+    if (subtask?.parent_id) {
+      const { data: siblings } = await supabase
+        .from("tasks")
+        .select("status")
+        .eq("parent_id", subtask.parent_id);
+      const allDone = (siblings ?? []).every((s) => s.status === "completed");
+      if (allDone) {
+        await supabase
+          .from("tasks")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("id", subtask.parent_id);
+      }
+    }
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to complete subtask" };
+  }
+}
+
+async function deleteSubtask(id: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to delete subtask" };
+  }
+}
+
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default async function TasksPage() {
   const supabase = await createClient();
 
   const [activeResult, completedResult] = await Promise.all([
-    supabase.from("tasks").select("*").eq("status", "active").order("created_at", { ascending: false }),
+    supabase
+      .from("tasks")
+      .select("*, subtasks:tasks!tasks_parent_id_fkey(id, title, status, created_at)")
+      .is("parent_id", null)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
     supabase
       .from("tasks")
       .select("*")
+      .is("parent_id", null)
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(10),
@@ -139,6 +224,9 @@ export default async function TasksPage() {
                         completeAction={completeTask}
                         archiveAction={archiveTask}
                         updateAction={updateTask}
+                        addSubtaskAction={addSubtask}
+                        completeSubtaskAction={completeSubtask}
+                        deleteSubtaskAction={deleteSubtask}
                       />
                     </div>
                   ))}

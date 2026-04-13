@@ -259,7 +259,7 @@ You have access to the user's Supabase data, Gmail, and Google Calendar via tool
 
 Tools available:
 - get_tasks: active/completed/archived tasks
-- add_task: create a new task
+- add_task: create a new task or subtask (use parent_id to add items to a list — call get_tasks first to find the parent task ID)
 - complete_task: mark a task done by ID
 - get_habits_today: all active habits + today's completion status
 - log_habit: mark a habit complete for a given date
@@ -319,12 +319,13 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
     }),
 
     add_task: tool({
-      description: "Add a new task to the tasks table.",
+      description: "Add a new task or subtask to the tasks table. To add an item to a list (e.g. shopping list, grocery list), first call get_tasks to find the parent task ID, then call add_task with parent_id set.",
       parameters: jsonSchema<{
         title: string;
         priority?: "high" | "medium" | "low";
         category?: string;
         due_date?: string;
+        parent_id?: string;
       }>({
         type: "object",
         required: ["title"],
@@ -333,20 +334,29 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           priority: {
             type: "string",
             enum: ["high", "medium", "low"],
-            description: "Task priority.",
+            description: "Task priority. Omit for subtasks.",
           },
           category: { type: "string", description: "Task category." },
-          due_date: { type: "string", description: "Due date in YYYY-MM-DD format." },
+          due_date: { type: "string", description: "Due date in YYYY-MM-DD format. Omit for subtasks." },
+          parent_id: { type: "string", description: "Parent task UUID. Set this to add a subtask/list item under an existing task." },
         },
       }),
-      execute: async ({ title, priority, category, due_date }) => {
+      execute: async ({ title, priority, category, due_date, parent_id }) => {
         if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
           return { error: `due_date must be YYYY-MM-DD format, got: "${due_date}"` };
         }
         const { data, error } = await supabase
           .from("tasks")
-          .insert({ user_id: userId, title, priority: priority ?? null, category: category ?? null, due_date: due_date ?? null, status: "active" })
-          .select("id, title, priority, status, due_date, category, created_at")
+          .insert({
+            user_id: userId,
+            title,
+            priority: parent_id ? null : (priority ?? null),
+            category: category ?? null,
+            due_date: parent_id ? null : (due_date ?? null),
+            status: "active",
+            parent_id: parent_id ?? null,
+          })
+          .select("id, title, priority, status, due_date, category, parent_id, created_at")
           .single();
         if (error) return { error: error.message };
         return data;
