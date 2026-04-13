@@ -262,24 +262,24 @@ def seed_study_log(client):
 def seed_journal(client):
     entries = [
         {
-            "date":     today_minus(1),
-            "content":  "Good training week. Hit 4 workouts, sleep has been better since cutting caffeine after 2pm. The search API refactor is almost done — need to ship it by EOD Thursday.",
-            "response": "Four workouts in a week with improved sleep consistency is real progress. Cutting late caffeine is one of the highest-ROI sleep interventions — worth keeping. Thursday deadline on the search API: block 2 hours tomorrow morning while focus is high.",
+            "date":       today_minus(1),
+            "free_write": "Good training week. Hit 4 workouts, sleep has been better since cutting caffeine after 2pm. The search API refactor is almost done — need to ship it by EOD Thursday.",
+            "responses":  {"reflection": "Four workouts in a week with improved sleep consistency is real progress. Cutting late caffeine is one of the highest-ROI sleep interventions — worth keeping. Thursday deadline on the search API: block 2 hours tomorrow morning while focus is high."},
         },
         {
-            "date":     today_minus(5),
-            "content":  "Struggled with motivation this week. Only made it to the gym twice. Work has been stressful — big deployment went sideways and we spent most of Thursday debugging. Didn't sleep great either.",
-            "response": "Deployment incidents are draining — context switches plus the stress carry into recovery. Two workouts during a high-stress week is not a failure, it's appropriate load management. Sleep quality after incidents is usually worse. Prioritize one simple, low-demand workout this weekend to reset.",
+            "date":       today_minus(5),
+            "free_write": "Struggled with motivation this week. Only made it to the gym twice. Work has been stressful — big deployment went sideways and we spent most of Thursday debugging. Didn't sleep great either.",
+            "responses":  {"reflection": "Deployment incidents are draining — context switches plus the stress carry into recovery. Two workouts during a high-stress week is not a failure, it's appropriate load management. Sleep quality after incidents is usually worse. Prioritize one simple, low-demand workout this weekend to reset."},
         },
         {
-            "date":     today_minus(12),
-            "content":  "Feeling really good lately. Weight is trending down, workouts feel strong. Starting to think about running a half marathon in the spring.",
-            "response": "Trend confirmation: weight down 1.8 lb over three weeks, body fat moving in the right direction. Half marathon in spring is feasible — base mileage is already there from the weekly runs. Recommend picking a specific race date; having it on the calendar changes training discipline.",
+            "date":       today_minus(12),
+            "free_write": "Feeling really good lately. Weight is trending down, workouts feel strong. Starting to think about running a half marathon in the spring.",
+            "responses":  {"reflection": "Trend confirmation: weight down 1.8 lb over three weeks, body fat moving in the right direction. Half marathon in spring is feasible — base mileage is already there from the weekly runs. Recommend picking a specific race date; having it on the calendar changes training discipline."},
         },
         {
-            "date":     today_minus(20),
-            "content":  "Trying to get back into reading more. Used to read a book a week in college, now barely finish one a month. Too much time on my phone in the evenings.",
-            "response": "Reading volume drops when phone use fills the same time slot — they compete directly. The 20-min daily reading habit you added addresses this if applied consistently in the pre-sleep window. Rate yourself on the habit at end of week rather than end of day; it reduces the friction of individual misses.",
+            "date":       today_minus(20),
+            "free_write": "Trying to get back into reading more. Used to read a book a week in college, now barely finish one a month. Too much time on my phone in the evenings.",
+            "responses":  {"reflection": "Reading volume drops when phone use fills the same time slot — they compete directly. The 20-min daily reading habit you added addresses this if applied consistently in the pre-sleep window. Rate yourself on the habit at end of week rather than end of day; it reduces the friction of individual misses."},
         },
     ]
     rows = [{"user_id": DEMO_USER_ID, **e} for e in entries]
