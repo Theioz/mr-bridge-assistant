@@ -2,7 +2,7 @@
 
 import { useChat } from "ai/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import MessageBubble from "./message-bubble";
 import ToolStatusBar from "./tool-status-bar";
 import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-command-menu";
@@ -12,6 +12,9 @@ interface Props {
   sessionId: string;
   initialMessages: Message[];
   onMessageSent?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 // Returns the slash token the cursor is currently inside, or null.
@@ -25,9 +28,15 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
   return { start, query: match[1].slice(1).toLowerCase() };
 }
 
-export default function ChatInterface({ sessionId, initialMessages, onMessageSent }: Props) {
+export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput } = useChat({
     api: "/api/chat",
@@ -96,7 +105,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           setActiveIndex((i) => (i - 1 + menuCommands.length) % menuCommands.length);
           break;
         case "Enter":
-          if (e.shiftKey) return; // allow default newline in textarea
+          if (isTouchDevice) return; // mobile: Enter always inserts newline
+          if (e.shiftKey) return; // desktop: Shift+Enter inserts newline
           if (menuCommands.length > 0) {
             e.preventDefault();
             applyCommand(menuCommands[activeIndex]);
@@ -117,26 +127,54 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           break;
       }
     },
-    [menuCommands, activeIndex, applyCommand, handleSubmit]
+    [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit]
   );
 
-  // ── Scroll to bottom on new messages ─────────────────────────────────
+  // ── Scroll to bottom on new messages (not when prepending older ones) ─
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!loadingMore) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, loadingMore]);
 
   // ── Auto-resize textarea ──────────────────────────────────────────────
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [input]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
+        {hasMore && (
+          <div className="flex justify-center py-3">
+            <button
+              onClick={() => {
+                const el = scrollContainerRef.current;
+                const prevHeight = el?.scrollHeight ?? 0;
+                onLoadMore?.();
+                requestAnimationFrame(() => {
+                  if (el) el.scrollTop += el.scrollHeight - prevHeight;
+                });
+              }}
+              disabled={loadingMore}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs transition-opacity"
+              style={{
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              {loadingMore
+                ? <Loader2 size={12} className="animate-spin" />
+                : "Load older messages"
+              }
+            </button>
+          </div>
+        )}
         {messages.length === 0 && (
           <p className="text-center mt-8" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
             Ask Mr. Bridge anything.
@@ -241,6 +279,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Ask Mr. Bridge..."
+            enterKeyHint={isTouchDevice ? "enter" : "send"}
             disabled={isLoading}
             autoComplete="off"
             aria-autocomplete="list"

@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (mobile newline input + paginated chat load more — issue #149)
+- **Mobile Enter = newline** — `chat-interface.tsx` detects touch devices via `window.matchMedia("(pointer: coarse)")` on mount; on mobile, `Enter` always inserts a newline (no submit); on desktop, plain `Enter` submits and `Shift+Enter` inserts a newline; `enterKeyHint` on the textarea is `"enter"` on mobile and `"send"` on desktop
+- **Cursor-based pagination in GET `/api/chat/sessions/[id]`** — query now accepts `before` (position cursor) and `limit` (max 50, default 20) params; fetches newest-first, reverses for display, returns `{ messages, hasMore, oldestPosition }`; initial load is capped at 20 messages
+- **"Load older messages" button** — `chat-page-client.tsx` tracks `hasMore`, `oldestPosition`, `loadingMore`; clicking the button prepends older messages while preserving scroll position via `scrollHeight` diff; button shows a `Loader2` spinner while fetching
+
 ### Added (subtasks + grocery list UI — issue #144)
 - **`parent_id` column on `tasks`** — migration `20260413000008_tasks_parent_id.sql` adds `parent_id uuid references tasks(id) on delete cascade` and a supporting index; applied to live DB
 - **`Subtask` type** added to `web/src/lib/types.ts`; `Task` extended with `parent_id: string | null` and optional `subtasks?: Subtask[]`
