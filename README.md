@@ -314,8 +314,8 @@ A Next.js web app deployed on Vercel. Built against a full design system (DM San
 - **Fitness** — Dual-axis body comp chart (weight + BF%); weekly workout frequency bar chart; active cal area chart; sortable/paginated workout history table
 - **Journal** — Two-tab editor: *Reflect* (all 5 prompts visible, progress dots, 1.5s auto-save) and *Free Write* (open textarea with word count); collapsible history accordion
 - **Weekly Review** — Last 7 days at a glance: habit score + 7-day pill strip per habit with streak; tasks completed this week, still-active tasks with overdue callout; workout count/duration/calories; average readiness/sleep/HRV with per-day readiness column; body composition delta vs 7 days ago; journal entry count
-- **Meals** — Recent meal log from Supabase (stub; full logging via Chat)
-- **Settings** — Profile key-values from Supabase `profile` table
+- **Meals** — Daily macro summary card (calories/protein/carbs/fat vs goals, progress bars with color coding); food photo analyzer with optional context prompt (Claude vision → macro estimation → log); 7-day meal history from Supabase
+- **Settings** — Profile key-values from Supabase `profile` table; Nutrition Goals section (calorie, protein, carbs, fat daily targets)
 
 **Local development:**
 ```bash

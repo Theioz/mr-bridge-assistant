@@ -41,6 +41,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "No image file provided" }, { status: 400 });
   }
 
+  const userPromptRaw = formData.get("prompt");
+  const userPrompt = typeof userPromptRaw === "string" ? userPromptRaw.trim() : "";
+
   // Validate file type
   if (!imageFile.type.startsWith("image/")) {
     return Response.json({ error: "File must be an image" }, { status: 400 });
@@ -73,12 +76,13 @@ export async function POST(req: Request) {
             {
               type: "text",
               text: `Analyze this food photo and estimate its nutritional content.
-
+${userPrompt ? `\nUser context: ${userPrompt}\n` : ""}
 Instructions:
 - Identify the dish name and list all visible ingredients with estimated quantities
 - Estimate macros and micros for the total visible portion (what would be eaten)
 - Use conservative estimates — do not inflate
 - If multiple items are present, sum the totals
+- If the user provided context above, use it to improve accuracy (e.g. specific ingredients, portion size, cooking method)
 - Set confidence to "high" only if the food is clearly identifiable and portion is estimable
 - Set confidence to "low" if the image is unclear, the food is ambiguous, or portion size is very uncertain
 - Include any key assumptions in notes (e.g. "sauce not included", "estimated half-plate portion")
