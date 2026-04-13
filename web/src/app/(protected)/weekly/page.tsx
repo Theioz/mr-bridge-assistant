@@ -473,7 +473,7 @@ export default async function WeeklyPage() {
         </Card>
 
         {/* Recovery */}
-        <Card title="Recovery Averages" accent={scoreColor(avgReadiness)}>
+        <Card title="Sleep & Recovery" accent={scoreColor(avgReadiness)}>
           {recoveryRows.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No recovery data for this week.</p>
           ) : (
@@ -538,6 +538,60 @@ export default async function WeeklyPage() {
                           style={{ color: row?.readiness != null ? scoreColor(row.readiness) : "var(--color-text-faint)" }}
                         >
                           {row?.readiness != null ? row.readiness : "—"}
+                        </span>
+                        <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
+                          {fmtDate(d).replace(/[A-Za-z]+ /, "")}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Per-day sleep pills */}
+              <div>
+                <p className="text-xs mb-2" style={{ color: "var(--color-text-muted)" }}>Sleep by day</p>
+                <div className="flex gap-2 flex-wrap">
+                  {last7Days.map((d) => {
+                    const row = recoveryRows.find((r) => r.date === d);
+                    return (
+                      <div
+                        key={d}
+                        title={`${fmtDate(d)}: ${row?.sleep_score != null ? `Sleep ${row.sleep_score}` : "no data"}`}
+                        className="flex flex-col items-center gap-0.5"
+                      >
+                        <span
+                          className="tabular-nums text-xs font-medium"
+                          style={{ color: row?.sleep_score != null ? scoreColor(row.sleep_score) : "var(--color-text-faint)" }}
+                        >
+                          {row?.sleep_score != null ? row.sleep_score : "—"}
+                        </span>
+                        <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
+                          {fmtDate(d).replace(/[A-Za-z]+ /, "")}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Per-day HRV pills */}
+              <div>
+                <p className="text-xs mb-2" style={{ color: "var(--color-text-muted)" }}>HRV by day (ms)</p>
+                <div className="flex gap-2 flex-wrap">
+                  {last7Days.map((d) => {
+                    const row = recoveryRows.find((r) => r.date === d);
+                    return (
+                      <div
+                        key={d}
+                        title={`${fmtDate(d)}: ${row?.avg_hrv != null ? `HRV ${Math.round(row.avg_hrv)}ms` : "no data"}`}
+                        className="flex flex-col items-center gap-0.5"
+                      >
+                        <span
+                          className="tabular-nums text-xs font-medium"
+                          style={{ color: row?.avg_hrv != null ? "var(--color-info)" : "var(--color-text-faint)" }}
+                        >
+                          {row?.avg_hrv != null ? Math.round(row.avg_hrv) : "—"}
                         </span>
                         <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
                           {fmtDate(d).replace(/[A-Za-z]+ /, "")}

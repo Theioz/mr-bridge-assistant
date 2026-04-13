@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (Sleep & HRV by day in Weekly Review — issue #122)
+- **Weekly Review Recovery card** renamed from "Recovery Averages" to "Sleep & Recovery"
+- **"Sleep by day" row** added below "Readiness by day" — 7-day strip with color-coded score (green ≥80 / yellow ≥60 / red <60) and day number; sourced from `sleep_score` in `recovery_metrics`
+- **"HRV by day (ms)" row** added below Sleep — same strip layout, values rounded to nearest integer, colored `var(--color-info)`; sourced from `avg_hrv` in `recovery_metrics`
+
 ### Added (MB favicon and iOS touch icon — issue #117)
 - **`web/src/app/icon.svg`** — raw SVG monogram logo (solid indigo `#1d4ed8` background, `rx="7"` rounded corners); Next.js App Router auto-wires this as the browser favicon
 - **`web/src/app/apple-icon.png`** — 180×180 PNG rasterized from the SVG for iOS Add to Home Screen; solid `#1d4ed8` background, proportionally scaled paths
