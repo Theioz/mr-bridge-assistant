@@ -113,7 +113,7 @@ export default async function MacroSummaryCard() {
   const hasData = rows.length > 0;
 
   const totals = rows.reduce(
-    (acc, row) => ({
+    (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, row) => ({
       calories: acc.calories + (row.calories ?? 0),
       protein_g: acc.protein_g + (row.protein_g ?? 0),
       carbs_g: acc.carbs_g + (row.carbs_g ?? 0),
