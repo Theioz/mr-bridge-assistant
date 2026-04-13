@@ -38,9 +38,11 @@ export default async function ChatPage() {
   }
 
   return (
-    <ChatPageClient
-      initialSessionId={(session as ChatSession | null)?.id ?? null}
-      initialMessages={initialMessages}
-    />
+    <div className="h-full flex flex-col">
+      <ChatPageClient
+        initialSessionId={(session as ChatSession | null)?.id ?? null}
+        initialMessages={initialMessages}
+      />
+    </div>
   );
 }
