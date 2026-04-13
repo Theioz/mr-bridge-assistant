@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [Unreleased]
+
+### Fixed (journal data leak and sync failure — issue #133)
+- **`supabase/migrations/20260413000006_journal_entries_rls_and_constraint.sql`** — `journal_entries` had RLS policies from the multitenancy migration but `ENABLE ROW LEVEL SECURITY` was never called, so all queries returned every user's rows; migration enables RLS so the existing per-user policies take effect
+- **`supabase/migrations/20260413000006_journal_entries_rls_and_constraint.sql`** — unique constraint was `(user_id, date)` (migration 003) but `saveJournalEntry` targeted `onConflict: "date,user_id"`; the column-order mismatch caused upserts to fail when another user had a row for the same date; constraint dropped and recreated as `journal_entries_date_user_id_key UNIQUE (date, user_id)` matching the upsert target
+- **`web/src/app/(protected)/journal/page.tsx`** — no code changes needed; queries use `createClient()` (user-scoped) and `saveJournalEntry` already includes `user_id: user.id`; both work correctly once RLS is active
+
+---
+
 ## [1.0.0] — 2026-04-13
 
 ### Fixed (pre-1.0 audit — security and server action correctness)
