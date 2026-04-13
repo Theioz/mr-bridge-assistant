@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat textarea with shift+enter + auto-expand, mobile bottom spacing — issue #134)
+- **`<input>` replaced with auto-expanding `<textarea>`** — `chat-interface.tsx` now uses a `<textarea rows={1}>` with an auto-resize effect that sets height from `scrollHeight` on every input change; capped at `max-height: 200px` with `overflow-y: auto` so the field scrolls internally rather than growing unbounded
+- **Shift+Enter inserts newlines** — `handleKeyDown` now passes through `Enter` when `shiftKey` is held, allowing multi-line input; plain Enter submits (or applies a slash command if the menu is open)
+- **Mobile bottom spacing fixed** — replaced `height: calc(100dvh - 8rem)` hardcoded on `ChatInterface` with a flex-fill chain: `chat/page.tsx` wraps in `h-full flex flex-col`; `chat-page-client.tsx` root div and content row use `flex flex-col flex-1 min-h-0`; `ChatInterface` root div uses `flex flex-col flex-1 min-h-0` — the chat fills available layout height without dead space below the input bar on mobile
+
 ### Fixed (journal entries data leak and broken saves — issue #133)
 - **RLS enabled on `journal_entries`** — migration `20260413000006_journal_entries_rls_and_constraint.sql` calls `alter table journal_entries enable row level security`; the per-user policy added in the multitenancy migration was inert until RLS itself was switched on, meaning any authenticated user could read all entries
 - **Unique constraint fixed for multi-tenancy** — same migration drops `journal_entries_user_id_date_unique` (column order `user_id, date`) and recreates as `journal_entries_date_user_id_key` with `(date, user_id)`; the old single-column `date` constraint was already replaced in `20260413000003`, but this migration normalizes the name and column order to match the upsert conflict target

@@ -27,7 +27,7 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
 
 export default function ChatInterface({ sessionId, initialMessages, onMessageSent }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput } = useChat({
     api: "/api/chat",
@@ -54,8 +54,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   }, []);
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleInputChange(e);
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      handleInputChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
       updateMenu(e.target.value, e.target.selectionStart ?? e.target.value.length);
     },
     [handleInputChange, updateMenu]
@@ -83,32 +83,41 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (menuCommands.length === 0) return;
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       switch (e.key) {
         case "ArrowDown":
+          if (menuCommands.length === 0) return;
           e.preventDefault();
           setActiveIndex((i) => (i + 1) % menuCommands.length);
           break;
         case "ArrowUp":
+          if (menuCommands.length === 0) return;
           e.preventDefault();
           setActiveIndex((i) => (i - 1 + menuCommands.length) % menuCommands.length);
           break;
         case "Enter":
-          e.preventDefault();
-          applyCommand(menuCommands[activeIndex]);
+          if (e.shiftKey) return; // allow default newline in textarea
+          if (menuCommands.length > 0) {
+            e.preventDefault();
+            applyCommand(menuCommands[activeIndex]);
+          } else {
+            e.preventDefault();
+            handleSubmit(e as unknown as React.FormEvent);
+          }
           break;
         case "Escape":
+          if (menuCommands.length === 0) return;
           e.preventDefault();
           setMenuCommands([]);
           break;
         case "Tab":
+          if (menuCommands.length === 0) return;
           e.preventDefault();
           applyCommand(menuCommands[activeIndex]);
           break;
       }
     },
-    [menuCommands, activeIndex, applyCommand]
+    [menuCommands, activeIndex, applyCommand, handleSubmit]
   );
 
   // ── Scroll to bottom on new messages ─────────────────────────────────
@@ -116,8 +125,16 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ── Auto-resize textarea ──────────────────────────────────────────────
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
+
   return (
-    <div className="flex flex-col" style={{ height: "calc(100dvh - 8rem)" }}>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Message list */}
       <div className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
         {messages.length === 0 && (
@@ -217,8 +234,9 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
               onHover={setActiveIndex}
             />
           )}
-          <input
+          <textarea
             ref={inputRef}
+            rows={1}
             value={input}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -229,6 +247,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             aria-expanded={menuCommands.length > 0}
             className="w-full rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 focus:outline-none"
             style={{
+              resize: "none",
+              overflow: "hidden",
+              maxHeight: 200,
+              overflowY: "auto",
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               color: "var(--color-text)",

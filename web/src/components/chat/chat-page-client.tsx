@@ -96,7 +96,7 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
   }, [fetchSessions]);
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Page header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
       </div>
 
       {/* Content row: sidebar + chat */}
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-4 items-stretch flex-1 min-h-0">
         {/* Desktop history sidebar */}
         {historyOpen && (
           <div className="hidden lg:block">
@@ -190,11 +190,11 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
         )}
 
         {/* Chat interface */}
-        <div className="flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {loadingSession ? (
             <div
-              className="flex items-center justify-center"
-              style={{ height: "calc(100dvh - 8rem)", color: "var(--color-text-muted)", fontSize: 14 }}
+              className="flex flex-1 items-center justify-center"
+              style={{ color: "var(--color-text-muted)", fontSize: 14 }}
             >
               Loading conversation&hellip;
             </div>
