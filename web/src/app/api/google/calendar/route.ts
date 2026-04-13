@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { startOfTodayRFC3339, endOfTodayRFC3339, USER_TZ } from "@/lib/timezone";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+import { createClient } from "@/lib/supabase/server";
 
 export interface CalendarEvent {
   time: string;
@@ -24,7 +25,24 @@ function formatTime(dateTimeStr: string | null | undefined, dateStr: string | nu
   });
 }
 
+const today = new Date().toISOString().slice(0, 10);
+const DEMO_EVENTS: CalendarEvent[] = [
+  { time: "6:30 AM",  title: "Morning run",    calendarName: "Alex Chen", isPrimary: true, isBirthday: false },
+  { time: "9:00 AM",  title: "Team standup",   calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Google Meet" },
+  { time: "12:30 PM", title: "Lunch w/ Priya", calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Tartine Manufactory" },
+  { time: "6:00 PM",  title: "Gym — push day", calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Equinox SoMa" },
+];
+// suppress unused variable warning from linter
+void today;
+
 export async function GET() {
+  // Return mock data for demo user
+  const serverClient = await createClient();
+  const { data: { user } } = await serverClient.auth.getUser();
+  if (user?.id && user.id === process.env.DEMO_USER_ID) {
+    return NextResponse.json({ events: DEMO_EVENTS });
+  }
+
   try {
     const auth = getGoogleAuthClient();
     const calendar = google.calendar({ version: "v3", auth });

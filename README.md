@@ -475,6 +475,96 @@ mr-bridge-assistant/
 
 ---
 
+## Demo Account
+
+A shared demo account lets visitors explore the app without touching real data. The demo user ("Alex Chen, software engineer, SF") has 30 days of realistic fitness, habit, recovery, and task data pre-loaded. Data resets nightly.
+
+### Using the demo
+
+On the login page, click **"Try the demo"** — it auto-fills credentials and signs you in. No registration required.
+
+Or sign in manually:
+- **Email:** `demo@mr-bridge.app`
+- **Password:** set in your deployment's `DEMO_PASSWORD` env var (see `.env.example`)
+
+The demo account is fully interactive: toggle habits, add tasks, chat with the AI, browse fitness data. All changes are wiped and reseeded at 3 AM PT each night.
+
+**What's real vs mocked:**
+| Feature | Demo behaviour |
+|---------|----------------|
+| Habits, tasks, fitness, recovery | Real data from Supabase (seeded) |
+| Chat (AI) | Groq Llama 3.3-70b — free tier, no Claude API cost |
+| Gmail | Hardcoded mock emails |
+| Google Calendar | Hardcoded mock events |
+| Fitbit / Oura sync | Not connected — seed data covers it |
+
+---
+
+## Self-Hosting
+
+This repo is designed to run as a personal deployment. If you fork it, choose a unique name for your app before deploying to avoid conflicts.
+
+### Places that reference "mr-bridge" by name
+
+Run a global find-and-replace on these before deploying:
+
+| Location | What to change |
+|----------|----------------|
+| `web/package.json` → `"name"` | `mr-bridge-web` → your app name |
+| Vercel project name | Set in the Vercel dashboard on first deploy |
+| Supabase project name | Set when creating the project |
+| `.env` → `NEXT_PUBLIC_APP_NAME` (if used) | Your app name |
+| Any hardcoded `mr-bridge.app` domains in `.env` | Your domain |
+
+### One-time setup after forking
+
+```bash
+# 1. Install dependencies
+cd web && npm install
+pip3 install -r scripts/requirements.txt
+
+# 2. Copy and fill environment variables
+cp .env.example .env
+# Edit .env — fill in Supabase, Anthropic, Google OAuth, Groq keys
+
+# 3. Run the schema migration in Supabase SQL editor
+# Copy contents of supabase/migrations/ and run in order
+
+# 4. Get your Supabase user ID for OWNER_USER_ID
+python3 scripts/print_owner_id.py
+# Add OWNER_USER_ID=<uuid> to .env
+
+# 5. Create the demo account in Supabase Auth dashboard
+# Email: demo@mr-bridge.app (or your chosen demo email)
+# Then add DEMO_EMAIL, DEMO_PASSWORD, DEMO_USER_ID to .env
+
+# 6. Seed the demo account
+python3 scripts/seed_demo.py
+
+# 7. Add NEXT_PUBLIC_DEMO_EMAIL and NEXT_PUBLIC_DEMO_PASSWORD to .env
+# (these are exposed to the browser to power the "Try demo" button)
+```
+
+### Required env vars
+
+| Variable | Description |
+|----------|-------------|
+| `SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Same as above (browser-accessible) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-only) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key (browser) |
+| `ANTHROPIC_API_KEY` | Claude API key |
+| `GROQ_API_KEY` | Groq API key — free at console.groq.com |
+| `OWNER_USER_ID` | Your Supabase auth UUID (run `print_owner_id.py`) |
+| `DEMO_USER_ID` | Demo account's Supabase auth UUID |
+| `DEMO_EMAIL` | Demo account email |
+| `DEMO_PASSWORD` | Demo account password |
+| `NEXT_PUBLIC_DEMO_EMAIL` | Same as `DEMO_EMAIL` (exposes "Try demo" button) |
+| `NEXT_PUBLIC_DEMO_PASSWORD` | Same as `DEMO_PASSWORD` (powers auto-fill) |
+| `CRON_SECRET` | Secret for protecting cron endpoints |
+
+---
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.

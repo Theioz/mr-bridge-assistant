@@ -44,7 +44,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, upsert, log_sync, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
 
 
 FITNESS_SCOPES = ["https://www.googleapis.com/auth/fitness.body.read"]
@@ -209,11 +209,11 @@ def fetch_body_composition(creds, start_ms, end_ms) -> tuple[list[dict], dict[st
     return rows, type_to_sources
 
 
-def existing_dates(client) -> set:
+def existing_dates(client, user_id: str) -> set:
     # Skip dates that already have body-comp data from a richer source (any row with bf%)
     # and dates we've already written via google_fit (weight-only)
-    rich = client.table("fitness_log").select("date").not_.is_("body_fat_pct", "null").execute().data
-    gfit = client.table("fitness_log").select("date").eq("source", "google_fit").execute().data
+    rich = client.table("fitness_log").select("date").not_.is_("body_fat_pct", "null").eq("user_id", user_id).execute().data
+    gfit = client.table("fitness_log").select("date").eq("source", "google_fit").eq("user_id", user_id).execute().data
     return {r["date"] for r in rich} | {r["date"] for r in gfit}
 
 
@@ -275,7 +275,8 @@ def main():
         return
 
     client = get_client()
-    existing = existing_dates(client)
+    owner_user_id = get_owner_user_id()
+    existing = existing_dates(client, owner_user_id)
     new_rows = [r for r in rows if r["date"] not in existing]
 
     if not new_rows:
@@ -300,7 +301,7 @@ def main():
             return
 
     sb_rows = [
-        {**{k: v for k, v in r.items() if v is not None}, "source": "google_fit"}
+        {**{k: v for k, v in r.items() if v is not None}, "source": "google_fit", "user_id": owner_user_id}
         for r in sorted(new_rows, key=lambda x: x["date"])
     ]
     written = upsert(client, "fitness_log", sb_rows)

@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id
 from fetch_weather import fetch_weather, format_weather_line
 
 
@@ -28,6 +28,7 @@ def fmt_hrs(h) -> str:
 
 def main():
     client = get_client()
+    uid = get_owner_user_id()
     today = str(date.today())
     yesterday = str(date.today() - timedelta(days=1))
     seven_days_ago = str(date.today() - timedelta(days=7))
@@ -35,12 +36,13 @@ def main():
     # ── Query functions (closures) ─────────────────────────────────────────────
 
     def q_profile():
-        return client.table("profile").select("key,value").execute().data
+        return client.table("profile").select("key,value").eq("user_id", uid).execute().data
 
     def q_tasks():
         return (
             client.table("tasks")
             .select("title,priority,due_date,status")
+            .eq("user_id", uid)
             .eq("status", "active")
             .order("due_date", desc=False)
             .execute()
@@ -48,12 +50,13 @@ def main():
         )
 
     def q_habit_registry():
-        return client.table("habit_registry").select("id,name").eq("active", True).execute().data
+        return client.table("habit_registry").select("id,name").eq("active", True).eq("user_id", uid).execute().data
 
     def q_habits():
         return (
             client.table("habits")
             .select("habit_id,date,completed")
+            .eq("user_id", uid)
             .gte("date", seven_days_ago)
             .lte("date", today)
             .execute()
@@ -64,6 +67,7 @@ def main():
         return (
             client.table("fitness_log")
             .select("date,weight_lb,body_fat_pct,bmi,muscle_mass_lb,visceral_fat,source")
+            .eq("user_id", uid)
             .not_.is_("body_fat_pct", "null")
             .order("date", desc=True)
             .limit(2)
@@ -75,6 +79,7 @@ def main():
         return (
             client.table("workout_sessions")
             .select("activity,duration_mins,calories,avg_hr,start_time")
+            .eq("user_id", uid)
             .eq("date", yesterday)
             .order("start_time")
             .execute()
@@ -85,6 +90,7 @@ def main():
         return (
             client.table("workout_sessions")
             .select("activity,duration_mins,calories,avg_hr,start_time")
+            .eq("user_id", uid)
             .eq("date", today)
             .order("start_time")
             .execute()
@@ -95,6 +101,7 @@ def main():
         return (
             client.table("recovery_metrics")
             .select("*")
+            .eq("user_id", uid)
             .order("date", desc=True)
             .limit(1)
             .execute()
@@ -105,6 +112,7 @@ def main():
         return (
             client.table("study_log")
             .select("date,subject,duration_mins,notes")
+            .eq("user_id", uid)
             .gte("date", seven_days_ago)
             .order("date", desc=True)
             .execute()
@@ -115,6 +123,7 @@ def main():
         return (
             client.table("meal_log")
             .select("date,meal_type,notes,recipe_id")
+            .eq("user_id", uid)
             .gte("date", seven_days_ago)
             .order("date", desc=True)
             .execute()
