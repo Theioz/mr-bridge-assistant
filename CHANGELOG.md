@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (meal log route missing user_id — issue #136)
+- **`user_id` added to insert payload** — `POST /api/meals/log` now resolves the authenticated user via `supabase.auth.getUser()` and includes `user_id` in the `meal_log` insert; returns `401 Unauthorized` if no session
+- **Service client replaced** — `createServiceClient` swapped for `createClient` from `@/lib/supabase/server` so the route operates under the user's session context
+
 ### Fixed (chat de-sync — messages disappear or appear out of order on refresh — issue #132)
 - **Early user message persistence** — user message and session row are now inserted at the start of the POST handler, before `streamText` is called; `onFinish` only inserts the assistant reply; messages now survive stream errors, timeouts, and aborts
 - **`position` column on `chat_messages`** — migration `20260413000005_chat_messages_position.sql` adds a `bigint position` column; each insert derives `MAX(position) + 1` within the session so ordering is deterministic and independent of `created_at` timestamp precision
