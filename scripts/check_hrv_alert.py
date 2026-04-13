@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id, log_notification
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/dashboard"
@@ -113,6 +113,8 @@ def main() -> None:
         subprocess.run(cmd, check=True)
         set_profile_value(client, "hrv_alert_last_notified", today_str)
         print(f"[check_hrv_alert] Alert fired: {message}")
+        user_id = get_owner_user_id()
+        log_notification(client, user_id, "hrv_alert", title, message)
     except Exception as e:
         print(f"[check_hrv_alert] notify error: {e}", file=sys.stderr)
 

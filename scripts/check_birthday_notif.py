@@ -22,7 +22,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 load_dotenv(ROOT / ".env")
+from _supabase import get_client, get_owner_user_id, log_notification  # noqa: E402
+
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/dashboard"
 
@@ -97,13 +100,24 @@ def main() -> None:
             if is_birthday_event(title, cal_name):
                 birthdays_today.append(person_name(title))
 
+    try:
+        sb_client = get_client()
+        user_id: str | None = get_owner_user_id()
+    except Exception:
+        sb_client = None
+        user_id = None
+
     app_url = os.environ.get("APP_URL", "").rstrip("/")
     for name in birthdays_today:
-        cmd = ["bash", str(NOTIFY_SCRIPT), "--title", "Birthday Today", "--message", f"It's {name}'s birthday today."]
+        title = "Birthday Today"
+        body = f"It's {name}'s birthday today."
+        cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", body]
         if app_url:
             cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
         try:
             subprocess.run(cmd, check=True)
+            if sb_client and user_id:
+                log_notification(sb_client, user_id, "birthday", title, body)
         except Exception as e:
             print(f"[check_birthday_notif] notify error for {name}: {e}", file=sys.stderr)
 

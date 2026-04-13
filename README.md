@@ -84,6 +84,7 @@ flowchart LR
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); HEIC detection with user-friendly guidance; 7-day meal history
+- **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
 
 ---

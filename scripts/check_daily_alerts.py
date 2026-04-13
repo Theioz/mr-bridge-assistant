@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client
+from _supabase import get_client, get_owner_user_id, log_notification
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/tasks"
@@ -75,6 +75,11 @@ def main() -> None:
         set_profile_value(client, "task_alerts_last_notified", today_str)
         return
 
+    try:
+        user_id: str | None = get_owner_user_id()
+    except EnvironmentError:
+        user_id = None
+
     fired = 0
     for task in rows:
         due = task.get("due_date", "")
@@ -89,6 +94,8 @@ def main() -> None:
         try:
             subprocess.run(cmd, check=True)
             fired += 1
+            if user_id:
+                log_notification(client, user_id, "task_due", title, message)
         except Exception as e:
             print(f"[check_daily_alerts] notify error for task '{name}': {e}", file=sys.stderr)
 

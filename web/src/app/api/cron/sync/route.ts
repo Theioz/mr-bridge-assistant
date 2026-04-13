@@ -17,6 +17,12 @@ export async function GET(request: NextRequest) {
   const db = createServiceClient();
   const results: Record<string, unknown> = {};
 
+  // Purge notifications older than 30 days (TTL cleanup — runs once daily)
+  await db
+    .from("notifications")
+    .delete()
+    .lt("sent_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
   // Run all three syncs in parallel, skipping any synced within the last 30 minutes
   const [ouraAge, fitbitAge, googleFitAge] = await Promise.all([
     lastSyncAgeSecs(db, "oura"),

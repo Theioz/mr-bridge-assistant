@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (notification history center — issue #99)
+- **`notifications` table** — new Supabase table (`id`, `user_id`, `type`, `title`, `body`, `sent_at`, `read_at`) with RLS, per-user composite index on `(user_id, sent_at desc)`, and a partial index for unread rows; migration `20260413000007_notifications.sql` applied to live DB
+- **`log_notification` helper** in `scripts/_supabase.py` — inserts a row after each successful push notification; non-fatal (errors go to stderr only)
+- **HRV, weather, task, and birthday scripts updated** — `check_hrv_alert.py`, `check_weather_alert.py`, `check_daily_alerts.py`, `check_birthday_notif.py` all call `log_notification` with `type`, `title`, and `body` after a confirmed `subprocess.run` success; `check_birthday_notif.py` initializes its own Supabase client for this purpose
+- **30-day TTL cleanup** wired into `api/cron/sync/route.ts` (runs daily at 6 AM PST) — deletes rows where `sent_at < now() - 30 days` before syncs run; time-based rather than count-based so recent unread notifications are never silently dropped
+- **`/notifications` page** — server component at `web/src/app/(protected)/notifications/page.tsx`; fetches last 50 notifications within the 30-day window; marks all unread as read on page load via a single `UPDATE` before rendering; passes `isUnread` flag per row to the client component
+- **`NotificationList` client component** — `web/src/components/notifications/notification-list.tsx`; type filter pills (All / HRV / Weather / Tasks / Birthday); per-row icon by type; relative time display (`Just now`, `2 hours ago`, `Yesterday`, weekday, or `Apr 3`); left-border accent + bold title for unread rows at fetch time; "No notifications yet" empty state
+- **`/api/notifications/unread-count` route** — returns `{ count: number }` for unread rows within the 30-day window; called by Nav on mount and on route change
+- **Notifications nav item** — `Bell` icon added to `NAV_ITEMS` between Chat and Settings; appears in desktop sidebar and in the More bottom sheet on mobile; red dot/count badge rendered on the Bell icon when `unreadCount > 0`; badge refreshes on every route change via `useEffect([pathname])`
+
 ### Fixed (chat textarea with shift+enter + auto-expand, mobile bottom spacing — issue #134)
 - **`<input>` replaced with auto-expanding `<textarea>`** — `chat-interface.tsx` now uses a `<textarea rows={1}>` with an auto-resize effect that sets height from `scrollHeight` on every input change; capped at `max-height: 200px` with `overflow-y: auto` so the field scrolls internally rather than growing unbounded
 - **Shift+Enter inserts newlines** — `handleKeyDown` now passes through `Enter` when `shiftKey` is held, allowing multi-line input; plain Enter submits (or applies a slash command if the menu is open)
