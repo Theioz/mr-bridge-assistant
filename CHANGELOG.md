@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (ntfy.sh click-through URLs — issue #75)
+- **`scripts/notify.sh`** — new `--click-url <url>` argument; when provided, adds an `X-Click` header to the ntfy.sh curl call so tapping the notification opens the web app directly
+- **`scripts/check_hrv_alert.py`** — passes `--click-url ${APP_URL}/dashboard` to notify.sh when `APP_URL` is set
+- **`scripts/check_weather_alert.py`** — passes `--click-url ${APP_URL}/dashboard`
+- **`scripts/check_birthday_notif.py`** — passes `--click-url ${APP_URL}/dashboard`
+- **`scripts/check_daily_alerts.py`** — passes `--click-url ${APP_URL}/tasks`
+- **`scripts/check_task_due_alerts.py`** — passes `--click-url ${APP_URL}/tasks`
+- **`.github/workflows/weekly-review-nudge.yml`** — adds `Click: ${APP_URL}/weekly` header when `APP_URL` GitHub Actions secret is set
+- **`.env.example`** — added `APP_URL=https://your-app.vercel.app`; click URLs are skipped gracefully if the variable is absent
+
 ### Added (fitness goal progress charts — issue #66)
 - **Fitness Goals section in Settings** — four new fields added to `ProfileForm` in a dedicated "Fitness Goals" card: `weekly_workout_goal` (sessions/week), `weekly_active_cal_goal` (kcal/week), `weight_goal_lbs` (target lbs), `body_fat_goal_pct` (target %); stored as profile key-value pairs; inline save/delete matches existing field pattern
 - **Suggested Nutrition card** — appears in the "Nutrition Goals" section when both `weight_goal_lbs` and `body_fat_goal_pct` are set; computes macros from fitness goals using: 1 g protein/lb lean mass, 0.4 g fat/lb goal weight, 15× bodyweight calories, carbs fill the remainder; one-click "Apply" populates all four nutrition goal fields via server actions

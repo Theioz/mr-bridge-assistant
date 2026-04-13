@@ -10,8 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send weekly review notification via ntfy.sh
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APP_URL: ${{ secrets.APP_URL }}
         run: |
-          curl -s -X POST "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}" \
+          CURL_ARGS=(-s -X POST "https://ntfy.sh/$NTFY_TOPIC" \
             -H "Title: Mr. Bridge — Weekly Review" \
-            -H "Priority: high" \
-            -d "Time for your weekly review. Open Mr. Bridge and run /weekly-review."
+            -H "Priority: high")
+          if [[ -n "$APP_URL" ]]; then
+            CURL_ARGS+=(-H "Click: ${APP_URL}/weekly")
+          fi
+          curl "${CURL_ARGS[@]}" -d "Time for your weekly review. Open Mr. Bridge and run /weekly-review."

@@ -10,6 +10,7 @@ Requires: supabase, python-dotenv
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import date, timedelta
@@ -20,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from _supabase import get_client
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
+CLICK_PATH = "/dashboard"
 DEFAULT_THRESHOLD = 20  # percent
 
 
@@ -103,11 +105,12 @@ def main() -> None:
         f"HRV is {today_hrv:.0f}ms — {drop_pct:.0f}% below 7-day avg "
         f"({baseline:.0f}ms). Consider rest or deload."
     )
+    app_url = os.environ.get("APP_URL", "").rstrip("/")
+    cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
+    if app_url:
+        cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
     try:
-        subprocess.run(
-            ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message],
-            check=True,
-        )
+        subprocess.run(cmd, check=True)
         set_profile_value(client, "hrv_alert_last_notified", today_str)
         print(f"[check_hrv_alert] Alert fired: {message}")
     except Exception as e:

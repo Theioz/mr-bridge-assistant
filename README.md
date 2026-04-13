@@ -258,7 +258,7 @@ pip3 install -r scripts/requirements.txt
 Add profile data directly via the Supabase dashboard or the web interface Settings page. Recipes populate the `recipes` table; the session briefing reads `memory/meal_log.md` locally as a fallback until recipe display ships in the web interface.
 
 ### 6. Set up push notifications (Android, macOS, Windows)
-See [docs/notifications-setup.md](docs/notifications-setup.md). Add `NTFY_TOPIC` as a GitHub Actions secret for the Sunday weekly review cloud nudge.
+See [docs/notifications-setup.md](docs/notifications-setup.md). Add `NTFY_TOPIC` as a GitHub Actions secret for the Sunday weekly review cloud nudge. Optionally add `APP_URL` (your Vercel deployment URL) to both `.env` and GitHub Actions secrets — when set, tapping any notification opens the relevant page in the web app.
 
 ### 7. Connect Google Calendar + Gmail
 Open Claude Code in the project directory, run `/mcp`, and authenticate with your Google account.

@@ -15,6 +15,7 @@ Requires: supabase, python-dotenv
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import date
@@ -26,6 +27,7 @@ from _supabase import get_client
 from fetch_weather import fetch_weather
 
 NOTIFY_SCRIPT    = ROOT / "scripts" / "notify.sh"
+CLICK_PATH       = "/dashboard"
 PRECIP_THRESHOLD = 0.2    # inches
 HIGH_THRESHOLD   = 95.0   # °F
 LOW_THRESHOLD    = 28.0   # °F
@@ -50,11 +52,12 @@ def set_profile_value(client, key: str, value: str) -> None:
 
 
 def _fire(title: str, message: str) -> bool:
+    app_url = os.environ.get("APP_URL", "").rstrip("/")
+    cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
+    if app_url:
+        cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
     try:
-        subprocess.run(
-            ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message],
-            check=True,
-        )
+        subprocess.run(cmd, check=True)
         print(f"[check_weather_alert] Alert fired: {message}")
         return True
     except Exception as e:
