@@ -5,7 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-## [Unreleased]
+## [1.0.0] — 2026-04-13
+
+First personal daily-use release.
 
 ### Added (MB favicon and iOS touch icon — issue #117)
 - **`web/src/app/icon.svg`** — raw SVG monogram logo (solid indigo `#1d4ed8` background, `rx="7"` rounded corners); Next.js App Router auto-wires this as the browser favicon

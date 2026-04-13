@@ -1,6 +1,6 @@
-# Mr. Bridge — Personal Assistant
+# Mr. Bridge — Personal AI Assistant
 
-A personal AI assistant context layer for Claude Code. Syncs fitness, habit, and task data from external APIs into Supabase, delivers a structured session briefing, and tracks accountability across devices. Includes a full Next.js web interface for real-time access from any browser.
+Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs fitness, habit, task, and health data from external services into your own Supabase database, delivers a live structured briefing when you open a session, and surfaces everything through a Next.js web interface you can access from any device.
 
 ## Architecture
 
@@ -24,10 +24,11 @@ flowchart LR
         cron["cron/sync\ndaily 6am PST"]
         rs["sync/oura\nsync/fitbit\nsync/googlefit"]
         rc["api/chat"]
+        rm["api/meals"]
         rw["weather"]
         rcal["google/calendar"]
         rmail["google/gmail"]
-        pg["Dashboard · Habits\nTasks · Fitness\nChat · Journal"]
+        pg["Dashboard · Habits · Tasks\nFitness · Chat · Journal\nWeekly · Meals · Settings"]
     end
 
     subgraph ext["External APIs"]
@@ -48,7 +49,7 @@ flowchart LR
     class oura,fitbit,gfit device
     class so,sf,sg script
     class db storage
-    class rs,rc,rw,rcal,rmail route
+    class rs,rc,rm,rw,rcal,rmail route
     class pg page
     class cl,gc,gm,om extapi
     class cron cron
@@ -63,19 +64,274 @@ flowchart LR
     db --> pg
     db --> rc
     rc --> db
+    rm --> db
 
     cl --> rc
+    cl --> rm
     gc --> rcal --> pg
     gm --> rmail --> pg
     rw --> pg
     om --> rw
 ```
 
-## Purpose
+## What you get
 
-Mr. Bridge runs like infrastructure — structured over casual, quantified over qualitative, no filler. It pulls live data from Supabase at session start and delivers a concise brief before anything else. All live data is stored in the cloud and accessible from Claude Code, the web interface, or any device.
+- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, and Oura recovery scores in one view
+- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 13 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read + write, recipes, meals); slash command autocomplete
+- **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
+- **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion
+- **Fitness** — Body composition charts (weight + BF%), weekly workout frequency, active calorie chart, full workout history table; goal progress overlays
+- **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
+- **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
+- **Meals** — Daily macro summary vs goals; food photo analyzer (photo → Claude vision → macro estimate → log); 7-day meal history
+- **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
 
-## File Structure
+---
+
+## Prerequisites
+
+Have these accounts and tools ready before you start. You do not need to install anything in the repo yet.
+
+| What | Where | Notes |
+|------|-------|-------|
+| **Claude Code CLI** | `npm install -g @anthropic-ai/claude-code` | Requires Node 18+ |
+| **Anthropic API key** | [console.anthropic.com](https://console.anthropic.com) → API Keys | Billing must be enabled (Settings → Billing) |
+| **Supabase account** | [supabase.com](https://supabase.com) | Free tier is fine |
+| **Vercel account** | [vercel.com](https://vercel.com) | Free tier is fine |
+| **Google account** | [console.cloud.google.com](https://console.cloud.google.com) | For Calendar, Gmail, and optionally Google Fit |
+| **Oura account** *(optional)* | [cloud.ouraring.com](https://cloud.ouraring.com) | For sleep and recovery data |
+| **Fitbit account** *(optional)* | [dev.fitbit.com](https://dev.fitbit.com) | For body composition and workouts |
+| **ntfy app** *(optional)* | ntfy.sh | For push notifications on Android/iOS |
+
+---
+
+## Setup guide
+
+### Step 1 — Fork and clone the repo
+
+Fork the repo to your GitHub account, then clone it:
+
+```bash
+git clone --recurse-submodules https://github.com/<your-username>/mr-bridge-assistant.git
+cd mr-bridge-assistant
+```
+
+### Step 2 — Create a Supabase project
+
+1. Go to [supabase.com](https://supabase.com) → **New project**. Give it any name and choose a region close to you.
+2. Once created, go to **Settings → API**. Note these three values — you'll need them for every env file:
+   - **Project URL** — looks like `https://abcdefgh.supabase.co`
+   - **anon key** — the `anon` / `public` key (safe to use in the browser)
+   - **service_role key** — keep this secret; never expose it in client-side code
+3. Install the Supabase CLI and push the schema:
+
+```bash
+brew install supabase/tap/supabase   # macOS; see supabase.com/docs/guides/cli for other OS
+supabase login
+supabase link --project-ref <your-project-ref>   # ref is the part of the URL after https://
+supabase db push
+```
+
+This creates all 14 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, etc.).
+
+### Step 3 — Get your Anthropic API key
+
+1. Go to [console.anthropic.com](https://console.anthropic.com) → **API Keys** → **Create key**. Copy the key — it's only shown once.
+2. If you haven't added billing yet: **Settings → Billing → Add payment method**. The API requires an active billing method even on free-tier usage.
+
+### Step 4 — Set up Google Cloud OAuth
+
+This step enables Calendar, Gmail, and optionally Google Fit. It's the most involved step but only needs to be done once.
+
+**Create a Google Cloud project and enable APIs:**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → click the project dropdown → **New Project**. Name it anything (e.g. `mr-bridge`).
+2. In the left sidebar: **APIs & Services → Library**. Search for and enable each of these:
+   - **Google Calendar API**
+   - **Gmail API**
+   - **Fitness API** *(only if you use Google Fit)*
+
+**Configure the OAuth consent screen:**
+
+3. Go to **APIs & Services → OAuth consent screen** → **External** → **Create**.
+4. Fill in:
+   - App name: anything (e.g. `Mr. Bridge`)
+   - User support email: your email
+   - Developer contact email: your email
+5. Click through Scopes (no changes needed) → **Test users** → add your own Google email address. This is required while the app is in "Testing" status — without it, OAuth will be blocked.
+6. Save and continue.
+
+**Create OAuth credentials:**
+
+7. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**.
+8. Application type: **Desktop app**. Name it anything.
+9. Click **Download JSON** — save the file somewhere safe. It contains your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+**Get your refresh tokens:**
+
+10. For **Calendar + Gmail** (the main `GOOGLE_REFRESH_TOKEN`):
+```bash
+python3 scripts/setup-web-oauth.py
+```
+This opens a browser, asks you to authorize with your Google account, and prints the refresh token.
+
+11. For **Google Fit** (a separate token with fitness scopes) — only if you use Google Fit:
+```bash
+python3 scripts/sync-googlefit.py --setup
+```
+This opens a browser and prints `GOOGLE_FIT_REFRESH_TOKEN`.
+
+### Step 5 — Set up fitness integrations *(optional)*
+
+Skip any integrations you don't use. The app works with none, one, or all of them.
+
+**Oura Ring:**
+1. Go to [cloud.ouraring.com](https://cloud.ouraring.com) → **Account → Personal Access Tokens → Create token**.
+2. Copy the token — this is your `OURA_ACCESS_TOKEN`.
+
+**Fitbit:**
+1. Go to [dev.fitbit.com](https://dev.fitbit.com) → **Register an app**.
+2. Fill in: Application Name (anything), OAuth 2.0 Application Type → **Personal**, Callback URL → `http://localhost:8080/`.
+3. Save — you'll see your `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET`.
+4. Authorize and get the initial refresh token:
+```bash
+python3 scripts/sync-fitbit.py --setup
+```
+5. The refresh token rotates on every use, so it's stored in Supabase (not in an env file). Write the initial token with:
+```bash
+python3 -c "
+import sys, os; sys.path.insert(0, 'scripts')
+from dotenv import load_dotenv; load_dotenv(dotenv_path='.env')
+from _supabase import get_client
+get_client().table('profile').upsert({'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='key').execute()
+print('Done.')
+"
+```
+
+### Step 6 — Set up push notifications via ntfy.sh *(optional)*
+
+1. Install the **ntfy** app on your phone ([Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy) / [iOS](https://apps.apple.com/app/ntfy/id1625396347)).
+2. Choose a unique topic name — something like `mr-bridge-yourname-1234`. No account needed.
+3. Subscribe to your topic in the app.
+4. Set `NTFY_TOPIC` to that same string in your `.env` file.
+
+For platform-specific setup (macOS banners, Android background delivery, Windows) see [docs/notifications-setup.md](docs/notifications-setup.md).
+
+### Step 7 — Configure environment variables
+
+Two env files are required: one for Python sync scripts (root), one for the Next.js web app.
+
+```bash
+cp .env.example .env
+cp web/.env.local.example web/.env.local
+```
+
+Fill in each file using the values collected in steps 2–6. Every variable has a comment explaining where it comes from.
+
+**Root `.env`** — used by Python scripts (`sync-oura.py`, `sync-fitbit.py`, `check_hrv_alert.py`, etc.):
+
+| Variable | Where to get it |
+|----------|----------------|
+| `SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | Supabase → Settings → API → anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
+| `GOOGLE_CLIENT_ID` | Google Cloud → Credentials (from downloaded JSON) |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials (from downloaded JSON) |
+| `GOOGLE_REFRESH_TOKEN` | Output of `scripts/setup-web-oauth.py` |
+| `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
+| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
+| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
+| `FITBIT_REFRESH_TOKEN` | Output of `scripts/sync-fitbit.py --setup` *(optional; also stored in Supabase)* |
+| `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` — must match your Fitbit profile unit setting |
+| `GOOGLE_FIT_REFRESH_TOKEN` | Output of `scripts/sync-googlefit.py --setup` *(optional)* |
+| `NTFY_TOPIC` | Your chosen ntfy topic string *(optional)* |
+| `APP_URL` | Your Vercel deployment URL, e.g. `https://your-app.vercel.app` *(optional — enables notification tap-to-open)* |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+| `PICOVOICE_ACCESS_KEY` | picovoice.ai *(optional — voice interface only)* |
+
+**`web/.env.local`** — used by the Next.js app and Vercel:
+
+| Variable | Where to get it |
+|----------|----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+| `GOOGLE_CLIENT_ID` | Google Cloud → Credentials |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials |
+| `GOOGLE_REFRESH_TOKEN` | Output of `scripts/setup-web-oauth.py` |
+| `GOOGLE_FIT_REFRESH_TOKEN` | Output of `scripts/sync-googlefit.py --setup` *(optional)* |
+| `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
+| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
+| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
+| `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` *(optional)* |
+| `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
+| `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
+| `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
+
+### Step 8 — Deploy to Vercel
+
+1. Go to [vercel.com](https://vercel.com) → **New Project** → import your GitHub fork.
+2. Set the **Root Directory** to `web`.
+3. Go to **Settings → Environment Variables** and add every variable from `web/.env.local`, including `CRON_SECRET` and optionally `APP_URL`.
+4. Click **Deploy**. Vercel will auto-deploy on every push to `main` going forward.
+
+The `vercel.json` in `web/` schedules a daily sync cron at 6am PST (`0 14 * * *`) that calls `/api/cron/sync` to pull overnight Oura, Fitbit, and Google Fit data before you open the dashboard.
+
+### Step 9 — Connect Google Calendar + Gmail in Claude Code
+
+The CLI assistant uses the claude.ai hosted MCP for Calendar and Gmail (configured in `.mcp.json`).
+
+1. Open Claude Code in the project directory:
+```bash
+claude .
+```
+2. Run `/mcp` in the Claude Code session and follow the prompt to authenticate with your Google account.
+
+You only need to do this once. Claude Code will remember the auth for future sessions.
+
+### Step 10 — Seed your profile
+
+Mr. Bridge reads a flat key-value `profile` table in Supabase. Fill in your details one of two ways:
+
+- **Web app** → open the web interface → **Settings** → fill in Display Name, Home Location, Target Weight, nutrition goals, and fitness goals, then save each field.
+- **Chat** → ask Mr. Bridge: *"Set my weight goal to 160 lbs"* or *"My name is Jason"* — the AI writes these directly to Supabase.
+
+### Step 11 — First session
+
+```bash
+cd mr-bridge-assistant
+claude .
+```
+
+Mr. Bridge will sync fitness data, query Supabase, fetch your calendar and Gmail, and deliver the session briefing. On your very first run it will ask for your name if it isn't in the profile table yet.
+
+---
+
+## Slash commands
+
+| Command | Description |
+|---------|-------------|
+| `/log-habit [habits...]` | Log habit completions for today |
+| `/session-briefing` | Re-run the full session briefing on demand |
+| `/weekly-review` | Run the weekly habit + accountability summary |
+| `/stop-timer` | Stop the active study timer and log the duration |
+
+---
+
+## Web interface — local development
+
+```bash
+cd web
+npm install
+npm run dev   # http://localhost:3000
+```
+
+Requires `web/.env.local` to be filled in (see Step 7). The app runs entirely against your Supabase instance — the same data you see in production.
+
+---
+
+## File structure
 
 ```
 mr-bridge-assistant/
@@ -84,7 +340,7 @@ mr-bridge-assistant/
 ├── README.md
 ├── .env.example                           # Root env var template (Python scripts)
 ├── .gitignore
-├── .mcp.json                              # MCP servers: DeepWiki (Google Calendar + Gmail via claude.ai hosted MCP)
+├── .mcp.json                              # MCP servers: Google Calendar + Gmail via claude.ai hosted MCP
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
@@ -98,7 +354,7 @@ mr-bridge-assistant/
 │       └── 20260412000000_add_nutrition_to_meal_log.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
-│   ├── .env.local.example                 # Web app env var template (Supabase, Anthropic, Google, timezone)
+│   ├── .env.local.example                 # Web app env var template
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── (protected)/               # Auth-gated pages
@@ -111,47 +367,48 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
 │   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: photo upload, ingredient editing, macro review
-│   │   │   │   └── journal/page.tsx       # Daily journal — guided 5-prompt flow
+│   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
+│   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools: tasks, habits, fitness, profile, Gmail, Calendar read+write, recipes, meals with macros)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (13 tools)
 │   │   │   │   ├── sync/
-│   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics; returns skipped:true if OURA_ACCESS_TOKEN not set
-│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts; refresh token from profile table; returns skipped:true if unconfigured
-│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp; returns skipped:true if Google Fit env vars not set
+│   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
+│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts
+│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp
 │   │   │   │   ├── cron/
-│   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; 30-min skip window; all 3 sources in parallel
-│   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key); resolves location from profile
+│   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
+│   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
-│   │   │   │   │   ├── analyze-photo/route.ts  # POST — Claude vision macro estimation from image; image never stored
-│   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate macros from edited ingredients string (Haiku)
-│   │   │   │   │   └── log/route.ts            # POST — insert meal_log row with full nutrition fields
+│   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision macro estimation
+│   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate from edited ingredients (Haiku)
+│   │   │   │   │   └── log/route.ts             # POST — insert meal_log row
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
 │   │   │   └── login/page.tsx
 │   │   ├── components/
-│   │   │   ├── nav.tsx                    # Left sidebar (desktop); bottom tab bar on mobile: 4 primary tabs (Dashboard, Habits, Tasks, Chat) + More sheet for remaining pages
+│   │   │   ├── nav.tsx                    # Left sidebar (desktop); bottom tab bar + More sheet (mobile)
 │   │   │   ├── ui/
 │   │   │   │   └── logo.tsx               # MB monogram SVG
-│   │   │   ├── chat/                      # Chat UI with markdown rendering
+│   │   │   ├── chat/                      # Chat UI with markdown rendering + session history
 │   │   │   ├── tasks/                     # Task CRUD components
-│   │   │   ├── habits/                    # Habit toggle, add/archive UI, range-selectable history grid
-│   │   │   ├── fitness/                   # Body comp, workout freq, active cal, weight/body fat goal charts (Recharts)
+│   │   │   ├── habits/                    # Habit toggle, add/archive UI, heatmap, streak charts
+│   │   │   ├── fitness/                   # Body comp, workout freq, active cal, goal charts (Recharts)
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   └── dashboard/
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
-│   │   │       ├── sync-button.tsx        # Client component; calls all 3 sync routes in parallel; spinner + router.refresh() on completion
+│   │   │       ├── sync-button.tsx        # Calls all 3 sync routes; spinner + router.refresh()
 │   │   │       └── tasks-summary.tsx      # Active tasks card
 │   │   └── lib/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       ├── types.ts                   # TypeScript interfaces for all DB tables
 │   │       └── sync/
-│   │           ├── oura.ts                # syncOura() — all Oura endpoints, upserts recovery_metrics
-│   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; manages rotating refresh token
+│   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
+│   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; rotating refresh token
 │   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
-│   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers for sync_log table
+│   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
 │   ├── vercel.json                        # Cron: /api/cron/sync daily at 6am PST (0 14 * * *)
 │   └── package.json
 │
@@ -185,27 +442,25 @@ mr-bridge-assistant/
 ├── docs/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
 │   ├── fitness-tracker-setup.md           # Google Fit, Oura, Fitbit, Renpho setup
-│   ├── google-oauth-setup.md             # OAuth token setup + refresh guide
-│   └── gmail-multi-account.md            # POP3 aggregation + Calendar sharing setup (App Password, label ID resolution)
-│
-├── memory/                                # Local files (gitignored, archived originals)
-│   └── meal_log.md                        # Recipes — archived original; data lives in Supabase `recipes` table
+│   ├── google-oauth-setup.md              # OAuth token setup + refresh guide
+│   └── gmail-multi-account.md             # POP3 aggregation + Calendar sharing setup
 │
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
 │   ├── requirements.txt                   # Pinned Python dependencies
+│   ├── setup-web-oauth.py                 # Browser-based OAuth flow → prints GOOGLE_REFRESH_TOKEN
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
-│   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile; reusable
+│   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
-│   ├── sync-oura.py                       # Oura Ring sync → recovery_metrics + workout_sessions; endpoints: sleep, readiness, activity, spo2, stress, resilience, heartrate, workout
-│   ├── sync-fitbit.py                     # Fitbit workouts → Supabase workout_sessions
+│   ├── sync-oura.py                       # Oura Ring → recovery_metrics + workout_sessions
+│   ├── sync-fitbit.py                     # Fitbit workouts + body comp → Supabase
 │   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
-│   ├── check_weather_alert.py             # Severe weather push alerts (precip/thunder/heat/freeze/wind)
+│   ├── check_weather_alert.py             # Severe weather push alerts
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   └── update-references.sh              # Pull latest best practices submodule
 │
@@ -218,150 +473,7 @@ mr-bridge-assistant/
 
 > All live data (habits, tasks, fitness, recovery, recipes, meals) is stored in **Supabase** — not local files.
 
-## Getting Started
-
-### 1. Clone the repo
-```bash
-git clone --recurse-submodules https://github.com/<your-username>/mr-bridge-assistant.git
-cd mr-bridge-assistant
-```
-
-### 2. Set up Supabase
-1. Create a free project at [supabase.com](https://supabase.com)
-2. Install the Supabase CLI: `brew install supabase/tap/supabase`
-3. Link and push the schema:
-```bash
-supabase login
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
-
-### 3. Set up environment variables
-Two env files are required — one for Python scripts, one for the web app:
-
-```bash
-# Root — Python sync scripts
-cp .env.example .env
-
-# Web app — Next.js (Vercel reads .env.local)
-cp web/.env.local.example web/.env.local
-```
-
-Fill in each value. See [docs/google-oauth-setup.md](docs/google-oauth-setup.md) for Google credentials, [docs/fitness-tracker-setup.md](docs/fitness-tracker-setup.md) for Oura/Fitbit, and [docs/notifications-setup.md](docs/notifications-setup.md) for `NTFY_TOPIC`.
-
-### 4. Install Python dependencies
-```bash
-pip3 install -r scripts/requirements.txt
-```
-
-### 5. Populate Supabase
-Add profile data directly via the Supabase dashboard or the web interface Settings page. Recipes populate the `recipes` table; the session briefing reads `memory/meal_log.md` locally as a fallback until recipe display ships in the web interface.
-
-### 6. Set up push notifications (Android, macOS, Windows)
-See [docs/notifications-setup.md](docs/notifications-setup.md). Add `NTFY_TOPIC` as a GitHub Actions secret for the Sunday weekly review cloud nudge. Optionally add `APP_URL` (your Vercel deployment URL) to both `.env` and GitHub Actions secrets — when set, tapping any notification opens the relevant page in the web app.
-
-### 7. Connect Google Calendar + Gmail
-Open Claude Code in the project directory, run `/mcp`, and authenticate with your Google account.
-
-### 8. Open Claude Code in this directory
-```bash
-claude .
-```
-Mr. Bridge will sync fitness data, query Supabase, fetch calendar + Gmail, and deliver the session briefing.
-
-> **First time?** If the Claude CLI isn't found: `npm install -g @anthropic-ai/claude-code`
-
-## Session Workflow
-
-1. Open Claude Code in this directory
-2. Mr. Bridge syncs fitness APIs → queries Supabase → fetches calendar + Gmail
-3. Session briefing delivered: schedule, emails, tasks, habit accountability
-4. Use `/log-habit`, `/session-briefing` as needed during the session
-5. Data writes go to Supabase automatically — no manual commit needed for data
-
-## Slash Commands
-
-| Command | Description |
-|---------|-------------|
-| `/log-habit [habits...]` | Log habit completions for today |
-| `/session-briefing` | Re-run the full session briefing on demand |
-| `/weekly-review` | Run the weekly habit + accountability summary |
-| `/stop-timer` | Stop active study timer and log duration |
-
-## Feature Development Workflow
-
-Before starting any feature work:
-```bash
-bash scripts/update-references.sh   # pull latest best practices
-git checkout -b feature/<name>
-```
-
-After implementation, open a PR — direct pushes to `main` are blocked by branch protection.
-Feature backlog is tracked via GitHub Issues in your fork.
-
-## Web Interface
-
-A Next.js web app deployed on Vercel. Built against a full design system (DM Sans + Inter, indigo primary, dark CSS custom property tokens). All pages are server-rendered with `force-dynamic`; only chart/interactive components are client components.
-
-- **Dashboard** — Personalized greeting with inline date + weather (Open-Meteo, no API key); **Health Breakdown** card (full-width): readiness/sleep/activity scores, 6-up metrics row, stress/resilience row, then two 50/50 tabbed chart panels:
-  - *Fitness* tabs: Weight · Body Fat · Steps · Active Cal (each with a dashed 7-day trailing average overlay)
-  - *Sleep* tabs: Sleep Stages · HRV · Resting HR · SpO₂
-  - Window selector (7d/14d/30d/90d/1yr) and single Sync button (triggers Oura, Fitbit, Google Fit on demand) in the header
-  - Habits Today + Active Tasks side-by-side below (fixed height, inner scroll); Schedule Today + Important Emails below that; Upcoming Birthday widget
-- **Chat** — Streams Claude Sonnet responses with markdown rendering; inline tool status chips (spinner → ✓); "New chat" button; slash command autocomplete (type `/` to surface 8 built-in commands, filter by prefix, keyboard-navigable); 13 tools: tasks, habits, fitness, profile, Gmail, Calendar (read + write), recipes, meals
-- **Tasks** — Inline title editing, priority dot selector, relative due dates, completed tasks accordion
-- **Habits** — Daily check-in with indigo toggles + streak counts; 90-day heatmap; streak bar chart; weekly radial completion chart
-- **Fitness** — Dual-axis body comp chart (weight + BF%); weekly workout frequency bar chart; active cal area chart; sortable/paginated workout history table
-- **Journal** — Two-tab editor: *Reflect* (all 5 prompts visible, progress dots, 1.5s auto-save) and *Free Write* (open textarea with word count); collapsible history accordion
-- **Weekly Review** — Last 7 days at a glance: habit score + 7-day pill strip per habit with streak; tasks completed this week, still-active tasks with overdue callout; workout count/duration/calories; average readiness/sleep/HRV with per-day readiness column; body composition delta vs 7 days ago; journal entry count
-- **Meals** — Daily macro summary card (calories/protein/carbs/fat vs goals, progress bars with color coding); food photo analyzer with optional context prompt (Claude vision → macro estimation → log); 7-day meal history from Supabase
-- **Settings** — Profile key-values from Supabase `profile` table; Nutrition Goals section with a suggested macro calculator (goal mode × weight → calories; protein/fat/carbs breakdown; defaults to 1.0 g/lb protein); one-click Apply populates all nutrition goal fields
-
-**Local development:**
-```bash
-cd web
-npm install
-npm run dev   # http://localhost:3000
-```
-
-Requires `web/.env.local` with:
-```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-ANTHROPIC_API_KEY=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REFRESH_TOKEN=...
-GOOGLE_FIT_REFRESH_TOKEN=...
-OURA_ACCESS_TOKEN=...
-FITBIT_CLIENT_ID=...
-FITBIT_CLIENT_SECRET=...
-FITBIT_WEIGHT_UNIT=lbs
-USER_TIMEZONE=America/Los_Angeles
-```
-
-> **Note:** `FITBIT_REFRESH_TOKEN` is stored in the Supabase `profile` table (key: `fitbit_refresh_token`) rather than as an env var, because Fitbit rotates it on every use. Write it once with:
-> ```bash
-> python3 -c "
-> import sys, os; sys.path.insert(0, 'scripts')
-> from dotenv import load_dotenv; load_dotenv(dotenv_path='.env')
-> from _supabase import get_client
-> get_client().table('profile').upsert({'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='key').execute()
-> print('Done.')
-> "
-> ```
->
-> The Vercel cron (`*/30 * * * *`) requires `CRON_SECRET` to be set in Vercel environment variables — Vercel generates and manages this automatically when you deploy with `vercel.json` crons enabled.
-
-## Voice Interface (Jarvis Mode)
-
-See [voice/README.md](voice/README.md) for full setup. Requires Picovoice access key and `ANTHROPIC_API_KEY`.
-
-```bash
-pip install -r voice/requirements.txt
-python voice/bridge_voice.py
-```
+---
 
 ## Changelog
 
