@@ -12,6 +12,7 @@ Requires: supabase, python-dotenv
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from datetime import date, datetime, timezone
@@ -24,6 +25,7 @@ from _supabase import get_client
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CACHE_KEY = "task_notif_cache"
 DEDUP_HOURS = 24
+CLICK_PATH = "/tasks"
 
 
 def get_profile_value(client, key: str) -> str | None:
@@ -73,10 +75,11 @@ def needs_notification(task_id: str, cache: dict[str, str]) -> bool:
 
 
 def send_notify(title: str, message: str) -> None:
-    subprocess.run(
-        ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message],
-        check=True,
-    )
+    app_url = os.environ.get("APP_URL", "").rstrip("/")
+    cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
+    if app_url:
+        cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
+    subprocess.run(cmd, check=True)
 
 
 def main() -> None:

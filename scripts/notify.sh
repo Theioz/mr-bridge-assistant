@@ -1,9 +1,10 @@
 #!/bin/bash
 # Mr. Bridge — notification sender (macOS + Android)
-# Usage: ./scripts/notify.sh --title "Title" --message "Message"
+# Usage: ./scripts/notify.sh --title "Title" --message "Message" [--click-url "https://..."]
 
 TITLE="Mr. Bridge"
 MESSAGE=""
+CLICK_URL=""
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/../.env"
 
@@ -11,6 +12,7 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     --title) TITLE="$2"; shift ;;
     --message) MESSAGE="$2"; shift ;;
+    --click-url) CLICK_URL="$2"; shift ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
   shift
@@ -30,7 +32,9 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 if [[ -n "$NTFY_TOPIC" ]]; then
-  curl -s -X POST "https://ntfy.sh/$NTFY_TOPIC" \
-    -H "Title: $TITLE" \
-    -d "$MESSAGE" > /dev/null
+  CURL_ARGS=(-s -X POST "https://ntfy.sh/$NTFY_TOPIC" -H "Title: $TITLE")
+  if [[ -n "$CLICK_URL" ]]; then
+    CURL_ARGS+=(-H "Click: $CLICK_URL")
+  fi
+  curl "${CURL_ARGS[@]}" -d "$MESSAGE" > /dev/null
 fi

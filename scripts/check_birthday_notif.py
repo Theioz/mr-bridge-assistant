@@ -24,6 +24,7 @@ from googleapiclient.discovery import build
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
+CLICK_PATH = "/dashboard"
 
 
 def get_credentials() -> Credentials:
@@ -96,12 +97,13 @@ def main() -> None:
             if is_birthday_event(title, cal_name):
                 birthdays_today.append(person_name(title))
 
+    app_url = os.environ.get("APP_URL", "").rstrip("/")
     for name in birthdays_today:
+        cmd = ["bash", str(NOTIFY_SCRIPT), "--title", "Birthday Today", "--message", f"It's {name}'s birthday today."]
+        if app_url:
+            cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
         try:
-            subprocess.run(
-                ["bash", str(NOTIFY_SCRIPT), "--title", "Birthday Today", "--message", f"It's {name}'s birthday today."],
-                check=True,
-            )
+            subprocess.run(cmd, check=True)
         except Exception as e:
             print(f"[check_birthday_notif] notify error for {name}: {e}", file=sys.stderr)
 

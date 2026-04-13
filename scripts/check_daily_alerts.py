@@ -10,6 +10,7 @@ Requires: supabase, python-dotenv
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import date
@@ -20,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from _supabase import get_client
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
+CLICK_PATH = "/tasks"
 
 
 def get_profile_value(client, key: str) -> str | None:
@@ -80,11 +82,12 @@ def main() -> None:
         is_today = due == today_str
         title = "Task Due Today" if is_today else "Task Overdue"
         message = f"{name} — due {due}" if not is_today else f"{name} — due today"
+        app_url = os.environ.get("APP_URL", "").rstrip("/")
+        cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
+        if app_url:
+            cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
         try:
-            subprocess.run(
-                ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message],
-                check=True,
-            )
+            subprocess.run(cmd, check=True)
             fired += 1
         except Exception as e:
             print(f"[check_daily_alerts] notify error for task '{name}': {e}", file=sys.stderr)
