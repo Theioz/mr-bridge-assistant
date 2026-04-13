@@ -12,10 +12,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { FitnessLog } from "@/lib/types";
+import type { WindowKey } from "@/lib/window";
+import { formatDate, computeDailyTicks } from "@/lib/chart-utils";
 
 interface Props {
   data: FitnessLog[];
   windowLabel?: string;
+  windowKey: WindowKey;
 }
 
 const TOOLTIP_STYLE = {
@@ -24,7 +27,7 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: "#64748B", fontSize: 12 },
 };
 
-export function BodyCompDualChart({ data, windowLabel = "90D" }: Props) {
+export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Props) {
   const [animate, setAnimate] = useState(true);
 
   useEffect(() => {
@@ -33,10 +36,11 @@ export function BodyCompDualChart({ data, windowLabel = "90D" }: Props) {
   }, []);
 
   const chartData = data.map((d) => ({
-    date: d.date.slice(5),
+    date: formatDate(d.date),
     weight: d.weight_lb,
     bodyFat: d.body_fat_pct,
   }));
+  const ticks = computeDailyTicks(data.map((d) => d.date), windowKey);
 
   if (chartData.length === 0) {
     return (
@@ -71,7 +75,7 @@ export function BodyCompDualChart({ data, windowLabel = "90D" }: Props) {
             tick={{ fill: "#64748B", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            interval="preserveStartEnd"
+            ticks={ticks}
           />
           <YAxis
             yAxisId="weight"

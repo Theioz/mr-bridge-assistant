@@ -21,6 +21,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **Dashboard tasks query** and **tasks page active query** both filter `parent_id IS NULL` so subtasks never appear as standalone items
 - **`add_task` chat tool** accepts optional `parent_id`; system prompt updated to instruct the model to call `get_tasks` first when adding list items, then `add_task` with `parent_id`
 
+### Fixed (fitness chart date format and mobile tick density — issue #150)
+- **`web/src/lib/chart-utils.ts`** — new shared utility with `formatDate` (YYYY-MM-DD → "Apr 11"), `computeDailyTicks` (filters dates to a readable subset based on window key), `computeWeeklyTicks` (filters weekly labels based on week count), and `daysToWindowKey` (inverse of WINDOW_DAYS)
+- **Date format standardized** — all five fitness charts now use `formatDate` ("Apr 11") instead of the previous mix of `date.slice(5)` ("04-11") on body-comp/weight-goal/body-fat-goal and `toLocaleDateString` on workout-freq/active-cal-goal; the local `dayLabel` helpers in those charts were removed in favor of the shared import
+- **Mobile tick density fixed** — removed `interval={0}` from all five `<XAxis>` elements; replaced with explicit `ticks` arrays computed by `computeDailyTicks`/`computeWeeklyTicks`; density rules: 7d → all, 14d/30d → Mondays only, 90d/1yr → every 14th date; weekly mode: ≤8 weeks → all, 9–26 weeks → every 2nd, >26 weeks → every 4th
+- **`windowKey` prop added** to `BodyCompDualChart`, `WeightGoalChart`, and `BodyFatGoalChart`; `fitness/page.tsx` passes `windowKey` from `getWindow()` to all three; `WorkoutFreqChart` and `ActiveCalGoalChart` derive window key from their existing `days` prop via `daysToWindowKey`
+
 ### Added (daily/weekly toggle on fitness charts — issue #145)
 - **`GranularityToggle` component** — `web/src/components/ui/granularity-toggle.tsx`; `Daily | Weekly` pill toggle matching window-selector style; greyed out with tooltip when `disabled`
 - **`WorkoutFreqChart`** — prop changed from `weekCount` to `days: number`; `granularity` state (`daily`/`weekly`); auto-forces weekly + disables toggle when `days > 90`; daily mode plots one slot per calendar day (green `#10B981` with goal, indigo `#6366F1` without, rest day `#1E2130`); weekly mode retains existing ISO-week bucketing; x-axis shows only Monday ticks at >14d, all days at ≤14d

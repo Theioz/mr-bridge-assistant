@@ -7,12 +7,15 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { FitnessLog } from "@/lib/types";
+import type { WindowKey } from "@/lib/window";
+import { formatDate, computeDailyTicks } from "@/lib/chart-utils";
 import Link from "next/link";
 
 interface Props {
   data: FitnessLog[];
   goal?: number | null;
   windowLabel?: string;
+  windowKey: WindowKey;
 }
 
 const TOOLTIP_STYLE = {
@@ -21,7 +24,7 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: "#64748B", fontSize: 12 },
 };
 
-export function WeightGoalChart({ data, goal, windowLabel = "90D" }: Props) {
+export function WeightGoalChart({ data, goal, windowLabel = "90D", windowKey }: Props) {
   const [animate, setAnimate] = useState(true);
 
   useEffect(() => {
@@ -29,9 +32,9 @@ export function WeightGoalChart({ data, goal, windowLabel = "90D" }: Props) {
     setAnimate(!mq.matches);
   }, []);
 
-  const chartData = data
-    .filter((d) => d.weight_lb != null)
-    .map((d) => ({ date: d.date.slice(5), weight: d.weight_lb }));
+  const filtered = data.filter((d) => d.weight_lb != null);
+  const chartData = filtered.map((d) => ({ date: formatDate(d.date), weight: d.weight_lb }));
+  const ticks = computeDailyTicks(filtered.map((d) => d.date), windowKey);
 
   const latest = chartData[chartData.length - 1]?.weight ?? null;
   const hasGoal = goal != null && goal > 0;
@@ -90,7 +93,7 @@ export function WeightGoalChart({ data, goal, windowLabel = "90D" }: Props) {
               tick={{ fill: "#64748B", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
-              interval="preserveStartEnd"
+              ticks={ticks}
             />
             <YAxis
               stroke="#334155"

@@ -89,7 +89,7 @@ export default async function FitnessPage() {
       </div>
 
       {/* Body composition trend */}
-      <BodyCompDualChart data={fitnessData} windowLabel={windowKey.toUpperCase()} />
+      <BodyCompDualChart data={fitnessData} windowLabel={windowKey.toUpperCase()} windowKey={windowKey} />
 
       {/* Weekly frequency + active cal vs goals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -131,11 +131,13 @@ export default async function FitnessPage() {
           data={fitnessData}
           goal={weightGoal}
           windowLabel={windowKey.toUpperCase()}
+          windowKey={windowKey}
         />
         <BodyFatGoalChart
           data={fitnessData}
           goal={bodyFatGoal}
           windowLabel={windowKey.toUpperCase()}
+          windowKey={windowKey}
         />
       </div>
 
