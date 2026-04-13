@@ -181,7 +181,7 @@ Tools available:
 - get_fitness_summary
 - get_profile, update_profile
 - search_gmail, get_email_body (returns demo emails)
-- list_calendar_events, create_calendar_event (returns demo events)
+- list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
 - get_recipes, log_meal`
     : `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
@@ -192,6 +192,15 @@ Quantify wherever possible. Conservative estimates. Lead with the answer, then r
 Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
 When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
 When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
+
+Calendar pre-flight rules (apply before every create_calendar_event call):
+1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
+2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
+3. Only call create_calendar_event after the user has confirmed there are no conflicts or has explicitly accepted them.
+
+Calendar mutation rules:
+- delete_calendar_event: always state the event title, date, and time; require explicit user confirmation before calling.
+- update_calendar_event: always state the before/after diff; require explicit user confirmation before calling.
 
 You have access to the user's Supabase data, Gmail, and Google Calendar via tools. Use them when asked — do not tell the user you lack access to email or calendar. Never suggest these integrations aren't connected; they are.
 
@@ -206,8 +215,10 @@ Tools available:
 - update_profile: upsert one or more profile keys — use for goals, preferences, and targets agreed upon in conversation. Always tell the user what you're about to write before calling this, then confirm what was saved. For known fitness/nutrition goals, use the canonical keys so they appear in the web UI: weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal. For other goals (sleep, study, etc.) use dot-notation: sleep.goal.hrs, study.goal.mins_per_day, etc.
 - search_gmail: search Gmail with any query string, returns message IDs + metadata
 - get_email_body: fetch and decode the full plain-text body of an email by message ID
-- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
-- create_calendar_event: create a Google Calendar event on the primary calendar
+- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). Each event also includes an eventId — preserve it for delete/update calls. By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
+- create_calendar_event: create a Google Calendar event on the primary calendar. Pre-flight required: call list_calendar_events first, check for time overlaps and duplicate titles on the target date, surface any conflicts to the user, and confirm before proceeding.
+- delete_calendar_event: delete an event by eventId. Always state title/date/time and require explicit user confirmation first.
+- update_calendar_event: patch an existing event by eventId (summary, start, end, location, description). Always state before/after and require explicit user confirmation first.
 - get_recipes: search saved recipes by ingredient, name, or tag; omit query to return all
 - log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link, notes, and estimated macros (calories, protein_g, carbs_g, fat_g) — include macros whenever the user mentions them or you can estimate from the food description
 
@@ -626,7 +637,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
 
     list_calendar_events: tool({
       description:
-        "List events across all Google Calendars for a given date range. Defaults to today only. Use this whenever the user asks what's on their calendar, schedule, or agenda.",
+        "List events across all Google Calendars for a given date range. Defaults to today only. Use this whenever the user asks what's on their calendar, schedule, or agenda. Each event in the result includes an eventId field — preserve and use it when calling delete_calendar_event or update_calendar_event.",
       parameters: jsonSchema<{ date?: string; days?: number }>({
         type: "object",
         properties: {
@@ -683,6 +694,7 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
                   return true;
                 })
                 .map((e) => ({
+                  eventId: e.id ?? "",
                   title: e.summary ?? "(No title)",
                   start: e.start?.dateTime ?? e.start?.date ?? "",
                   end: e.end?.dateTime ?? e.end?.date ?? "",
@@ -794,6 +806,99 @@ Recipes and meal planning are in scope. When asked what to cook given ingredient
           };
         } catch (err) {
           return { error: err instanceof Error ? err.message : "Failed to create calendar event" };
+        }
+      },
+    }),
+
+    delete_calendar_event: tool({
+      description:
+        "Delete a Google Calendar event by eventId. IMPORTANT: before calling this tool, always state the event title, date, and time to the user and require explicit confirmation. Never delete without confirmed user intent.",
+      parameters: jsonSchema<{ eventId: string }>({
+        type: "object",
+        required: ["eventId"],
+        properties: {
+          eventId: { type: "string", description: "The eventId from list_calendar_events." },
+        },
+      }),
+      execute: async ({ eventId }) => {
+        if (isDemo) {
+          return { deleted: true, eventId, note: "Demo mode — event not deleted from real calendar." };
+        }
+        try {
+          const auth = getGoogleAuthClient();
+          const calendar = google.calendar({ version: "v3", auth });
+          await calendar.events.delete({ calendarId: "primary", eventId });
+          return { deleted: true, eventId };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Failed to delete calendar event" };
+        }
+      },
+    }),
+
+    update_calendar_event: tool({
+      description:
+        "Update an existing Google Calendar event by eventId. Accepts any subset of: summary (title), start (RFC3339 dateTime or date), end (RFC3339 dateTime or date), location, description. IMPORTANT: before calling, state the before/after changes and require explicit user confirmation.",
+      parameters: jsonSchema<{
+        eventId: string;
+        summary?: string;
+        start?: string;
+        end?: string;
+        location?: string;
+        description?: string;
+      }>({
+        type: "object",
+        required: ["eventId"],
+        properties: {
+          eventId: { type: "string", description: "The eventId from list_calendar_events." },
+          summary: { type: "string", description: "New event title." },
+          start: { type: "string", description: "New start as RFC3339 dateTime (e.g. 2026-04-15T09:00:00) or date (YYYY-MM-DD) for all-day." },
+          end: { type: "string", description: "New end as RFC3339 dateTime or date." },
+          location: { type: "string", description: "New location string." },
+          description: { type: "string", description: "New description/notes." },
+        },
+      }),
+      execute: async ({ eventId, summary, start, end, location, description }) => {
+        if (isDemo) {
+          return { updated: true, eventId, note: "Demo mode — event not updated in real calendar." };
+        }
+        try {
+          const auth = getGoogleAuthClient();
+          const calendar = google.calendar({ version: "v3", auth });
+          const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
+
+          // Build patch body — only include fields that were provided
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const requestBody: Record<string, any> = {};
+          if (summary !== undefined) requestBody.summary = summary;
+          if (location !== undefined) requestBody.location = location;
+          if (description !== undefined) requestBody.description = description;
+          if (start !== undefined) {
+            requestBody.start = /T/.test(start)
+              ? { dateTime: start.length === 16 ? `${start}:00` : start, timeZone: tz }
+              : { date: start };
+          }
+          if (end !== undefined) {
+            requestBody.end = /T/.test(end)
+              ? { dateTime: end.length === 16 ? `${end}:00` : end, timeZone: tz }
+              : { date: end };
+          }
+
+          const res = await calendar.events.patch({
+            calendarId: "primary",
+            eventId,
+            requestBody,
+          });
+
+          return {
+            updated: true,
+            eventId: res.data.id,
+            title: res.data.summary,
+            start: res.data.start,
+            end: res.data.end,
+            link: res.data.htmlLink,
+          };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Failed to update calendar event" };
         }
       },
     }),
