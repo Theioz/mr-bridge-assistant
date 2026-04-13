@@ -16,9 +16,17 @@ import { getWindow } from "@/lib/window";
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
   const supabase = await createClient();
-  await supabase
-    .from("habits")
-    .upsert({ habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
+  if (completed) {
+    await supabase
+      .from("habits")
+      .upsert({ habit_id: habitId, date, completed: true }, { onConflict: "habit_id,date" });
+  } else {
+    await supabase
+      .from("habits")
+      .delete()
+      .eq("habit_id", habitId)
+      .eq("date", date);
+  }
   revalidatePath("/habits");
   revalidatePath("/dashboard");
 }
@@ -51,9 +59,10 @@ export default async function HabitsPage() {
   const historyDays = Math.min(days, 90);
   const historyDates = getLastNDays(historyDays);
 
-  const [registryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
+  const [registryResult, allRegistryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
     await Promise.all([
       supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
+      supabase.from("habit_registry").select("*"),
       supabase.from("habits").select("*").eq("date", today),
       // Window-based history
       supabase
@@ -76,6 +85,7 @@ export default async function HabitsPage() {
     ]);
 
   const habits = (registryResult.data ?? []) as HabitRegistry[];
+  const allRegistry = (allRegistryResult.data ?? []) as HabitRegistry[];
   const todayLogs = (todayLogsResult.data ?? []) as HabitLog[];
   const historyLogs = (historyLogsResult.data ?? []) as HabitLog[];
   const allCompleted = (allCompletedResult.data ?? []) as { habit_id: string; date: string }[];
@@ -118,7 +128,7 @@ export default async function HabitsPage() {
           {/* Charts: Heatmap (2/3) + Radial (1/3) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <HabitHeatmap habits={habits} logs={historyLogs} dates={heatmapDates} />
+              <HabitHeatmap habits={habits} registry={allRegistry} logs={historyLogs} dates={heatmapDates} />
             </div>
             <div>
               <RadialCompletion habits={habits} weekLogs={weekLogs} />
