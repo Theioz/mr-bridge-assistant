@@ -129,7 +129,8 @@ def seed_habits(client):
 
 
 def seed_tasks(client):
-    tasks = [
+    # Parent tasks inserted first so we can capture IDs for subtasks
+    parent_tasks = [
         # Active
         {"title": "Ship v2 of the search API",         "priority": "high",   "status": "active",    "category": "work",     "due_date": today_minus(-3)},
         {"title": "Write design doc for auth refactor","priority": "high",   "status": "active",    "category": "work",     "due_date": today_minus(-7)},
@@ -143,9 +144,36 @@ def seed_tasks(client):
         {"title": "30-min cardio 3x this week",       "priority": "medium", "status": "completed", "category": "fitness",  "due_date": None, "completed_at": f"{today_minus(1)}T07:15:00Z"},
         {"title": "Update resume",                    "priority": "low",    "status": "completed", "category": "personal", "due_date": None, "completed_at": f"{today_minus(5)}T20:00:00Z"},
     ]
-    rows = [{"user_id": DEMO_USER_ID, **t} for t in tasks]
-    client.table("tasks").insert(rows).execute()
-    print(f"[seed] tasks: {len(rows)}")
+    parent_rows = [{"user_id": DEMO_USER_ID, **t} for t in parent_tasks]
+    resp = client.table("tasks").insert(parent_rows).execute()
+    id_map = {r["title"]: r["id"] for r in resp.data}
+
+    # Subtasks referencing parent_id
+    subtask_defs = [
+        # Under "Ship v2 of the search API"
+        ("Ship v2 of the search API", [
+            {"title": "Update OpenAPI spec",          "priority": "high",   "status": "completed", "category": "work", "completed_at": f"{today_minus(4)}T11:00:00Z"},
+            {"title": "Add rate-limit headers to v2", "priority": "high",   "status": "active",    "category": "work"},
+            {"title": "Write migration guide",        "priority": "medium", "status": "active",    "category": "work"},
+        ]),
+        # Under "Migrate PostgreSQL to v16"
+        ("Migrate PostgreSQL to v16", [
+            {"title": "Test upgrade on staging",      "priority": "high",   "status": "completed", "category": "work", "completed_at": f"{today_minus(6)}T14:00:00Z"},
+            {"title": "Schedule maintenance window",  "priority": "medium", "status": "active",    "category": "work"},
+        ]),
+    ]
+    subtask_rows = []
+    for parent_title, children in subtask_defs:
+        pid = id_map.get(parent_title)
+        if pid:
+            for child in children:
+                subtask_rows.append({"user_id": DEMO_USER_ID, "parent_id": pid, **child})
+
+    if subtask_rows:
+        client.table("tasks").insert(subtask_rows).execute()
+
+    total = len(parent_rows) + len(subtask_rows)
+    print(f"[seed] tasks: {len(parent_rows)} tasks + {len(subtask_rows)} subtasks = {total} total")
 
 
 def seed_fitness(client):
@@ -225,22 +253,28 @@ def seed_recovery(client):
         total_sleep = round(base_sleep + rng.uniform(-0.6, 0.6), 2)
         deep  = round(total_sleep * rng.uniform(0.18, 0.22), 2)
         rem   = round(total_sleep * rng.uniform(0.22, 0.27), 2)
+        light = round(total_sleep * rng.uniform(0.40, 0.50), 2)
         hrv   = int(rng.gauss(52, 8))
         rhr   = int(rng.gauss(58, 3))
         readiness = int(min(100, max(40, rng.gauss(72, 10))))
         sleep_score = int(min(100, max(40, rng.gauss(74, 8))))
         rows.append({
-            "user_id":        DEMO_USER_ID,
-            "date":           d,
-            "total_sleep_hrs":total_sleep,
-            "deep_hrs":       deep,
-            "rem_hrs":        rem,
-            "avg_hrv":        max(25, hrv),
-            "resting_hr":     max(45, rhr),
-            "readiness":      readiness,
-            "sleep_score":    sleep_score,
-            "active_cal":     int(rng.gauss(450, 80)),
-            "source":         "oura",
+            "user_id":          DEMO_USER_ID,
+            "date":             d,
+            "total_sleep_hrs":  total_sleep,
+            "deep_hrs":         deep,
+            "rem_hrs":          rem,
+            "light_hrs":        light,
+            "avg_hrv":          max(25, hrv),
+            "resting_hr":       max(45, rhr),
+            "readiness":        readiness,
+            "sleep_score":      sleep_score,
+            "active_cal":       int(rng.gauss(450, 80)),
+            "steps":            int(rng.gauss(9200, 1800)),
+            "activity_score":   int(min(100, max(40, rng.gauss(74, 12)))),
+            "spo2_avg":         round(rng.uniform(96.0, 99.0), 1),
+            "body_temp_delta":  round(rng.uniform(-0.4, 0.4), 2),
+            "source":           "oura",
         })
     client.table("recovery_metrics").upsert(rows, on_conflict="user_id,date").execute()
     print(f"[seed] recovery_metrics: {len(rows)} nights")
@@ -326,8 +360,242 @@ def seed_recipes(client):
         },
     ]
     rows = [{"user_id": DEMO_USER_ID, **r} for r in recipes]
-    client.table("recipes").insert(rows).execute()
+    resp = client.table("recipes").insert(rows).execute()
     print(f"[seed] recipes: {len(rows)} recipes")
+    # Return name → id map for meal_log seeding
+    return {r["name"]: r["id"] for r in resp.data}
+
+
+def seed_meal_log(client, recipe_ids: dict):
+    """14 days of meals with realistic macros. Some entries reference saved recipes."""
+    rng = random.Random(31)
+
+    # (meal_type, recipe_name_or_None, notes, cal, protein, carbs, fat, fiber, sodium)
+    meal_templates = [
+        ("breakfast", "Overnight Oats",              "Pre-workout",              420, 28, 54, 10, 7, 180),
+        ("breakfast", None,                           "Scrambled eggs + toast",   380, 30, 32,  9, 2, 520),
+        ("breakfast", None,                           "Greek yogurt + granola",   350, 22, 42,  8, 3, 210),
+        ("lunch",     "High-Protein Chicken Bowl",    "Meal prep",                540, 48, 52,  9, 5, 680),
+        ("lunch",     "Spicy Tuna Rice Bowl",         None,                       490, 42, 50,  8, 3, 760),
+        ("lunch",     None,                           "Turkey wrap + side salad", 510, 38, 45, 12, 4, 890),
+        ("dinner",    "Greek Salmon with Tzatziki",   None,                       520, 46, 18, 24, 3, 640),
+        ("dinner",    "Turkey and Veggie Stir Fry",   "Extra rice",               580, 50, 58, 12, 6, 820),
+        ("dinner",    None,                           "Steak + roasted potatoes", 650, 52, 44, 22, 4, 740),
+        ("snack",     None,                           "Protein shake",            180, 25,  8,  4, 1, 220),
+        ("snack",     None,                           "Apple + peanut butter",    210,  6, 28,  9, 4,  80),
+    ]
+
+    rows = []
+    for days_ago in range(14, 0, -1):
+        d = today_minus(days_ago)
+        # 2–3 meals + occasional snack per day
+        daily_templates = rng.sample(meal_templates[:3], 1)      # 1 breakfast
+        daily_templates += rng.sample(meal_templates[3:6], 1)    # 1 lunch
+        daily_templates += rng.sample(meal_templates[6:9], 1)    # 1 dinner
+        if rng.random() < 0.55:
+            daily_templates += rng.sample(meal_templates[9:], 1) # occasional snack
+
+        for meal_type, recipe_name, notes, cal, protein, carbs, fat, fiber, sodium in daily_templates:
+            rid = recipe_ids.get(recipe_name) if recipe_name else None
+            rows.append({
+                "user_id":   DEMO_USER_ID,
+                "date":      d,
+                "meal_type": meal_type,
+                "recipe_id": rid,
+                "notes":     notes,
+                "calories":  cal  + rng.randint(-30, 30),
+                "protein_g": round(protein + rng.uniform(-3, 3), 1),
+                "carbs_g":   round(carbs   + rng.uniform(-5, 5), 1),
+                "fat_g":     round(fat     + rng.uniform(-2, 2), 1),
+                "fiber_g":   round(fiber   + rng.uniform(-0.5, 0.5), 1),
+                "sodium_mg": sodium + rng.randint(-80, 80),
+                "source":    "manual",
+            })
+
+    client.table("meal_log").insert(rows).execute()
+    print(f"[seed] meal_log: {len(rows)} entries over 14 days")
+
+
+def seed_notifications(client):
+    """Recent notifications spanning the past week — mix of types, some read."""
+    rows = [
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "hrv_alert",
+            "title":   "HRV declining",
+            "body":    "HRV has dropped 3 consecutive days (58 → 52 → 46 ms). Prioritize recovery today.",
+            "sent_at": f"{today_minus(1)}T07:05:00Z",
+            "read_at": f"{today_minus(1)}T07:31:00Z",
+        },
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "task_due",
+            "title":   "Task overdue: Schedule dentist appointment",
+            "body":    "This task was due 10 days ago and is still open.",
+            "sent_at": f"{today_minus(2)}T09:00:00Z",
+            "read_at": None,
+        },
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "journal_reminder",
+            "title":   "Journal reminder",
+            "body":    "You haven't journaled in 4 days.",
+            "sent_at": f"{today_minus(3)}T20:00:00Z",
+            "read_at": f"{today_minus(3)}T20:45:00Z",
+        },
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "weather",
+            "title":   "Rain expected today",
+            "body":    "0.4 in of rain forecast for San Francisco. Move outdoor run indoors or reschedule.",
+            "sent_at": f"{today_minus(4)}T06:30:00Z",
+            "read_at": f"{today_minus(4)}T06:32:00Z",
+        },
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "task_due",
+            "title":   "Task due soon: Ship v2 of the search API",
+            "body":    "Due in 3 days.",
+            "sent_at": f"{today_minus(0)}T09:00:00Z",
+            "read_at": None,
+        },
+        {
+            "user_id": DEMO_USER_ID,
+            "type":    "birthday",
+            "title":   "Upcoming birthday",
+            "body":    "Mom's birthday is in 5 days.",
+            "sent_at": f"{today_minus(0)}T08:00:00Z",
+            "read_at": None,
+        },
+    ]
+    client.table("notifications").insert(rows).execute()
+    print(f"[seed] notifications: {len(rows)} entries")
+
+
+def seed_workout_plans(client):
+    """One week of structured workout plans (Mon–Fri) anchored around today."""
+    # Find the most recent Monday as anchor
+    today = date.today()
+    days_since_monday = today.weekday()  # 0=Mon
+    monday = today - timedelta(days=days_since_monday)
+
+    plans = [
+        {
+            "offset": 0,  # Monday
+            "name": "Push Day",
+            "warmup": [
+                {"exercise": "Arm circles",        "sets": 2, "reps": "30 sec", "notes": "Forward + backward"},
+                {"exercise": "Band pull-aparts",   "sets": 2, "reps": "15"},
+                {"exercise": "Light DB press",     "sets": 1, "reps": "15",    "weight_lbs": 25},
+            ],
+            "workout": [
+                {"exercise": "Barbell bench press","sets": 4, "reps": "6–8",   "weight_lbs": 185},
+                {"exercise": "Incline DB press",   "sets": 3, "reps": "10",    "weight_lbs": 65},
+                {"exercise": "Shoulder press",     "sets": 3, "reps": "10",    "weight_lbs": 115},
+                {"exercise": "Lateral raises",     "sets": 3, "reps": "15",    "weight_lbs": 20},
+                {"exercise": "Tricep pushdowns",   "sets": 3, "reps": "12",    "weight_lbs": 50},
+            ],
+            "cooldown": [
+                {"exercise": "Chest stretch",      "sets": 1, "reps": "60 sec"},
+                {"exercise": "Shoulder cross-body","sets": 1, "reps": "30 sec each"},
+            ],
+            "notes": "Focus on progressive overload — add 5 lb to bench if all 4 sets felt clean.",
+        },
+        {
+            "offset": 1,  # Tuesday
+            "name": "Pull Day",
+            "warmup": [
+                {"exercise": "Cat-cow",            "sets": 2, "reps": "10"},
+                {"exercise": "Scapular retractions","sets": 2,"reps": "15"},
+                {"exercise": "Face pulls",         "sets": 2, "reps": "15",    "weight_lbs": 30},
+            ],
+            "workout": [
+                {"exercise": "Barbell row",        "sets": 4, "reps": "6–8",   "weight_lbs": 165},
+                {"exercise": "Lat pulldown",       "sets": 3, "reps": "10",    "weight_lbs": 130},
+                {"exercise": "Seated cable row",   "sets": 3, "reps": "12",    "weight_lbs": 120},
+                {"exercise": "DB curl",            "sets": 3, "reps": "12",    "weight_lbs": 35},
+                {"exercise": "Hammer curl",        "sets": 2, "reps": "15",    "weight_lbs": 30},
+            ],
+            "cooldown": [
+                {"exercise": "Lat stretch",        "sets": 1, "reps": "45 sec each"},
+                {"exercise": "Bicep wall stretch", "sets": 1, "reps": "30 sec each"},
+            ],
+            "notes": None,
+        },
+        {
+            "offset": 2,  # Wednesday
+            "name": "Zone 2 Cardio",
+            "warmup": [
+                {"exercise": "Easy walk",          "sets": 1, "reps": "5 min"},
+            ],
+            "workout": [
+                {"exercise": "Treadmill run",      "sets": 1, "reps": "35 min", "notes": "HR 130–145 bpm, conversational pace"},
+            ],
+            "cooldown": [
+                {"exercise": "Walk",               "sets": 1, "reps": "5 min"},
+                {"exercise": "Hip flexor stretch", "sets": 1, "reps": "45 sec each"},
+                {"exercise": "Calf stretch",       "sets": 1, "reps": "30 sec each"},
+            ],
+            "notes": "Recovery-focused day. Keep HR below 145.",
+        },
+        {
+            "offset": 3,  # Thursday
+            "name": "Leg Day",
+            "warmup": [
+                {"exercise": "Leg swings",         "sets": 2, "reps": "20 each"},
+                {"exercise": "Goblet squat",       "sets": 2, "reps": "10",    "weight_lbs": 35},
+                {"exercise": "Hip circles",        "sets": 1, "reps": "10 each"},
+            ],
+            "workout": [
+                {"exercise": "Back squat",         "sets": 4, "reps": "6–8",   "weight_lbs": 205},
+                {"exercise": "Romanian deadlift",  "sets": 3, "reps": "10",    "weight_lbs": 175},
+                {"exercise": "Leg press",          "sets": 3, "reps": "12",    "weight_lbs": 270},
+                {"exercise": "Walking lunges",     "sets": 3, "reps": "12 each","weight_lbs": 40},
+                {"exercise": "Leg curl",           "sets": 3, "reps": "12",    "weight_lbs": 80},
+                {"exercise": "Calf raise",         "sets": 4, "reps": "15",    "weight_lbs": 160},
+            ],
+            "cooldown": [
+                {"exercise": "Pigeon pose",        "sets": 1, "reps": "60 sec each"},
+                {"exercise": "Quad stretch",       "sets": 1, "reps": "30 sec each"},
+                {"exercise": "Hamstring stretch",  "sets": 1, "reps": "45 sec each"},
+            ],
+            "notes": "Squat form check: knees tracking over toes, depth to parallel minimum.",
+        },
+        {
+            "offset": 4,  # Friday
+            "name": "Upper Accessory + Core",
+            "warmup": [
+                {"exercise": "Resistance band row","sets": 2, "reps": "15"},
+                {"exercise": "Thoracic rotation",  "sets": 2, "reps": "10 each"},
+            ],
+            "workout": [
+                {"exercise": "Pull-ups",           "sets": 4, "reps": "max",   "notes": "Bodyweight — aim for 8+"},
+                {"exercise": "DB shoulder press",  "sets": 3, "reps": "12",    "weight_lbs": 55},
+                {"exercise": "Cable face pull",    "sets": 3, "reps": "15",    "weight_lbs": 40},
+                {"exercise": "Plank",              "sets": 3, "reps": "45 sec"},
+                {"exercise": "Dead bug",           "sets": 3, "reps": "10 each"},
+                {"exercise": "Cable crunch",       "sets": 3, "reps": "15",    "weight_lbs": 60},
+            ],
+            "cooldown": [
+                {"exercise": "Child's pose",       "sets": 1, "reps": "60 sec"},
+                {"exercise": "Doorway chest stretch","sets": 1,"reps": "30 sec each"},
+            ],
+            "notes": "Deload week option: drop all weights by 20% and focus on form.",
+        },
+    ]
+
+    rows = []
+    for p in plans:
+        offset = p.pop("offset")
+        plan_date = str(monday + timedelta(days=offset))
+        rows.append({
+            "user_id":  DEMO_USER_ID,
+            "date":     plan_date,
+            **p,
+        })
+
+    client.table("workout_plans").upsert(rows, on_conflict="user_id,date").execute()
+    print(f"[seed] workout_plans: {len(rows)} plans (Mon–Fri current week)")
 
 
 def main():
@@ -343,7 +611,10 @@ def main():
     seed_recovery(client)
     seed_study_log(client)
     seed_journal(client)
-    seed_recipes(client)
+    recipe_ids = seed_recipes(client)
+    seed_meal_log(client, recipe_ids)
+    seed_notifications(client)
+    seed_workout_plans(client)
     print("[seed] Done.")
 
 
