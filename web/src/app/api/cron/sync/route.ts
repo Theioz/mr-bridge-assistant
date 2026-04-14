@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { syncOura } from "@/lib/sync/oura";
 import { syncFitbit } from "@/lib/sync/fitbit";
 import { syncGoogleFit } from "@/lib/sync/googlefit";
+import { syncStocks } from "@/lib/sync/stocks";
 import { lastSyncAgeSecs } from "@/lib/sync/log";
 
 const SKIP_WINDOW_SECS = 30 * 60; // 30 minutes — same as run-syncs.py
@@ -68,6 +69,28 @@ export async function GET(request: NextRequest) {
   }
 
   await Promise.all(tasks);
+
+  // Stocks sync — no skip window; EOD data doesn't change intraday
+  const { data: watchlistRow } = await db
+    .from("profile")
+    .select("value")
+    .eq("user_id", ownerUserId)
+    .eq("key", "stock_watchlist")
+    .single();
+
+  const stockTickers: string[] = watchlistRow?.value
+    ? (JSON.parse(watchlistRow.value) as string[])
+    : [];
+
+  if (stockTickers.length > 0) {
+    try {
+      results.stocks = await syncStocks(db, ownerUserId, stockTickers);
+    } catch (e) {
+      results.stocks = { error: (e as Error).message };
+    }
+  } else {
+    results.stocks = { skipped: true, reason: "empty watchlist" };
+  }
 
   return NextResponse.json({ success: true, results });
 }
