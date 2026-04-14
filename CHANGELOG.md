@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **`README.md`** — replaced Mermaid architecture diagram with D2-rendered SVG (`docs/architecture.svg`); diagram now includes Renpho, Polygon.io/stocks pipeline, Notifications page, ntfy.sh alert scripts, and all 10 pages (#182)
+
+### Added
+- **`docs/architecture.d2`** — D2 source for the architecture diagram; left-to-right layout with colour-coded containers (data sources, sync layer, Supabase hub, Next.js/Vercel, external APIs, alert scripts)
+- **`docs/architecture.svg`** — rendered SVG output from `d2 --theme=200`
+
 ### Added (meal scanner redesign — issue #199)
 - **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — redesigned Scanner tab as a multi-scan session: scan multiple labels or food photos, see combined macros live, then log directly, split into meal prep containers, or hand off to Chat with nutrition context pre-filled; includes manual entry fallback on scan error, per-item ingredient editing with re-estimation, and navigation guard when leaving with unsaved scans
 - **`web/src/app/api/meals/log/route.ts`** — added `count` field to POST body; when `count > 1`, inserts multiple identical rows (used by meal prep to log N containers in one request)
@@ -15,7 +22,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **`web/src/components/meals/MealsClient.tsx`** — added navigation guard: intercepts tab switches away from Scanner when unsaved scans exist; shows inline banner with "Keep scanning" / "Discard and leave" options
 
 ### Added (stock watchlist dashboard widget — issue #142)
-- **`supabase/migrations/`** — `stocks_cache` table: per-user ticker cache with `price`, `change_abs`, `change_pct`, `sparkline` JSONB (7-day EOD bars), and `fetched_at`; RLS restricts to owner
+- **`supabase/migrations/20260414000002_add_stocks_cache.sql`** — `stocks_cache` table: per-user ticker cache with `price`, `change_abs`, `change_pct`, `sparkline` JSONB (7-day EOD bars), and `fetched_at`; RLS restricts to owner
 - **`web/src/lib/types.ts`** — added `StocksCache` interface
 - **`web/src/lib/sync/stocks.ts`** — shared Polygon.io helper (`syncStocks`); fetches `/v2/aggs/ticker/{T}/prev` for price/change and `/v2/aggs/ticker/{T}/range/1/day` for 14-day window trimmed to last 7 trading bars; upserts to `stocks_cache`
 - **`web/src/app/api/stocks/refresh/route.ts`** — authenticated POST handler; reads `stock_watchlist` from `profile` and calls `syncStocks`; returns `{ updated }`
