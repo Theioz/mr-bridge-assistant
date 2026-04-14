@@ -12,6 +12,7 @@ interface MealLogBody {
   fiber_g?: number;
   sodium_mg?: number;
   source?: string;
+  count?: number;
 }
 
 export async function POST(req: Request) {
@@ -31,30 +32,46 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data, error } = await supabase
-    .from("meal_log")
-    .insert({
-      user_id: user.id,
-      meal_type: body.meal_type,
-      notes: body.notes ?? null,
-      date: body.date ?? todayString(),
-      calories: body.calories ?? null,
-      protein_g: body.protein_g ?? null,
-      carbs_g: body.carbs_g ?? null,
-      fat_g: body.fat_g ?? null,
-      fiber_g: body.fiber_g ?? null,
-      sodium_mg: body.sodium_mg ?? null,
-      source: body.source ?? "manual",
-    })
-    .select()
-    .single();
+  const count = typeof body.count === "number" && body.count > 1 ? Math.round(body.count) : 1;
+
+  const rowBase = {
+    user_id: user.id,
+    meal_type: body.meal_type,
+    notes: body.notes ?? null,
+    date: body.date ?? todayString(),
+    calories: body.calories ?? null,
+    protein_g: body.protein_g ?? null,
+    carbs_g: body.carbs_g ?? null,
+    fat_g: body.fat_g ?? null,
+    fiber_g: body.fiber_g ?? null,
+    sodium_mg: body.sodium_mg ?? null,
+    source: body.source ?? "manual",
+  };
+
+  if (count === 1) {
+    const { data, error } = await supabase
+      .from("meal_log")
+      .insert(rowBase)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[meals/log] Supabase error:", error);
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    return Response.json(data, { status: 201 });
+  }
+
+  const rows = Array.from({ length: count }, () => ({ ...rowBase }));
+  const { data, error } = await supabase.from("meal_log").insert(rows).select();
 
   if (error) {
     console.error("[meals/log] Supabase error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  return Response.json(data, { status: 201 });
+  return Response.json({ count: data?.length ?? count }, { status: 201 });
 }
 
 interface MealLogPatchBody {

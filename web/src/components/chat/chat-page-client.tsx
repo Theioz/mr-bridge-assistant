@@ -35,11 +35,21 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
 
   const [sessions, setSessions] = useState<SessionPreview[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
+  const [chatPrefill, setChatPrefill] = useState<string | null>(null);
 
   // Hydrate desktop panel state from localStorage after mount
   useEffect(() => {
     const stored = localStorage.getItem("chatHistoryOpen");
     if (stored !== null) setHistoryOpen(stored === "true");
+  }, []);
+
+  // Read prefill from Scanner → Chat handoff
+  useEffect(() => {
+    const prefill = sessionStorage.getItem("chatPrefill");
+    if (prefill) {
+      sessionStorage.removeItem("chatPrefill");
+      setChatPrefill(prefill);
+    }
   }, []);
 
   // Persist activeSessionId to sessionStorage on every change (belt-and-suspenders)
@@ -332,6 +342,7 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
               hasMore={hasMore}
               loadingMore={loadingMore}
               onLoadMore={handleLoadMore}
+              initialInput={chatPrefill ?? undefined}
             />
           )}
         </div>

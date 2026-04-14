@@ -949,6 +949,28 @@ export default function MealsClient({
   macroTotals,
 }: Props) {
   const [tab, setTab] = useState<Tab>("today");
+  const [unsavedScanCount, setUnsavedScanCount] = useState(0);
+  const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+
+  function handleTabClick(id: Tab) {
+    if (id !== "scanner" && tab === "scanner" && unsavedScanCount > 0) {
+      setPendingTab(id);
+      return;
+    }
+    setTab(id);
+  }
+
+  function confirmLeave() {
+    setUnsavedScanCount(0);
+    if (pendingTab) {
+      setTab(pendingTab);
+      setPendingTab(null);
+    }
+  }
+
+  function cancelLeave() {
+    setPendingTab(null);
+  }
 
   return (
     <div className="space-y-5">
@@ -962,7 +984,7 @@ export default function MealsClient({
           return (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => handleTabClick(id)}
               className="flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150"
               style={{
                 background: active ? "var(--color-primary)" : "transparent",
@@ -977,6 +999,54 @@ export default function MealsClient({
         })}
       </div>
 
+      {/* Navigation guard banner */}
+      {pendingTab && unsavedScanCount > 0 && (
+        <div
+          className="flex items-center gap-3 rounded-lg px-4 py-3"
+          style={{
+            background: "var(--color-warning, #f59e0b)22",
+            border: "1px solid var(--color-warning, #f59e0b)",
+            fontSize: 13,
+            color: "var(--color-text)",
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            You have {unsavedScanCount} unsaved scan{unsavedScanCount !== 1 ? "s" : ""}.
+          </span>
+          <button
+            onClick={cancelLeave}
+            className="rounded-lg transition-opacity active:opacity-70"
+            style={{
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 500,
+              padding: "5px 10px",
+              border: "none",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Keep scanning
+          </button>
+          <button
+            onClick={confirmLeave}
+            className="rounded-lg transition-opacity active:opacity-70"
+            style={{
+              background: "transparent",
+              color: "var(--color-text-muted)",
+              fontSize: 12,
+              padding: "5px 10px",
+              border: "1px solid var(--color-border)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Discard and leave
+          </button>
+        </div>
+      )}
+
       {/* Tab panels */}
       {tab === "today" && (
         <TodayTab
@@ -986,7 +1056,9 @@ export default function MealsClient({
         />
       )}
       {tab === "recipes" && <RecipesTab recipes={recipes} />}
-      {tab === "scanner" && <FoodPhotoAnalyzer />}
+      {tab === "scanner" && (
+        <FoodPhotoAnalyzer onUnsavedItems={(count) => setUnsavedScanCount(count)} />
+      )}
       {tab === "plan" && (
         <PlanTab macroTotals={macroTotals} macroGoals={macroGoals} />
       )}
