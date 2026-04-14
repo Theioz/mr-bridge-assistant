@@ -1318,28 +1318,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     });
   }
 
-  // Build system value:
-  // - Demo (Groq): plain string — Groq doesn't support cacheControl.
-  // - Non-demo (Anthropic): two content blocks. Block 1 is the large static rules block
-  //   marked ephemeral so Anthropic caches it across users and days. Block 2 is the tiny
-  //   dynamic block (date + name) processed fresh each turn. This prevents daily cache busts
-  //   caused by todayString() appearing in the previously-cached monolithic prompt.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const systemValue: any = isDemo
+  // Build system prompt string. AI SDK v4 requires system to be a plain string.
+  const systemValue = isDemo
     ? demoSystemPrompt
-    : [
-        {
-          type: "text",
-          text: STATIC_SYSTEM_PROMPT,
-          experimental_providerMetadata: {
-            anthropic: { cacheControl: { type: "ephemeral" } },
-          },
-        },
-        {
-          type: "text",
-          text: dynamicPromptBlock,
-        },
-      ];
+    : `${STATIC_SYSTEM_PROMPT}\n\n${dynamicPromptBlock}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
