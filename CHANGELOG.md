@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (centralized meal hub with tabs and get_today_meals tool — issue #163)
+- **`web/src/components/meals/MealsClient.tsx`** — new "use client" component wrapping the entire meals experience in four pill-style tabs (Today, Recipes, Scanner, Plan); tab state managed locally, default tab is Today
+- **Tab: Today** — today's meals grouped by type with macro totals, inline macro progress bars (replicates MacroSummaryCard logic from server-fetched props), quick-log form with meal type + description + collapsible macro fields (calories/protein/carbs/fat), log-via-chat nudge
+- **Tab: Recipes** — client-side searchable list of saved recipes filtered on name/tags/ingredients; each card collapses/expands to reveal ingredients; "Use this recipe" button prompts for meal type then POSTs to `/api/meals/log`
+- **Tab: Scanner** — mounts `FoodPhotoAnalyzer` as-is (pre-upload context textarea already implemented)
+- **Tab: Plan** — ingredient textarea; on submit POSTs to new `/api/meals/suggest`; displays 2–3 Claude-generated suggestion cards with macros, saved-recipe badge, and "Log this" inline logging
+- **`web/src/app/api/meals/suggest/route.ts`** — new POST endpoint; auth-guarded; fetches saved recipes and dietary preferences from profile; calls `generateObject` with Claude Sonnet 4.6 to return 2–3 meal suggestions calibrated to remaining macro budget; flags saved-recipe matches with `isSaved: true` and `recipeId`
+- **`web/src/app/api/chat/route.ts`** — added `get_today_meals` tool (read-only, no-arg query of today's `meal_log` entries); removed `log_meal` tool (meal logging is now exclusively done through the Meals tab UI); updated system prompt to instruct Mr. Bridge to call `get_today_meals` before making any claim about today's intake, and to redirect meal-logging requests to the Meals tab
+- **`web/src/app/(protected)/meals/page.tsx`** — refactored from a monolithic server-rendered page to a thin data-fetching layer; now fetches meals, recipes, and profile (macro goals) in parallel and passes computed props (`todayMeals`, `pastMeals`, `macroTotals`, `macroGoals`, `recipes`) to `MealsClient`; past-6-day log renders below the tab container
+
 ### Added (loading skeletons for all protected routes — issue #164)
 - **`web/src/app/(protected)/dashboard/loading.tsx`** — header + health breakdown chart + 2×2 card grid
 - **`web/src/app/(protected)/fitness/loading.tsx`** — header + window selector strip + 2×2 chart grid

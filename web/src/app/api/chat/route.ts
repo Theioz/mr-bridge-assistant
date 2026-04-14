@@ -238,7 +238,7 @@ Tools available:
 - get_profile, update_profile
 - search_gmail, get_email_body (returns demo emails)
 - list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
-- get_recipes, log_meal`
+- get_recipes, get_today_meals`
     : `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
 ${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : 'If you learn the user\'s name during the conversation, use it naturally going forward.'}
@@ -276,9 +276,12 @@ Tools available:
 - delete_calendar_event: delete an event by eventId. Always state title/date/time and require explicit user confirmation first.
 - update_calendar_event: patch an existing event by eventId (summary, start, end, location, description). Always state before/after and require explicit user confirmation first.
 - get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
-- log_meal: log a meal by type (breakfast/lunch/dinner/snack) with optional recipe link, notes, and estimated macros (calories, protein_g, carbs_g, fat_g) — include macros whenever the user mentions them or you can estimate from the food description
+- get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
 
 Recipes and meal planning are in scope.
+
+Meal logging is done through the Meals tab in the web interface — do not attempt to log meals yourself. If the user asks you to log a meal, tell them to use the Meals tab. You can still read today's logged meals via get_today_meals to give accurate nutrition advice.
+Before making any claim about what the user has or hasn't eaten today, always call get_today_meals first.
 
 Ingredient assumptions: Unless the user states otherwise in this conversation, assume the only ingredients available are bare essentials — salt, pepper, neutral oil, olive oil, butter, garlic, onion, basic dry spices (cumin, paprika, oregano, chili flake, cinnamon, etc.), flour, sugar, baking soda/powder, vinegar, soy sauce, and stock/broth. Do not assume proteins, produce, dairy, or specialty ingredients are on hand.
 
@@ -997,50 +1000,21 @@ When asked what to cook or for recipe ideas:
       },
     }),
 
-    log_meal: tool({
-      description: "Log a meal to the meal_log table. Include estimated macros (calories, protein_g, carbs_g, fat_g) whenever the user mentions them or you can estimate them from the food description.",
-      parameters: jsonSchema<{
-        meal_type: "breakfast" | "lunch" | "dinner" | "snack";
-        notes?: string;
-        recipe_id?: string;
-        date?: string;
-        calories?: number;
-        protein_g?: number;
-        carbs_g?: number;
-        fat_g?: number;
-      }>({
+    get_today_meals: tool({
+      description: "Get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.",
+      parameters: jsonSchema<Record<string, never>>({
         type: "object",
-        required: ["meal_type"],
-        properties: {
-          meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "Meal type." },
-          notes: { type: "string", description: "Free-text meal description." },
-          recipe_id: { type: "string", description: "UUID of a saved recipe." },
-          date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
-          calories: { type: "number", description: "Estimated calories." },
-          protein_g: { type: "number", description: "Estimated protein in grams." },
-          carbs_g: { type: "number", description: "Estimated carbohydrates in grams." },
-          fat_g: { type: "number", description: "Estimated fat in grams." },
-        },
+        properties: {},
       }),
-      execute: async ({ meal_type, notes, recipe_id, date, calories, protein_g, carbs_g, fat_g }) => {
-        const { data, error } = await supabase
+      execute: async () => {
+        const today = todayString();
+        let q = supabase
           .from("meal_log")
-          .insert({
-            user_id: userId,
-            meal_type,
-            notes: notes ?? null,
-            recipe_id: recipe_id ?? null,
-            date: date ?? todayString(),
-            calories: calories ?? null,
-            protein_g: protein_g ?? null,
-            carbs_g: carbs_g ?? null,
-            fat_g: fat_g ?? null,
-            source: "chat",
-          })
-          .select()
-          .single();
-        if (error) return { error: error.message };
-        return data;
+          .select("meal_type, notes, calories, protein_g, carbs_g, fat_g, recipes(name)")
+          .eq("date", today);
+        if (userId) q = q.eq("user_id", userId);
+        const { data } = await q;
+        return data ?? [];
       },
     }),
   };
