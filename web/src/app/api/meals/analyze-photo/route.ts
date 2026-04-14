@@ -29,6 +29,23 @@ const FoodAnalysisSchema = z.object({
 
 export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema>;
 
+const NutritionLabelSchema = z.object({
+  product_name: z.string().describe("Product or food name if visible on the label"),
+  serving_size: z.string().describe("Serving size as printed, e.g. '1 cup (240ml)' or '28g'"),
+  servings_per_container: z.number().nullable().describe("Servings per container if printed"),
+  calories: z.number().int().describe("Calories per serving as printed"),
+  protein_g: z.number().describe("Protein in grams per serving"),
+  carbs_g: z.number().describe("Total carbohydrates in grams per serving"),
+  fat_g: z.number().describe("Total fat in grams per serving"),
+  fiber_g: z.number().nullable().describe("Dietary fiber in grams per serving"),
+  sugar_g: z.number().nullable().describe("Total sugars in grams per serving"),
+  sodium_mg: z.number().nullable().describe("Sodium in milligrams per serving"),
+  readable: z.boolean().describe("Whether the label was clearly readable"),
+  notes: z.string().describe("Any caveats, e.g. 'label partially obscured' or 'daily value % used where grams not shown'"),
+});
+
+export type NutritionLabel = z.infer<typeof NutritionLabelSchema>;
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -50,6 +67,9 @@ export async function POST(req: Request) {
 
   const userPromptRaw = formData.get("prompt");
   const userPrompt = typeof userPromptRaw === "string" ? userPromptRaw.trim() : "";
+
+  const modeRaw = formData.get("mode");
+  const mode = modeRaw === "label" ? "label" : "food";
 
   // Validate file type
   if (!imageFile.type.startsWith("image/")) {
@@ -77,6 +97,31 @@ export async function POST(req: Request) {
   const mimeType = imageFile.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
   try {
+    if (mode === "label") {
+      const { object } = await generateObject({
+        model: anthropic("claude-sonnet-4-6"),
+        schema: NutritionLabelSchema,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                image: base64,
+                mimeType,
+              },
+              {
+                type: "text",
+                text: `Read the nutrition facts label in this image precisely. Extract the exact printed values — do not estimate. If a value is not clearly legible, set it to null. Set readable to false if the label is too blurry, obscured, or not a nutrition facts label.`,
+              },
+            ],
+          },
+        ],
+      });
+
+      return Response.json({ mode: "label", ...object });
+    }
+
     const { object } = await generateObject({
       model: anthropic("claude-sonnet-4-6"),
       schema: FoodAnalysisSchema,
@@ -109,7 +154,7 @@ Instructions:
       ],
     });
 
-    return Response.json(object);
+    return Response.json({ mode: "food", ...object });
   } catch (err) {
     console.error("[analyze-photo] Claude error:", err);
     return Response.json(
