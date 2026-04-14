@@ -141,10 +141,10 @@ When creating multiple calendar events, work one week at a time. After completin
 If a task will require more than 12 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
 Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
 
-Calendar pre-flight rules (apply before every create_calendar_event call):
+Calendar pre-flight rules (apply before every create_calendar_event or assign_workout call):
 1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
 2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
-3. Only call create_calendar_event after the user has confirmed there are no conflicts or has explicitly accepted them.
+3. Only call create_calendar_event or assign_workout after the user has confirmed there are no conflicts or has explicitly accepted them.
 
 Calendar mutation rules:
 - delete_calendar_event: always state the event title, date, and time; require explicit user confirmation before calling.
@@ -170,6 +170,9 @@ Tools available:
 - get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
 - get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
 - get_session_history: fetch earlier messages from this chat session. Ask the user before calling: "Should I pull earlier messages from this session for more context?"
+- get_workout_plan: fetch this week's workout plan (Mon–Sun). Call before making any suggestion or edit to the program.
+- assign_workout: upsert one day's workout plan to Supabase and create/update the Google Calendar event. Pre-flight required: call list_calendar_events first, check for overlaps and duplicate Workout titles on that date, surface conflicts to the user, and confirm before proceeding.
+- update_workout_exercise: patch a single exercise within a day's plan by name (case-insensitive) and refresh the calendar event description.
 
 Recipes and meal planning are in scope.
 
@@ -1151,7 +1154,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     }),
 
     assign_workout: tool({
-      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. When update_calendar is true and no start_time is provided, ask the user what time their workout will be before calling. If the result includes calendar_conflicts, surface them to the user and ask whether to proceed — then call again with skip_conflict_check: true if they confirm.",
+      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool.",
       parameters: jsonSchema<{
         date: string;
         warmup: WorkoutExercise[];
@@ -1161,7 +1164,6 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         start_time?: string;
         end_time?: string;
         update_calendar?: boolean;
-        skip_conflict_check?: boolean;
       }>({
         type: "object",
         required: ["date", "warmup", "workout", "cooldown"],
@@ -1171,13 +1173,12 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           workout: { type: "array", items: { type: "object" }, description: "Main workout exercises." },
           cooldown: { type: "array", items: { type: "object" }, description: "Cool-down exercises." },
           notes: { type: "string", description: "Optional plan notes." },
-          start_time: { type: "string", description: "Workout start time in HH:MM (24h) format. Ask the user if not provided and update_calendar is true." },
+          start_time: { type: "string", description: "Workout start time in HH:MM (24h) format." },
           end_time: { type: "string", description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour." },
           update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
-          skip_conflict_check: { type: "boolean", description: "Skip conflict detection and book regardless. Only set true after the user has been shown conflicts and confirmed they want to proceed." },
         },
       }),
-      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true, skip_conflict_check = false }) => {
+      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
         if (!userId) return { error: "Not authenticated" };
         if (isDemo) return { demo: true, note: "Demo mode — plan not saved." };
 
@@ -1201,65 +1202,19 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
             let startObj: object;
             let endObj: object;
-            let startISO: string | null = null;
-            let endISO: string | null = null;
-
             if (start_time) {
               const computedEnd = end_time ?? (() => {
                 const [h, m] = start_time.split(":").map(Number);
                 return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
               })();
-              startISO = `${date}T${start_time}:00`;
-              endISO = `${date}T${computedEnd}:00`;
-              startObj = { dateTime: startISO, timeZone: tz };
-              endObj = { dateTime: endISO, timeZone: tz };
+              startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
+              endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
             } else {
               startObj = { date };
               endObj = { date };
             }
 
-            const eventId: string | null = upserted.calendar_event_id ?? null;
-
-            // Conflict check — only for new events with a known time window
-            if (!skip_conflict_check && !eventId && startISO && endISO) {
-              const calListRes = await withTimeout(
-                calendar.calendarList.list({ minAccessRole: "reader" }),
-                8000,
-                "calendarList"
-              );
-              const calIds = (calListRes.data.items ?? [])
-                .filter((c) => c.primary || c.accessRole === "owner")
-                .map((c) => c.id!);
-
-              const conflictArrays = await Promise.all(
-                calIds.map(async (calId) => {
-                  const res = await withTimeout(
-                    calendar.events.list({
-                      calendarId: calId,
-                      timeMin: `${startISO}`,
-                      timeMax: `${endISO}`,
-                      singleEvents: true,
-                    }),
-                    8000,
-                    "events.list"
-                  );
-                  return (res.data.items ?? [])
-                    .filter((e) => e.status !== "cancelled" && !/^Workout\s*—/i.test(e.summary ?? ""))
-                    .map((e) => ({
-                      eventId: e.id,
-                      title: e.summary ?? "(No title)",
-                      start: e.start?.dateTime ?? e.start?.date ?? "",
-                      end: e.end?.dateTime ?? e.end?.date ?? "",
-                    }));
-                })
-              );
-
-              const conflicts = conflictArrays.flat();
-              if (conflicts.length > 0) {
-                return { ...upserted, calendar_conflicts: conflicts, calendar_note: "Plan saved to Supabase. Calendar event NOT created — conflicts detected. Surface these to the user and call again with skip_conflict_check: true if they confirm." };
-              }
-            }
-
+            let eventId: string | null = upserted.calendar_event_id ?? null;
             if (eventId) {
               await withTimeout(
                 calendar.events.patch({
@@ -1279,13 +1234,13 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
                 8000,
                 "calendar insert"
               );
-              const newEventId = res.data.id ?? null;
+              eventId = res.data.id ?? null;
               await supabase
                 .from("workout_plans")
-                .update({ calendar_event_id: newEventId })
+                .update({ calendar_event_id: eventId })
                 .eq("user_id", userId)
                 .eq("date", date);
-              upserted.calendar_event_id = newEventId;
+              upserted.calendar_event_id = eventId;
             }
           } catch (calErr) {
             return { ...upserted, calendar_warning: calErr instanceof Error ? calErr.message : "Calendar sync failed" };
