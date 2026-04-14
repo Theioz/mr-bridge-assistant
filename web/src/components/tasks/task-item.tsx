@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { Archive, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import type { Task, Subtask } from "@/lib/types";
+import { todayString } from "@/lib/timezone";
 
 const PRIORITY_COLOR: Record<string, string> = {
   high:   "var(--color-danger)",
@@ -11,10 +12,11 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
+  const today = todayString();
   const diff = Math.round(
-    (new Date(dateStr + "T00:00:00").getTime() - Date.now()) / 86_400_000
+    (new Date(dateStr + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86_400_000
   );
-  if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, urgent: true };
+  if (diff < 0)   return { label: `${Math.abs(diff)}d overdue`, urgent: true  };
   if (diff === 0) return { label: "Today",    urgent: true  };
   if (diff === 1) return { label: "Tomorrow", urgent: false };
   if (diff <= 7)  return { label: `${diff}d`, urgent: false };

@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (task due date label off-by-one — issue #184)
+- **`web/src/components/tasks/task-item.tsx`** — `relativeDue` now compares two midnights using `todayString()` from `@/lib/timezone` instead of subtracting `Date.now()`, eliminating the off-by-one that showed tomorrow's tasks as "Today" late in the evening
+
 ### Fixed (tasks tab broken by relational join — issue #172)
 - **`web/src/app/(protected)/tasks/page.tsx`** — replaced `tasks!tasks_parent_id_fkey` relational join (which silently errored when the FK constraint name didn't match) with a separate subtasks query merged in JS; added `console.error` logging for all three query results so future failures surface in server logs
 - **`web/src/lib/types.ts`** — updated `Task.subtasks` from `Subtask[]` to `Task[]` to match the two-query merge approach
