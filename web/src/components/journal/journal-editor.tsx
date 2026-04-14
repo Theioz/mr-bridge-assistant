@@ -61,7 +61,6 @@ export default function JournalEditor({
   const [responses, setResponses]   = useState<JournalResponses>(initialResponses);
   const [freeWrite, setFreeWrite]   = useState(initialFreeWrite);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [submitted, setSubmitted]   = useState(false);
   const [, startTransition]         = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,16 +96,15 @@ export default function JournalEditor({
     scheduleAutoSave(responses, value);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = null;
-    triggerSave(responses, freeWrite);
+    setSaveStatus("saving");
+    await saveAction(date, responses, freeWrite);
+    setSaveStatus("saved");
     setResponses({});
     setFreeWrite("");
-    setSubmitted(true);
-    document.getElementById("journal-history")?.scrollIntoView({ behavior: "smooth" });
     onSubmit?.();
-    setTimeout(() => setSubmitted(false), 3000);
   }
 
   // Clear debounce on unmount
@@ -157,15 +155,7 @@ export default function JournalEditor({
         </span>
       </div>
 
-      {/* Confirmation banner */}
-      {submitted ? (
-        <div className="p-5 flex items-center justify-center" style={{ minHeight: 120 }}>
-          <p className="text-sm font-medium" style={{ color: "var(--color-positive)" }}>
-            Entry saved.
-          </p>
-        </div>
-      ) : (
-        <>
+      <>
           {/* Reflect tab */}
           {tab === "reflect" && (
             <div className="p-5 space-y-5">
@@ -258,7 +248,6 @@ export default function JournalEditor({
             </button>
           </div>
         </>
-      )}
     </div>
   );
 }

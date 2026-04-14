@@ -14,9 +14,11 @@ const PROMPT_LABELS: Record<string, string> = {
 
 interface Props {
   entries: JournalEntry[];
+  today?: string;
+  onEdit?: (entry: JournalEntry) => void;
 }
 
-export default function JournalHistory({ entries }: Props) {
+export default function JournalHistory({ entries, today, onEdit }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   function toggle(id: string) {
@@ -29,20 +31,23 @@ export default function JournalHistory({ entries }: Props) {
 
   if (entries.length === 0) {
     return (
-      <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No past entries yet.</p>
+      <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No entries yet.</p>
     );
   }
 
   return (
     <div className="space-y-2">
       {entries.map((entry) => {
-        const isOpen = expanded.has(entry.id);
-        const date   = new Date(entry.date + "T00:00:00");
-        const dateLabel = date.toLocaleDateString("en-US", {
-          weekday: "short",
-          month:   "short",
-          day:     "numeric",
-        });
+        const isOpen    = expanded.has(entry.id);
+        const isToday   = today && entry.date === today;
+        const date      = new Date(entry.date + "T00:00:00");
+        const dateLabel = isToday
+          ? "Today"
+          : date.toLocaleDateString("en-US", {
+              weekday: "short",
+              month:   "short",
+              day:     "numeric",
+            });
 
         // Preview: first filled reflect response or first line of free write
         const preview =
@@ -61,32 +66,47 @@ export default function JournalHistory({ entries }: Props) {
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             {/* Accordion header */}
-            <button
-              className="w-full flex items-center gap-3 px-4 py-3 text-left"
-              onClick={() => toggle(entry.id)}
-            >
-              <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>
-                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
-
-              <span
-                className="text-xs font-medium flex-shrink-0"
-                style={{ color: "var(--color-text-muted)", minWidth: 88 }}
+            <div className="flex items-center">
+              <button
+                className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                onClick={() => toggle(entry.id)}
               >
-                {dateLabel}
-              </span>
+                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>
+                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </span>
 
-              {!isOpen && (
                 <span
-                  className="text-sm truncate"
+                  className="text-xs font-medium flex-shrink-0"
+                  style={{
+                    color:    isToday ? "var(--color-primary)" : "var(--color-text-muted)",
+                    minWidth: 88,
+                  }}
+                >
+                  {dateLabel}
+                </span>
+
+                {!isOpen && (
+                  <span
+                    className="text-sm truncate"
+                    style={{ color: "var(--color-text-faint)" }}
+                  >
+                    {preview
+                      ? preview.slice(0, 80) + (preview.length > 80 ? "…" : "")
+                      : "No responses"}
+                  </span>
+                )}
+              </button>
+
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(entry)}
+                  className="px-4 py-3 text-xs flex-shrink-0"
                   style={{ color: "var(--color-text-faint)" }}
                 >
-                  {preview
-                    ? preview.slice(0, 80) + (preview.length > 80 ? "…" : "")
-                    : "No responses"}
-                </span>
+                  Edit
+                </button>
               )}
-            </button>
+            </div>
 
             {/* Expanded body */}
             {isOpen && (
