@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (radial wheel clipping on mobile — issue #170)
+- **`web/src/components/habits/radial-completion.tsx`** — increased `ResponsiveContainer` height from 220 → 260; reduced `outerRadius` from 90 → 80 to prevent outer rings from overflowing the card on 390px viewports
+
 ### Added (nutrition facts label scanner with serving multiplier and daily macro context — issue #165)
 - **`web/src/app/api/meals/analyze-photo/route.ts`** — added `NutritionLabelSchema` (product name, serving size, servings per container, calories, protein, carbs, fat, fiber, sugar, sodium, readable flag, notes); added optional `mode` form field (`food` | `label`, default `food`); in label mode calls `generateObject` with `NutritionLabelSchema` and an exact-read prompt; both modes now return `{ mode, ...object }` so the client can distinguish
 - **`web/src/app/api/meals/today-totals/route.ts`** — new auth-gated GET route; queries `meal_log` for today's date and returns summed `calories / protein_g / carbs_g / fat_g`
