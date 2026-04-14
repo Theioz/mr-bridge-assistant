@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (tasks tab broken by relational join — issue #172)
+- **`web/src/app/(protected)/tasks/page.tsx`** — replaced `tasks!tasks_parent_id_fkey` relational join (which silently errored when the FK constraint name didn't match) with a separate subtasks query merged in JS; added `console.error` logging for all three query results so future failures surface in server logs
+- **`web/src/lib/types.ts`** — updated `Task.subtasks` from `Subtask[]` to `Task[]` to match the two-query merge approach
+
 ### Added (journal editor Submit button — issue #178)
 - **`web/src/components/journal/journal-editor.tsx`** — added explicit Submit button below the Reflect and Free Write tab content; on click flushes any pending debounce, saves immediately, clears form fields, shows a 3-second "Entry saved." confirmation banner, and scrolls to past entries
 - **`web/src/app/(protected)/journal/page.tsx`** — added `id="journal-history"` to the past-entries section so the editor can scroll to it after submit
