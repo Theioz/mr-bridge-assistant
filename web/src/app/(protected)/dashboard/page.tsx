@@ -186,6 +186,16 @@ export default async function DashboardPage() {
         windowLabel={windowKey.toUpperCase()}
       />
 
+      {/* ── Schedule + Watchlist: live time-bounded data ─────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ScheduleToday />
+        <WatchlistWidget
+          rows={stocksRows}
+          hasApiKey={!!process.env.POLYGON_API_KEY}
+          refreshAction={refreshStocks}
+        />
+      </div>
+
       {/* ── Habits + Tasks: fixed height, scrollable ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HabitsCheckin
@@ -198,18 +208,8 @@ export default async function DashboardPage() {
         <TasksSummary tasks={tasks} />
       </div>
 
-      {/* ── Watchlist ────────────────────────────────────────────────── */}
-      <WatchlistWidget
-        rows={stocksRows}
-        hasApiKey={!!process.env.POLYGON_API_KEY}
-        refreshAction={refreshStocks}
-      />
-
-      {/* ── Schedule + Emails ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ScheduleToday />
-        <ImportantEmails />
-      </div>
+      {/* ── Emails ───────────────────────────────────────────────────── */}
+      <ImportantEmails />
 
     </div>
   );

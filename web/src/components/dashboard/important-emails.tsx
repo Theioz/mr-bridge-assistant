@@ -41,14 +41,38 @@ export default function ImportantEmails() {
       ) : emails.length > 0 ? (
         <div className="divide-y divide-neutral-800/50">
           {emails.map((email, i) => (
-            <div key={i} className="py-2 first:pt-0 last:pb-0 min-w-0">
-              <p className="text-xs text-neutral-400 truncate">
-                {email.from}
-                {email.account === "professional" && (
-                  <span className="ml-1.5 text-neutral-600 text-[10px]">work</span>
+            <div key={i} className="py-2.5 first:pt-0 last:pb-0 min-w-0">
+              <div className="flex items-baseline justify-between gap-3 mb-0.5">
+                <p className="text-xs text-neutral-400 truncate">
+                  {email.from}
+                  {email.account === "professional" && (
+                    <span className="ml-1.5 text-neutral-600 text-[10px]">work</span>
+                  )}
+                </p>
+                {email.receivedAt && (
+                  <p className="text-[10px] text-neutral-600 shrink-0">
+                    {new Date(email.receivedAt).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </p>
                 )}
-              </p>
-              <p className="text-sm text-neutral-200 truncate mt-0.5">{email.subject}</p>
+              </div>
+              <p className="text-sm text-neutral-200 truncate">{email.subject}</p>
+              {email.snippet && (
+                <p
+                  className="mt-1 text-xs text-neutral-500"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {email.snippet}
+                </p>
+              )}
             </div>
           ))}
         </div>

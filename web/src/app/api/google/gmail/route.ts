@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export interface EmailSummary {
   from: string;
   subject: string;
+  snippet?: string;
   receivedAt: string;
   account: "personal" | "professional";
 }
@@ -23,10 +24,10 @@ function getHeader(headers: { name?: string | null; value?: string | null }[], n
 }
 
 const DEMO_EMAILS: EmailSummary[] = [
-  { from: "UPS Tracking", subject: "Your package is out for delivery today",        receivedAt: "Mon, 13 Apr 2026 08:14:00 -0700", account: "personal" },
-  { from: "Alaska Airlines", subject: "Flight Confirmation: SFO → SEA Apr 20",     receivedAt: "Thu, 10 Apr 2026 11:02:00 -0700", account: "personal" },
-  { from: "Figma",          subject: "Action required: Accept team invite",         receivedAt: "Mon, 13 Apr 2026 09:47:00 -0700", account: "professional" },
-  { from: "DocuSign",       subject: "Invoice #4421 — please sign",                 receivedAt: "Fri, 11 Apr 2026 15:12:00 -0700", account: "professional" },
+  { from: "UPS Tracking",   subject: "Your package is out for delivery today",   snippet: "Hi Alex, your package is out for delivery today. Estimated delivery: today by 8pm. Track at ups.com.",                                    receivedAt: "Mon, 13 Apr 2026 08:14:00 -0700", account: "personal" },
+  { from: "Alaska Airlines", subject: "Flight Confirmation: SFO → SEA Apr 20",  snippet: "Your flight AS 321 on April 20 from San Francisco (SFO) to Seattle (SEA) is confirmed. Departs 7:45am, arrives 9:50am. Code: KXZP94.",    receivedAt: "Thu, 10 Apr 2026 11:02:00 -0700", account: "personal" },
+  { from: "Figma",          subject: "Action required: Accept team invite",       snippet: "Lena Park has invited you to join the 'Product Design' team on Figma. Click here to accept the invitation.",                                receivedAt: "Mon, 13 Apr 2026 09:47:00 -0700", account: "professional" },
+  { from: "DocuSign",       subject: "Invoice #4421 — please sign",              snippet: "Alex Chen, a document has been sent to you for signature by Acme Corp. Invoice #4421 for $1,240.00. This request expires in 7 days.",       receivedAt: "Fri, 11 Apr 2026 15:12:00 -0700", account: "professional" },
 ];
 
 export async function GET() {
@@ -78,6 +79,7 @@ export async function GET() {
         return {
           from: parseFrom(getHeader(headers, "From")),
           subject: getHeader(headers, "Subject") || "(No subject)",
+          snippet: msg.data.snippet ?? undefined,
           receivedAt: getHeader(headers, "Date"),
           account,
         };
