@@ -315,7 +315,8 @@ Tools available:
 - get_profile, update_profile
 - search_gmail, get_email_body (returns demo emails)
 - list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
-- get_recipes, get_today_meals`;
+- get_recipes, get_today_meals
+- get_workout_plan, assign_workout, update_workout_exercise`;
 
   const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
@@ -329,6 +330,33 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       content: m.content,
     }))
     .filter((m: { role: "user" | "assistant"; content: string }) => m.content.trim() !== "");
+
+  interface WorkoutExercise {
+    exercise: string;
+    sets?: number;
+    reps?: string;
+    weight_lbs?: number | null;
+    notes?: string | null;
+  }
+
+  function buildCalendarDescription(
+    warmup: WorkoutExercise[],
+    workout: WorkoutExercise[],
+    cooldown: WorkoutExercise[]
+  ): string {
+    const fmt = (ex: WorkoutExercise) => {
+      const parts = [ex.exercise];
+      if (ex.sets) parts.push(`${ex.sets} sets`);
+      if (ex.reps) parts.push(`× ${ex.reps}`);
+      if (ex.weight_lbs) parts.push(`@ ${ex.weight_lbs} lbs`);
+      return parts.join(" ");
+    };
+    const sections: string[] = [];
+    if (warmup.length) sections.push("Warm-up:\n" + warmup.map(fmt).join("\n"));
+    if (workout.length) sections.push("Workout:\n" + workout.map(fmt).join("\n"));
+    if (cooldown.length) sections.push("Cool-down:\n" + cooldown.map(fmt).join("\n"));
+    return sections.join("\n\n");
+  }
 
   const tools = {
     get_tasks: tool({
@@ -1082,6 +1110,195 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .order("position", { ascending: true, nullsFirst: false })
           .limit(Math.min(limit, 40));
         return data ?? [];
+      },
+    }),
+
+    get_workout_plan: tool({
+      description: "Fetch the workout plan for the current Mon–Sun week. No parameters. Call this before making any adjustment or suggestion to the user's workout program.",
+      parameters: jsonSchema<Record<string, never>>({
+        type: "object",
+        properties: {},
+      }),
+      execute: async () => {
+        if (!userId) return { error: "Not authenticated" };
+        if (isDemo) return { demo: true, note: "Demo mode — no real workout plans." };
+        const today = new Date();
+        const dow = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - dow);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        const fmt = (d: Date) => d.toISOString().slice(0, 10);
+        const { data, error } = await supabase
+          .from("workout_plans")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("date", fmt(monday))
+          .lte("date", fmt(sunday))
+          .order("date", { ascending: true });
+        if (error) return { error: error.message };
+        return { week: `${fmt(monday)} – ${fmt(sunday)}`, plans: data ?? [] };
+      },
+    }),
+
+    assign_workout: tool({
+      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. When update_calendar is true and no start_time is provided, ask the user what time their workout will be before calling.",
+      parameters: jsonSchema<{
+        date: string;
+        warmup: WorkoutExercise[];
+        workout: WorkoutExercise[];
+        cooldown: WorkoutExercise[];
+        notes?: string;
+        start_time?: string;
+        end_time?: string;
+        update_calendar?: boolean;
+      }>({
+        type: "object",
+        required: ["date", "warmup", "workout", "cooldown"],
+        properties: {
+          date: { type: "string", description: "Date in YYYY-MM-DD format." },
+          warmup: { type: "array", items: { type: "object" }, description: "Warm-up exercises." },
+          workout: { type: "array", items: { type: "object" }, description: "Main workout exercises." },
+          cooldown: { type: "array", items: { type: "object" }, description: "Cool-down exercises." },
+          notes: { type: "string", description: "Optional plan notes." },
+          start_time: { type: "string", description: "Workout start time in HH:MM (24h) format. Ask the user if not provided and update_calendar is true." },
+          end_time: { type: "string", description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour." },
+          update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
+        },
+      }),
+      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
+        if (!userId) return { error: "Not authenticated" };
+        if (isDemo) return { demo: true, note: "Demo mode — plan not saved." };
+
+        const { data: upserted, error } = await supabase
+          .from("workout_plans")
+          .upsert(
+            { user_id: userId, date, warmup, workout, cooldown, notes: notes ?? null, updated_at: new Date().toISOString() },
+            { onConflict: "user_id,date" }
+          )
+          .select()
+          .single();
+        if (error) return { error: error.message };
+
+        if (update_calendar) {
+          try {
+            const auth = getGoogleAuthClient();
+            const calendar = google.calendar({ version: "v3", auth });
+            const description = buildCalendarDescription(warmup, workout, cooldown);
+            const title = `Workout — ${new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}`;
+            const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
+
+            let startObj: object;
+            let endObj: object;
+            if (start_time) {
+              const computedEnd = end_time ?? (() => {
+                const [h, m] = start_time.split(":").map(Number);
+                return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+              })();
+              startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
+              endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
+            } else {
+              startObj = { date };
+              endObj = { date };
+            }
+
+            let eventId: string | null = upserted.calendar_event_id ?? null;
+            if (eventId) {
+              await calendar.events.patch({
+                calendarId: "primary",
+                eventId,
+                requestBody: { summary: title, description, start: startObj, end: endObj },
+              });
+            } else {
+              const res = await calendar.events.insert({
+                calendarId: "primary",
+                requestBody: { summary: title, start: startObj, end: endObj, description },
+              });
+              eventId = res.data.id ?? null;
+              await supabase
+                .from("workout_plans")
+                .update({ calendar_event_id: eventId })
+                .eq("user_id", userId)
+                .eq("date", date);
+              upserted.calendar_event_id = eventId;
+            }
+          } catch (calErr) {
+            return { ...upserted, calendar_warning: calErr instanceof Error ? calErr.message : "Calendar sync failed" };
+          }
+        }
+
+        return upserted;
+      },
+    }),
+
+    update_workout_exercise: tool({
+      description: "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description.",
+      parameters: jsonSchema<{
+        date: string;
+        phase: "warmup" | "workout" | "cooldown";
+        exercise_name: string;
+        updates: { sets?: number; reps?: string; weight_lbs?: number; notes?: string };
+      }>({
+        type: "object",
+        required: ["date", "phase", "exercise_name", "updates"],
+        properties: {
+          date: { type: "string", description: "YYYY-MM-DD date of the plan to edit." },
+          phase: { type: "string", enum: ["warmup", "workout", "cooldown"], description: "Which phase the exercise is in." },
+          exercise_name: { type: "string", description: "Exercise name to match (case-insensitive)." },
+          updates: {
+            type: "object",
+            description: "Fields to merge into the matched exercise object.",
+            properties: {
+              sets: { type: "number" },
+              reps: { type: "string" },
+              weight_lbs: { type: "number" },
+              notes: { type: "string" },
+            },
+          },
+        },
+      }),
+      execute: async ({ date, phase, exercise_name, updates }) => {
+        if (!userId) return { error: "Not authenticated" };
+        if (isDemo) return { demo: true, note: "Demo mode — not saved." };
+
+        const { data: row, error: fetchErr } = await supabase
+          .from("workout_plans")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("date", date)
+          .single();
+        if (fetchErr || !row) return { error: fetchErr?.message ?? "No plan found for that date." };
+
+        const arr: WorkoutExercise[] = [...(row[phase] as WorkoutExercise[])];
+        const idx = arr.findIndex((e) => e.exercise.toLowerCase() === exercise_name.toLowerCase());
+        if (idx === -1) return { error: `Exercise "${exercise_name}" not found in ${phase}.` };
+        arr[idx] = { ...arr[idx], ...updates };
+
+        const { data: updated, error: upErr } = await supabase
+          .from("workout_plans")
+          .update({ [phase]: arr, updated_at: new Date().toISOString() })
+          .eq("user_id", userId)
+          .eq("date", date)
+          .select()
+          .single();
+        if (upErr) return { error: upErr.message };
+
+        if (updated.calendar_event_id) {
+          try {
+            const auth = getGoogleAuthClient();
+            const calendar = google.calendar({ version: "v3", auth });
+            const description = buildCalendarDescription(updated.warmup, updated.workout, updated.cooldown);
+            await calendar.events.patch({
+              calendarId: "primary",
+              eventId: updated.calendar_event_id,
+              requestBody: { description },
+            });
+          } catch {
+            // Non-fatal — plan is already saved
+          }
+        }
+
+        return updated;
       },
     }),
   };
