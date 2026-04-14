@@ -4,15 +4,17 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Camera,
+  ImageIcon,
   Loader2,
+  MessageSquare,
   X,
   AlertCircle,
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Send,
   Trash2,
 } from "lucide-react";
+import InlineMealChat from "./InlineMealChat";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 type ScanPhase = "idle" | "loading" | "error" | "manual";
@@ -67,7 +69,8 @@ interface FoodPhotoAnalyzerProps {
 
 export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerProps) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   // ── Session state ─────────────────────────────────────────────────────────
   const [items, setItems] = useState<ScanItem[]>([]);
@@ -96,8 +99,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const [mealPrepType, setMealPrepType] = useState<MealType>("lunch");
   const [prepping, setPrepping] = useState(false);
 
-  // ── Chat handoff state ────────────────────────────────────────────────────
-  const [chatQuestion, setChatQuestion] = useState("");
+  // ── Inline chat state ────────────────────────────────────────────────────
+  const [showInlineChat, setShowInlineChat] = useState(false);
 
   // ── Derived totals ────────────────────────────────────────────────────────
   const combined = items.reduce(
@@ -183,7 +186,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     const file = e.target.files?.[0];
     if (!file) return;
     // Reset so the same file can be scanned again
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (libraryInputRef.current) libraryInputRef.current.value = "";
 
     if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
       setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
@@ -275,6 +279,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           item.id === id
             ? {
                 ...item,
+                label: data.food_name ?? item.label,
                 calories: data.calories ?? item.calories,
                 protein_g: data.protein_g ?? item.protein_g,
                 carbs_g: data.carbs_g ?? item.carbs_g,
@@ -376,17 +381,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     }
   }
 
-  // ── Chat handoff ──────────────────────────────────────────────────────────
-  function handleSendToChat() {
-    if (!chatQuestion.trim() && items.length === 0) return;
-    const nutritionLines = items
+  // ── Inline chat context ───────────────────────────────────────────────────
+  function buildNutritionContext(): string {
+    const lines = items
       .map((i) => `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g protein, ${Math.round(i.carbs_g)}g carbs, ${Math.round(i.fat_g)}g fat`)
       .join("\n");
-    const prefillText = items.length > 0
-      ? `${chatQuestion.trim()}\n\n--- Scanned nutrition data ---\n${nutritionLines}\nCombined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g protein, ${Math.round(combined.carbs_g)}g carbs, ${Math.round(combined.fat_g)}g fat`
-      : chatQuestion.trim();
-    sessionStorage.setItem("chatPrefill", prefillText);
-    router.push("/chat");
+    return `--- Scanned nutrition data ---\n${lines}\nCombined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g protein, ${Math.round(combined.carbs_g)}g carbs, ${Math.round(combined.fat_g)}g fat`;
   }
 
   // ── Mode toggle ───────────────────────────────────────────────────────────
@@ -430,15 +430,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       {/* Mode toggle — always visible */}
       {ModeToggle}
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      {/* Hidden file inputs — camera and library */}
+      <input ref={cameraInputRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <input ref={libraryInputRef} type="file" accept="image/*"                        className="hidden" onChange={handleFileChange} />
 
       {/* ── LOADING overlay ─────────────────────────────────────────────── */}
       {scanPhase === "loading" && (
@@ -471,7 +465,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               onClick={() => {
                 setScanPhase("idle");
                 setErrorMsg("");
-                fileInputRef.current?.click();
+                cameraInputRef.current?.click();
               }}
               className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
               style={{
@@ -485,7 +479,26 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               }}
             >
               <Camera size={13} />
-              Re-scan
+              Camera
+            </button>
+            <button
+              onClick={() => {
+                setScanPhase("idle");
+                setErrorMsg("");
+                libraryInputRef.current?.click();
+              }}
+              className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 13,
+                padding: "8px 14px",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <ImageIcon size={13} />
+              From Library
             </button>
             <button
               onClick={() => {
@@ -585,22 +598,40 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           <p style={{ fontSize: 14, color: "var(--color-text-muted)", textAlign: "center" }}>
             Scan a nutrition label or food photo to get started.
           </p>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
-            style={{
-              background: "var(--color-primary)",
-              color: "#fff",
-              fontSize: 15,
-              padding: "13px 24px",
-              minHeight: 48,
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <Camera size={17} />
-            Scan
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+              style={{
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 15,
+                padding: "13px 24px",
+                minHeight: 48,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Camera size={17} />
+              Take Photo
+            </button>
+            <button
+              onClick={() => libraryInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 15,
+                padding: "13px 24px",
+                minHeight: 48,
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <ImageIcon size={17} />
+              From Library
+            </button>
+          </div>
         </div>
       )}
 
@@ -644,9 +675,22 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   </div>
                 </div>
 
-                {/* Expand: ingredients + re-estimate */}
+                {/* Expand: dish name + ingredients + re-estimate */}
                 {expanded && item.mode === "food" && (
                   <div className="mt-3 flex flex-col gap-2">
+                    <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 2 }}>
+                      Dish name
+                    </label>
+                    <input
+                      type="text"
+                      value={item.label}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((i) => i.id === item.id ? { ...i, label: e.target.value } : i)
+                        )
+                      }
+                      style={{ ...inputStyle, fontWeight: 600, fontSize: 14 }}
+                    />
                     <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 2 }}>
                       Ingredients
                     </label>
@@ -694,22 +738,42 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
           {/* Add another scan */}
           {scanPhase === "idle" && (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 14,
-                padding: "10px 16px",
-                minHeight: 44,
-                background: "transparent",
-                cursor: "pointer",
-              }}
-            >
-              <Camera size={14} />
-              Add another scan
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+                style={{
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-muted)",
+                  fontSize: 13,
+                  padding: "9px 14px",
+                  minHeight: 40,
+                  background: "transparent",
+                  cursor: "pointer",
+                  flex: 1,
+                }}
+              >
+                <Camera size={13} />
+                Take Photo
+              </button>
+              <button
+                onClick={() => libraryInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+                style={{
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-muted)",
+                  fontSize: 13,
+                  padding: "9px 14px",
+                  minHeight: 40,
+                  background: "transparent",
+                  cursor: "pointer",
+                  flex: 1,
+                }}
+              >
+                <ImageIcon size={13} />
+                From Library
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -733,51 +797,28 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           </div>
 
           {/* Ask Mr. Bridge */}
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Ask Mr. Bridge…"
-                value={chatQuestion}
-                onChange={(e) => setChatQuestion(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSendToChat(); }}
-                style={{ ...inputStyle, flex: 1, fontSize: 14 }}
-              />
-              <button
-                onClick={handleSendToChat}
-                disabled={!chatQuestion.trim() && items.length === 0}
-                className="flex items-center justify-center rounded-xl transition-opacity active:opacity-70 disabled:opacity-40"
-                style={{
-                  background: "var(--color-primary)",
-                  color: "#fff",
-                  padding: "10px 14px",
-                  border: "none",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-                title="Send to Chat"
-              >
-                <Send size={15} />
-              </button>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {["What can I make with these?", "Calculate my macros"].map((q) => (
-                <button
-                  key={q}
-                  onClick={() => setChatQuestion(q)}
-                  className="rounded-full transition-opacity active:opacity-70"
-                  style={{
-                    ...pillBtnBase,
-                    background: "transparent",
-                    color: "var(--color-text-muted)",
-                    fontSize: 12,
-                  }}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
+          {!showInlineChat ? (
+            <button
+              onClick={() => setShowInlineChat(true)}
+              className="flex items-center gap-2 rounded-xl transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 14,
+                padding: "10px 16px",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <MessageSquare size={14} />
+              Ask Mr. Bridge…
+            </button>
+          ) : (
+            <InlineMealChat
+              initialContext={buildNutritionContext()}
+              onClose={() => setShowInlineChat(false)}
+            />
+          )}
 
           {/* Sheet error */}
           {errorMsg && scanPhase === "idle" && (
