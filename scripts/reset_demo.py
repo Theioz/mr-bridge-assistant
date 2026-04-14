@@ -36,9 +36,11 @@ TABLES = [
     "study_log",
     "journal_entries",
     "workout_sessions",
+    "workout_plans",
     "recovery_metrics",
     "fitness_log",
     "tasks",
+    "notifications",
     "timer_state",
     "profile",
 ]
