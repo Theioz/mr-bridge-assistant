@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
+import type { EmojiClickData } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 interface Props {
   habit: HabitRegistry;
@@ -30,6 +34,19 @@ export default function HabitToggle({
   const [editEmoji, setEditEmoji] = useState(habit.emoji ?? "");
   const [editCategory, setEditCategory] = useState(habit.category ?? "");
   const [editPending, startEditTransition] = useTransition();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   const completed = optimistic ?? false;
 
@@ -56,14 +73,30 @@ export default function HabitToggle({
     <div className={`flex items-center ${isPending || archivePending || editPending ? "opacity-60" : ""}`}>
       {editing ? (
         <div className="flex-1 flex flex-wrap items-center gap-2 py-2 px-1">
-          <input
-            type="text"
-            value={editEmoji}
-            onChange={(e) => setEditEmoji(e.target.value)}
-            maxLength={4}
-            className="w-10 bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-neutral-600"
-            placeholder="😀"
-          />
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker((v) => !v)}
+              className="w-10 h-8 bg-neutral-800 text-neutral-100 text-lg rounded flex items-center justify-center focus:outline-none focus:ring-1 focus:ring-neutral-600"
+              title="Pick emoji"
+            >
+              {editEmoji || "😀"}
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute left-0 top-10 z-50">
+                <EmojiPicker
+                  onEmojiClick={(data: EmojiClickData) => {
+                    setEditEmoji(data.emoji);
+                    setShowEmojiPicker(false);
+                  }}
+                  width={300}
+                  height={400}
+                  skinTonesDisabled
+                  previewConfig={{ showPreview: false }}
+                />
+              </div>
+            )}
+          </div>
           <input
             type="text"
             value={editName}
