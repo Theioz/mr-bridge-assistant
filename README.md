@@ -4,7 +4,7 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 
 ## Architecture
 
-![Architecture](docs/architecture.svg)
+<img src="docs/architecture.svg" alt="Architecture" width="100%">
 
 [View full size →](docs/architecture.png)
 
