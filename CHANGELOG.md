@@ -7,6 +7,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (deduplicate add_task inserts — issue #176)
+- **`web/src/app/api/chat/route.ts`** — added 90-second deduplication window to `add_task` execute; before inserting, queries for an active task with the same title (case-insensitive) and due_date created in the last 90 seconds; returns the existing row instead of inserting a duplicate (guards against `retryOnOverload` stream-retry double-inserts)
+
+### Fixed (habit edit form — issue #175)
+- **`web/src/app/(protected)/habits/page.tsx`** — added `updateHabit` server action that updates `name`, `emoji`, and `category` on `habit_registry`, scoped to authenticated user; passed as `updateAction` prop to `HabitTodaySection`
+- **`web/src/components/habits/habit-today-section.tsx`** — added `updateAction` to Props interface and passes it down to each `HabitToggle`
+- **`web/src/components/habits/habit-toggle.tsx`** — added `updateAction` prop, local edit state (`editing`, `editName`, `editEmoji`, `editCategory`), and an inline edit form with emoji/name/category inputs and Save/Cancel buttons; shown when manageMode is true and Edit is clicked
+
+### Added (emoji picker for Add Habit form — issue #174)
+- **`web/src/components/habits/habit-today-section.tsx`** — replaced plain emoji text input with an `emoji-picker-react` popover button; closes on emoji selection or outside click
+- **`web/package.json`** — added `emoji-picker-react` dependency
+
+### Added (meal log inline editing — issue #173)
+- **`web/src/app/api/meals/log/route.ts`** — added `PATCH` handler; accepts `id`, `notes`, `meal_type`, `calories`, `protein_g`, `carbs_g`, `fat_g`; validates meal_type; scoped to authenticated user's rows via `.eq("user_id", user.id)`
+- **`web/src/components/meals/MealsClient.tsx`** — added inline edit state and form to both `TodayTab` and `PastMeals`; tapping a meal row enters edit mode with pre-filled fields; Save calls `PATCH /api/meals/log` then refreshes; Cancel discards changes
+
 ### Fixed (task due date label off-by-one — issue #184)
 - **`web/src/components/tasks/task-item.tsx`** — `relativeDue` now compares two midnights using `todayString()` from `@/lib/timezone` instead of subtracting `Date.now()`, eliminating the off-by-one that showed tomorrow's tasks as "Today" late in the evening
 
