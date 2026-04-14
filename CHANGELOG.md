@@ -13,6 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **`web/src/app/api/chat/route.ts`** — expanded Haiku routing patterns: meal queries, goal reads, habit checks, profile reads, inline log commands
 - **`web/src/components/chat/chat-interface.tsx`** — model override chip (Auto / Haiku / Sonnet) in the input bar; defaults to Auto (uses `selectModel` routing); overrides passed as `model` in POST body; resets to Auto on page reload
 
+### Fixed (nutrition scanner opens camera directly — issue #186)
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — added `capture="environment"` to the hidden file input so mobile browsers open the rear camera directly instead of showing the file picker
+
 ### Fixed (deduplicate add_task inserts — issue #176)
 - **`web/src/app/api/chat/route.ts`** — added 90-second deduplication window to `add_task` execute; before inserting, queries for an active task with the same title (case-insensitive) and due_date created in the last 90 seconds; returns the existing row instead of inserting a duplicate (guards against `retryOnOverload` stream-retry double-inserts)
 
