@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import HabitToggle from "./habit-toggle";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
+import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 
 interface Props {
   habits: HabitRegistry[];
@@ -11,6 +12,7 @@ interface Props {
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
   archiveAction: (habitId: string) => Promise<void>;
   addAction: (name: string, emoji: string, category: string) => Promise<void>;
+  updateAction: (id: string, name: string, emoji: string, category: string) => Promise<void>;
 }
 
 export default function HabitTodaySection({
@@ -20,6 +22,7 @@ export default function HabitTodaySection({
   toggleAction,
   archiveAction,
   addAction,
+  updateAction,
 }: Props) {
   const todayLogMap = new Map(todayLogs.map((l) => [l.habit_id, l]));
 
@@ -29,6 +32,19 @@ export default function HabitTodaySection({
   const [emoji, setEmoji] = useState("");
   const [category, setCategory] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   function handleAdd() {
     if (!name.trim()) return;
@@ -92,6 +108,7 @@ export default function HabitTodaySection({
             date={date}
             manageMode={manageMode}
             archiveAction={archiveAction}
+            updateAction={updateAction}
           />
         ))}
         {habits.length === 0 && !showAdd && (
@@ -101,14 +118,31 @@ export default function HabitTodaySection({
 
       {showAdd && (
         <div className="mt-3 flex flex-wrap items-center gap-2 py-3 border-t border-neutral-800/50">
-          <input
-            type="text"
-            placeholder="Emoji"
-            value={emoji}
-            onChange={(e) => setEmoji(e.target.value)}
-            maxLength={4}
-            className="w-14 bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1.5 placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600"
-          />
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker((v) => !v)}
+              className="w-10 h-8 bg-neutral-800 text-neutral-100 text-lg rounded flex items-center justify-center focus:outline-none focus:ring-1 focus:ring-neutral-600"
+              title="Pick emoji"
+            >
+              {emoji || "😀"}
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute left-0 top-10 z-50">
+                <EmojiPicker
+                  onEmojiClick={(data: EmojiClickData) => {
+                    setEmoji(data.emoji);
+                    setShowEmojiPicker(false);
+                  }}
+                  width={300}
+                  height={400}
+                  searchDisabled={false}
+                  skinTonesDisabled
+                  previewConfig={{ showPreview: false }}
+                />
+              </div>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Habit name"
