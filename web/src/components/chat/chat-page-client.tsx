@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { History } from "lucide-react";
 import type { Message } from "ai";
 import ChatInterface from "./chat-interface";
@@ -25,6 +25,8 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
   const [hasMore, setHasMore] = useState(false);
   const [oldestPosition, setOldestPosition] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Incrementing this key forces ChatInterface to remount with fresh initialMessages
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Desktop sidebar state — persisted in localStorage
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -68,6 +70,42 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  // Re-fetch messages when the user returns to this tab so stale router-cache
+  // data doesn't leave the chat a few conversations behind.
+  const activeSessionIdRef = useRef(activeSessionId);
+  activeSessionIdRef.current = activeSessionId;
+
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== "visible") return;
+      const sessionId = activeSessionIdRef.current;
+      // Skip if this is a brand-new unsaved session (nothing to fetch yet)
+      if (!initialSessionId && activeMessages.length === 0) return;
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const msgs: Message[] = (
+          data.messages as { id: string; role: string; content: string; created_at: string }[]
+        ).map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          createdAt: new Date(m.created_at),
+        }));
+        setActiveMessages(msgs);
+        setHasMore(data.hasMore ?? false);
+        setOldestPosition(data.oldestPosition ?? null);
+        setRefreshKey((k) => k + 1);
+      } catch {
+        // non-fatal — stale messages are better than a broken UI
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSessionId]);
 
   const toggleDesktopHistory = () => {
     const next = !historyOpen;
@@ -245,7 +283,7 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
             </div>
           ) : (
             <ChatInterface
-              key={activeSessionId}
+              key={`${activeSessionId}-${refreshKey}`}
               sessionId={activeSessionId}
               initialMessages={activeMessages}
               onMessageSent={handleMessageSent}
