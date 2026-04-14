@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import JournalEditor from "@/components/journal/journal-editor";
-import JournalHistory from "@/components/journal/journal-history";
+import JournalTabs from "@/components/journal/journal-tabs";
 import type { JournalEntry, JournalResponses } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 
@@ -37,18 +36,17 @@ export default async function JournalPage() {
   const supabase = await createClient();
   const today = todayString();
 
-  const [todayResult, historyResult] = await Promise.all([
+  const [todayResult, allResult] = await Promise.all([
     supabase.from("journal_entries").select("*").eq("date", today).maybeSingle(),
     supabase
       .from("journal_entries")
       .select("*")
-      .neq("date", today)
       .order("date", { ascending: false })
-      .limit(30),
+      .limit(31),
   ]);
 
   const todayEntry  = todayResult.data as JournalEntry | null;
-  const pastEntries = (historyResult.data ?? []) as JournalEntry[];
+  const allEntries  = (allResult.data ?? []) as JournalEntry[];
 
   const dateLabel = new Date(today + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
@@ -68,26 +66,13 @@ export default async function JournalPage() {
         </p>
       </div>
 
-      {/* Today's editor */}
-      <JournalEditor
-        date={today}
+      <JournalTabs
+        today={today}
         initialResponses={todayEntry?.responses ?? {}}
         initialFreeWrite={todayEntry?.free_write ?? ""}
+        allEntries={allEntries}
         saveAction={saveJournalEntry}
       />
-
-      {/* Past entries */}
-      {pastEntries.length > 0 && (
-        <section id="journal-history">
-          <p
-            className="text-xs uppercase tracking-widest mb-3"
-            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-          >
-            Past Entries
-          </p>
-          <JournalHistory entries={pastEntries} />
-        </section>
-      )}
     </div>
   );
 }
