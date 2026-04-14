@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat session lost on mobile tab switch and refresh — issue #171)
+- **`web/src/components/chat/chat-page-client.tsx`** — added `useEffect` to persist `activeSessionId` to `sessionStorage` on every change; added mount-time fallback that reads `sessionStorage` when `initialSessionId` is null (covers edge cases where SSR couldn't resolve the last session)
+- **`web/src/app/(protected)/chat/page.tsx`** — server-side fix was already in place (queries `chat_sessions` ordered by `last_active_at desc`, pre-loads `initialMessages`); no changes needed
+
 ### Fixed (radial wheel clipping on mobile — issue #170)
 - **`web/src/components/habits/radial-completion.tsx`** — increased `ResponsiveContainer` height from 220 → 260; reduced `outerRadius` from 90 → 80 to prevent outer rings from overflowing the card on 390px viewports
 

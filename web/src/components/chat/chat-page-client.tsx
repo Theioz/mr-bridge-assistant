@@ -40,6 +40,20 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
     if (stored !== null) setHistoryOpen(stored === "true");
   }, []);
 
+  // Persist activeSessionId to sessionStorage on every change (belt-and-suspenders)
+  useEffect(() => {
+    sessionStorage.setItem("chatActiveSessionId", activeSessionId);
+  }, [activeSessionId]);
+
+  // On mount: if SSR couldn't provide a session, check sessionStorage as fallback
+  useEffect(() => {
+    if (!initialSessionId) {
+      const stored = sessionStorage.getItem("chatActiveSessionId");
+      if (stored) setActiveSessionId(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/chat/sessions");
