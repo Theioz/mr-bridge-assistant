@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (perf: reduce Anthropic API costs — issue #189)
+- **`web/src/app/api/chat/route.ts`** — `maxSteps` reduced from 25 to 12; system prompt split into static (cached with `cacheControl: ephemeral`) + dynamic (date + name, uncached) content blocks to prevent daily cache busts; context window trimmed from 20 to 10 messages; top-level `providerOptions` cacheControl block removed (now inline on static block); `selectModel` accepts optional `model` override from request body; system prompt adds graceful step-limit rule and `get_session_history` consent rule
+- **`web/src/app/api/chat/route.ts`** — new `get_session_history` tool: fetches up to 40 earlier messages from the current session on demand; model asks user before calling
+- **`web/src/app/api/chat/route.ts`** — expanded Haiku routing patterns: meal queries, goal reads, habit checks, profile reads, inline log commands
+- **`web/src/components/chat/chat-interface.tsx`** — model override chip (Auto / Haiku / Sonnet) in the input bar; defaults to Auto (uses `selectModel` routing); overrides passed as `model` in POST body; resets to Auto on page reload
+
 ### Fixed (deduplicate add_task inserts — issue #176)
 - **`web/src/app/api/chat/route.ts`** — added 90-second deduplication window to `add_task` execute; before inserting, queries for an active task with the same title (case-insensitive) and due_date created in the last 90 seconds; returns the existing row instead of inserting a duplicate (guards against `retryOnOverload` stream-retry double-inserts)
 

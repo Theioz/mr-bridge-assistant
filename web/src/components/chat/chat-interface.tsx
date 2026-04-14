@@ -2,7 +2,7 @@
 
 import { useChat } from "ai/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, ChevronDown } from "lucide-react";
 import MessageBubble from "./message-bubble";
 import ToolStatusBar from "./tool-status-bar";
 import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-command-menu";
@@ -38,9 +38,13 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
+  type ModelOverride = "auto" | "haiku" | "sonnet";
+  const [modelOverride, setModelOverride] = useState<ModelOverride>("auto");
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput } = useChat({
     api: "/api/chat",
-    body: { sessionId },
+    body: { sessionId, model: modelOverride },
     initialMessages,
     onFinish: onMessageSent,
   });
@@ -312,6 +316,52 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             }}
           />
         </div>
+        {/* Model override chip */}
+        <div className="relative flex-shrink-0 self-end mb-0.5">
+          <button
+            type="button"
+            onClick={() => setModelMenuOpen((o) => !o)}
+            className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors duration-150"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              color: modelOverride === "auto" ? "var(--color-text-muted)" : "var(--color-primary)",
+            }}
+            title="Model override — Auto uses smart routing"
+          >
+            {modelOverride === "auto" ? "Auto" : modelOverride === "haiku" ? "Haiku" : "Sonnet"}
+            <ChevronDown size={11} />
+          </button>
+          {modelMenuOpen && (
+            <div
+              className="absolute bottom-full mb-1 right-0 rounded-lg overflow-hidden z-10"
+              style={{
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                minWidth: 100,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+              }}
+            >
+              {(["auto", "haiku", "sonnet"] as ModelOverride[]).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => { setModelOverride(opt); setModelMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors duration-100"
+                  style={{
+                    color: modelOverride === opt ? "var(--color-primary)" : "var(--color-text)",
+                    background: "transparent",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--color-border)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                >
+                  {opt === "auto" ? "Auto" : opt === "haiku" ? "Haiku (fast)" : "Sonnet (smart)"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
