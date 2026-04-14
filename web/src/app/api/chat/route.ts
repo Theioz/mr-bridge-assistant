@@ -331,6 +331,15 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     }))
     .filter((m: { role: "user" | "assistant"; content: string }) => m.content.trim() !== "");
 
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+      ),
+    ]);
+  }
+
   interface WorkoutExercise {
     exercise: string;
     sets?: number;
@@ -1142,7 +1151,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     }),
 
     assign_workout: tool({
-      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. When update_calendar is true and no start_time is provided, ask the user what time their workout will be before calling.",
+      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. When update_calendar is true and no start_time is provided, ask the user what time their workout will be before calling. If the result includes calendar_conflicts, surface them to the user and ask whether to proceed — then call again with skip_conflict_check: true if they confirm.",
       parameters: jsonSchema<{
         date: string;
         warmup: WorkoutExercise[];
@@ -1152,6 +1161,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         start_time?: string;
         end_time?: string;
         update_calendar?: boolean;
+        skip_conflict_check?: boolean;
       }>({
         type: "object",
         required: ["date", "warmup", "workout", "cooldown"],
@@ -1164,9 +1174,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           start_time: { type: "string", description: "Workout start time in HH:MM (24h) format. Ask the user if not provided and update_calendar is true." },
           end_time: { type: "string", description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour." },
           update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
+          skip_conflict_check: { type: "boolean", description: "Skip conflict detection and book regardless. Only set true after the user has been shown conflicts and confirmed they want to proceed." },
         },
       }),
-      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
+      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true, skip_conflict_check = false }) => {
         if (!userId) return { error: "Not authenticated" };
         if (isDemo) return { demo: true, note: "Demo mode — plan not saved." };
 
@@ -1190,37 +1201,91 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
             let startObj: object;
             let endObj: object;
+            let startISO: string | null = null;
+            let endISO: string | null = null;
+
             if (start_time) {
               const computedEnd = end_time ?? (() => {
                 const [h, m] = start_time.split(":").map(Number);
                 return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
               })();
-              startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
-              endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
+              startISO = `${date}T${start_time}:00`;
+              endISO = `${date}T${computedEnd}:00`;
+              startObj = { dateTime: startISO, timeZone: tz };
+              endObj = { dateTime: endISO, timeZone: tz };
             } else {
               startObj = { date };
               endObj = { date };
             }
 
-            let eventId: string | null = upserted.calendar_event_id ?? null;
+            const eventId: string | null = upserted.calendar_event_id ?? null;
+
+            // Conflict check — only for new events with a known time window
+            if (!skip_conflict_check && !eventId && startISO && endISO) {
+              const calListRes = await withTimeout(
+                calendar.calendarList.list({ minAccessRole: "reader" }),
+                8000,
+                "calendarList"
+              );
+              const calIds = (calListRes.data.items ?? [])
+                .filter((c) => c.primary || c.accessRole === "owner")
+                .map((c) => c.id!);
+
+              const conflictArrays = await Promise.all(
+                calIds.map(async (calId) => {
+                  const res = await withTimeout(
+                    calendar.events.list({
+                      calendarId: calId,
+                      timeMin: `${startISO}`,
+                      timeMax: `${endISO}`,
+                      singleEvents: true,
+                    }),
+                    8000,
+                    "events.list"
+                  );
+                  return (res.data.items ?? [])
+                    .filter((e) => e.status !== "cancelled" && !/^Workout\s*—/i.test(e.summary ?? ""))
+                    .map((e) => ({
+                      eventId: e.id,
+                      title: e.summary ?? "(No title)",
+                      start: e.start?.dateTime ?? e.start?.date ?? "",
+                      end: e.end?.dateTime ?? e.end?.date ?? "",
+                    }));
+                })
+              );
+
+              const conflicts = conflictArrays.flat();
+              if (conflicts.length > 0) {
+                return { ...upserted, calendar_conflicts: conflicts, calendar_note: "Plan saved to Supabase. Calendar event NOT created — conflicts detected. Surface these to the user and call again with skip_conflict_check: true if they confirm." };
+              }
+            }
+
             if (eventId) {
-              await calendar.events.patch({
-                calendarId: "primary",
-                eventId,
-                requestBody: { summary: title, description, start: startObj, end: endObj },
-              });
+              await withTimeout(
+                calendar.events.patch({
+                  calendarId: "primary",
+                  eventId,
+                  requestBody: { summary: title, description, start: startObj, end: endObj },
+                }),
+                8000,
+                "calendar patch"
+              );
             } else {
-              const res = await calendar.events.insert({
-                calendarId: "primary",
-                requestBody: { summary: title, start: startObj, end: endObj, description },
-              });
-              eventId = res.data.id ?? null;
+              const res = await withTimeout(
+                calendar.events.insert({
+                  calendarId: "primary",
+                  requestBody: { summary: title, start: startObj, end: endObj, description },
+                }),
+                8000,
+                "calendar insert"
+              );
+              const newEventId = res.data.id ?? null;
               await supabase
                 .from("workout_plans")
-                .update({ calendar_event_id: eventId })
+                .update({ calendar_event_id: newEventId })
                 .eq("user_id", userId)
                 .eq("date", date);
-              upserted.calendar_event_id = eventId;
+              upserted.calendar_event_id = newEventId;
             }
           } catch (calErr) {
             return { ...upserted, calendar_warning: calErr instanceof Error ? calErr.message : "Calendar sync failed" };
@@ -1288,17 +1353,82 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
             const auth = getGoogleAuthClient();
             const calendar = google.calendar({ version: "v3", auth });
             const description = buildCalendarDescription(updated.warmup, updated.workout, updated.cooldown);
-            await calendar.events.patch({
-              calendarId: "primary",
-              eventId: updated.calendar_event_id,
-              requestBody: { description },
-            });
+            await withTimeout(
+              calendar.events.patch({
+                calendarId: "primary",
+                eventId: updated.calendar_event_id,
+                requestBody: { description },
+              }),
+              8000,
+              "calendar patch"
+            );
           } catch {
             // Non-fatal — plan is already saved
           }
         }
 
         return updated;
+      },
+    }),
+
+    get_stock_quote: tool({
+      description: "Get current price and daily change for a stock ticker. Checks stocks_cache first; falls back to a live Polygon.io fetch if the cache is stale (>6h) or the ticker is not cached. Use when the user asks about a stock price or market move.",
+      parameters: jsonSchema<{ ticker: string }>({
+        type: "object",
+        required: ["ticker"],
+        properties: {
+          ticker: { type: "string", description: "Stock ticker symbol, e.g. AAPL, NVDA, BTC-USD" },
+        },
+      }),
+      execute: async ({ ticker }) => {
+        const sym = ticker.toUpperCase();
+
+        // 1. Check stocks_cache
+        const { data: cached } = await supabase
+          .from("stocks_cache")
+          .select("ticker,price,change_abs,change_pct,fetched_at")
+          .eq("user_id", userId)
+          .eq("ticker", sym)
+          .maybeSingle();
+
+        const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+        if (cached && cached.fetched_at > sixHoursAgo) {
+          return {
+            ticker: cached.ticker,
+            price: cached.price,
+            change_abs: cached.change_abs,
+            change_pct: cached.change_pct,
+            fetched_at: cached.fetched_at,
+            source: "cache",
+          };
+        }
+
+        // 2. Live fetch from Polygon
+        const apiKey = process.env.POLYGON_API_KEY;
+        if (!apiKey) return { error: "POLYGON_API_KEY not configured" };
+
+        const res = await fetch(
+          `https://api.polygon.io/v2/aggs/ticker/${sym}/prev?apiKey=${apiKey}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return { error: `Polygon returned ${res.status}` };
+
+        const json = await res.json() as { results?: { o: number; c: number }[] };
+        const bar = json.results?.[0];
+        if (!bar) return { error: "No data returned for this ticker" };
+
+        const price = bar.c;
+        const changeAbs = bar.c - bar.o;
+        const changePct = bar.o !== 0 ? ((bar.c - bar.o) / bar.o) * 100 : 0;
+
+        return {
+          ticker: sym,
+          price,
+          change_abs: changeAbs,
+          change_pct: changePct,
+          fetched_at: new Date().toISOString(),
+          source: "live",
+        };
       },
     }),
   };
