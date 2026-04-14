@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (loading skeletons for all protected routes — issue #164)
+- **`web/src/app/(protected)/dashboard/loading.tsx`** — header + health breakdown chart + 2×2 card grid
+- **`web/src/app/(protected)/fitness/loading.tsx`** — header + window selector strip + 2×2 chart grid
+- **`web/src/app/(protected)/habits/loading.tsx`** — header + radial circle + streak chart + habit row list
+- **`web/src/app/(protected)/tasks/loading.tsx`** — header + add-form card + 3 priority group skeletons
+- **`web/src/app/(protected)/weekly/loading.tsx`** — header + 3 summary cards + chart + summary card
+- **`web/src/app/(protected)/journal/loading.tsx`** — header + tall editor card + 2 collapsed entry rows
+- **`web/src/app/(protected)/meals/loading.tsx`** — header + tab bar pills + 2 content cards
+- **`web/src/app/(protected)/notifications/loading.tsx`** — header + 5 notification row skeletons
+- **`web/src/app/(protected)/settings/loading.tsx`** — header + 6 label/input row skeletons
+- **`web/src/app/(protected)/chat/loading.tsx`** — centered "Loading conversation…" text + input bar skeleton; eliminates blank-page gap on all protected route navigations
+
 ### Added (edit task due date and priority — issue #157)
 - **`web/src/app/(protected)/tasks/page.tsx`** — `updateTask` server action now accepts a `fields` object (`title?`, `due_date?`, `priority?`) instead of a bare title string; also revalidates `/dashboard` on update
 - **`web/src/components/tasks/task-item.tsx`** — `updateAction` prop updated to match new fields signature; `SubtaskRow` and `TaskItem` `commitEdit` calls updated accordingly; added `showEditPanel` toggle (Pencil icon, size 13) next to the Archive button; when open, renders an inline row with a date input, a clear-date button, a priority select, and Save/cancel buttons; initializes from current task values
