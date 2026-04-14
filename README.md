@@ -4,83 +4,15 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph devices["Devices"]
-        oura["Oura Ring"]
-        fitbit["Fitbit"]
-        gfit["Google Fit"]
-    end
-
-    subgraph scripts["Sync Scripts"]
-        so["sync-oura"]
-        sf["sync-fitbit"]
-        sg["sync-googlefit"]
-    end
-
-    db[("Supabase\n16 tables")]
-
-    subgraph web["Next.js · Vercel"]
-        cron["cron/sync\ndaily 6am PST"]
-        rs["sync/oura\nsync/fitbit\nsync/googlefit"]
-        rc["api/chat"]
-        rm["api/meals"]
-        rw["weather"]
-        rcal["google/calendar"]
-        rmail["google/gmail"]
-        pg["Dashboard · Habits · Tasks\nFitness · Chat · Journal\nWeekly · Meals · Settings"]
-    end
-
-    subgraph ext["External APIs"]
-        cl["Anthropic"]
-        gc["Google Calendar"]
-        gm["Gmail"]
-        om["Open-Meteo"]
-    end
-
-    classDef device   fill:#111318,stroke:#10B981,color:#E2E8F0,stroke-width:1.5px
-    classDef script   fill:#111318,stroke:#6366F1,color:#E2E8F0,stroke-width:1.5px
-    classDef storage  fill:#111318,stroke:#F59E0B,color:#F59E0B,stroke-width:1.5px
-    classDef route    fill:#111318,stroke:#38BDF8,color:#E2E8F0,stroke-width:1.5px
-    classDef page     fill:#181B24,stroke:#6366F1,color:#E2E8F0,stroke-width:2px
-    classDef extapi   fill:#111318,stroke:#475569,color:#94A3B8,stroke-width:1px
-    classDef cron     fill:#111318,stroke:#F59E0B,color:#F59E0B,stroke-width:1px,stroke-dasharray:4 2
-
-    class oura,fitbit,gfit device
-    class so,sf,sg script
-    class db storage
-    class rs,rc,rm,rw,rcal,rmail route
-    class pg page
-    class cl,gc,gm,om extapi
-    class cron cron
-
-    oura --> so --> db
-    fitbit --> sf --> db
-    gfit --> sg --> db
-
-    oura & fitbit & gfit --> rs --> db
-    cron --> rs
-
-    db --> pg
-    db --> rc
-    rc --> db
-    rm --> db
-
-    cl --> rc
-    cl --> rm
-    gc --> rcal --> pg
-    gm --> rmail --> pg
-    rw --> pg
-    om --> rw
-```
+![Architecture](docs/architecture.svg)
 
 ## What you get
 
-- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, and Oura recovery scores in one view
-- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 15 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
+- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
+- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 21 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, stock quotes, session history); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
 - **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
-- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts
+- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync)
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
@@ -133,7 +65,7 @@ supabase link --project-ref <your-project-ref>   # ref is the part of the URL af
 supabase db push
 ```
 
-This creates all 16 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, notifications, etc.).
+This creates all 18 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, etc.).
 
 ### Step 3 — Get your Anthropic API key
 
@@ -271,7 +203,7 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py` |
 | `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
-| `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — enables stock watchlist widget and `get_stock_quote` chat tool; free tier supports EOD data)* |
+| `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — stock watchlist widget + `get_stock_quote` chat tool; free tier supports EOD data)* |
 
 ### Step 8 — Deploy to Vercel
 
@@ -364,7 +296,10 @@ mr-bridge-assistant/
 │       ├── 20260413000005_chat_messages_position.sql
 │       ├── 20260413000006_journal_entries_rls_and_constraint.sql
 │       ├── 20260413000007_notifications.sql
-│       └── 20260413000008_tasks_parent_id.sql
+│       ├── 20260413000008_tasks_parent_id.sql
+│       ├── 20260414000000_add_workout_plans.sql
+│       ├── 20260414000001_workout_plans_add_name.sql
+│       └── 20260414000002_add_stocks_cache.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── .env.local.example                 # Web app env var template
@@ -395,7 +330,12 @@ mr-bridge-assistant/
 │   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision: food macro estimation (mode=food) or exact label reading (mode=label)
 │   │   │   │   │   ├── today-totals/route.ts    # GET — sum today's meal_log macros (calories/protein/carbs/fat)
 │   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate from edited ingredients (Haiku)
-│   │   │   │   │   └── log/route.ts             # POST — insert meal_log row
+│   │   │   │   │   └── log/route.ts             # POST — insert meal_log row; PATCH — inline edit
+│   │   │   │   ├── stocks/
+│   │   │   │   │   ├── refresh/route.ts         # POST — sync stock_watchlist tickers via syncStocks()
+│   │   │   │   │   └── validate/route.ts        # GET — proxy Polygon ticker validation (keeps API key server-side)
+│   │   │   │   ├── notifications/
+│   │   │   │   │   └── unread-count/route.ts    # GET — count unread notifications for badge
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
@@ -408,12 +348,16 @@ mr-bridge-assistant/
 │   │   │   ├── tasks/                     # Task CRUD components
 │   │   │   ├── habits/                    # Habit toggle, add/archive UI, heatmap, streak charts
 │   │   │   ├── fitness/                   # Body comp, workout freq, active cal, goal charts (Recharts)
+│   │   │   │   └── weekly-workout-plan.tsx  # Mon–Sun workout plan cards with phases + Calendar sync
 │   │   │   ├── journal/                   # Guided journal flow + history list
+│   │   │   ├── settings/
+│   │   │   │   └── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
 │   │   │   └── dashboard/
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── sync-button.tsx        # Calls all 3 sync routes; spinner + router.refresh()
-│   │   │       └── tasks-summary.tsx      # Active tasks card
+│   │   │       ├── tasks-summary.tsx      # Active tasks card
+│   │   │       └── watchlist-widget.tsx   # Stock ticker rows: sparkline + price/change; refresh button
 │   │   └── lib/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
@@ -422,6 +366,7 @@ mr-bridge-assistant/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
 │   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; rotating refresh token
 │   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
+│   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
 │   ├── vercel.json                        # Cron: /api/cron/sync daily at 6am PST (0 14 * * *)
 │   └── package.json
