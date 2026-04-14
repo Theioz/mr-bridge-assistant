@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Message } from "ai";
 
 const TOOL_LABELS: Record<string, string> = {
@@ -52,7 +53,7 @@ function getInvocations(msg: Message): ToolInvocation[] {
   return (msg.toolInvocations as ToolInvocation[] | undefined) ?? [];
 }
 
-export default function ToolStatusBar({ messages, isLoading }: Props) {
+const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props) {
   if (!isLoading) return null;
 
   // Only look at messages since the last user turn
@@ -98,4 +99,6 @@ export default function ToolStatusBar({ messages, isLoading }: Props) {
       </div>
     </div>
   );
-}
+});
+
+export default ToolStatusBar;

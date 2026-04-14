@@ -18,3 +18,4 @@ memory/timer_state.json
 # Personal Claude Code settings (overrides for local machine only)
 .claude/settings.local.json
 credentials.json
+.vercel
