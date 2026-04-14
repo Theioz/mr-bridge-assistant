@@ -28,6 +28,7 @@ function LoginForm() {
       setErrorMsg(error.message);
       setState("error");
     } else {
+      router.refresh();
       router.push("/");
     }
   }
