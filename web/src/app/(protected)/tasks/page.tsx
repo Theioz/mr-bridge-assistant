@@ -160,10 +160,10 @@ const priorityOrder = { high: 0, medium: 1, low: 2 };
 export default async function TasksPage() {
   const supabase = await createClient();
 
-  const [activeResult, completedResult] = await Promise.all([
+  const [activeResult, completedResult, subtasksResult] = await Promise.all([
     supabase
       .from("tasks")
-      .select("*, subtasks:tasks!tasks_parent_id_fkey(id, title, status, created_at)")
+      .select("*")
       .is("parent_id", null)
       .eq("status", "active")
       .order("created_at", { ascending: false }),
@@ -174,13 +174,32 @@ export default async function TasksPage() {
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("tasks")
+      .select("id, title, status, created_at, parent_id")
+      .not("parent_id", "is", null)
+      .eq("status", "active"),
   ]);
 
-  const tasks = ((activeResult.data ?? []) as Task[]).sort(
-    (a, b) =>
-      (priorityOrder[a.priority ?? "low"] ?? 2) -
-      (priorityOrder[b.priority ?? "low"] ?? 2)
-  );
+  if (activeResult.error)    console.error("[tasks] active query error:", activeResult.error.message);
+  if (completedResult.error) console.error("[tasks] completed query error:", completedResult.error.message);
+  if (subtasksResult.error)  console.error("[tasks] subtasks query error:", subtasksResult.error.message);
+
+  const subtasksByParent = new Map<string, Task[]>();
+  for (const s of (subtasksResult.data ?? []) as Task[]) {
+    if (!s.parent_id) continue;
+    const arr = subtasksByParent.get(s.parent_id) ?? [];
+    arr.push(s);
+    subtasksByParent.set(s.parent_id, arr);
+  }
+
+  const tasks = ((activeResult.data ?? []) as Task[])
+    .map((t) => ({ ...t, subtasks: subtasksByParent.get(t.id) ?? [] }))
+    .sort(
+      (a, b) =>
+        (priorityOrder[a.priority ?? "low"] ?? 2) -
+        (priorityOrder[b.priority ?? "low"] ?? 2)
+    );
   const completedTasks = (completedResult.data ?? []) as Task[];
 
   const high   = tasks.filter((t) => t.priority === "high");
