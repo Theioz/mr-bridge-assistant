@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 
 async function updateProfile(key: string, value: string) {
   "use server";
@@ -26,6 +27,20 @@ async function deleteProfile(key: string) {
   revalidatePath("/dashboard");
 }
 
+async function saveWatchlist(tickers: string[]) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("profile")
+    .upsert(
+      { user_id: user.id, key: "stock_watchlist", value: JSON.stringify(tickers) },
+      { onConflict: "user_id,key" },
+    );
+  revalidatePath("/settings");
+}
+
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase.from("profile").select("key,value");
@@ -34,6 +49,8 @@ export default async function SettingsPage() {
   for (const row of data ?? []) {
     values[row.key] = row.value;
   }
+
+  const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -50,6 +67,12 @@ export default async function SettingsPage() {
         values={values}
         updateAction={updateProfile}
         deleteAction={deleteProfile}
+      />
+
+      <WatchlistSettings
+        watchlist={watchlist}
+        saveAction={saveWatchlist}
+        hasApiKey={!!process.env.POLYGON_API_KEY}
       />
     </div>
   );

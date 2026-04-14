@@ -160,3 +160,14 @@ export interface WorkoutPlan {
   created_at: string;
   updated_at: string;
 }
+
+export interface StocksCache {
+  id: string;
+  user_id: string;
+  ticker: string;
+  price: number | null;
+  change_abs: number | null;
+  change_pct: number | null;
+  sparkline: { date: string; close: number }[] | null;
+  fetched_at: string;
+}

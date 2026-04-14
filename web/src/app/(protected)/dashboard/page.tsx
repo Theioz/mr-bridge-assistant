@@ -13,7 +13,33 @@ import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
 import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import TasksSummary from "@/components/dashboard/tasks-summary";
-import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task } from "@/lib/types";
+import { WatchlistWidget } from "@/components/dashboard/watchlist-widget";
+import { syncStocks } from "@/lib/sync/stocks";
+import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task, StocksCache } from "@/lib/types";
+
+async function refreshStocks() {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: profileRow } = await supabase
+    .from("profile")
+    .select("value")
+    .eq("user_id", user.id)
+    .eq("key", "stock_watchlist")
+    .single();
+
+  const tickers: string[] = profileRow?.value
+    ? (JSON.parse(profileRow.value) as string[])
+    : [];
+
+  if (tickers.length > 0) {
+    await syncStocks(supabase, user.id, tickers);
+  }
+
+  revalidatePath("/dashboard");
+}
 
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
@@ -42,6 +68,7 @@ export default async function DashboardPage() {
     allCompletedRes,
     profileRes,
     tasksRes,
+    stocksRes,
   ] = await Promise.all([
     // Latest 2 rows with body fat (for delta calculations)
     supabase
@@ -90,6 +117,10 @@ export default async function DashboardPage() {
       .is("parent_id", null)
       .eq("status", "active")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("stocks_cache")
+      .select("*")
+      .order("ticker", { ascending: true }),
   ]);
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
@@ -116,6 +147,8 @@ export default async function DashboardPage() {
       ({ high: 0, medium: 1, low: 2 }[a.priority ?? "low"] ?? 2) -
       ({ high: 0, medium: 1, low: 2 }[b.priority ?? "low"] ?? 2)
   );
+
+  const stocksRows = (stocksRes.data ?? []) as StocksCache[];
 
   const nameRows = (profileRes.data ?? []) as { key: string; value: string }[];
   const userName =
@@ -164,6 +197,13 @@ export default async function DashboardPage() {
         />
         <TasksSummary tasks={tasks} />
       </div>
+
+      {/* ── Watchlist ────────────────────────────────────────────────── */}
+      <WatchlistWidget
+        rows={stocksRows}
+        hasApiKey={!!process.env.POLYGON_API_KEY}
+        refreshAction={refreshStocks}
+      />
 
       {/* ── Schedule + Emails ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

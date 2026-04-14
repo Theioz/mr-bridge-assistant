@@ -271,6 +271,7 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py` |
 | `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
+| `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — enables stock watchlist widget and `get_stock_quote` chat tool; free tier supports EOD data)* |
 
 ### Step 8 — Deploy to Vercel
 

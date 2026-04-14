@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (stock watchlist dashboard widget — issue #142)
+- **`supabase/migrations/`** — `stocks_cache` table: per-user ticker cache with `price`, `change_abs`, `change_pct`, `sparkline` JSONB (7-day EOD bars), and `fetched_at`; RLS restricts to owner
+- **`web/src/lib/types.ts`** — added `StocksCache` interface
+- **`web/src/lib/sync/stocks.ts`** — shared Polygon.io helper (`syncStocks`); fetches `/v2/aggs/ticker/{T}/prev` for price/change and `/v2/aggs/ticker/{T}/range/1/day` for 14-day window trimmed to last 7 trading bars; upserts to `stocks_cache`
+- **`web/src/app/api/stocks/refresh/route.ts`** — authenticated POST handler; reads `stock_watchlist` from `profile` and calls `syncStocks`; returns `{ updated }`
+- **`web/src/app/api/stocks/validate/route.ts`** — GET proxy for Polygon `/v3/reference/tickers`; keeps `POLYGON_API_KEY` server-side; returns `{ valid: boolean }`
+- **`web/src/app/api/cron/sync/route.ts`** — added stocks sync step after health syncs; reads `stock_watchlist` for `ownerUserId` and calls `syncStocks` if non-empty; logged in `results.stocks`
+- **`web/src/components/dashboard/watchlist-widget.tsx`** — `WatchlistWidget` client component; 3-column ticker rows (symbol+timestamp / recharts 80×32 sparkline / price+change colour-coded green/red); refresh button with `useTransition` spinner; no-API-key and empty-watchlist states; sparkline hidden below 480px for clean mobile layout
+- **`web/src/app/(protected)/dashboard/page.tsx`** — fetches `stocks_cache` rows in `Promise.all`; `refreshStocks` server action calls `syncStocks` directly then `revalidatePath`; renders `<WatchlistWidget>` below Habits/Tasks grid
+- **`web/src/components/settings/watchlist-settings.tsx`** — `WatchlistSettings` client component; uppercase ticker input + Add button with server-proxy validation; per-ticker remove buttons; saves immediately on add/remove; no-API-key warning banner
+- **`web/src/app/(protected)/settings/page.tsx`** — `saveWatchlist` server action; reads `stock_watchlist` profile key; renders `<WatchlistSettings>` below `ProfileForm`
+- **`web/src/app/api/chat/route.ts`** — added `get_stock_quote` tool; checks `stocks_cache` first (6h freshness); falls back to live Polygon `/prev` fetch if stale or not found
+
 ### Added (weekly workout program in fitness tab — issue #192)
 - **`supabase/migrations/20260414000000_add_workout_plans.sql`** — new `workout_plans` table: per-user, per-date rows with `warmup`, `workout`, `cooldown` JSONB arrays, optional `notes`, and `calendar_event_id`; RLS policy restricts to owner
 - **`web/src/lib/types.ts`** — added `WorkoutExercise` and `WorkoutPlan` interfaces
