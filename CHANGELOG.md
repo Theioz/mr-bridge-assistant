@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (journal editor Submit button — issue #178)
+- **`web/src/components/journal/journal-editor.tsx`** — added explicit Submit button below the Reflect and Free Write tab content; on click flushes any pending debounce, saves immediately, clears form fields, shows a 3-second "Entry saved." confirmation banner, and scrolls to past entries
+- **`web/src/app/(protected)/journal/page.tsx`** — added `id="journal-history"` to the past-entries section so the editor can scroll to it after submit
+
 ### Fixed (chat session lost on mobile tab switch and refresh — issue #171)
 - **`web/src/components/chat/chat-page-client.tsx`** — added `useEffect` to persist `activeSessionId` to `sessionStorage` on every change; added mount-time fallback that reads `sessionStorage` when `initialSessionId` is null (covers edge cases where SSR couldn't resolve the last session)
 - **`web/src/app/(protected)/chat/page.tsx`** — server-side fix was already in place (queries `chat_sessions` ordered by `last_active_at desc`, pre-loads `initialMessages`); no changes needed

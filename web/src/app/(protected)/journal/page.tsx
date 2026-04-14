@@ -78,7 +78,7 @@ export default async function JournalPage() {
 
       {/* Past entries */}
       {pastEntries.length > 0 && (
-        <section>
+        <section id="journal-history">
           <p
             className="text-xs uppercase tracking-widest mb-3"
             style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
