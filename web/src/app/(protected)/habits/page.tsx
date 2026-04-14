@@ -55,6 +55,23 @@ async function archiveHabit(habitId: string) {
   revalidatePath("/dashboard");
 }
 
+async function updateHabit(id: string, name: string, emoji: string, category: string) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("habit_registry")
+    .update({
+      name: name.trim(),
+      emoji: emoji.trim() || null,
+      category: category.trim() || null,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  revalidatePath("/habits");
+}
+
 export default async function HabitsPage() {
   const supabase = await createClient();
   const today = todayString();
@@ -126,6 +143,7 @@ export default async function HabitsPage() {
         toggleAction={toggleHabit}
         archiveAction={archiveHabit}
         addAction={addHabit}
+        updateAction={updateHabit}
       />
 
       {habits.length > 0 && (
