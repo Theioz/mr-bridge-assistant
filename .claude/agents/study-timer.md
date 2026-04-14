@@ -6,6 +6,7 @@ tools:
 model: haiku
 permissionMode: acceptEdits
 maxTurns: 6
+color: green
 ---
 
 ## Purpose
