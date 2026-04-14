@@ -75,12 +75,12 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
       <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
         Weekly Completion
       </p>
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={260}>
         <RadialBarChart
           cx="50%"
           cy="50%"
           innerRadius={20}
-          outerRadius={90}
+          outerRadius={80}
           data={data}
           startAngle={180}
           endAngle={-180}
