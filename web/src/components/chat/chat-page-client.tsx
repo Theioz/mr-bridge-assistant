@@ -67,9 +67,51 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
     }
   }, []);
 
+  // On mount: fetch the real session list and auto-correct if the Next.js router
+  // cache (staleTimes.dynamic: 300s) served a stale initialSessionId. API calls
+  // always bypass the router cache, so this gives us the authoritative Supabase state.
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    const initSessions = async () => {
+      try {
+        const res = await fetch("/api/chat/sessions");
+        if (!res.ok) return;
+        const data = await res.json();
+        const list: SessionPreview[] = data.sessions ?? [];
+        setSessions(list);
+
+        const mostRecent = list[0];
+        if (mostRecent && mostRecent.id !== activeSessionIdRef.current) {
+          // Server gave us a stale session — silently switch to the real latest one
+          setLoadingSession(true);
+          try {
+            const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
+            if (msgRes.ok) {
+              const msgData = await msgRes.json();
+              const msgs: Message[] = (
+                msgData.messages as { id: string; role: string; content: string; created_at: string }[]
+              ).map((m) => ({
+                id: m.id,
+                role: m.role as "user" | "assistant",
+                content: m.content,
+                createdAt: new Date(m.created_at),
+              }));
+              setActiveSessionId(mostRecent.id);
+              setActiveMessages(msgs);
+              setHasMore(msgData.hasMore ?? false);
+              setOldestPosition(msgData.oldestPosition ?? null);
+              setRefreshKey((k) => k + 1);
+            }
+          } finally {
+            setLoadingSession(false);
+          }
+        }
+      } catch {
+        // non-fatal
+      }
+    };
+    initSessions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Re-fetch messages when the user returns to this tab so stale router-cache
   // data doesn't leave the chat a few conversations behind.
