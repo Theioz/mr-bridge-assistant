@@ -76,7 +76,10 @@ const retryOnOverload: LanguageModelV1Middleware = {
   },
 };
 
-function selectModel(messages: { role: string; content: unknown }[]): "haiku" | "sonnet" {
+function selectModel(messages: { role: string; content: unknown }[], modelOverride?: "haiku" | "sonnet" | "auto"): "haiku" | "sonnet" {
+  if (modelOverride === "haiku") return "haiku";
+  if (modelOverride === "sonnet") return "sonnet";
+
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
   if (!lastUser || typeof lastUser.content !== "string") return "sonnet";
   const msg = lastUser.content.toLowerCase().trim();
@@ -111,16 +114,88 @@ function selectModel(messages: { role: string; content: unknown }[]): "haiku" | 
     /show.{0,10}tasks/, /list.{0,10}tasks/, /get.{0,10}tasks/, /what.{0,10}tasks/,
     /check habits/, /show habits/, /get recipes/, /find recipes/, /what.{0,20}recipes/,
     /my habits today/,
+    /what.{0,20}(eat|ate|had).{0,20}today/,
+    /today.{0,20}meals/,
+    /what.{0,20}weight.{0,20}goal/,
+    /what.{0,20}(protein|calorie|macro).{0,20}goal/,
+    /show.{0,10}habits/,
+    /how.{0,20}habits.{0,20}(today|this week)/,
+    /what.{0,10}my.{0,20}goal/,
+    /get.{0,10}profile/,
+    /log.{0,10}(that|it) as/,
   ];
   if (simplePatterns.some((p) => p.test(msg))) return "haiku";
 
   return "sonnet";
 }
 
+// ── Static system prompt (module-level, never changes — safe to cache) ──────
+// The dynamic block (date + user name) is built inside POST per-request.
+// Only the static block carries cacheControl so the cache key is stable
+// across users and days; the tiny dynamic block is processed fresh each turn.
+const STATIC_SYSTEM_PROMPT = `Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
+Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
+Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
+When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
+When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
+If a task will require more than 12 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
+Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
+
+Calendar pre-flight rules (apply before every create_calendar_event call):
+1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
+2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
+3. Only call create_calendar_event after the user has confirmed there are no conflicts or has explicitly accepted them.
+
+Calendar mutation rules:
+- delete_calendar_event: always state the event title, date, and time; require explicit user confirmation before calling.
+- update_calendar_event: always state the before/after diff; require explicit user confirmation before calling.
+
+You have access to the user's Supabase data, Gmail, and Google Calendar via tools. Use them when asked — do not tell the user you lack access to email or calendar. Never suggest these integrations aren't connected; they are.
+
+Tools available:
+- get_tasks: active/completed/archived tasks
+- add_task: create a new task or subtask (use parent_id to add items to a list — call get_tasks first to find the parent task ID)
+- complete_task: mark a task done by ID
+- get_habits_today: all active habits + today's completion status
+- log_habit: mark a habit complete for a given date
+- get_fitness_summary: recent body composition, workouts, recovery metrics
+- get_profile: profile key/value store
+- update_profile: upsert one or more profile keys — use for goals, preferences, and targets agreed upon in conversation. Always tell the user what you're about to write before calling this, then confirm what was saved. For known fitness/nutrition goals, use the canonical keys so they appear in the web UI: weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal. For other goals (sleep, study, etc.) use dot-notation: sleep.goal.hrs, study.goal.mins_per_day, etc.
+- search_gmail: search Gmail with any query string, returns message IDs + metadata
+- get_email_body: fetch and decode the full plain-text body of an email by message ID
+- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). Each event also includes an eventId — preserve it for delete/update calls. By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
+- create_calendar_event: create a Google Calendar event on the primary calendar. Pre-flight required: call list_calendar_events first, check for time overlaps and duplicate titles on the target date, surface any conflicts to the user, and confirm before proceeding.
+- delete_calendar_event: delete an event by eventId. Always state title/date/time and require explicit user confirmation first.
+- update_calendar_event: patch an existing event by eventId (summary, start, end, location, description). Always state before/after and require explicit user confirmation first.
+- get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
+- get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
+- get_session_history: fetch earlier messages from this chat session. Ask the user before calling: "Should I pull earlier messages from this session for more context?"
+
+Recipes and meal planning are in scope.
+
+Meal logging is done through the Meals tab in the web interface — do not attempt to log meals yourself. If the user asks you to log a meal, tell them to use the Meals tab. You can still read today's logged meals via get_today_meals to give accurate nutrition advice.
+Before making any claim about what the user has or hasn't eaten today, always call get_today_meals first.
+
+Ingredient assumptions: Unless the user states otherwise in this conversation, assume the only ingredients available are bare essentials — salt, pepper, neutral oil, olive oil, butter, garlic, onion, basic dry spices (cumin, paprika, oregano, chili flake, cinnamon, etc.), flour, sugar, baking soda/powder, vinegar, soy sauce, and stock/broth. Do not assume proteins, produce, dairy, or specialty ingredients are on hand.
+
+When the user says what they have available (e.g. "I have chicken, broccoli, and rice"), treat those ingredients as the primary constraint for the rest of the conversation.
+
+When asked what to cook or for recipe ideas:
+1. Call get_recipes to check the saved recipe library — if a saved recipe is a good fit for the context (ingredients on hand, dietary preferences, fitness goals), surface it with a note that it's saved.
+2. Also suggest 1–2 recipes from your own knowledge that are NOT in the saved list. The saved list is a library of recipes the user likes, not a menu to be confined to.
+3. If the user hasn't said what they have on hand, ask: "What proteins or produce do you have available?"
+4. Call get_fitness_summary to calibrate the recommendation — prioritize protein post-workout, lower-calorie options in a deficit phase, etc.
+5. Call get_profile to check for dietary preferences and cuisine preferences (ignore any pantry-related profile keys).
+6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
+
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const { messages, sessionId } = await req.json();
+  const { messages, sessionId, model: modelOverride } = await req.json() as {
+    messages: { role: "user" | "assistant"; content: string }[];
+    sessionId?: string;
+    model?: "haiku" | "sonnet" | "auto";
+  };
   console.log("[chat] sessionId:", sessionId, "messages:", messages.length);
 
   // Resolve the authenticated user (needed for per-user data scoping)
@@ -156,7 +231,7 @@ export async function POST(req: Request) {
       .eq("session_id", sessionId)
       .in("role", ["user", "assistant"])
       .order("position", { ascending: true, nullsFirst: false })
-      .limit(20);
+      .limit(10);
     if (data) {
       // Filter out empty-content messages — they cause Anthropic 400 errors
       contextMessages = (data as { role: "user" | "assistant"; content: string }[]).filter(
@@ -219,8 +294,10 @@ export async function POST(req: Request) {
   }
 
   const userLabel = userName ?? (isDemo ? "Alex" : "the user");
-  const systemPrompt = isDemo
-    ? `You are Mr. Bridge, a personal AI assistant. Today's date is ${todayString()}.
+
+  // Demo: full string prompt (Groq doesn't support cacheControl).
+  // Non-demo: dynamic block only — the static rules live in STATIC_SYSTEM_PROMPT above.
+  const demoSystemPrompt = `You are Mr. Bridge, a personal AI assistant. Today's date is ${todayString()}.
 You are currently running in demo mode for a fictional persona: Alex Chen, a software engineer based in San Francisco.
 Address the user as "Alex" — naturally in conversation, not robotically after every sentence.
 
@@ -238,62 +315,11 @@ Tools available:
 - get_profile, update_profile
 - search_gmail, get_email_body (returns demo emails)
 - list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
-- get_recipes, get_today_meals`
-    : `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
+- get_recipes, get_today_meals`;
+
+  const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
-${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : 'If you learn the user\'s name during the conversation, use it naturally going forward.'}
-
-Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
-Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
-Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
-When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
-When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
-
-Calendar pre-flight rules (apply before every create_calendar_event call):
-1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
-2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
-3. Only call create_calendar_event after the user has confirmed there are no conflicts or has explicitly accepted them.
-
-Calendar mutation rules:
-- delete_calendar_event: always state the event title, date, and time; require explicit user confirmation before calling.
-- update_calendar_event: always state the before/after diff; require explicit user confirmation before calling.
-
-You have access to the user's Supabase data, Gmail, and Google Calendar via tools. Use them when asked — do not tell the user you lack access to email or calendar. Never suggest these integrations aren't connected; they are.
-
-Tools available:
-- get_tasks: active/completed/archived tasks
-- add_task: create a new task or subtask (use parent_id to add items to a list — call get_tasks first to find the parent task ID)
-- complete_task: mark a task done by ID
-- get_habits_today: all active habits + today's completion status
-- log_habit: mark a habit complete for a given date
-- get_fitness_summary: recent body composition, workouts, recovery metrics
-- get_profile: profile key/value store
-- update_profile: upsert one or more profile keys — use for goals, preferences, and targets agreed upon in conversation. Always tell the user what you're about to write before calling this, then confirm what was saved. For known fitness/nutrition goals, use the canonical keys so they appear in the web UI: weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal. For other goals (sleep, study, etc.) use dot-notation: sleep.goal.hrs, study.goal.mins_per_day, etc.
-- search_gmail: search Gmail with any query string, returns message IDs + metadata
-- get_email_body: fetch and decode the full plain-text body of an email by message ID
-- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). Each event also includes an eventId — preserve it for delete/update calls. By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
-- create_calendar_event: create a Google Calendar event on the primary calendar. Pre-flight required: call list_calendar_events first, check for time overlaps and duplicate titles on the target date, surface any conflicts to the user, and confirm before proceeding.
-- delete_calendar_event: delete an event by eventId. Always state title/date/time and require explicit user confirmation first.
-- update_calendar_event: patch an existing event by eventId (summary, start, end, location, description). Always state before/after and require explicit user confirmation first.
-- get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
-- get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
-
-Recipes and meal planning are in scope.
-
-Meal logging is done through the Meals tab in the web interface — do not attempt to log meals yourself. If the user asks you to log a meal, tell them to use the Meals tab. You can still read today's logged meals via get_today_meals to give accurate nutrition advice.
-Before making any claim about what the user has or hasn't eaten today, always call get_today_meals first.
-
-Ingredient assumptions: Unless the user states otherwise in this conversation, assume the only ingredients available are bare essentials — salt, pepper, neutral oil, olive oil, butter, garlic, onion, basic dry spices (cumin, paprika, oregano, chili flake, cinnamon, etc.), flour, sugar, baking soda/powder, vinegar, soy sauce, and stock/broth. Do not assume proteins, produce, dairy, or specialty ingredients are on hand.
-
-When the user says what they have available (e.g. "I have chicken, broccoli, and rice"), treat those ingredients as the primary constraint for the rest of the conversation.
-
-When asked what to cook or for recipe ideas:
-1. Call get_recipes to check the saved recipe library — if a saved recipe is a good fit for the context (ingredients on hand, dietary preferences, fitness goals), surface it with a note that it's saved.
-2. Also suggest 1–2 recipes from your own knowledge that are NOT in the saved list. The saved list is a library of recipes the user likes, not a menu to be confined to.
-3. If the user hasn't said what they have on hand, ask: "What proteins or produce do you have available?"
-4. Call get_fitness_summary to calibrate the recommendation — prioritize protein post-workout, lower-calorie options in a deficit phase, etc.
-5. Call get_profile to check for dietary preferences and cuisine preferences (ignore any pantry-related profile keys).
-6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
+${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : "If you learn the user's name during the conversation, use it naturally going forward."}`;
 
   // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
   // Also filter empty-content messages to prevent Anthropic 400 errors
@@ -1037,6 +1063,27 @@ When asked what to cook or for recipe ideas:
         return data ?? [];
       },
     }),
+
+    get_session_history: tool({
+      description: "Fetch earlier messages from this chat session. Use when the user references something said earlier that isn't in the current context window. Always ask the user before calling: \"Should I pull earlier messages from this session for more context?\"",
+      parameters: jsonSchema<{ limit?: number }>({
+        type: "object",
+        properties: {
+          limit: { type: "number", description: "How many messages to fetch (max 40). Defaults to 20." },
+        },
+      }),
+      execute: async ({ limit = 20 }) => {
+        if (!sessionId) return { error: "No session ID available." };
+        const { data } = await supabase
+          .from("chat_messages")
+          .select("role, content, created_at")
+          .eq("session_id", sessionId)
+          .in("role", ["user", "assistant"])
+          .order("position", { ascending: true, nullsFirst: false })
+          .limit(Math.min(limit, 40));
+        return data ?? [];
+      },
+    }),
   };
 
   // Select model: demo → Groq Llama (free tier); real user → Anthropic tier selection
@@ -1046,7 +1093,7 @@ When asked what to cook or for recipe ideas:
     selectedModel = groq("llama-3.3-70b-versatile");
     console.log(`[chat] model=groq/llama-3.3-70b-versatile (demo) session=${sessionId}`);
   } else {
-    const modelTier = selectModel(messages);
+    const modelTier = selectModel(messages, modelOverride);
     console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
     selectedModel = wrapLanguageModel({
       model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
@@ -1054,13 +1101,36 @@ When asked what to cook or for recipe ideas:
     });
   }
 
+  // Build system value:
+  // - Demo (Groq): plain string — Groq doesn't support cacheControl.
+  // - Non-demo (Anthropic): two content blocks. Block 1 is the large static rules block
+  //   marked ephemeral so Anthropic caches it across users and days. Block 2 is the tiny
+  //   dynamic block (date + name) processed fresh each turn. This prevents daily cache busts
+  //   caused by todayString() appearing in the previously-cached monolithic prompt.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const systemValue: any = isDemo
+    ? demoSystemPrompt
+    : [
+        {
+          type: "text",
+          text: STATIC_SYSTEM_PROMPT,
+          experimental_providerMetadata: {
+            anthropic: { cacheControl: { type: "ephemeral" } },
+          },
+        },
+        {
+          type: "text",
+          text: dynamicPromptBlock,
+        },
+      ];
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
     model: selectedModel as any,
-    system: systemPrompt,
+    system: systemValue,
     messages: [...contextMessages, ...cleanMessages],
     tools,
-    maxSteps: 25,
+    maxSteps: 12,
     onError: ({ error }) => {
       console.error("[chat] streamText error:", JSON.stringify(error));
     },
@@ -1098,13 +1168,6 @@ When asked what to cook or for recipe ideas:
       }
     },
   };
-
-  // Only pass Anthropic cache options for non-demo (Groq doesn't support providerOptions)
-  if (!isDemo) {
-    streamOptions.providerOptions = {
-      anthropic: { cacheControl: { type: "ephemeral" } },
-    };
-  }
 
   const result = streamText(streamOptions);
 
