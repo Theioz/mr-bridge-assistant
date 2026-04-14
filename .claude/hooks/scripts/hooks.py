@@ -4,7 +4,8 @@ Mr. Bridge — Claude Code Hooks
 Receives event context via stdin JSON and handles lifecycle events.
 
 Supported hooks:
-  PostToolUse — fires after any tool completes
+  PostToolUse — fires after Write or Edit tool completes
+  Stop        — fires when a session ends
 """
 
 import json
@@ -15,11 +16,11 @@ from datetime import datetime
 
 
 def handle_post_tool_use(event: dict):
-    """After a Write tool call, remind to commit if a memory file was written."""
+    """After a Write or Edit tool call, remind to commit if a memory file was touched."""
     tool_name = event.get("tool_name", "")
     tool_input = event.get("tool_input", {})
 
-    if tool_name != "Write":
+    if tool_name not in ("Write", "Edit"):
         return
 
     file_path = tool_input.get("file_path", "")
@@ -31,6 +32,16 @@ def handle_post_tool_use(event: dict):
     print(
         f"\n[Mr. Bridge] Memory updated ({filename}) — "
         f"run: git add . && git commit -m \"session: {date} — memory update\" && git push",
+        file=sys.stderr
+    )
+
+
+def handle_stop(event: dict):
+    """At session end, remind to commit any pending changes."""
+    date = datetime.now().strftime("%Y-%m-%d")
+    print(
+        f"\n[Mr. Bridge] Session ended — if you made changes, run: "
+        f"git add . && git commit -m \"session: {date} — <summary>\" && git push",
         file=sys.stderr
     )
 
@@ -48,6 +59,8 @@ def main():
 
     if hook_type == "PostToolUse":
         handle_post_tool_use(event)
+    elif hook_type == "Stop":
+        handle_stop(event)
 
 
 if __name__ == "__main__":

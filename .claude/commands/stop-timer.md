@@ -3,9 +3,7 @@ name: stop-timer
 description: Stop the active study timer, optionally adjust the logged duration, and insert the entry into the Supabase study_log table.
 user-invocable: true
 allowed-tools:
-  - Read
-  - Write
-  - Edit
+  - Bash(bash *)
 model: haiku
 ---
 

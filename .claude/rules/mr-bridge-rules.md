@@ -208,4 +208,4 @@ All live data is stored in Supabase. Local markdown files are archived originals
 | Resource | Location | Purpose |
 |----------|----------|---------|
 | Claude Code best practices | `.claude/references/best-practice/` | Patterns for agents, skills, commands, hooks, MCP |
-| Update reference: | `git submodule update --remote .claude/references/best-practice` | Pull latest before feature work |
+| Update reference: | `bash scripts/update-references.sh` | Pull latest before feature work |
