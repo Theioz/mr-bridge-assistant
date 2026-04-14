@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (meal scanner UX — issue #203)
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — split scan trigger into "Take Photo" (camera) and "From Library" (gallery) buttons across all three trigger locations: empty state, add-another row, and error recovery
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — re-estimation now applies `food_name` from API response to the item label; dish name field added to expanded edit panel for direct manual editing
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — replaced chat redirect with inline ephemeral Mr. Bridge panel; session is deleted on close so it never appears in chat history
+- **`web/src/app/(protected)/meals/InlineMealChat.tsx`** — new ephemeral inline chat component; prepends scanned nutrition context to first message, streams response via Vercel AI SDK data stream protocol
+- **`web/src/app/api/chat/sessions/[id]/route.ts`** — added DELETE handler; verifies ownership, deletes session row (messages cascade via ON DELETE CASCADE)
+
 ### Changed
 - **`README.md`** — replaced Mermaid architecture diagram with D2-rendered SVG (`docs/architecture.svg`); diagram now includes Renpho, Polygon.io/stocks pipeline, Notifications page, ntfy.sh alert scripts, and all 10 pages (#182)
 
