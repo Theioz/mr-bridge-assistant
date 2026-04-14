@@ -15,6 +15,7 @@ interface Props {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  initialInput?: string;
 }
 
 // Returns the slash token the cursor is currently inside, or null.
@@ -28,7 +29,7 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
   return { start, query: match[1].slice(1).toLowerCase() };
 }
 
-export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore }: Props) {
+export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore, initialInput }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,12 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     initialMessages,
     onFinish: onMessageSent,
   });
+
+  // Seed input from navigation handoff (e.g. Scanner → Chat prefill)
+  useEffect(() => {
+    if (initialInput) setInput(initialInput);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Slash-command menu state ──────────────────────────────────────────
   const [menuCommands, setMenuCommands] = useState<SlashCommand[]>([]);

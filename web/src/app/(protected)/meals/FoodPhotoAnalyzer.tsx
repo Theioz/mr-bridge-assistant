@@ -2,30 +2,34 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Loader2, X, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
-import type { FoodAnalysis, NutritionLabel } from "@/app/api/meals/analyze-photo/route";
-import type { TodayTotals } from "@/app/api/meals/today-totals/route";
+import {
+  Camera,
+  Loader2,
+  X,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Send,
+  Trash2,
+} from "lucide-react";
 
-type AnalyzerMode = "food" | "label";
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-type Phase = "idle" | "loading" | "review" | "saving" | "done" | "error";
+type ScanPhase = "idle" | "loading" | "error" | "manual";
+type AnalyzerMode = "food" | "label";
 
-interface FoodReviewState extends FoodAnalysis {
-  mode: "food";
-  meal_type_guess: MealType;
+interface ScanItem {
+  id: string;
+  mode: AnalyzerMode;
+  label: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g?: number;
+  sodium_mg?: number;
+  ingredients?: string; // food mode only — used for re-estimation
 }
-
-interface LabelReviewState extends NutritionLabel {
-  mode: "label";
-}
-
-type ReviewState = FoodReviewState | LabelReviewState;
-
-const CONFIDENCE_COLORS: Record<string, string> = {
-  high: "var(--color-success, #22c55e)",
-  medium: "var(--color-warning, #f59e0b)",
-  low: "var(--color-danger, #ef4444)",
-};
 
 const inputStyle = {
   background: "var(--color-bg)",
@@ -39,67 +43,101 @@ const inputStyle = {
   WebkitAppearance: "none" as const,
 } as const;
 
-function MacroFitRow({ totals, addingCalories }: { totals: TodayTotals; addingCalories: number }) {
+const pillBtnBase = {
+  borderRadius: 20,
+  fontSize: 13,
+  fontWeight: 500,
+  padding: "6px 14px",
+  cursor: "pointer",
+  border: "1px solid var(--color-border)",
+  transition: "all 0.15s",
+} as const;
+
+function MacroLine({ item }: { item: Pick<ScanItem, "calories" | "protein_g" | "carbs_g" | "fat_g"> }) {
   return (
-    <div
-      className="rounded-lg px-3 py-2"
-      style={{
-        background: "var(--color-bg)",
-        border: "1px solid var(--color-border)",
-        fontSize: 12,
-        color: "var(--color-text-muted)",
-      }}
-    >
-      <span style={{ color: "var(--color-text-faint)" }}>Today so far: </span>
-      <span>{Math.round(totals.calories)} cal · Prot {Math.round(totals.protein_g)}g · Carbs {Math.round(totals.carbs_g)}g · Fat {Math.round(totals.fat_g)}g</span>
-      <span style={{ color: "var(--color-text-faint)" }}> — this adds </span>
-      <span style={{ color: "var(--color-text)" }}>{Math.round(addingCalories)} cal</span>
-    </div>
+    <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+      {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P · {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
+    </span>
   );
 }
 
-export default function FoodPhotoAnalyzer() {
+interface FoodPhotoAnalyzerProps {
+  onUnsavedItems?: (count: number) => void;
+}
+
+export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [analyzerMode, setAnalyzerMode] = useState<AnalyzerMode>("food");
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>("");
-  const [review, setReview] = useState<ReviewState | null>(null);
-  const [reestimating, setReestimating] = useState(false);
-  const [macrosExpanded, setMacrosExpanded] = useState(false);
-  const [userPrompt, setUserPrompt] = useState<string>("");
-  const [servingMultiplier, setServingMultiplier] = useState<number>(1.0);
-  const [todayTotals, setTodayTotals] = useState<TodayTotals | null>(null);
 
-  function reset() {
-    setPhase("idle");
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    setReview(null);
-    setErrorMsg("");
-    setReestimating(false);
-    setMacrosExpanded(false);
-    setUserPrompt("");
-    setServingMultiplier(1.0);
-    setTodayTotals(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  // ── Session state ─────────────────────────────────────────────────────────
+  const [items, setItems] = useState<ScanItem[]>([]);
+  const [scanPhase, setScanPhase] = useState<ScanPhase>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [analyzerMode, setAnalyzerMode] = useState<AnalyzerMode>("label");
+  const [activeSheet, setActiveSheet] = useState<"log" | "mealprep" | null>(null);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [reestimatingId, setReestimatingId] = useState<string | null>(null);
+
+  // ── Manual entry state ───────────────────────────────────────────────────
+  const [manualLabel, setManualLabel] = useState("");
+  const [manualCal, setManualCal] = useState("");
+  const [manualProtein, setManualProtein] = useState("");
+  const [manualCarbs, setManualCarbs] = useState("");
+  const [manualFat, setManualFat] = useState("");
+
+  // ── Log sheet state ───────────────────────────────────────────────────────
+  const [logMealType, setLogMealType] = useState<MealType>("lunch");
+  const [servings, setServings] = useState("1");
+  const [logging, setLogging] = useState(false);
+
+  // ── Meal prep sheet state ─────────────────────────────────────────────────
+  const [batchServings, setBatchServings] = useState("1");
+  const [containers, setContainers] = useState("1");
+  const [mealPrepType, setMealPrepType] = useState<MealType>("lunch");
+  const [prepping, setPrepping] = useState(false);
+
+  // ── Chat handoff state ────────────────────────────────────────────────────
+  const [chatQuestion, setChatQuestion] = useState("");
+
+  // ── Derived totals ────────────────────────────────────────────────────────
+  const combined = items.reduce(
+    (acc, item) => ({
+      calories: acc.calories + item.calories,
+      protein_g: acc.protein_g + item.protein_g,
+      carbs_g: acc.carbs_g + item.carbs_g,
+      fat_g: acc.fat_g + item.fat_g,
+    }),
+    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+  );
+
+  function notifyUnsaved(newItems: ScanItem[]) {
+    onUnsavedItems?.(newItems.length);
   }
 
-  async function fetchTodayTotals() {
-    try {
-      const res = await fetch("/api/meals/today-totals");
-      if (res.ok) {
-        const data = await res.json();
-        setTodayTotals(data as TodayTotals);
-      }
-    } catch {
-      // non-fatal — daily context is best-effort
-    }
+  function addItem(item: ScanItem) {
+    setItems((prev) => {
+      const next = [...prev, item];
+      notifyUnsaved(next);
+      return next;
+    });
   }
 
+  function removeItem(id: string) {
+    setItems((prev) => {
+      const next = prev.filter((i) => i.id !== id);
+      notifyUnsaved(next);
+      return next;
+    });
+    if (expandedItemId === id) setExpandedItemId(null);
+  }
+
+  function clearAll() {
+    setItems([]);
+    notifyUnsaved([]);
+    setActiveSheet(null);
+  }
+
+  // ── Image compression (unchanged) ────────────────────────────────────────
   async function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -140,24 +178,20 @@ export default function FoodPhotoAnalyzer() {
     });
   }
 
+  // ── Scan flow ─────────────────────────────────────────────────────────────
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset so the same file can be scanned again
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
-    if (
-      file.type === "image/heic" ||
-      file.name.toLowerCase().endsWith(".heic")
-    ) {
-      setErrorMsg(
-        "In your iPhone Camera settings, set format to 'Most Compatible' and try again."
-      );
-      setPhase("error");
+    if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
+      setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
+      setScanPhase("error");
       return;
     }
 
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setPhase("loading");
+    setScanPhase("loading");
 
     let imageBlob: Blob;
     try {
@@ -169,9 +203,6 @@ export default function FoodPhotoAnalyzer() {
     const formData = new FormData();
     formData.append("image", imageBlob, "photo.jpg");
     formData.append("mode", analyzerMode);
-    if (analyzerMode === "food" && userPrompt.trim()) {
-      formData.append("prompt", userPrompt.trim());
-    }
 
     try {
       const res = await fetch("/api/meals/analyze-photo", {
@@ -182,14 +213,39 @@ export default function FoodPhotoAnalyzer() {
       if (contentType.includes("application/json")) {
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
+
         if (data.mode === "label") {
-          setReview(data as LabelReviewState);
-          setServingMultiplier(1.0);
+          if (!data.readable) {
+            setErrorMsg("Label wasn't clear enough to read — try a better-lit photo.");
+            setScanPhase("error");
+            return;
+          }
+          addItem({
+            id: crypto.randomUUID(),
+            mode: "label",
+            label: data.product_name || "Nutrition Label",
+            calories: data.calories ?? 0,
+            protein_g: data.protein_g ?? 0,
+            carbs_g: data.carbs_g ?? 0,
+            fat_g: data.fat_g ?? 0,
+            fiber_g: data.fiber_g ?? undefined,
+            sodium_mg: data.sodium_mg ?? undefined,
+          });
         } else {
-          setReview(data as FoodReviewState);
+          addItem({
+            id: crypto.randomUUID(),
+            mode: "food",
+            label: data.food_name ?? "Unknown food",
+            calories: data.calories ?? 0,
+            protein_g: data.protein_g ?? 0,
+            carbs_g: data.carbs_g ?? 0,
+            fat_g: data.fat_g ?? 0,
+            fiber_g: data.fiber_g ?? undefined,
+            sodium_mg: data.sodium_mg ?? undefined,
+            ingredients: data.ingredients ?? undefined,
+          });
         }
-        setPhase("review");
-        fetchTodayTotals();
+        setScanPhase("idle");
       } else {
         const text = await res.text();
         if (res.status === 413 || text.includes("Entity Too Large")) {
@@ -199,102 +255,141 @@ export default function FoodPhotoAnalyzer() {
       }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Analysis failed");
-      setPhase("error");
+      setScanPhase("error");
     }
   }
 
-  async function handleReestimate() {
-    if (!review || review.mode !== "food") return;
-    setReestimating(true);
+  // ── Per-item re-estimation ────────────────────────────────────────────────
+  async function handleReestimateItem(id: string, ingredients: string) {
+    setReestimatingId(id);
     try {
       const res = await fetch("/api/meals/estimate-macros", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients: review.ingredients }),
+        body: JSON.stringify({ ingredients }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Re-estimation failed");
-      setReview((prev) =>
-        prev && prev.mode === "food"
-          ? { ...data, mode: "food", meal_type_guess: prev.meal_type_guess }
-          : prev
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                calories: data.calories ?? item.calories,
+                protein_g: data.protein_g ?? item.protein_g,
+                carbs_g: data.carbs_g ?? item.carbs_g,
+                fat_g: data.fat_g ?? item.fat_g,
+                fiber_g: data.fiber_g ?? item.fiber_g,
+              }
+            : item
+        )
       );
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Re-estimation failed");
+    } catch {
+      // non-fatal — keep existing values
     } finally {
-      setReestimating(false);
+      setReestimatingId(null);
     }
   }
 
-  async function handleLogFood() {
-    if (!review || review.mode !== "food") return;
-    setPhase("saving");
+  // ── Manual entry ──────────────────────────────────────────────────────────
+  function handleAddManual() {
+    if (!manualLabel.trim()) return;
+    addItem({
+      id: crypto.randomUUID(),
+      mode: "food",
+      label: manualLabel.trim(),
+      calories: parseFloat(manualCal) || 0,
+      protein_g: parseFloat(manualProtein) || 0,
+      carbs_g: parseFloat(manualCarbs) || 0,
+      fat_g: parseFloat(manualFat) || 0,
+    });
+    setManualLabel("");
+    setManualCal("");
+    setManualProtein("");
+    setManualCarbs("");
+    setManualFat("");
+    setScanPhase("idle");
+  }
+
+  // ── Log as meal ───────────────────────────────────────────────────────────
+  async function handleLogMeal() {
+    const s = parseFloat(servings) || 1;
+    setLogging(true);
     try {
       const res = await fetch("/api/meals/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meal_type: review.meal_type_guess,
-          notes: `${review.food_name} — ${review.ingredients}`,
-          calories: review.calories,
-          protein_g: review.protein_g,
-          carbs_g: review.carbs_g,
-          fat_g: review.fat_g,
-          fiber_g: review.fiber_g,
-          sodium_mg: review.sodium_mg,
-          source: "vision",
+          meal_type: logMealType,
+          notes: items.map((i) => i.label).join(", "),
+          calories: Math.round(combined.calories * s),
+          protein_g: Math.round(combined.protein_g * s * 10) / 10,
+          carbs_g: Math.round(combined.carbs_g * s * 10) / 10,
+          fat_g: Math.round(combined.fat_g * s * 10) / 10,
+          source: "scanner",
         }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Failed to log meal");
-      setPhase("done");
+      clearAll();
+      setServings("1");
       router.refresh();
-      setTimeout(reset, 2000);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Failed to log meal");
-      setPhase("error");
+    } finally {
+      setLogging(false);
     }
   }
 
-  async function handleLogLabel() {
-    if (!review || review.mode !== "label") return;
-    setPhase("saving");
-    const m = servingMultiplier;
-    const notes = `${review.product_name} — ${review.serving_size}${m !== 1 ? ` × ${m}` : ""}`;
+  // ── Meal prep ─────────────────────────────────────────────────────────────
+  async function handleMealPrep() {
+    const n = parseInt(containers) || 1;
+    const perContainer = {
+      calories: Math.round(combined.calories / n),
+      protein_g: Math.round((combined.protein_g / n) * 10) / 10,
+      carbs_g: Math.round((combined.carbs_g / n) * 10) / 10,
+      fat_g: Math.round((combined.fat_g / n) * 10) / 10,
+    };
+    setPrepping(true);
     try {
       const res = await fetch("/api/meals/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meal_type: "snack",
-          notes,
-          calories: Math.round(review.calories * m),
-          protein_g: Math.round(review.protein_g * m * 10) / 10,
-          carbs_g: Math.round(review.carbs_g * m * 10) / 10,
-          fat_g: Math.round(review.fat_g * m * 10) / 10,
-          fiber_g: review.fiber_g != null ? Math.round(review.fiber_g * m * 10) / 10 : null,
-          sodium_mg: review.sodium_mg != null ? Math.round(review.sodium_mg * m) : null,
-          source: "label",
+          meal_type: mealPrepType,
+          notes: items.map((i) => i.label).join(", "),
+          ...perContainer,
+          source: "scanner",
+          count: n,
         }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error ?? "Failed to log meal");
-      setPhase("done");
+      if (!res.ok || data.error) throw new Error(data.error ?? "Failed to log meal prep");
+      clearAll();
+      setBatchServings("1");
+      setContainers("1");
       router.refresh();
-      setTimeout(reset, 2000);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to log meal");
-      setPhase("error");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to log meal prep");
+    } finally {
+      setPrepping(false);
     }
   }
 
-  function updateMacro(field: keyof FoodReviewState, value: string, isInt: boolean) {
-    const parsed = isInt ? parseInt(value, 10) : parseFloat(value);
-    if (!isNaN(parsed)) setReview((prev) => (prev && prev.mode === "food" ? { ...prev, [field]: parsed } : prev));
-    else if (value === "") setReview((prev) => (prev && prev.mode === "food" ? { ...prev, [field]: 0 } : prev));
+  // ── Chat handoff ──────────────────────────────────────────────────────────
+  function handleSendToChat() {
+    if (!chatQuestion.trim() && items.length === 0) return;
+    const nutritionLines = items
+      .map((i) => `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g protein, ${Math.round(i.carbs_g)}g carbs, ${Math.round(i.fat_g)}g fat`)
+      .join("\n");
+    const prefillText = items.length > 0
+      ? `${chatQuestion.trim()}\n\n--- Scanned nutrition data ---\n${nutritionLines}\nCombined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g protein, ${Math.round(combined.carbs_g)}g carbs, ${Math.round(combined.fat_g)}g fat`
+      : chatQuestion.trim();
+    sessionStorage.setItem("chatPrefill", prefillText);
+    router.push("/chat");
   }
 
-  // ── Pill toggle ──
+  // ── Mode toggle ───────────────────────────────────────────────────────────
   const ModeToggle = (
     <div
       className="flex items-center gap-0.5 p-0.5 rounded-lg self-start"
@@ -303,7 +398,7 @@ export default function FoodPhotoAnalyzer() {
         border: "1px solid var(--color-border)",
       }}
     >
-      {(["food", "label"] as AnalyzerMode[]).map((opt) => {
+      {(["label", "food"] as AnalyzerMode[]).map((opt) => {
         const active = opt === analyzerMode;
         return (
           <button
@@ -317,267 +412,375 @@ export default function FoodPhotoAnalyzer() {
               whiteSpace: "nowrap",
             }}
           >
-            {opt === "food" ? "Food photo" : "Nutrition label"}
+            {opt === "food" ? "Food Photo" : "Nutrition Label"}
           </button>
         );
       })}
     </div>
   );
 
+  const s = parseFloat(servings) || 1;
+  const n = parseInt(containers) || 1;
+
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-5 flex flex-col gap-4"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
-      <p
-        className="text-xs uppercase tracking-widest mb-4"
-        style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-      >
-        Analyze Food Photo
-      </p>
+      {/* Mode toggle — always visible */}
+      {ModeToggle}
 
-      {/* IDLE */}
-      {phase === "idle" && (
-        <div className="flex flex-col gap-3">
-          {ModeToggle}
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
-          {analyzerMode === "food" && (
-            <div>
-              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
-                Context <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
-              </label>
-              <textarea
-                value={userPrompt}
-                onChange={(e) => setUserPrompt(e.target.value)}
-                rows={2}
-                placeholder="e.g. This is a homemade bowl with ~200g chicken breast and half-cup rice"
-                autoComplete="off"
-                autoCorrect="off"
-                style={{
-                  ...inputStyle,
-                  resize: "none",
-                  lineHeight: 1.6,
-                }}
-              />
-            </div>
-          )}
+      {/* ── LOADING overlay ─────────────────────────────────────────────── */}
+      {scanPhase === "loading" && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-3 py-2"
+          style={{
+            background: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-muted)",
+            fontSize: 14,
+          }}
+        >
+          <Loader2 size={15} className="animate-spin" style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+          Analyzing…
+        </div>
+      )}
 
-          {analyzerMode === "label" && (
-            <p style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-              Point your camera at a nutrition facts label. Claude will read the exact printed values.
-            </p>
-          )}
+      {/* ── ERROR / recovery panel ───────────────────────────────────────── */}
+      {scanPhase === "error" && (
+        <div
+          className="rounded-lg p-3 flex flex-col gap-3"
+          style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+        >
+          <div className="flex items-start gap-2" style={{ color: "var(--color-danger, #ef4444)", fontSize: 14 }}>
+            <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{errorMsg}</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setScanPhase("idle");
+                setErrorMsg("");
+                fileInputRef.current?.click();
+              }}
+              className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
+              style={{
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Camera size={13} />
+              Re-scan
+            </button>
+            <button
+              onClick={() => {
+                setErrorMsg("");
+                setScanPhase("manual");
+              }}
+              className="rounded-lg transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 13,
+                padding: "8px 14px",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              Enter manually
+            </button>
+          </div>
+        </div>
+      )}
 
+      {/* ── MANUAL ENTRY form ────────────────────────────────────────────── */}
+      {scanPhase === "manual" && (
+        <div
+          className="rounded-lg p-4 flex flex-col gap-3"
+          style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+        >
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Enter nutrition manually</p>
+          <input
+            type="text"
+            placeholder="Name (e.g. Greek Yogurt)"
+            value={manualLabel}
+            onChange={(e) => setManualLabel(e.target.value)}
+            style={inputStyle}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Calories", value: manualCal, set: setManualCal },
+              { label: "Protein (g)", value: manualProtein, set: setManualProtein },
+              { label: "Carbs (g)", value: manualCarbs, set: setManualCarbs },
+              { label: "Fat (g)", value: manualFat, set: setManualFat },
+            ].map(({ label, value, set }) => (
+              <div key={label}>
+                <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>
+                  {label}
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddManual}
+              disabled={!manualLabel.trim()}
+              className="rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
+              style={{
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 500,
+                padding: "10px 16px",
+                border: "none",
+                cursor: manualLabel.trim() ? "pointer" : "default",
+                flex: 1,
+              }}
+            >
+              Add to session
+            </button>
+            <button
+              onClick={() => setScanPhase("idle")}
+              className="rounded-lg transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 14,
+                padding: "10px 16px",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── ITEM LIST or empty state ─────────────────────────────────────── */}
+      {items.length === 0 && scanPhase === "idle" && (
+        <div className="flex flex-col items-center gap-3 py-4">
+          <p style={{ fontSize: 14, color: "var(--color-text-muted)", textAlign: "center" }}>
+            Scan a nutrition label or food photo to get started.
+          </p>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
             style={{
               background: "var(--color-primary)",
               color: "#fff",
-              fontSize: 16,
-              padding: "13px 20px",
-              width: "100%",
+              fontSize: 15,
+              padding: "13px 24px",
               minHeight: 48,
+              border: "none",
+              cursor: "pointer",
             }}
           >
-            <Camera size={18} />
-            {analyzerMode === "food" ? "Upload or take photo" : "Scan label"}
+            <Camera size={17} />
+            Scan
           </button>
-          <p style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
-            {analyzerMode === "food"
-              ? "Claude identifies the food and estimates macros. Images are never stored."
-              : "Claude reads exact values from the label. Images are never stored."}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handleFileChange}
-          />
         </div>
       )}
 
-      {/* LOADING */}
-      {phase === "loading" && (
-        <div className="flex items-center gap-4">
-          {previewUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="Food preview"
-              className="rounded-lg object-cover flex-shrink-0"
-              style={{ width: 64, height: 64 }}
-            />
-          )}
-          <div className="flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
-            <Loader2 size={16} className="animate-spin" style={{ color: "var(--color-primary)" }} />
-            <span style={{ fontSize: 15 }}>
-              {analyzerMode === "label" ? "Reading label…" : "Analyzing…"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* REVIEW — food mode */}
-      {phase === "review" && review?.mode === "food" && (
-        <div className="space-y-5">
-          {previewUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="Food preview"
-              className="rounded-lg object-cover w-full"
-              style={{ maxHeight: 180, objectFit: "cover" }}
-            />
-          )}
-
-          <div>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text)" }}>
-              {review.food_name}
-            </p>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
-              Ingredients
-            </label>
-            <textarea
-              value={review.ingredients}
-              onChange={(e) => setReview((prev) => prev && prev.mode === "food" ? { ...prev, ingredients: e.target.value } : prev)}
-              rows={3}
-              placeholder="e.g. chicken breast ~150g, white rice ~1 cup, broccoli ~½ cup"
-              autoComplete="off"
-              autoCorrect="off"
-              style={{
-                ...inputStyle,
-                resize: "none",
-                lineHeight: 1.6,
-              }}
-            />
-            <div className="flex items-center gap-3 mt-2">
-              <button
-                onClick={handleReestimate}
-                disabled={reestimating}
-                className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
-                style={{
-                  fontSize: 13,
-                  color: "var(--color-primary)",
-                  padding: "6px 0",
-                  background: "none",
-                  border: "none",
-                  cursor: reestimating ? "default" : "pointer",
-                }}
+      {items.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {items.map((item) => {
+            const expanded = expandedItemId === item.id;
+            return (
+              <div
+                key={item.id}
+                className="rounded-lg p-3"
+                style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
               >
-                {reestimating
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : <RefreshCw size={13} />
-                }
-                Re-estimate macros
-              </button>
-              {review.confidence && (
-                <span
-                  className="rounded-full px-2 py-0.5 text-xs font-medium ml-auto"
-                  style={{
-                    background: CONFIDENCE_COLORS[review.confidence] + "22",
-                    color: CONFIDENCE_COLORS[review.confidence],
-                  }}
-                >
-                  {review.confidence} confidence
-                </span>
-              )}
-            </div>
-            {review.notes && (
-              <p style={{ fontSize: 12, color: "var(--color-text-faint)", marginTop: 6, fontStyle: "italic" }}>
-                {review.notes}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
-              Meal type
-            </label>
-            <select
-              value={review.meal_type_guess}
-              onChange={(e) =>
-                setReview((prev) => prev && prev.mode === "food" ? { ...prev, meal_type_guess: e.target.value as MealType } : prev)
-              }
-              style={inputStyle}
-            >
-              <option value="breakfast">Breakfast</option>
-              <option value="lunch">Lunch</option>
-              <option value="dinner">Dinner</option>
-              <option value="snack">Snack</option>
-            </select>
-          </div>
-
-          <div
-            className="rounded-lg p-3"
-            style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {[
-                  { label: "cal", value: review.calories },
-                  { label: "P", value: review.protein_g != null ? `${review.protein_g}g` : null },
-                  { label: "C", value: review.carbs_g != null ? `${review.carbs_g}g` : null },
-                  { label: "F", value: review.fat_g != null ? `${review.fat_g}g` : null },
-                ].map(({ label, value }) =>
-                  value != null ? (
-                    <span key={label} style={{ fontSize: 14, color: "var(--color-text)" }}>
-                      <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>{label} </span>
-                      {value}
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
+                      {item.label}
                     </span>
-                  ) : null
+                    <MacroLine item={item} />
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {item.mode === "food" && item.ingredients && (
+                      <button
+                        onClick={() => setExpandedItemId(expanded ? null : item.id)}
+                        className="flex items-center gap-1 rounded transition-opacity active:opacity-70"
+                        style={{ fontSize: 11, color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer", padding: "4px 6px" }}
+                        title="Edit / Re-estimate"
+                      >
+                        {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="rounded transition-opacity active:opacity-70"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "4px" }}
+                      title="Remove"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expand: ingredients + re-estimate */}
+                {expanded && item.mode === "food" && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 2 }}>
+                      Ingredients
+                    </label>
+                    <textarea
+                      value={item.ingredients ?? ""}
+                      rows={3}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((i) => i.id === item.id ? { ...i, ingredients: e.target.value } : i)
+                        )
+                      }
+                      style={{
+                        ...inputStyle,
+                        resize: "none",
+                        lineHeight: 1.6,
+                        fontSize: 13,
+                      }}
+                    />
+                    <button
+                      onClick={() => handleReestimateItem(item.id, item.ingredients ?? "")}
+                      disabled={reestimatingId === item.id || !item.ingredients?.trim()}
+                      className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--color-primary)",
+                        padding: "6px 0",
+                        background: "none",
+                        border: "none",
+                        cursor: (reestimatingId === item.id || !item.ingredients?.trim()) ? "default" : "pointer",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      {reestimatingId === item.id
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <RefreshCw size={13} />}
+                      Re-estimate macros
+                    </button>
+                  </div>
                 )}
               </div>
-              <button
-                onClick={() => setMacrosExpanded((v) => !v)}
-                className="flex items-center gap-1 rounded transition-opacity active:opacity-70 ml-3 flex-shrink-0"
-                style={{ fontSize: 12, color: "var(--color-text-muted)", background: "none", border: "none" }}
-              >
-                Edit
-                {macrosExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              </button>
-            </div>
+            );
+          })}
 
-            {macrosExpanded && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                {(
-                  [
-                    { label: "Calories", field: "calories", unit: "kcal", isInt: true },
-                    { label: "Protein", field: "protein_g", unit: "g" },
-                    { label: "Carbs", field: "carbs_g", unit: "g" },
-                    { label: "Fat", field: "fat_g", unit: "g" },
-                    { label: "Fiber", field: "fiber_g", unit: "g" },
-                    { label: "Sodium", field: "sodium_mg", unit: "mg", isInt: true },
-                  ] as { label: string; field: keyof FoodReviewState; unit: string; isInt?: boolean }[]
-                ).map(({ label, field, unit, isInt }) => (
-                  <div key={field}>
-                    <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>
-                      {label} <span style={{ color: "var(--color-text-faint)" }}>({unit})</span>
-                    </label>
-                    <input
-                      type="text"
-                      inputMode={isInt ? "numeric" : "decimal"}
-                      value={review[field] as number ?? ""}
-                      onChange={(e) => updateMacro(field, e.target.value, isInt ?? false)}
-                      style={inputStyle}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Add another scan */}
+          {scanPhase === "idle" && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 14,
+                padding: "10px 16px",
+                minHeight: 44,
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <Camera size={14} />
+              Add another scan
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── COMBINED TOTAL + ACTIONS (only when items exist) ────────────── */}
+      {items.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {/* Combined total */}
+          <div
+            className="rounded-lg px-3 py-2"
+            style={{
+              background: "var(--color-bg)",
+              border: "1px solid var(--color-border)",
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: "var(--color-text-muted)" }}>Combined: </span>
+            <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+              {Math.round(combined.calories)} cal · {Math.round(combined.protein_g)}g P · {Math.round(combined.carbs_g)}g C · {Math.round(combined.fat_g)}g F
+            </span>
           </div>
 
-          {/* How this fits today */}
-          {todayTotals && (
-            <MacroFitRow totals={todayTotals} addingCalories={review.calories} />
-          )}
+          {/* Ask Mr. Bridge */}
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Ask Mr. Bridge…"
+                value={chatQuestion}
+                onChange={(e) => setChatQuestion(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSendToChat(); }}
+                style={{ ...inputStyle, flex: 1, fontSize: 14 }}
+              />
+              <button
+                onClick={handleSendToChat}
+                disabled={!chatQuestion.trim() && items.length === 0}
+                className="flex items-center justify-center rounded-xl transition-opacity active:opacity-70 disabled:opacity-40"
+                style={{
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  padding: "10px 14px",
+                  border: "none",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                title="Send to Chat"
+              >
+                <Send size={15} />
+              </button>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {["What can I make with these?", "Calculate my macros"].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => setChatQuestion(q)}
+                  className="rounded-full transition-opacity active:opacity-70"
+                  style={{
+                    ...pillBtnBase,
+                    background: "transparent",
+                    color: "var(--color-text-muted)",
+                    fontSize: 12,
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {errorMsg && phase === "review" && (
+          {/* Sheet error */}
+          {errorMsg && scanPhase === "idle" && (
             <div className="flex items-center gap-2" style={{ color: "var(--color-danger, #ef4444)", fontSize: 13 }}>
               <AlertCircle size={14} />
               {errorMsg}
@@ -590,223 +793,204 @@ export default function FoodPhotoAnalyzer() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+          {/* Action row */}
+          <div className="flex gap-2">
             <button
-              onClick={handleLogFood}
-              className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+              onClick={() => setActiveSheet(activeSheet === "log" ? null : "log")}
+              className="rounded-xl font-medium transition-opacity active:opacity-70"
               style={{
-                background: "var(--color-primary)",
-                color: "#fff",
-                fontSize: 16,
-                padding: "13px 20px",
-                minHeight: 48,
+                background: activeSheet === "log" ? "var(--color-primary)" : "var(--color-bg)",
+                color: activeSheet === "log" ? "#fff" : "var(--color-text)",
+                border: "1px solid var(--color-border)",
+                fontSize: 14,
+                padding: "10px 14px",
+                cursor: "pointer",
                 flex: 1,
               }}
             >
-              Log Meal
+              Log as meal
             </button>
             <button
-              onClick={reset}
-              className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+              onClick={() => setActiveSheet(activeSheet === "mealprep" ? null : "mealprep")}
+              className="rounded-xl font-medium transition-opacity active:opacity-70"
+              style={{
+                background: activeSheet === "mealprep" ? "var(--color-primary)" : "var(--color-bg)",
+                color: activeSheet === "mealprep" ? "#fff" : "var(--color-text)",
+                border: "1px solid var(--color-border)",
+                fontSize: 14,
+                padding: "10px 14px",
+                cursor: "pointer",
+                flex: 1,
+              }}
+            >
+              Meal prep
+            </button>
+            <button
+              onClick={clearAll}
+              className="flex items-center justify-center rounded-xl transition-opacity active:opacity-70"
               style={{
                 border: "1px solid var(--color-border)",
                 color: "var(--color-text-muted)",
-                fontSize: 15,
-                padding: "13px 20px",
-                minHeight: 48,
+                padding: "10px 12px",
+                background: "transparent",
+                cursor: "pointer",
               }}
+              title="Clear all"
             >
-              <X size={15} />
-              Cancel
+              <Trash2 size={15} />
             </button>
           </div>
-        </div>
-      )}
 
-      {/* REVIEW — label mode */}
-      {phase === "review" && review?.mode === "label" && (
-        <div className="space-y-4">
-          {previewUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="Label preview"
-              className="rounded-lg object-cover w-full"
-              style={{ maxHeight: 180, objectFit: "cover" }}
-            />
-          )}
+          {/* ── LOG SHEET ──────────────────────────────────────────────── */}
+          {activeSheet === "log" && (
+            <div
+              className="rounded-xl p-4 flex flex-col gap-3"
+              style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Log as meal</p>
 
-          {!review.readable ? (
-            <div className="flex items-start gap-2" style={{ color: "var(--color-warning, #f59e0b)", fontSize: 14 }}>
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span>Label wasn&apos;t clear enough to read — try a better-lit photo</span>
-            </div>
-          ) : (
-            <>
-              {/* Product + serving */}
-              <div>
-                <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)" }}>
-                  {review.product_name}
-                </p>
-                <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 2 }}>
-                  Serving: {review.serving_size}
-                  {review.servings_per_container != null && ` · ${review.servings_per_container} servings/container`}
-                </p>
+              {/* Meal type */}
+              <div className="flex flex-wrap gap-1.5">
+                {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setLogMealType(t)}
+                    className="rounded-full transition-all duration-150"
+                    style={{
+                      ...pillBtnBase,
+                      background: logMealType === t ? "var(--color-primary)" : "transparent",
+                      color: logMealType === t ? "#fff" : "var(--color-text-muted)",
+                      borderColor: logMealType === t ? "var(--color-primary)" : "var(--color-border)",
+                    }}
+                  >
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
               </div>
 
-              {/* Serving multiplier */}
+              {/* Servings */}
               <div className="flex items-center gap-3">
-                <label style={{ fontSize: 12, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
                   Servings
                 </label>
                 <input
-                  type="number"
-                  min={0.5}
-                  step={0.5}
-                  value={servingMultiplier}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v) && v > 0) setServingMultiplier(v);
-                  }}
+                  type="text"
+                  inputMode="decimal"
+                  value={servings}
+                  onChange={(e) => setServings(e.target.value)}
                   style={{ ...inputStyle, width: 80 }}
                 />
               </div>
 
-              {/* Macro table */}
-              <div
-                className="rounded-lg overflow-hidden"
-                style={{ border: "1px solid var(--color-border)" }}
+              {/* Preview */}
+              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+                <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+                  {Math.round(combined.calories * s)} cal · {Math.round(combined.protein_g * s * 10) / 10}g P · {Math.round(combined.carbs_g * s * 10) / 10}g C · {Math.round(combined.fat_g * s * 10) / 10}g F
+                </span>
+              </div>
+
+              <button
+                onClick={handleLogMeal}
+                disabled={logging}
+                className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
+                style={{
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  fontSize: 15,
+                  padding: "13px 20px",
+                  minHeight: 48,
+                  border: "none",
+                  cursor: logging ? "default" : "pointer",
+                }}
               >
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                  <tbody>
-                    {[
-                      { label: "Calories", value: Math.round(review.calories * servingMultiplier), unit: "" },
-                      { label: "Protein", value: review.protein_g != null ? Math.round(review.protein_g * servingMultiplier * 10) / 10 : null, unit: "g" },
-                      { label: "Carbs", value: review.carbs_g != null ? Math.round(review.carbs_g * servingMultiplier * 10) / 10 : null, unit: "g" },
-                      { label: "Fat", value: review.fat_g != null ? Math.round(review.fat_g * servingMultiplier * 10) / 10 : null, unit: "g" },
-                      { label: "Fiber", value: review.fiber_g != null ? Math.round(review.fiber_g * servingMultiplier * 10) / 10 : null, unit: "g" },
-                      { label: "Sugar", value: review.sugar_g != null ? Math.round(review.sugar_g * servingMultiplier * 10) / 10 : null, unit: "g" },
-                      { label: "Sodium", value: review.sodium_mg != null ? Math.round(review.sodium_mg * servingMultiplier) : null, unit: "mg" },
-                    ].map(({ label, value, unit }, i) => (
-                      <tr
-                        key={label}
-                        style={{
-                          borderBottom: i < 6 ? "1px solid var(--color-border)" : undefined,
-                          background: i % 2 === 0 ? "var(--color-bg)" : "var(--color-surface)",
-                        }}
-                      >
-                        <td style={{ padding: "8px 12px", color: "var(--color-text-muted)" }}>{label}</td>
-                        <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--color-text)", fontWeight: 500 }}>
-                          {value != null ? `${value}${unit}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {review.notes && (
-                <p style={{ fontSize: 12, color: "var(--color-text-faint)", fontStyle: "italic" }}>
-                  {review.notes}
-                </p>
-              )}
-
-              {/* How this fits today */}
-              {todayTotals && (
-                <MacroFitRow totals={todayTotals} addingCalories={Math.round(review.calories * servingMultiplier)} />
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <button
-                  onClick={handleLogLabel}
-                  className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
-                  style={{
-                    background: "var(--color-primary)",
-                    color: "#fff",
-                    fontSize: 16,
-                    padding: "13px 20px",
-                    minHeight: 48,
-                    flex: 1,
-                  }}
-                >
-                  Log this
-                </button>
-                <button
-                  onClick={reset}
-                  className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text-muted)",
-                    fontSize: 15,
-                    padding: "13px 20px",
-                    minHeight: 48,
-                  }}
-                >
-                  <X size={15} />
-                  Cancel
-                </button>
-              </div>
-            </>
+                {logging && <Loader2 size={15} className="animate-spin" />}
+                Log {logMealType}
+              </button>
+            </div>
           )}
 
-          {/* Still show Cancel when unreadable */}
-          {!review.readable && (
-            <button
-              onClick={reset}
-              className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 15,
-                padding: "13px 20px",
-                minHeight: 48,
-                width: "100%",
-              }}
+          {/* ── MEAL PREP SHEET ────────────────────────────────────────── */}
+          {activeSheet === "mealprep" && (
+            <div
+              className="rounded-xl p-4 flex flex-col gap-3"
+              style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
             >
-              <X size={15} />
-              Try again
-            </button>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Meal prep</p>
+
+              <div className="flex items-center gap-3">
+                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+                  Total batch makes
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={batchServings}
+                  onChange={(e) => setBatchServings(e.target.value)}
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <span style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>servings</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+                  Splitting into
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={containers}
+                  onChange={(e) => setContainers(e.target.value)}
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <span style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>containers</span>
+              </div>
+
+              {/* Per-container preview */}
+              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+                Per container:{" "}
+                <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+                  {Math.round(combined.calories / n)} cal · {Math.round((combined.protein_g / n) * 10) / 10}g P · {Math.round((combined.carbs_g / n) * 10) / 10}g C · {Math.round((combined.fat_g / n) * 10) / 10}g F
+                </span>
+              </div>
+
+              {/* Meal type */}
+              <div className="flex flex-wrap gap-1.5">
+                {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setMealPrepType(t)}
+                    className="rounded-full transition-all duration-150"
+                    style={{
+                      ...pillBtnBase,
+                      background: mealPrepType === t ? "var(--color-primary)" : "transparent",
+                      color: mealPrepType === t ? "#fff" : "var(--color-text-muted)",
+                      borderColor: mealPrepType === t ? "var(--color-primary)" : "var(--color-border)",
+                    }}
+                  >
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={handleMealPrep}
+                disabled={prepping}
+                className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
+                style={{
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  fontSize: 15,
+                  padding: "13px 20px",
+                  minHeight: 48,
+                  border: "none",
+                  cursor: prepping ? "default" : "pointer",
+                }}
+              >
+                {prepping && <Loader2 size={15} className="animate-spin" />}
+                Log {n} container{n !== 1 ? "s" : ""}
+              </button>
+            </div>
           )}
-        </div>
-      )}
-
-      {/* SAVING */}
-      {phase === "saving" && (
-        <div className="flex items-center gap-3" style={{ color: "var(--color-text-muted)" }}>
-          <Loader2 size={16} className="animate-spin" style={{ color: "var(--color-primary)" }} />
-          <span style={{ fontSize: 15 }}>Logging meal…</span>
-        </div>
-      )}
-
-      {/* DONE */}
-      {phase === "done" && (
-        <div className="flex items-center gap-2" style={{ color: "var(--color-success, #22c55e)" }}>
-          <CheckCircle size={18} />
-          <span style={{ fontSize: 15 }}>Meal logged.</span>
-        </div>
-      )}
-
-      {/* ERROR */}
-      {phase === "error" && (
-        <div className="space-y-4">
-          <div className="flex items-start gap-2" style={{ color: "var(--color-danger, #ef4444)" }}>
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-            <span style={{ fontSize: 14 }}>{errorMsg}</span>
-          </div>
-          <button
-            onClick={reset}
-            className="flex items-center justify-center rounded-xl transition-opacity active:opacity-70"
-            style={{
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text-muted)",
-              fontSize: 15,
-              padding: "13px 20px",
-              minHeight: 48,
-              width: "100%",
-            }}
-          >
-            Try again
-          </button>
         </div>
       )}
     </div>

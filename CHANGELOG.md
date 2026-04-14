@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (meal scanner redesign — issue #199)
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — redesigned Scanner tab as a multi-scan session: scan multiple labels or food photos, see combined macros live, then log directly, split into meal prep containers, or hand off to Chat with nutrition context pre-filled; includes manual entry fallback on scan error, per-item ingredient editing with re-estimation, and navigation guard when leaving with unsaved scans
+- **`web/src/app/api/meals/log/route.ts`** — added `count` field to POST body; when `count > 1`, inserts multiple identical rows (used by meal prep to log N containers in one request)
+- **`web/src/components/chat/chat-interface.tsx`** — added `initialInput?: string` prop; seeds the chat input on mount (used for Scanner → Chat handoff)
+- **`web/src/components/chat/chat-page-client.tsx`** — added mount effect that reads `chatPrefill` from `sessionStorage` and passes it to `ChatInterface` as `initialInput`
+- **`web/src/components/meals/MealsClient.tsx`** — added navigation guard: intercepts tab switches away from Scanner when unsaved scans exist; shows inline banner with "Keep scanning" / "Discard and leave" options
+
 ### Added (stock watchlist dashboard widget — issue #142)
 - **`supabase/migrations/`** — `stocks_cache` table: per-user ticker cache with `price`, `change_abs`, `change_pct`, `sparkline` JSONB (7-day EOD bars), and `fetched_at`; RLS restricts to owner
 - **`web/src/lib/types.ts`** — added `StocksCache` interface
