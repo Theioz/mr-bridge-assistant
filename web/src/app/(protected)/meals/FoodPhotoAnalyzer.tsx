@@ -3,14 +3,23 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, X, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
-import type { FoodAnalysis } from "@/app/api/meals/analyze-photo/route";
+import type { FoodAnalysis, NutritionLabel } from "@/app/api/meals/analyze-photo/route";
+import type { TodayTotals } from "@/app/api/meals/today-totals/route";
 
+type AnalyzerMode = "food" | "label";
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 type Phase = "idle" | "loading" | "review" | "saving" | "done" | "error";
 
-interface ReviewState extends FoodAnalysis {
+interface FoodReviewState extends FoodAnalysis {
+  mode: "food";
   meal_type_guess: MealType;
 }
+
+interface LabelReviewState extends NutritionLabel {
+  mode: "label";
+}
+
+type ReviewState = FoodReviewState | LabelReviewState;
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: "var(--color-success, #22c55e)",
@@ -23,16 +32,36 @@ const inputStyle = {
   border: "1px solid var(--color-border)",
   color: "var(--color-text)",
   outline: "none",
-  fontSize: 16, // Prevents iOS auto-zoom on focus
+  fontSize: 16,
   borderRadius: 8,
   padding: "10px 12px",
   width: "100%",
   WebkitAppearance: "none" as const,
 } as const;
 
+function MacroFitRow({ totals, addingCalories }: { totals: TodayTotals; addingCalories: number }) {
+  return (
+    <div
+      className="rounded-lg px-3 py-2"
+      style={{
+        background: "var(--color-bg)",
+        border: "1px solid var(--color-border)",
+        fontSize: 12,
+        color: "var(--color-text-muted)",
+      }}
+    >
+      <span style={{ color: "var(--color-text-faint)" }}>Today so far: </span>
+      <span>{Math.round(totals.calories)} cal · Prot {Math.round(totals.protein_g)}g · Carbs {Math.round(totals.carbs_g)}g · Fat {Math.round(totals.fat_g)}g</span>
+      <span style={{ color: "var(--color-text-faint)" }}> — this adds </span>
+      <span style={{ color: "var(--color-text)" }}>{Math.round(addingCalories)} cal</span>
+    </div>
+  );
+}
+
 export default function FoodPhotoAnalyzer() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [analyzerMode, setAnalyzerMode] = useState<AnalyzerMode>("food");
   const [phase, setPhase] = useState<Phase>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -40,6 +69,8 @@ export default function FoodPhotoAnalyzer() {
   const [reestimating, setReestimating] = useState(false);
   const [macrosExpanded, setMacrosExpanded] = useState(false);
   const [userPrompt, setUserPrompt] = useState<string>("");
+  const [servingMultiplier, setServingMultiplier] = useState<number>(1.0);
+  const [todayTotals, setTodayTotals] = useState<TodayTotals | null>(null);
 
   function reset() {
     setPhase("idle");
@@ -52,7 +83,21 @@ export default function FoodPhotoAnalyzer() {
     setReestimating(false);
     setMacrosExpanded(false);
     setUserPrompt("");
+    setServingMultiplier(1.0);
+    setTodayTotals(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function fetchTodayTotals() {
+    try {
+      const res = await fetch("/api/meals/today-totals");
+      if (res.ok) {
+        const data = await res.json();
+        setTodayTotals(data as TodayTotals);
+      }
+    } catch {
+      // non-fatal — daily context is best-effort
+    }
   }
 
   async function compressImage(file: File): Promise<Blob> {
@@ -99,7 +144,6 @@ export default function FoodPhotoAnalyzer() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reject HEIC — Canvas API cannot decode it in-browser
     if (
       file.type === "image/heic" ||
       file.name.toLowerCase().endsWith(".heic")
@@ -124,7 +168,10 @@ export default function FoodPhotoAnalyzer() {
 
     const formData = new FormData();
     formData.append("image", imageBlob, "photo.jpg");
-    if (userPrompt.trim()) formData.append("prompt", userPrompt.trim());
+    formData.append("mode", analyzerMode);
+    if (analyzerMode === "food" && userPrompt.trim()) {
+      formData.append("prompt", userPrompt.trim());
+    }
 
     try {
       const res = await fetch("/api/meals/analyze-photo", {
@@ -135,8 +182,14 @@ export default function FoodPhotoAnalyzer() {
       if (contentType.includes("application/json")) {
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
-        setReview(data as ReviewState);
+        if (data.mode === "label") {
+          setReview(data as LabelReviewState);
+          setServingMultiplier(1.0);
+        } else {
+          setReview(data as FoodReviewState);
+        }
         setPhase("review");
+        fetchTodayTotals();
       } else {
         const text = await res.text();
         if (res.status === 413 || text.includes("Entity Too Large")) {
@@ -151,7 +204,7 @@ export default function FoodPhotoAnalyzer() {
   }
 
   async function handleReestimate() {
-    if (!review) return;
+    if (!review || review.mode !== "food") return;
     setReestimating(true);
     try {
       const res = await fetch("/api/meals/estimate-macros", {
@@ -161,22 +214,21 @@ export default function FoodPhotoAnalyzer() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Re-estimation failed");
-      // Merge updated macros back, keep meal_type_guess from user's current selection
       setReview((prev) =>
-        prev ? { ...data, meal_type_guess: prev.meal_type_guess } : data
+        prev && prev.mode === "food"
+          ? { ...data, mode: "food", meal_type_guess: prev.meal_type_guess }
+          : prev
       );
     } catch (err) {
-      // Surface re-estimation errors inline without blowing away the review state
       setErrorMsg(err instanceof Error ? err.message : "Re-estimation failed");
     } finally {
       setReestimating(false);
     }
   }
 
-  async function handleLog() {
-    if (!review) return;
+  async function handleLogFood() {
+    if (!review || review.mode !== "food") return;
     setPhase("saving");
-
     try {
       const res = await fetch("/api/meals/log", {
         method: "POST",
@@ -204,11 +256,73 @@ export default function FoodPhotoAnalyzer() {
     }
   }
 
-  function updateMacro(field: keyof ReviewState, value: string, isInt: boolean) {
-    const parsed = isInt ? parseInt(value, 10) : parseFloat(value);
-    if (!isNaN(parsed)) setReview((prev) => (prev ? { ...prev, [field]: parsed } : prev));
-    else if (value === "") setReview((prev) => (prev ? { ...prev, [field]: 0 } : prev));
+  async function handleLogLabel() {
+    if (!review || review.mode !== "label") return;
+    setPhase("saving");
+    const m = servingMultiplier;
+    const notes = `${review.product_name} — ${review.serving_size}${m !== 1 ? ` × ${m}` : ""}`;
+    try {
+      const res = await fetch("/api/meals/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meal_type: "snack",
+          notes,
+          calories: Math.round(review.calories * m),
+          protein_g: Math.round(review.protein_g * m * 10) / 10,
+          carbs_g: Math.round(review.carbs_g * m * 10) / 10,
+          fat_g: Math.round(review.fat_g * m * 10) / 10,
+          fiber_g: review.fiber_g != null ? Math.round(review.fiber_g * m * 10) / 10 : null,
+          sodium_mg: review.sodium_mg != null ? Math.round(review.sodium_mg * m) : null,
+          source: "label",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Failed to log meal");
+      setPhase("done");
+      router.refresh();
+      setTimeout(reset, 2000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to log meal");
+      setPhase("error");
+    }
   }
+
+  function updateMacro(field: keyof FoodReviewState, value: string, isInt: boolean) {
+    const parsed = isInt ? parseInt(value, 10) : parseFloat(value);
+    if (!isNaN(parsed)) setReview((prev) => (prev && prev.mode === "food" ? { ...prev, [field]: parsed } : prev));
+    else if (value === "") setReview((prev) => (prev && prev.mode === "food" ? { ...prev, [field]: 0 } : prev));
+  }
+
+  // ── Pill toggle ──
+  const ModeToggle = (
+    <div
+      className="flex items-center gap-0.5 p-0.5 rounded-lg self-start"
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      {(["food", "label"] as AnalyzerMode[]).map((opt) => {
+        const active = opt === analyzerMode;
+        return (
+          <button
+            key={opt}
+            onClick={() => setAnalyzerMode(opt)}
+            className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
+            style={{
+              background: active ? "var(--color-primary)" : "transparent",
+              color: active ? "#fff" : "var(--color-text-muted)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {opt === "food" ? "Food photo" : "Nutrition label"}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div
@@ -225,24 +339,35 @@ export default function FoodPhotoAnalyzer() {
       {/* IDLE */}
       {phase === "idle" && (
         <div className="flex flex-col gap-3">
-          <div>
-            <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
-              Context <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
-            </label>
-            <textarea
-              value={userPrompt}
-              onChange={(e) => setUserPrompt(e.target.value)}
-              rows={2}
-              placeholder="e.g. This is a homemade bowl with ~200g chicken breast and half-cup rice"
-              autoComplete="off"
-              autoCorrect="off"
-              style={{
-                ...inputStyle,
-                resize: "none",
-                lineHeight: 1.6,
-              }}
-            />
-          </div>
+          {ModeToggle}
+
+          {analyzerMode === "food" && (
+            <div>
+              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
+                Context <span style={{ color: "var(--color-text-faint)" }}>(optional)</span>
+              </label>
+              <textarea
+                value={userPrompt}
+                onChange={(e) => setUserPrompt(e.target.value)}
+                rows={2}
+                placeholder="e.g. This is a homemade bowl with ~200g chicken breast and half-cup rice"
+                autoComplete="off"
+                autoCorrect="off"
+                style={{
+                  ...inputStyle,
+                  resize: "none",
+                  lineHeight: 1.6,
+                }}
+              />
+            </div>
+          )}
+
+          {analyzerMode === "label" && (
+            <p style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              Point your camera at a nutrition facts label. Claude will read the exact printed values.
+            </p>
+          )}
+
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
@@ -256,10 +381,12 @@ export default function FoodPhotoAnalyzer() {
             }}
           >
             <Camera size={18} />
-            Upload or take photo
+            {analyzerMode === "food" ? "Upload or take photo" : "Scan label"}
           </button>
           <p style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
-            Claude identifies the food and estimates macros. Images are never stored.
+            {analyzerMode === "food"
+              ? "Claude identifies the food and estimates macros. Images are never stored."
+              : "Claude reads exact values from the label. Images are never stored."}
           </p>
           <input
             ref={fileInputRef}
@@ -285,15 +412,16 @@ export default function FoodPhotoAnalyzer() {
           )}
           <div className="flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
             <Loader2 size={16} className="animate-spin" style={{ color: "var(--color-primary)" }} />
-            <span style={{ fontSize: 15 }}>Analyzing…</span>
+            <span style={{ fontSize: 15 }}>
+              {analyzerMode === "label" ? "Reading label…" : "Analyzing…"}
+            </span>
           </div>
         </div>
       )}
 
-      {/* REVIEW */}
-      {phase === "review" && review && (
+      {/* REVIEW — food mode */}
+      {phase === "review" && review?.mode === "food" && (
         <div className="space-y-5">
-          {/* Thumbnail row */}
           {previewUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -304,21 +432,19 @@ export default function FoodPhotoAnalyzer() {
             />
           )}
 
-          {/* ── Food name (display label) ── */}
           <div>
             <p style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text)" }}>
               {review.food_name}
             </p>
           </div>
 
-          {/* ── Ingredients (primary edit target) ── */}
           <div>
             <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
               Ingredients
             </label>
             <textarea
               value={review.ingredients}
-              onChange={(e) => setReview((prev) => prev ? { ...prev, ingredients: e.target.value } : prev)}
+              onChange={(e) => setReview((prev) => prev && prev.mode === "food" ? { ...prev, ingredients: e.target.value } : prev)}
               rows={3}
               placeholder="e.g. chicken breast ~150g, white rice ~1 cup, broccoli ~½ cup"
               autoComplete="off"
@@ -368,7 +494,6 @@ export default function FoodPhotoAnalyzer() {
             )}
           </div>
 
-          {/* Meal type */}
           <div>
             <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>
               Meal type
@@ -376,7 +501,7 @@ export default function FoodPhotoAnalyzer() {
             <select
               value={review.meal_type_guess}
               onChange={(e) =>
-                setReview((prev) => prev ? { ...prev, meal_type_guess: e.target.value as MealType } : prev)
+                setReview((prev) => prev && prev.mode === "food" ? { ...prev, meal_type_guess: e.target.value as MealType } : prev)
               }
               style={inputStyle}
             >
@@ -387,12 +512,10 @@ export default function FoodPhotoAnalyzer() {
             </select>
           </div>
 
-          {/* ── Macro summary (read-only) with optional manual edit toggle ── */}
           <div
             className="rounded-lg p-3"
             style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
           >
-            {/* Read-only summary row */}
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {[
@@ -419,7 +542,6 @@ export default function FoodPhotoAnalyzer() {
               </button>
             </div>
 
-            {/* Expandable manual edit grid */}
             {macrosExpanded && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                 {(
@@ -430,7 +552,7 @@ export default function FoodPhotoAnalyzer() {
                     { label: "Fat", field: "fat_g", unit: "g" },
                     { label: "Fiber", field: "fiber_g", unit: "g" },
                     { label: "Sodium", field: "sodium_mg", unit: "mg", isInt: true },
-                  ] as { label: string; field: keyof ReviewState; unit: string; isInt?: boolean }[]
+                  ] as { label: string; field: keyof FoodReviewState; unit: string; isInt?: boolean }[]
                 ).map(({ label, field, unit, isInt }) => (
                   <div key={field}>
                     <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>
@@ -449,7 +571,11 @@ export default function FoodPhotoAnalyzer() {
             )}
           </div>
 
-          {/* Inline re-estimation error */}
+          {/* How this fits today */}
+          {todayTotals && (
+            <MacroFitRow totals={todayTotals} addingCalories={review.calories} />
+          )}
+
           {errorMsg && phase === "review" && (
             <div className="flex items-center gap-2" style={{ color: "var(--color-danger, #ef4444)", fontSize: 13 }}>
               <AlertCircle size={14} />
@@ -463,10 +589,9 @@ export default function FoodPhotoAnalyzer() {
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <button
-              onClick={handleLog}
+              onClick={handleLogFood}
               className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
               style={{
                 background: "var(--color-primary)",
@@ -497,6 +622,153 @@ export default function FoodPhotoAnalyzer() {
         </div>
       )}
 
+      {/* REVIEW — label mode */}
+      {phase === "review" && review?.mode === "label" && (
+        <div className="space-y-4">
+          {previewUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewUrl}
+              alt="Label preview"
+              className="rounded-lg object-cover w-full"
+              style={{ maxHeight: 180, objectFit: "cover" }}
+            />
+          )}
+
+          {!review.readable ? (
+            <div className="flex items-start gap-2" style={{ color: "var(--color-warning, #f59e0b)", fontSize: 14 }}>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>Label wasn&apos;t clear enough to read — try a better-lit photo</span>
+            </div>
+          ) : (
+            <>
+              {/* Product + serving */}
+              <div>
+                <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)" }}>
+                  {review.product_name}
+                </p>
+                <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 2 }}>
+                  Serving: {review.serving_size}
+                  {review.servings_per_container != null && ` · ${review.servings_per_container} servings/container`}
+                </p>
+              </div>
+
+              {/* Serving multiplier */}
+              <div className="flex items-center gap-3">
+                <label style={{ fontSize: 12, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+                  Servings
+                </label>
+                <input
+                  type="number"
+                  min={0.5}
+                  step={0.5}
+                  value={servingMultiplier}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v) && v > 0) setServingMultiplier(v);
+                  }}
+                  style={{ ...inputStyle, width: 80 }}
+                />
+              </div>
+
+              {/* Macro table */}
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <tbody>
+                    {[
+                      { label: "Calories", value: Math.round(review.calories * servingMultiplier), unit: "" },
+                      { label: "Protein", value: review.protein_g != null ? Math.round(review.protein_g * servingMultiplier * 10) / 10 : null, unit: "g" },
+                      { label: "Carbs", value: review.carbs_g != null ? Math.round(review.carbs_g * servingMultiplier * 10) / 10 : null, unit: "g" },
+                      { label: "Fat", value: review.fat_g != null ? Math.round(review.fat_g * servingMultiplier * 10) / 10 : null, unit: "g" },
+                      { label: "Fiber", value: review.fiber_g != null ? Math.round(review.fiber_g * servingMultiplier * 10) / 10 : null, unit: "g" },
+                      { label: "Sugar", value: review.sugar_g != null ? Math.round(review.sugar_g * servingMultiplier * 10) / 10 : null, unit: "g" },
+                      { label: "Sodium", value: review.sodium_mg != null ? Math.round(review.sodium_mg * servingMultiplier) : null, unit: "mg" },
+                    ].map(({ label, value, unit }, i) => (
+                      <tr
+                        key={label}
+                        style={{
+                          borderBottom: i < 6 ? "1px solid var(--color-border)" : undefined,
+                          background: i % 2 === 0 ? "var(--color-bg)" : "var(--color-surface)",
+                        }}
+                      >
+                        <td style={{ padding: "8px 12px", color: "var(--color-text-muted)" }}>{label}</td>
+                        <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--color-text)", fontWeight: 500 }}>
+                          {value != null ? `${value}${unit}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {review.notes && (
+                <p style={{ fontSize: 12, color: "var(--color-text-faint)", fontStyle: "italic" }}>
+                  {review.notes}
+                </p>
+              )}
+
+              {/* How this fits today */}
+              {todayTotals && (
+                <MacroFitRow totals={todayTotals} addingCalories={Math.round(review.calories * servingMultiplier)} />
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  onClick={handleLogLabel}
+                  className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+                  style={{
+                    background: "var(--color-primary)",
+                    color: "#fff",
+                    fontSize: 16,
+                    padding: "13px 20px",
+                    minHeight: 48,
+                    flex: 1,
+                  }}
+                >
+                  Log this
+                </button>
+                <button
+                  onClick={reset}
+                  className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-muted)",
+                    fontSize: 15,
+                    padding: "13px 20px",
+                    minHeight: 48,
+                  }}
+                >
+                  <X size={15} />
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Still show Cancel when unreadable */}
+          {!review.readable && (
+            <button
+              onClick={reset}
+              className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                fontSize: 15,
+                padding: "13px 20px",
+                minHeight: 48,
+                width: "100%",
+              }}
+            >
+              <X size={15} />
+              Try again
+            </button>
+          )}
+        </div>
+      )}
+
       {/* SAVING */}
       {phase === "saving" && (
         <div className="flex items-center gap-3" style={{ color: "var(--color-text-muted)" }}>
@@ -513,7 +785,7 @@ export default function FoodPhotoAnalyzer() {
         </div>
       )}
 
-      {/* ERROR (fatal — photo upload failed) */}
+      {/* ERROR */}
       {phase === "error" && (
         <div className="space-y-4">
           <div className="flex items-start gap-2" style={{ color: "var(--color-danger, #ef4444)" }}>

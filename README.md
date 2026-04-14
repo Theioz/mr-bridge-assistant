@@ -83,7 +83,7 @@ flowchart LR
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
-- **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); HEIC detection with user-friendly guidance; 7-day meal history
+- **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
 - **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
 
@@ -378,7 +378,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── weekly/page.tsx        # Weekly review — habits, tasks, workouts, recovery, body comp, journal
 │   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
-│   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: photo upload, ingredient editing, macro review
+│   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: food photo or label scan, serving multiplier, daily macro context
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
 │   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
@@ -391,7 +391,8 @@ mr-bridge-assistant/
 │   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
-│   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision macro estimation
+│   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision: food macro estimation (mode=food) or exact label reading (mode=label)
+│   │   │   │   │   ├── today-totals/route.ts    # GET — sum today's meal_log macros (calories/protein/carbs/fat)
 │   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate from edited ingredients (Haiku)
 │   │   │   │   │   └── log/route.ts             # POST — insert meal_log row
 │   │   │   │   └── google/

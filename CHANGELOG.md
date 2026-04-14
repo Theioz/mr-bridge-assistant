@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (nutrition facts label scanner with serving multiplier and daily macro context — issue #165)
+- **`web/src/app/api/meals/analyze-photo/route.ts`** — added `NutritionLabelSchema` (product name, serving size, servings per container, calories, protein, carbs, fat, fiber, sugar, sodium, readable flag, notes); added optional `mode` form field (`food` | `label`, default `food`); in label mode calls `generateObject` with `NutritionLabelSchema` and an exact-read prompt; both modes now return `{ mode, ...object }` so the client can distinguish
+- **`web/src/app/api/meals/today-totals/route.ts`** — new auth-gated GET route; queries `meal_log` for today's date and returns summed `calories / protein_g / carbs_g / fat_g`
+- **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — added pill-style "Food photo | Nutrition label" mode toggle above the upload button (matches `GranularityToggle` pattern); label mode passes `mode=label` in FormData; label result card shows product name + serving size prominently, macro table (Calories / Protein / Carbs / Fat / Fiber / Sugar / Sodium) with "—" for nulls, serving multiplier input (0.5 steps, live client-side multiplication), and "Log this" button logging macros × multiplier to `meal_log` with source `"label"`; unreadable label shows warning and retry prompt; both food and label result cards show a "How this fits today" row (fetched once from `/api/meals/today-totals` when results arrive) displaying today's running totals and calories being added
+
 ### Added (centralized meal hub with tabs and get_today_meals tool — issue #163)
 - **`web/src/components/meals/MealsClient.tsx`** — new "use client" component wrapping the entire meals experience in four pill-style tabs (Today, Recipes, Scanner, Plan); tab state managed locally, default tab is Today
 - **Tab: Today** — today's meals grouped by type with macro totals, inline macro progress bars (replicates MacroSummaryCard logic from server-fetched props), quick-log form with meal type + description + collapsible macro fields (calories/protein/carbs/fat), log-via-chat nudge
