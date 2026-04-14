@@ -202,19 +202,22 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                     Today
                   </span>
                 )}
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: "var(--color-text)",
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {/* No plan name stored in DB — show nothing here; exercises speak for themselves */}
-                </span>
+                {day.plan.name && (
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--color-text)",
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {day.plan.name}
+                  </span>
+                )}
+                {!day.plan.name && <span style={{ flex: 1 }} />}
                 {day.isCompleted && (
                   <span style={{ color: "#34d399", fontSize: 14, marginLeft: 4, flexShrink: 0 }}>✓</span>
                 )}

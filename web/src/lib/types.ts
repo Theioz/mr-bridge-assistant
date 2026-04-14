@@ -152,6 +152,7 @@ export interface WorkoutPlan {
   id: string;
   user_id: string;
   date: string;
+  name: string | null;
   warmup: WorkoutExercise[];
   workout: WorkoutExercise[];
   cooldown: WorkoutExercise[];

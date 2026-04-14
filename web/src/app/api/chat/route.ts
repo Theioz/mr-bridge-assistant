@@ -1157,6 +1157,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool.",
       parameters: jsonSchema<{
         date: string;
+        name?: string;
         warmup: WorkoutExercise[];
         workout: WorkoutExercise[];
         cooldown: WorkoutExercise[];
@@ -1169,6 +1170,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         required: ["date", "warmup", "workout", "cooldown"],
         properties: {
           date: { type: "string", description: "Date in YYYY-MM-DD format." },
+          name: { type: "string", description: "Workout name shown on the fitness page card, e.g. 'Push Day', 'Pull Day', 'Legs'." },
           warmup: { type: "array", items: { type: "object" }, description: "Warm-up exercises." },
           workout: { type: "array", items: { type: "object" }, description: "Main workout exercises." },
           cooldown: { type: "array", items: { type: "object" }, description: "Cool-down exercises." },
@@ -1178,14 +1180,14 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
         },
       }),
-      execute: async ({ date, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
+      execute: async ({ date, name, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
         if (!userId) return { error: "Not authenticated" };
         if (isDemo) return { demo: true, note: "Demo mode — plan not saved." };
 
         const { data: upserted, error } = await supabase
           .from("workout_plans")
           .upsert(
-            { user_id: userId, date, warmup, workout, cooldown, notes: notes ?? null, updated_at: new Date().toISOString() },
+            { user_id: userId, date, name: name ?? null, warmup, workout, cooldown, notes: notes ?? null, updated_at: new Date().toISOString() },
             { onConflict: "user_id,date" }
           )
           .select()
