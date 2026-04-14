@@ -56,3 +56,52 @@ export async function POST(req: Request) {
 
   return Response.json(data, { status: 201 });
 }
+
+interface MealLogPatchBody {
+  id: string;
+  notes?: string;
+  meal_type?: "breakfast" | "lunch" | "dinner" | "snack";
+  calories?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+}
+
+export async function PATCH(req: Request) {
+  let body: MealLogPatchBody;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (!body.id) return Response.json({ error: "id is required" }, { status: 400 });
+
+  const validTypes = ["breakfast", "lunch", "dinner", "snack"];
+  if (body.meal_type && !validTypes.includes(body.meal_type)) {
+    return Response.json({ error: "Invalid meal_type" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const updates: Record<string, unknown> = {};
+  if (body.notes     !== undefined) updates.notes      = body.notes;
+  if (body.meal_type !== undefined) updates.meal_type  = body.meal_type;
+  if (body.calories  !== undefined) updates.calories   = body.calories;
+  if (body.protein_g !== undefined) updates.protein_g  = body.protein_g;
+  if (body.carbs_g   !== undefined) updates.carbs_g    = body.carbs_g;
+  if (body.fat_g     !== undefined) updates.fat_g      = body.fat_g;
+
+  const { data, error } = await supabase
+    .from("meal_log")
+    .update(updates)
+    .eq("id", body.id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json(data);
+}

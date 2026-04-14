@@ -168,6 +168,43 @@ function TodayTab({
   const [logCarbs, setLogCarbs] = useState("");
   const [logFat, setLogFat] = useState("");
   const [logging, setLogging] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<{
+    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
+  }>({ notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
+  const [editSaving, setEditSaving] = useState(false);
+
+  function startEdit(m: MealRow) {
+    setEditingId(m.id);
+    setEditFields({
+      notes: m.notes ?? "",
+      meal_type: m.meal_type,
+      calories: m.calories != null ? String(m.calories) : "",
+      protein_g: m.protein_g != null ? String(m.protein_g) : "",
+      carbs_g: m.carbs_g != null ? String(m.carbs_g) : "",
+      fat_g: m.fat_g != null ? String(m.fat_g) : "",
+    });
+  }
+
+  async function saveEdit(id: string) {
+    setEditSaving(true);
+    await fetch("/api/meals/log", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        notes: editFields.notes || null,
+        meal_type: editFields.meal_type,
+        calories: editFields.calories ? Number(editFields.calories) : null,
+        protein_g: editFields.protein_g ? Number(editFields.protein_g) : null,
+        carbs_g: editFields.carbs_g ? Number(editFields.carbs_g) : null,
+        fat_g: editFields.fat_g ? Number(editFields.fat_g) : null,
+      }),
+    });
+    setEditSaving(false);
+    setEditingId(null);
+    router.refresh();
+  }
 
   const hasAnyGoal =
     macroGoals.calories !== null ||
@@ -281,28 +318,82 @@ function TodayTab({
                     .join(" · ")
                 : null;
               return (
-                <div key={m.id} className="flex items-baseline gap-3">
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 500,
-                      color: "var(--color-text-muted)",
-                      textTransform: "capitalize",
-                      minWidth: 64,
-                    }}
-                  >
-                    {m.meal_type}
-                  </span>
-                  <div>
-                    <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                      {m.recipes?.name ?? m.notes ?? "—"}
-                    </span>
-                    {macroStr && (
-                      <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
-                        {macroStr}
+                <div key={m.id}>
+                  {editingId === m.id ? (
+                    <div className="space-y-2 py-1">
+                      <div className="flex gap-2">
+                        <select
+                          value={editFields.meal_type}
+                          onChange={(e) => setEditFields((f) => ({ ...f, meal_type: e.target.value }))}
+                          style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
+                        >
+                          {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                        </select>
+                        <input
+                          type="text"
+                          value={editFields.notes}
+                          onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))}
+                          placeholder="Food name"
+                          style={{ ...inputStyle, flex: 1 }}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        {(["calories", "protein_g", "carbs_g", "fat_g"] as const).map((field) => (
+                          <input
+                            key={field}
+                            type="number"
+                            value={editFields[field]}
+                            onChange={(e) => setEditFields((f) => ({ ...f, [field]: e.target.value }))}
+                            placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
+                            style={{ ...inputStyle, width: 68 }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(m.id)}
+                          disabled={editSaving}
+                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-primary-foreground)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                        >
+                          {editSaving ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          style={{ fontSize: 13, padding: "4px 12px", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-baseline gap-3"
+                      onClick={() => startEdit(m)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: "var(--color-text-muted)",
+                          textTransform: "capitalize",
+                          minWidth: 64,
+                        }}
+                      >
+                        {m.meal_type}
                       </span>
-                    )}
-                  </div>
+                      <div>
+                        <span style={{ fontSize: 14, color: "var(--color-text)" }}>
+                          {m.recipes?.name ?? m.notes ?? "—"}
+                        </span>
+                        {macroStr && (
+                          <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
+                            {macroStr}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -919,12 +1010,51 @@ function fmtDate(d: string) {
 }
 
 function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
+  const router = useRouter();
   const byDate = new Map<string, MealRow[]>();
   for (const meal of pastMeals) {
     if (!byDate.has(meal.date)) byDate.set(meal.date, []);
     byDate.get(meal.date)!.push(meal);
   }
   const dates = Array.from(byDate.keys());
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<{
+    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
+  }>({ notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
+  const [editSaving, setEditSaving] = useState(false);
+
+  function startEdit(m: MealRow) {
+    setEditingId(m.id);
+    setEditFields({
+      notes: m.notes ?? "",
+      meal_type: m.meal_type,
+      calories: m.calories != null ? String(m.calories) : "",
+      protein_g: m.protein_g != null ? String(m.protein_g) : "",
+      carbs_g: m.carbs_g != null ? String(m.carbs_g) : "",
+      fat_g: m.fat_g != null ? String(m.fat_g) : "",
+    });
+  }
+
+  async function saveEdit(id: string) {
+    setEditSaving(true);
+    await fetch("/api/meals/log", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        notes: editFields.notes || null,
+        meal_type: editFields.meal_type,
+        calories: editFields.calories ? Number(editFields.calories) : null,
+        protein_g: editFields.protein_g ? Number(editFields.protein_g) : null,
+        carbs_g: editFields.carbs_g ? Number(editFields.carbs_g) : null,
+        fat_g: editFields.fat_g ? Number(editFields.fat_g) : null,
+      }),
+    });
+    setEditSaving(false);
+    setEditingId(null);
+    router.refresh();
+  }
 
   return (
     <div className="space-y-4">
@@ -964,28 +1094,82 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
                       .join(" · ")
                   : null;
                 return (
-                  <div key={m.id} className="flex items-baseline gap-3">
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: "var(--color-text-muted)",
-                        textTransform: "capitalize",
-                        minWidth: 64,
-                      }}
-                    >
-                      {m.meal_type}
-                    </span>
-                    <div>
-                      <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                        {m.recipes?.name ?? m.notes ?? "—"}
-                      </span>
-                      {macroStr && (
-                        <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
-                          {macroStr}
+                  <div key={m.id}>
+                    {editingId === m.id ? (
+                      <div className="space-y-2 py-1">
+                        <div className="flex gap-2">
+                          <select
+                            value={editFields.meal_type}
+                            onChange={(e) => setEditFields((f) => ({ ...f, meal_type: e.target.value }))}
+                            style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
+                          >
+                            {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                          </select>
+                          <input
+                            type="text"
+                            value={editFields.notes}
+                            onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))}
+                            placeholder="Food name"
+                            style={{ ...inputStyle, flex: 1 }}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          {(["calories", "protein_g", "carbs_g", "fat_g"] as const).map((field) => (
+                            <input
+                              key={field}
+                              type="number"
+                              value={editFields[field]}
+                              onChange={(e) => setEditFields((f) => ({ ...f, [field]: e.target.value }))}
+                              placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
+                              style={{ ...inputStyle, width: 68 }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(m.id)}
+                            disabled={editSaving}
+                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-primary-foreground)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                          >
+                            {editSaving ? "Saving…" : "Save"}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            style={{ fontSize: 13, padding: "4px 12px", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-baseline gap-3"
+                        onClick={() => startEdit(m)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: "var(--color-text-muted)",
+                            textTransform: "capitalize",
+                            minWidth: 64,
+                          }}
+                        >
+                          {m.meal_type}
                         </span>
-                      )}
-                    </div>
+                        <div>
+                          <span style={{ fontSize: 14, color: "var(--color-text)" }}>
+                            {m.recipes?.name ?? m.notes ?? "—"}
+                          </span>
+                          {macroStr && (
+                            <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
+                              {macroStr}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
