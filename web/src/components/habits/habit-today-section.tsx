@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import HabitToggle from "./habit-toggle";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
-import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import type { EmojiClickData } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 interface Props {
   habits: HabitRegistry[];
