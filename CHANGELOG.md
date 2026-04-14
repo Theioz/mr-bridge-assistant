@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (weekly workout program in fitness tab — issue #192)
+- **`supabase/migrations/20260414000000_add_workout_plans.sql`** — new `workout_plans` table: per-user, per-date rows with `warmup`, `workout`, `cooldown` JSONB arrays, optional `notes`, and `calendar_event_id`; RLS policy restricts to owner
+- **`web/src/lib/types.ts`** — added `WorkoutExercise` and `WorkoutPlan` interfaces
+- **`web/src/app/api/chat/route.ts`** — added `get_workout_plan` (fetches current Mon–Sun week), `assign_workout` (upserts one day's plan + creates/updates a timed Google Calendar event), and `update_workout_exercise` (patches a single exercise by name within a phase and refreshes the calendar event); added `buildCalendarDescription` helper; demo mode no-ops for all three tools
+- **`web/src/components/fitness/weekly-workout-plan.tsx`** — new client component; renders Mon–Sun cards with expand/collapse, Today badge, green checkmark for completed days, and three-phase exercise rows (Warm-up / Workout / Cool-down)
+- **`web/src/app/(protected)/fitness/page.tsx`** — queries `workout_plans` for current week; derives `completedDates` from existing `allWorkouts`; renders `WeeklyWorkoutPlan` above body composition chart
+
 ### Changed (perf: reduce Anthropic API costs — issue #189)
 - **`web/src/app/api/chat/route.ts`** — `maxSteps` reduced from 25 to 12; system prompt split into static (cached with `cacheControl: ephemeral`) + dynamic (date + name, uncached) content blocks to prevent daily cache busts; context window trimmed from 20 to 10 messages; top-level `providerOptions` cacheControl block removed (now inline on static block); `selectModel` accepts optional `model` override from request body; system prompt adds graceful step-limit rule and `get_session_history` consent rule
 - **`web/src/app/api/chat/route.ts`** — new `get_session_history` tool: fetches up to 40 earlier messages from the current session on demand; model asks user before calling

@@ -10,14 +10,25 @@ import { ActiveCalGoalChart } from "@/components/fitness/active-cal-goal-chart";
 import { WeightGoalChart } from "@/components/fitness/weight-goal-chart";
 import { BodyFatGoalChart } from "@/components/fitness/body-fat-goal-chart";
 import { WorkoutHistoryTable } from "@/components/fitness/workout-history-table";
-import type { FitnessLog, WorkoutSession, RecoveryMetrics } from "@/lib/types";
+import { WeeklyWorkoutPlan } from "@/components/fitness/weekly-workout-plan";
+import type { FitnessLog, WorkoutSession, RecoveryMetrics, WorkoutPlan } from "@/lib/types";
 
 export default async function FitnessPage() {
   const supabase = await createClient();
   const { key: windowKey, days } = await getWindow();
   const weekCount = Math.ceil(days / 7);
 
-  const [fitnessRes, workoutsRes, recoveryRes, profileRes] = await Promise.all([
+  // Current ISO week bounds (Mon–Sun)
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const mondayStr = monday.toISOString().slice(0, 10);
+  const sundayStr = sunday.toISOString().slice(0, 10);
+
+  const [fitnessRes, workoutsRes, recoveryRes, profileRes, weeklyPlansRes] = await Promise.all([
     supabase
       .from("fitness_log")
       .select("*")
@@ -43,11 +54,21 @@ export default async function FitnessPage() {
         "weight_goal_lbs",
         "body_fat_goal_pct",
       ]),
+    supabase
+      .from("workout_plans")
+      .select("*")
+      .gte("date", mondayStr)
+      .lte("date", sundayStr)
+      .order("date", { ascending: true }),
   ]);
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
   const allWorkouts = (workoutsRes.data ?? []) as WorkoutSession[];
   const recoveryData = (recoveryRes.data ?? []) as Pick<RecoveryMetrics, "date" | "active_cal">[];
+  const weeklyPlans = (weeklyPlansRes.data ?? []) as WorkoutPlan[];
+  const completedDates = allWorkouts
+    .filter((w) => w.date >= mondayStr && w.date <= sundayStr)
+    .map((w) => w.date);
 
   const workouts     = allWorkouts.filter((w) => !/walk/i.test(w.activity));
   const walkSessions = allWorkouts.filter((w) => /walk/i.test(w.activity));
@@ -87,6 +108,9 @@ export default async function FitnessPage() {
         </div>
         <WindowSelector current={windowKey} />
       </div>
+
+      {/* Weekly workout program */}
+      <WeeklyWorkoutPlan plans={weeklyPlans} completedDates={completedDates} />
 
       {/* Body composition trend */}
       <BodyCompDualChart data={fitnessData} windowLabel={windowKey.toUpperCase()} windowKey={windowKey} />

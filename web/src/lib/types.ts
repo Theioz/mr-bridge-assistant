@@ -139,3 +139,24 @@ export interface JournalEntry {
   created_at: string;
   updated_at: string;
 }
+
+export interface WorkoutExercise {
+  exercise: string;
+  sets?: number;
+  reps?: string;
+  weight_lbs?: number | null;
+  notes?: string | null;
+}
+
+export interface WorkoutPlan {
+  id: string;
+  user_id: string;
+  date: string;
+  warmup: WorkoutExercise[];
+  workout: WorkoutExercise[];
+  cooldown: WorkoutExercise[];
+  notes: string | null;
+  calendar_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
