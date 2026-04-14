@@ -357,6 +357,26 @@ When asked what to cook or for recipe ideas:
         if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
           return { error: `due_date must be YYYY-MM-DD format, got: "${due_date}"` };
         }
+
+        // Deduplication guard — prevents double-inserts from stream retries
+        const windowStart = new Date(Date.now() - 90_000).toISOString();
+        let dupQuery = supabase
+          .from("tasks")
+          .select("id, title, priority, status, due_date, category, parent_id, created_at")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .ilike("title", title.trim())
+          .gte("created_at", windowStart);
+
+        if (due_date) {
+          dupQuery = dupQuery.eq("due_date", due_date);
+        } else {
+          dupQuery = dupQuery.is("due_date", null);
+        }
+
+        const { data: existing } = await dupQuery.maybeSingle();
+        if (existing) return existing;
+
         const { data, error } = await supabase
           .from("tasks")
           .insert({
