@@ -1,54 +1,35 @@
 direction: right
 
-# ── Nodes ─────────────────────────────────────────────────────────────────────
+data_sources: "Data Sources\nOura · Fitbit · Google Fit · Renpho"
 
-data_sources: "Data Sources\n\nOura Ring · Fitbit\nGoogle Fit · Renpho ⚠"
-
-sync: "Sync Layer\n\nPython (CLI)\n  sync-oura · sync-fitbit\n  sync-googlefit · sync-renpho\n\nTypeScript\n  oura.ts · fitbit.ts\n  googlefit.ts · stocks.ts\n\nCron: api/cron/sync\n        (daily 6am PST)\nManual: api/sync/{oura·fitbit·googlefit}"
+sync: "Sync Layer\nPython scripts · TypeScript modules\nCron (daily 6am PST) · Manual routes"
 
 supabase: "Supabase Postgres\n18 tables · RLS enforced"
 
-nextjs: "Next.js · Vercel\n\nAPI Routes\n  api/chat  (21 tools · streaming)\n  api/meals/analyze-photo · log\n  api/weather\n  api/stocks/refresh\n  api/google/calendar · gmail\n  api/notifications/unread-count\n\nPages\n  Dashboard · Chat · Habits · Tasks\n  Fitness · Journal · Weekly · Meals\n  Notifications · Settings"
+nextjs: "Next.js · Vercel\n7 API routes · 10 pages"
 
-external: "External APIs\n\nAnthropic (Claude)\nGoogle Calendar · Gmail\nOpen-Meteo\nPolygon.io\nntfy.sh  (push alerts)"
+external: "External APIs\nAnthropic · Google Calendar · Gmail\nOpen-Meteo · Polygon.io · ntfy.sh"
 
 user: "Browser / Mobile"
 
-# ── Edges ─────────────────────────────────────────────────────────────────────
-
-# Primary left-to-right flow
 data_sources -> sync
 sync -> supabase: write / upsert
 supabase -> nextjs: query / SSR
-nextjs -> user
-
-# Write-back
 nextjs -> supabase: write
-
-# External APIs feed into Next.js only (keeps layout linear)
+nextjs -> user
 external -> nextjs: OAuth · stream · vision · EOD
-
-# ── Styles ────────────────────────────────────────────────────────────────────
 
 data_sources.style.stroke: "#10B981"
 data_sources.style.font-color: "#10B981"
-data_sources.width: 200
-data_sources.height: 340
 
 sync.style.stroke: "#6366F1"
-sync.width: 260
-sync.height: 340
 
 supabase.style.fill: "#422006"
 supabase.style.stroke: "#F59E0B"
 supabase.style.font-color: "#FDE68A"
 supabase.style.bold: true
-supabase.width: 220
-supabase.height: 340
 
 nextjs.style.stroke: "#38BDF8"
-nextjs.width: 280
-nextjs.height: 340
 
 external.style.stroke: "#475569"
 external.style.font-color: "#94A3B8"
@@ -56,5 +37,3 @@ external.style.font-color: "#94A3B8"
 user.style.fill: "#F8FAFC"
 user.style.stroke: "#CBD5E1"
 user.style.font-color: "#1E293B"
-user.width: 160
-user.height: 340
