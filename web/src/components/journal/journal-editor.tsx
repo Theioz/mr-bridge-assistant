@@ -47,6 +47,7 @@ interface Props {
     responses: JournalResponses,
     freeWrite: string
   ) => Promise<{ error?: string }>;
+  onSubmit?: () => void;
 }
 
 export default function JournalEditor({
@@ -54,16 +55,19 @@ export default function JournalEditor({
   initialResponses,
   initialFreeWrite,
   saveAction,
+  onSubmit,
 }: Props) {
-  const [tab, setTab]           = useState<Tab>("reflect");
-  const [responses, setResponses] = useState<JournalResponses>(initialResponses);
-  const [freeWrite, setFreeWrite] = useState(initialFreeWrite);
+  const [tab, setTab]               = useState<Tab>("reflect");
+  const [responses, setResponses]   = useState<JournalResponses>(initialResponses);
+  const [freeWrite, setFreeWrite]   = useState(initialFreeWrite);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [, startTransition]       = useTransition();
+  const [submitted, setSubmitted]   = useState(false);
+  const [, startTransition]         = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filledCount = PROMPTS.filter((p) => responses[p.slug]?.trim()).length;
   const wordCount   = freeWrite.trim().split(/\s+/).filter(Boolean).length;
+  const isEmpty     = Object.values(responses).every((v) => !v?.trim()) && !freeWrite.trim();
 
   const triggerSave = useCallback(
     (r: JournalResponses, fw: string) => {
@@ -91,6 +95,18 @@ export default function JournalEditor({
   function handleFreeWriteChange(value: string) {
     setFreeWrite(value);
     scheduleAutoSave(responses, value);
+  }
+
+  function handleSubmit() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    triggerSave(responses, freeWrite);
+    setResponses({});
+    setFreeWrite("");
+    setSubmitted(true);
+    document.getElementById("journal-history")?.scrollIntoView({ behavior: "smooth" });
+    onSubmit?.();
+    setTimeout(() => setSubmitted(false), 3000);
   }
 
   // Clear debounce on unmount
@@ -141,79 +157,107 @@ export default function JournalEditor({
         </span>
       </div>
 
-      {/* Reflect tab */}
-      {tab === "reflect" && (
-        <div className="p-5 space-y-5">
-          {/* Progress dots */}
-          <div className="flex items-center gap-2">
-            {PROMPTS.map((p) => (
-              <span
-                key={p.slug}
-                className="rounded-full transition-colors"
-                style={{
-                  width: 8,
-                  height: 8,
-                  background: responses[p.slug]?.trim()
-                    ? "var(--color-primary)"
-                    : "var(--color-border)",
-                }}
-              />
-            ))}
-            <span className="text-xs ml-1" style={{ color: "var(--color-text-faint)" }}>
-              {filledCount} / {PROMPTS.length}
-            </span>
-          </div>
+      {/* Confirmation banner */}
+      {submitted ? (
+        <div className="p-5 flex items-center justify-center" style={{ minHeight: 120 }}>
+          <p className="text-sm font-medium" style={{ color: "var(--color-positive)" }}>
+            Entry saved.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Reflect tab */}
+          {tab === "reflect" && (
+            <div className="p-5 space-y-5">
+              {/* Progress dots */}
+              <div className="flex items-center gap-2">
+                {PROMPTS.map((p) => (
+                  <span
+                    key={p.slug}
+                    className="rounded-full transition-colors"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      background: responses[p.slug]?.trim()
+                        ? "var(--color-primary)"
+                        : "var(--color-border)",
+                    }}
+                  />
+                ))}
+                <span className="text-xs ml-1" style={{ color: "var(--color-text-faint)" }}>
+                  {filledCount} / {PROMPTS.length}
+                </span>
+              </div>
 
-          {/* All prompts visible */}
-          {PROMPTS.map((p) => (
-            <div key={p.slug} className="space-y-2">
-              <label
-                className="block text-sm font-medium"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {p.question}
-              </label>
+              {/* All prompts visible */}
+              {PROMPTS.map((p) => (
+                <div key={p.slug} className="space-y-2">
+                  <label
+                    className="block text-sm font-medium"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    {p.question}
+                  </label>
+                  <textarea
+                    value={responses[p.slug] ?? ""}
+                    onChange={(e) => handleResponseChange(p.slug, e.target.value)}
+                    placeholder={p.placeholder}
+                    rows={3}
+                    className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5 transition-colors"
+                    style={{
+                      background: "var(--color-surface-raised)",
+                      border:     "1px solid var(--color-border)",
+                      color:      "var(--color-text)",
+                      lineHeight: "1.6",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Free Write tab */}
+          {tab === "freewrite" && (
+            <div className="p-5">
               <textarea
-                value={responses[p.slug] ?? ""}
-                onChange={(e) => handleResponseChange(p.slug, e.target.value)}
-                placeholder={p.placeholder}
-                rows={3}
-                className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5 transition-colors"
+                value={freeWrite}
+                onChange={(e) => handleFreeWriteChange(e.target.value)}
+                placeholder="Write anything on your mind — no structure, no prompts. Just you and the page."
+                rows={14}
+                className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5"
                 style={{
                   background: "var(--color-surface-raised)",
                   border:     "1px solid var(--color-border)",
                   color:      "var(--color-text)",
-                  lineHeight: "1.6",
+                  lineHeight: "1.75",
                 }}
               />
+              <p
+                className="text-xs mt-2 text-right"
+                style={{ color: "var(--color-text-faint)" }}
+              >
+                {wordCount} {wordCount === 1 ? "word" : "words"}
+              </p>
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Free Write tab */}
-      {tab === "freewrite" && (
-        <div className="p-5">
-          <textarea
-            value={freeWrite}
-            onChange={(e) => handleFreeWriteChange(e.target.value)}
-            placeholder="Write anything on your mind — no structure, no prompts. Just you and the page."
-            rows={14}
-            className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5"
-            style={{
-              background: "var(--color-surface-raised)",
-              border:     "1px solid var(--color-border)",
-              color:      "var(--color-text)",
-              lineHeight: "1.75",
-            }}
-          />
-          <p
-            className="text-xs mt-2 text-right"
-            style={{ color: "var(--color-text-faint)" }}
-          >
-            {wordCount} {wordCount === 1 ? "word" : "words"}
-          </p>
-        </div>
+          {/* Submit button */}
+          <div className="px-5 pb-5">
+            <button
+              onClick={handleSubmit}
+              disabled={saveStatus === "saving" || isEmpty}
+              className="w-full py-3 rounded-xl text-sm font-medium transition-opacity"
+              style={{
+                background: "var(--color-primary)",
+                color:      "var(--color-primary-foreground)",
+                opacity:    saveStatus === "saving" || isEmpty ? 0.5 : 1,
+                cursor:     saveStatus === "saving" || isEmpty ? "not-allowed" : "pointer",
+              }}
+            >
+              {saveStatus === "saving" ? "Saving…" : "Submit"}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
