@@ -112,7 +112,12 @@ function ChatPageClientInner({
 
         const active = list.filter((s) => !s.deleted_at);
         const mostRecent = active[0];
-        if (mostRecent && mostRecent.id !== activeSessionIdRef.current) {
+        // SSR already loaded messages for initialSessionId; skip the refetch when it matches.
+        if (
+          mostRecent &&
+          mostRecent.id !== activeSessionIdRef.current &&
+          mostRecent.id !== initialSessionId
+        ) {
           setLoadingSession(true);
           try {
             const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
@@ -303,16 +308,20 @@ function ChatPageClientInner({
     [allSessions, activeSessionId, loadSession, handleNewChat, toast, fetchSessions]
   );
 
-  const handleRestoreSession = useCallback(async (sessionId: string) => {
-    setAllSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
-    );
-    try {
-      await fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" });
-    } catch {
-      // non-fatal
-    }
-  }, []);
+  const handleRestoreSession = useCallback(
+    async (sessionId: string) => {
+      setAllSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+      );
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" });
+        if (res.ok) fetchSessions();
+      } catch {
+        // non-fatal
+      }
+    },
+    [fetchSessions]
+  );
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

@@ -73,7 +73,6 @@ export default function SlashCommandMenu({ commands, activeIndex, onSelect, onHo
               fontSize: 13,
               fontWeight: 500,
               color: "var(--color-primary)",
-              fontFamily: "ui-monospace, monospace",
               flexShrink: 0,
             }}
           >
