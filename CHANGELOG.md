@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (ui-ux-pro-max skill + design system — prep for issue #10)
+- **`.claude/skills/ui-ux-pro-max/`** — installed via `uipro init --ai claude` (uipro-cli@2.2.3). Provides design intelligence (67 styles, 96 palettes, 57 font pairings, 13 stacks) with a CLI for generating design systems and running domain searches (style, ux, typography, color, chart, stack-specific guidelines).
+- **`design-system/mr-bridge/MASTER.md`** — persisted design system: Dark Mode (OLED) style, Fira Code + Fira Sans typography, blue+amber palette with dark/light tokens, spacing/shadow scales, component specs, anti-patterns, pre-delivery checklist. Page Pattern hand-edited to "Sidebar + Main (Chat/Dashboard App Shell)" after the generator's output was unusable (landing-page layouts + raw CSV leak). Will serve as the source of truth for the web interface work in issue #10.
+
 ### Added (sports dashboard widget — issue #141)
 - **`supabase/migrations/20260415000001_add_sports_cache.sql`** — `sports_cache` table (`user_id`, `team_id`, `league`, `data jsonb`, `fetched_at`) with `unique(user_id, team_id)` and RLS on `auth.uid()`.
 - **`web/src/lib/sync/sports/provider.ts`** — `SportsProvider` interface + normalized `Team`, `Game`, `Standing`, `SportsCacheData` types. Sport-agnostic shape so swapping providers is a one-file change.
