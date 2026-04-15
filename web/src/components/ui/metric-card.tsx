@@ -35,16 +35,10 @@ export function MetricCard({
 
   return (
     <div
-      className="rounded-xl p-5 transition-colors duration-200"
+      className="rounded-xl p-5 transition-colors duration-200 hover-border-strong"
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-text-faint)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
       }}
     >
       <p

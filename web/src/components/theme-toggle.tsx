@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { setThemePreference } from "@/lib/theme-actions";
@@ -16,10 +16,7 @@ const LABEL: Record<ThemePreference, string> = {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
-
-  useEffect(() => setMounted(true), []);
 
   const current: ThemePreference = (theme as ThemePreference | undefined) ?? "system";
   const Icon = current === "light" ? Sun : current === "dark" ? Moon : Monitor;
@@ -37,9 +34,9 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={handleClick}
-      aria-label={mounted ? `Theme: ${LABEL[current]}. Click to change.` : "Theme toggle"}
-      title={mounted ? `Theme: ${LABEL[current]}` : undefined}
-      className="flex items-center justify-center rounded-md transition-colors cursor-pointer"
+      aria-label={`Theme: ${LABEL[current]}. Click to change.`}
+      title={`Theme: ${LABEL[current]}`}
+      className="flex items-center justify-center rounded-md transition-colors duration-150 cursor-pointer hover-text-brighten"
       style={{
         width: 32,
         height: 32,
@@ -47,8 +44,6 @@ export function ThemeToggle() {
         color: "var(--color-text-muted)",
         border: "1px solid var(--color-border)",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text-muted)"; }}
     >
       <Icon size={15} />
     </button>

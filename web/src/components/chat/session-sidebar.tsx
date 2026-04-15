@@ -30,7 +30,6 @@ export default function SessionSidebar({
 }: Props) {
   const [olderExpanded, setOlderExpanded] = useState(false);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const now = new Date();
   const recent = sessions.filter((s) => {
@@ -60,7 +59,7 @@ export default function SessionSidebar({
       <div style={{ padding: "12px 12px 8px" }}>
         <button
           onClick={onNewChat}
-          className="flex items-center gap-2 w-full cursor-pointer transition-colors duration-150"
+          className="flex items-center gap-2 w-full cursor-pointer transition-opacity duration-150 hover:opacity-85"
           style={{
             background: "var(--color-primary)",
             color: "white",
@@ -70,12 +69,6 @@ export default function SessionSidebar({
             fontSize: 13,
             fontWeight: 500,
             minHeight: 48,
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.opacity = "0.85";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.opacity = "1";
           }}
         >
           <Plus size={15} />
@@ -89,8 +82,6 @@ export default function SessionSidebar({
             key={`${s.id}-${timeTick}`}
             session={s}
             active={s.id === activeSessionId}
-            hovered={hoveredId === s.id}
-            onHover={setHoveredId}
             onSelect={onSessionSelect}
             onArchive={onArchive}
           />
@@ -125,8 +116,6 @@ export default function SessionSidebar({
                   key={`${s.id}-${timeTick}`}
                   session={s}
                   active={s.id === activeSessionId}
-                  hovered={hoveredId === s.id}
-                  onHover={setHoveredId}
                   onSelect={onSessionSelect}
                   onArchive={onArchive}
                 />
@@ -173,25 +162,19 @@ export default function SessionSidebar({
 function SessionRow({
   session,
   active,
-  hovered,
-  onHover,
   onSelect,
   onArchive,
 }: {
   session: SessionPreview;
   active: boolean;
-  hovered: boolean;
-  onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
   onArchive: (id: string) => void;
 }) {
   return (
     <div
-      onMouseEnter={() => onHover(session.id)}
-      onMouseLeave={() => onHover(null)}
+      className={`group/row relative transition-colors duration-150 ${active ? "" : "hover-bg-subtle"}`}
       style={{
-        position: "relative",
-        background: active ? "var(--color-primary-dim)" : hovered ? "var(--hover-subtle)" : "transparent",
+        background: active ? "var(--color-primary-dim)" : "transparent",
         borderLeft: active ? "2px solid var(--color-primary)" : "2px solid transparent",
         borderRadius: 6,
       }}
@@ -230,37 +213,30 @@ function SessionRow({
           {session.preview ?? "Empty session"}
         </span>
       </button>
-      {hovered && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onArchive(session.id);
-          }}
-          aria-label="Delete chat"
-          style={{
-            position: "absolute",
-            right: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "transparent",
-            border: "none",
-            color: "var(--color-text-muted)",
-            cursor: "pointer",
-            padding: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--color-danger)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--color-text-muted)";
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onArchive(session.id);
+        }}
+        aria-label="Delete chat"
+        className="opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-colors duration-150 hover-text-danger"
+        style={{
+          position: "absolute",
+          right: 8,
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: "var(--color-text-muted)",
+          cursor: "pointer",
+          padding: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 }

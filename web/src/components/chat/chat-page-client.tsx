@@ -339,7 +339,7 @@ function ChatPageClientInner({
 
           <button
             onClick={toggleDesktopHistory}
-            className="hidden lg:flex items-center justify-center rounded-lg transition-colors duration-150"
+            className={`hidden lg:flex items-center justify-center rounded-lg transition-colors duration-150 ${historyOpen ? "" : "hover-bg-subtle"}`}
             aria-label={historyOpen ? "Close history" : "Open history"}
             style={{
               background: historyOpen ? "var(--color-primary-dim)" : "transparent",
@@ -348,14 +348,6 @@ function ChatPageClientInner({
               cursor: "pointer",
               width: 36,
               height: 36,
-            }}
-            onMouseEnter={(e) => {
-              if (!historyOpen)
-                (e.currentTarget as HTMLElement).style.background = "var(--hover-subtle)";
-            }}
-            onMouseLeave={(e) => {
-              if (!historyOpen)
-                (e.currentTarget as HTMLElement).style.background = "transparent";
             }}
           >
             <History size={18} />
@@ -371,7 +363,7 @@ function ChatPageClientInner({
 
         <button
           onClick={handleNewChat}
-          className="transition-colors duration-150"
+          className="transition-colors duration-150 hover-text-brighten"
           style={{
             background: "transparent",
             border: "none",
@@ -380,12 +372,6 @@ function ChatPageClientInner({
             color: "var(--color-text-muted)",
             padding: "8px 4px",
             minHeight: 48,
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--color-text)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = "var(--color-text-muted)";
           }}
         >
           New chat

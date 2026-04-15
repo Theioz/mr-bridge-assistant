@@ -33,10 +33,8 @@ export function RecentWorkoutsTable({ workouts }: Props) {
         </p>
         <Link
           href="/fitness"
-          className="text-xs transition-colors duration-150 cursor-pointer"
+          className="text-xs transition-colors duration-150 cursor-pointer hover-text-brighten"
           style={{ color: "var(--color-text-muted)" }}
-          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "var(--color-text)")}
-          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "var(--color-text-muted)")}
         >
           View all →
         </Link>
