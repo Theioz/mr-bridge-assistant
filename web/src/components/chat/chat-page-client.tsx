@@ -11,19 +11,26 @@ import type { SessionPreview } from "@/app/api/chat/sessions/route";
 interface Props {
   initialSessionId: string | null;
   initialMessages: Message[];
+  initialHasMore?: boolean;
+  initialOldestPosition?: number | null;
 }
 
 function newSessionId(): string {
   return crypto.randomUUID();
 }
 
-export default function ChatPageClient({ initialSessionId, initialMessages }: Props) {
+export default function ChatPageClient({
+  initialSessionId,
+  initialMessages,
+  initialHasMore = false,
+  initialOldestPosition = null,
+}: Props) {
   const [activeSessionId, setActiveSessionId] = useState<string>(
     initialSessionId ?? newSessionId()
   );
   const [activeMessages, setActiveMessages] = useState<Message[]>(initialMessages);
-  const [hasMore, setHasMore] = useState(false);
-  const [oldestPosition, setOldestPosition] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [oldestPosition, setOldestPosition] = useState<number | null>(initialOldestPosition);
   const [loadingMore, setLoadingMore] = useState(false);
   // Incrementing this key forces ChatInterface to remount with fresh initialMessages
   const [refreshKey, setRefreshKey] = useState(0);

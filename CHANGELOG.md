@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat SSR loaded oldest messages, not latest — issue #210)
+- **`web/src/app/(protected)/chat/page.tsx`** — SSR query was `order("created_at", asc).limit(50)`, returning the **oldest** 50 messages; for long sessions (86+ messages) this rendered positions 1–50 instead of the latest 20. Now mirrors the `/api/chat/sessions/[id]` API: `order("position", desc).limit(20)`, reversed for display. Also passes `initialHasMore` / `initialOldestPosition` to `ChatPageClient` so "Load older" pagination works from first paint.
+- **`web/src/components/chat/chat-page-client.tsx`** — accepts `initialHasMore` / `initialOldestPosition` props and seeds the corresponding state from SSR.
+
 ### Fixed (chat SSR fetch cache — issue #208)
 - **`web/src/app/(protected)/chat/page.tsx`** — added `export const fetchCache = "force-no-store"` so Supabase queries on the chat route bypass Next.js Data Cache; SSR was replaying cached rows from an earlier render, causing `/chat` to render messages from old positions in the same session. `force-dynamic` alone does not disable sub-request fetch caching.
 
