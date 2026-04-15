@@ -6,6 +6,7 @@ import { Smile } from "lucide-react";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 import type { EmojiClickData } from "emoji-picker-react";
 import { getHabitIcon } from "@/lib/habit-icons";
+import HabitIconPicker from "./habit-icon-picker";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
@@ -16,7 +17,7 @@ interface Props {
   date: string;
   manageMode?: boolean;
   archiveAction?: (habitId: string) => Promise<void>;
-  updateAction?: (id: string, name: string, emoji: string, category: string) => Promise<void>;
+  updateAction?: (id: string, name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
 }
 
 export default function HabitToggle({
@@ -35,6 +36,7 @@ export default function HabitToggle({
   const [editName, setEditName] = useState(habit.name);
   const [editEmoji, setEditEmoji] = useState(habit.emoji ?? "");
   const [editCategory, setEditCategory] = useState(habit.category ?? "");
+  const [editIconKey, setEditIconKey] = useState(habit.icon_key ?? "target");
   const [editPending, startEditTransition] = useTransition();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -116,11 +118,14 @@ export default function HabitToggle({
             style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
             placeholder="Category"
           />
+          <div className="basis-full">
+            <HabitIconPicker value={editIconKey} onChange={setEditIconKey} />
+          </div>
           <button
             disabled={!editName.trim() || editPending}
             onClick={() => {
               startEditTransition(async () => {
-                await updateAction?.(habit.id, editName, editEmoji, editCategory);
+                await updateAction?.(habit.id, editName, editEmoji, editCategory, editIconKey);
                 setEditing(false);
               });
             }}
@@ -134,6 +139,7 @@ export default function HabitToggle({
               setEditName(habit.name);
               setEditEmoji(habit.emoji ?? "");
               setEditCategory(habit.category ?? "");
+              setEditIconKey(habit.icon_key ?? "target");
               setEditing(false);
             }}
             className="text-xs px-2 py-1 cursor-pointer"

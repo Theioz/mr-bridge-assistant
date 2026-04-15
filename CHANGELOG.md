@@ -7,6 +7,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (habit `icon_key` column + picker — issue #225)
+- **`supabase/migrations/20260415000003_habit_registry_icon_key.sql`** — adds nullable `icon_key TEXT` to `habit_registry` and backfills existing rows by mirroring the `getHabitIcon` derivation in SQL (category match → name keyword → `target`). **Apply manually in Supabase SQL editor before deploying.**
+- **`web/src/components/habits/habit-icon-picker.tsx`** (new) — radiogroup of 14 Lucide icons (Target, Dumbbell, HeartPulse, Moon, Droplet, Footprints, BookOpen, Code2, GraduationCap, Brain, NotebookPen, Sparkles, Smile, Ban). Inline in the add form ([habit-today-section.tsx](web/src/components/habits/habit-today-section.tsx)) and the edit form ([habit-toggle.tsx](web/src/components/habits/habit-toggle.tsx)).
+- **`web/src/lib/habit-icons.ts`** — `getHabitIcon` now prefers `habit.icon_key` when it matches a known key; otherwise falls through to category/name derivation. Exposes `HABIT_ICON_OPTIONS` registry consumed by the picker.
+- **`web/src/app/(protected)/habits/page.tsx`** — `addHabit` / `updateHabit` server actions accept and persist `iconKey`. Dashboard + weekly SSR queries select `icon_key`; Pick types updated.
+
 ### Changed (habit emoji-as-icon → Lucide — issue #225)
 - **`web/src/lib/habit-icons.ts`** (new) — `getHabitIcon(habit)` derives a Lucide icon from `habit.category` (Dumbbell/HeartPulse/Sparkles/GraduationCap/Moon/Brain) with a name-keyword fallback (sleep→Moon, water→Droplet, read→BookOpen, code→Code2, step→Footprints, workout→Dumbbell, journal→NotebookPen, alcohol→Ban, meditate→Brain, etc.) and `Target` as the final default. No schema migration — derivation only.
 - **`web/src/components/dashboard/habits-checkin.tsx`, `web/src/components/habits/habit-toggle.tsx`, `web/src/app/(protected)/weekly/page.tsx`** — habit row visual is now the derived Lucide icon. `habit-toggle` retains `habit.emoji` as a small `aria-hidden` accent after the icon. `habits-checkin` (compact dashboard) drops emoji entirely. Dashboard + weekly SSR queries now select `category`.

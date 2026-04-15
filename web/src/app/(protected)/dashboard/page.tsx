@@ -140,7 +140,7 @@ export default async function DashboardPage() {
       .select("*")
       .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
-    supabase.from("habit_registry").select("id,name,emoji,category").eq("active", true),
+    supabase.from("habit_registry").select("id,name,emoji,category,icon_key").eq("active", true),
     supabase.from("habits").select("*").eq("date", today),
     supabase
       .from("habits")
@@ -182,7 +182,7 @@ export default async function DashboardPage() {
 
   const fitnessData = (fitnessTrendRes.data ?? []) as { date: string; weight_lb: number | null; body_fat_pct: number | null }[];
 
-  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category">[];
+  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
   const todayLogs     = (todayHabitsRes.data ?? []) as HabitLog[];
   const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks  = computeStreaks(allCompleted, today);

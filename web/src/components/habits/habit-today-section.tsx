@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Smile } from "lucide-react";
 import HabitToggle from "./habit-toggle";
+import HabitIconPicker from "./habit-icon-picker";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 import type { EmojiClickData } from "emoji-picker-react";
 
@@ -15,8 +16,8 @@ interface Props {
   date: string;
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
   archiveAction: (habitId: string) => Promise<void>;
-  addAction: (name: string, emoji: string, category: string) => Promise<void>;
-  updateAction: (id: string, name: string, emoji: string, category: string) => Promise<void>;
+  addAction: (name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
+  updateAction: (id: string, name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
 }
 
 export default function HabitTodaySection({
@@ -35,6 +36,7 @@ export default function HabitTodaySection({
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("");
   const [category, setCategory] = useState("");
+  const [iconKey, setIconKey] = useState("target");
   const [isPending, startTransition] = useTransition();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -53,10 +55,11 @@ export default function HabitTodaySection({
   function handleAdd() {
     if (!name.trim()) return;
     startTransition(async () => {
-      await addAction(name, emoji, category);
+      await addAction(name, emoji, category, iconKey);
       setName("");
       setEmoji("");
       setCategory("");
+      setIconKey("target");
       setShowAdd(false);
     });
   }
@@ -65,6 +68,7 @@ export default function HabitTodaySection({
     setName("");
     setEmoji("");
     setCategory("");
+    setIconKey("target");
     setShowAdd(false);
   }
 
@@ -166,6 +170,9 @@ export default function HabitTodaySection({
             className="w-28 text-sm rounded px-2 py-1.5"
             style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
           />
+          <div className="basis-full">
+            <HabitIconPicker value={iconKey} onChange={setIconKey} />
+          </div>
           <button
             onClick={handleAdd}
             disabled={!name.trim() || isPending}

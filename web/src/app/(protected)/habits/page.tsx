@@ -39,7 +39,7 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
   revalidatePath("/dashboard");
 }
 
-async function addHabit(name: string, emoji: string, category: string) {
+async function addHabit(name: string, emoji: string, category: string, iconKey: string) {
   "use server";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,6 +49,7 @@ async function addHabit(name: string, emoji: string, category: string) {
     name: name.trim(),
     emoji: emoji.trim() || null,
     category: category.trim() || null,
+    icon_key: iconKey || null,
   });
   revalidatePath("/habits");
 }
@@ -61,7 +62,7 @@ async function archiveHabit(habitId: string) {
   revalidatePath("/dashboard");
 }
 
-async function updateHabit(id: string, name: string, emoji: string, category: string) {
+async function updateHabit(id: string, name: string, emoji: string, category: string, iconKey: string) {
   "use server";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -72,6 +73,7 @@ async function updateHabit(id: string, name: string, emoji: string, category: st
       name: name.trim(),
       emoji: emoji.trim() || null,
       category: category.trim() || null,
+      icon_key: iconKey || null,
     })
     .eq("id", id)
     .eq("user_id", user.id);

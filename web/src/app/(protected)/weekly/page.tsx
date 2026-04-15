@@ -135,7 +135,7 @@ export default async function WeeklyPage() {
     fitnessWeekAgoRes,
     journalCountRes,
   ] = await Promise.all([
-    supabase.from("habit_registry").select("id,name,emoji,category").eq("active", true),
+    supabase.from("habit_registry").select("id,name,emoji,category,icon_key").eq("active", true),
     supabase
       .from("habits")
       .select("habit_id,date,completed")
@@ -193,7 +193,7 @@ export default async function WeeklyPage() {
 
   // ── Habits ────────────────────────────────────────────────────────────────
 
-  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category">[];
+  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
   const weekHabits    = (weekHabitsRes.data ?? []) as { habit_id: string; date: string; completed: boolean }[];
   const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks  = computeStreaks(allCompleted, today);

@@ -8,7 +8,7 @@ import type { HabitStreaks } from "@/lib/streaks";
 import { getHabitIcon } from "@/lib/habit-icons";
 
 interface Props {
-  registry: Pick<HabitRegistry, "id" | "name" | "emoji" | "category">[];
+  registry: Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
   todayLogs: HabitLog[];
   streaks: HabitStreaks;
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
