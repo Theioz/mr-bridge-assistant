@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import { ReactNode } from "react";
 
 interface SheetProps {
@@ -10,6 +11,12 @@ interface SheetProps {
   children: ReactNode;
   contentClassName?: string;
   contentStyle?: React.CSSProperties;
+  /**
+   * Hide the default visible header (title + close button). Use when the
+   * consumer renders its own header. Radix focus-trap and labelling are
+   * preserved either way (@radix-ui/react-dialog >= 1.1 provides focus-trap).
+   */
+  hideHeader?: boolean;
 }
 
 export default function Sheet({
@@ -19,6 +26,7 @@ export default function Sheet({
   children,
   contentClassName,
   contentStyle,
+  hideHeader,
 }: SheetProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -40,7 +48,35 @@ export default function Sheet({
           }}
           aria-describedby={undefined}
         >
-          <Dialog.Title className="sr-only">{title}</Dialog.Title>
+          {hideHeader ? (
+            <Dialog.Title className="sr-only">{title}</Dialog.Title>
+          ) : (
+            <div
+              className="flex items-center justify-between px-5 pt-4 pb-3"
+              style={{ borderBottom: "1px solid var(--color-border)" }}
+            >
+              <Dialog.Title
+                className="text-sm font-semibold"
+                style={{ color: "var(--color-text)" }}
+              >
+                {title}
+              </Dialog.Title>
+              <Dialog.Close
+                aria-label="Close"
+                className="flex items-center justify-center rounded transition-colors cursor-pointer"
+                style={{
+                  color: "var(--color-text-muted)",
+                  background: "transparent",
+                  border: "none",
+                  padding: 8,
+                  minWidth: 44,
+                  minHeight: 44,
+                }}
+              >
+                <X size={18} />
+              </Dialog.Close>
+            </div>
+          )}
           {children}
         </Dialog.Content>
       </Dialog.Portal>

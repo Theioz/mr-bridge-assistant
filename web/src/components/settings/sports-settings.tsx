@@ -98,6 +98,12 @@ export function SportsSettings({ favorites, saveAction }: Props) {
           <input
             value={query}
             onChange={(e) => { setQuery(e.target.value); setError(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && results.length > 0) {
+                e.preventDefault();
+                handleAdd(results[0]);
+              }
+            }}
             placeholder="Search teams (e.g. Warriors, 49ers, Arsenal)"
             className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none"
             style={{

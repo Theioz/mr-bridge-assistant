@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Check, Loader2, X } from "lucide-react";
+import { useUnsavedChangesWarning } from "@/lib/use-unsaved-changes-warning";
 
 interface Field {
   key: string;
@@ -284,29 +285,40 @@ function FieldRow({
   initialValue,
   updateAction,
   deleteAction,
+  onDirtyChange,
 }: {
   field: Field;
   initialValue: string;
   updateAction: (key: string, value: string) => Promise<void>;
   deleteAction: (key: string) => Promise<void>;
+  onDirtyChange?: (key: string, dirty: boolean) => void;
 }) {
   const [value, setValue] = useState(initialValue);
+  const [baseline, setBaseline] = useState(initialValue);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  const isDirty = value !== baseline;
+
+  useEffect(() => {
+    onDirtyChange?.(field.key, isDirty);
+    return () => onDirtyChange?.(field.key, false);
+  }, [isDirty, field.key, onDirtyChange]);
+
   async function handleSave() {
     startTransition(async () => {
-      if (value.trim() === "") {
+      const trimmed = value.trim();
+      if (trimmed === "") {
         await deleteAction(field.key);
       } else {
-        await updateAction(field.key, value.trim());
+        await updateAction(field.key, trimmed);
       }
+      setValue(trimmed);
+      setBaseline(trimmed);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     });
   }
-
-  const isDirty = value !== initialValue;
 
   return (
     <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -378,6 +390,19 @@ function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Prom
 }
 
 export function ProfileForm({ values, updateAction, deleteAction }: Props) {
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
+  const handleDirtyChange = useCallback((key: string, dirty: boolean) => {
+    setDirtyKeys((prev) => {
+      const has = prev.has(key);
+      if (dirty === has) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+  useUnsavedChangesWarning(dirtyKeys.size > 0);
+
   return (
     <div className="space-y-6">
       <div
@@ -396,6 +421,7 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             initialValue={values[field.key] ?? ""}
             updateAction={updateAction}
             deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
           />
         ))}
       </div>
@@ -416,6 +442,7 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             initialValue={values[field.key] ?? ""}
             updateAction={updateAction}
             deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
           />
         ))}
       </div>
@@ -440,6 +467,7 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             initialValue={values[field.key] ?? ""}
             updateAction={updateAction}
             deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
           />
         ))}
       </div>

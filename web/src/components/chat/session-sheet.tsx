@@ -43,6 +43,7 @@ export default function SessionSheet({
       open={open}
       onOpenChange={(o) => { if (!o) onClose(); }}
       title="Chat history"
+      hideHeader
       contentClassName="flex flex-col"
       contentStyle={{ maxHeight: "60vh" }}
     >

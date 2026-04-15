@@ -236,7 +236,7 @@ export default function Nav() {
       </nav>
 
       {/* ── More bottom sheet ────────────────────────────────────────── */}
-      <Sheet open={showMore} onOpenChange={setShowMore} title="More navigation">
+      <Sheet open={showMore} onOpenChange={setShowMore} title="More navigation" hideHeader>
         <>
           {/* Handle + header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
