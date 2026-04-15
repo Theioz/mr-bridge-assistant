@@ -222,7 +222,7 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
       `}</style>
 
       <div
-        className="rounded-xl overflow-hidden"
+        className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         <div

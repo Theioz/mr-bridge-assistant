@@ -69,7 +69,7 @@ export default function ScheduleToday() {
 
   return (
     <div
-      className="rounded-xl p-4 h-full"
+      className="rounded-xl p-4 h-full transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <div className="flex items-center gap-2 mb-3">

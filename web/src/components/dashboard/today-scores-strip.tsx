@@ -48,7 +48,7 @@ export default function TodayScoresStrip({ today }: Props) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
+      className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       {/* 2px colored top bar keyed to readiness */}
