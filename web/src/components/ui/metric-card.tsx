@@ -35,7 +35,7 @@ export function MetricCard({
 
   return (
     <div
-      className="rounded-xl p-5 transition-colors duration-200 hover-border-strong"
+      className="rounded-xl p-5 transition-all duration-200 hover-border-strong card-lift"
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",

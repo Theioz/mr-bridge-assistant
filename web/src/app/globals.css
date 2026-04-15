@@ -162,6 +162,15 @@ body {
 .hover-text-muted:hover    { color: var(--color-text-muted) !important; }
 .hover-border-strong:hover { border-color: var(--color-text-faint) !important; }
 
+/* Card hover lift — MASTER.md spec.
+   Uses transform + box-shadow (no margin/padding change) to avoid layout shift.
+   Pair with a `transition-*` utility on the element; duration 200ms per spec. */
+.card-lift { will-change: transform; }
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
