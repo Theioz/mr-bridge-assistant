@@ -54,7 +54,7 @@ export function BodyFatGoalChart({ data, goal, windowLabel = "90D", windowKey }:
 
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-5 transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <div className="flex items-start justify-between gap-3 mb-4">

@@ -66,7 +66,7 @@ function Card({
 }) {
   return (
     <div
-      className="rounded-xl overflow-hidden flex flex-col"
+      className="rounded-xl overflow-hidden flex flex-col transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       {accent && <div style={{ height: 3, background: accent, flexShrink: 0 }} />}
