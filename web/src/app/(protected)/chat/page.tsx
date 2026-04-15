@@ -19,22 +19,28 @@ export default async function ChatPage() {
     .maybeSingle();
 
   let initialMessages: Message[] = [];
+  let initialHasMore = false;
+  let initialOldestPosition: number | null = null;
   if (session?.id) {
+    const LIMIT = 20;
     const { data: msgs } = await supabase
       .from("chat_messages")
-      .select("id, role, content, created_at")
+      .select("id, role, content, created_at, position")
       .eq("session_id", session.id)
       .in("role", ["user", "assistant"])
-      .order("created_at", { ascending: true })
-      .limit(50);
+      .order("position", { ascending: false })
+      .limit(LIMIT);
 
     if (msgs) {
-      initialMessages = (msgs as ChatMessage[]).map((m) => ({
+      const ordered = [...(msgs as (ChatMessage & { position: number })[])].reverse();
+      initialMessages = ordered.map((m) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
         content: m.content,
         createdAt: new Date(m.created_at),
       }));
+      initialHasMore = msgs.length === LIMIT;
+      initialOldestPosition = ordered[0]?.position ?? null;
     }
   }
 
@@ -43,6 +49,8 @@ export default async function ChatPage() {
       <ChatPageClient
         initialSessionId={(session as ChatSession | null)?.id ?? null}
         initialMessages={initialMessages}
+        initialHasMore={initialHasMore}
+        initialOldestPosition={initialOldestPosition}
       />
     </div>
   );
