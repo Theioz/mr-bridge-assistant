@@ -40,6 +40,8 @@
   --shadow-md:   0 4px 12px rgba(0,0,0,0.5);
   --shadow-lg:   0 8px 24px rgba(0,0,0,0.6);
   --shadow-glow: 0 0 0 3px var(--color-primary-dim);
+
+  --header-height: 8rem;
 }
 
 :root[data-theme="light"] {

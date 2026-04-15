@@ -7,12 +7,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Fixed (card-lift missed tiles — follow-up to #240)
 - Applied `transition-all duration-200 card-lift` to tile wrappers the first sweep missed (Link-wrapped tile, empty-state branches, weekly `Card` helper, fitness chart panels that weren't in the first scan):
   - [dashboard/tasks-summary.tsx](web/src/components/dashboard/tasks-summary.tsx) — Active Tasks tile (wrapper is `<Link>`, not `<div>`)
   - [fitness/workout-freq-chart.tsx](web/src/components/fitness/workout-freq-chart.tsx), [fitness/active-cal-chart.tsx](web/src/components/fitness/active-cal-chart.tsx), [fitness/active-cal-goal-chart.tsx](web/src/components/fitness/active-cal-goal-chart.tsx), [fitness/body-fat-goal-chart.tsx](web/src/components/fitness/body-fat-goal-chart.tsx)
   - [habits/heatmap.tsx](web/src/components/habits/heatmap.tsx), [habits/streak-chart.tsx](web/src/components/habits/streak-chart.tsx), [habits/radial-completion.tsx](web/src/components/habits/radial-completion.tsx) — both empty-state and data-state wrappers
   - [(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx) — shared `Card` component used by every tile on the weekly view
+=======
+### Fixed (chat polish bundle — issue #230)
+- **H7 — login redirect drops `next`.** [web/src/app/login/page.tsx](web/src/app/login/page.tsx) now reads `next` from the URL and pushes to it on successful sign-in; default is `/dashboard`. [web/src/app/auth/callback/route.ts](web/src/app/auth/callback/route.ts) defaults to `/dashboard` and validates `next` starts with `/` and not `//` (open-redirect guard).
+- **M1 — chat SSR + client double-fetch.** [web/src/components/chat/chat-page-client.tsx](web/src/components/chat/chat-page-client.tsx) no longer refetches messages for the most-recent session when SSR already provided them (skip when `mostRecent.id === initialSessionId`). Sessions list fetch is retained for the sidebar.
+- **M3 — restore doesn't resync server list.** [web/src/components/chat/chat-page-client.tsx](web/src/components/chat/chat-page-client.tsx) `handleRestoreSession` now calls `fetchSessions()` after a successful `/restore` POST.
+- **M4 — unread badge flickers on route change.** [web/src/components/nav.tsx](web/src/components/nav.tsx) fetches `/api/notifications/unread-count` once on mount + on `visibilitychange` (tab regains focus), instead of on every `pathname` change.
+- **L1 — slash-command menu typography.** [web/src/components/chat/slash-command-menu.tsx](web/src/components/chat/slash-command-menu.tsx) dropped monospace font family on the command name so it matches the description's system sans.
+- **L3 — magic `8rem` header offset.** Added `--header-height: 8rem` to [web/src/app/globals.css](web/src/app/globals.css); [web/src/components/chat/session-sidebar.tsx](web/src/components/chat/session-sidebar.tsx) `maxHeight` now uses `calc(100dvh - var(--header-height))`.
+- **L4 — cursor-pointer on section toggles.** Added inline `cursor: "pointer"` to both "Older" and "Recently deleted" toggle buttons in [web/src/components/chat/session-sidebar.tsx](web/src/components/chat/session-sidebar.tsx).
+>>>>>>> origin/main
 
 ### Changed (card-lift applied to canonical tile wrappers — issue #240)
 - Follow-up to #229 / #238. `.card-lift` was defined but only applied to `MetricCard`, which is an orphan (defined, never rendered) — so the lift was invisible on the real dashboard. Applied `transition-all duration-200 card-lift` to 13 canonical widget-shell wrappers:

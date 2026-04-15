@@ -64,17 +64,25 @@ export default function Nav() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/notifications/unread-count")
-      .then((r) => {
-        if (!r.ok) throw new Error("unread-count fetch failed");
-        return r.json();
-      })
-      .then((d) => {
-        setUnreadCount(d.count ?? 0);
-        setUnreadError(false);
-      })
-      .catch(() => setUnreadError(true));
-  }, [pathname]);
+    const load = () => {
+      fetch("/api/notifications/unread-count")
+        .then((r) => {
+          if (!r.ok) throw new Error("unread-count fetch failed");
+          return r.json();
+        })
+        .then((d) => {
+          setUnreadCount(d.count ?? 0);
+          setUnreadError(false);
+        })
+        .catch(() => setUnreadError(true));
+    };
+    load();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   // Is the current page one of the "More" pages? If so, highlight the More button.
   const moreIsActive = MOBILE_MORE.some((item) => isActive(pathname, item.href));
