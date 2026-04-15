@@ -131,10 +131,22 @@ export default function ChatPageClient({ initialSessionId, initialMessages }: Pr
   useEffect(() => {
     const handleVisibility = async () => {
       if (document.visibilityState !== "visible") return;
-      const sessionId = activeSessionIdRef.current;
       // Skip if this is a brand-new unsaved session (nothing to fetch yet)
       if (!initialSessionId && activeMessages.length === 0) return;
       try {
+        // Re-check which session should be active — router cache may have given us
+        // a stale activeSessionId, so trust the authoritative sessions list.
+        const listRes = await fetch("/api/chat/sessions");
+        let sessionId = activeSessionIdRef.current;
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const list: SessionPreview[] = listData.sessions ?? [];
+          setSessions(list);
+          if (list[0] && list[0].id !== sessionId) {
+            sessionId = list[0].id;
+            setActiveSessionId(sessionId);
+          }
+        }
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) return;
         const data = await res.json();

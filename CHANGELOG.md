@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat stale session on tab return — issue #206)
+- **`web/src/components/chat/chat-page-client.tsx`** — visibility-change handler now re-fetches `/api/chat/sessions` and switches to the most recent session before loading messages, mirroring the mount-time correction; fixes residual stale-conversation bug from #195 when `activeSessionId` itself was stale
+
 ### Fixed (meal scanner UX — issue #203)
 - **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — split scan trigger into "Take Photo" (camera) and "From Library" (gallery) buttons across all three trigger locations: empty state, add-another row, and error recovery
 - **`web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx`** — re-estimation now applies `food_name` from API response to the item label; dish name field added to expanded edit panel for direct manual editing
