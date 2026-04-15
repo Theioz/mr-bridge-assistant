@@ -7,6 +7,7 @@ import ChatInterface from "./chat-interface";
 import SessionSidebar from "./session-sidebar";
 import SessionSheet from "./session-sheet";
 import { UndoToastProvider, useUndoToast } from "@/components/ui/undo-toast";
+import { useKeyboardOpen } from "@/lib/use-keyboard-open";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
 
 interface Props {
@@ -46,6 +47,7 @@ function ChatPageClientInner({
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
+  const { isKeyboardOpen } = useKeyboardOpen();
 
   const [allSessions, setAllSessions] = useState<SessionPreview[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
@@ -465,7 +467,7 @@ function ChatPageClientInner({
       />
 
       {/* Mobile new-chat FAB */}
-      {!showSheet && (
+      {!showSheet && !isKeyboardOpen && (
         <button
           onClick={handleNewChat}
           aria-label="New chat"

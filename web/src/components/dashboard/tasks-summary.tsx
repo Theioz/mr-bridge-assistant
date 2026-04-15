@@ -55,7 +55,7 @@ export default function TasksSummary({ tasks }: Props) {
 
       {/* All tasks with inner scroll */}
       {topTasks.length > 0 && (
-        <div className="mt-3 space-y-1.5 overflow-y-auto" style={{ maxHeight: 160 }}>
+        <div className="mt-3 space-y-1.5 overflow-y-auto scroll-fade-mask" style={{ maxHeight: 160 }}>
           {topTasks.map((t) => {
             const dot = PRIORITY_COLOR[t.priority ?? "low"] ?? PRIORITY_COLOR.low;
             return (

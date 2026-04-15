@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (mobile chat keyboard / composer / FAB overlap — issue #226)
+- **`web/src/lib/use-keyboard-open.ts`** (new) — `useKeyboardOpen()` hook subscribes to `window.visualViewport` and returns `{ isKeyboardOpen, viewportHeight }`. Heuristic: keyboard open when `vv.height < window.innerHeight - 100`. SSR-safe.
+- **`web/src/components/chat/chat-page-client.tsx`** — mobile new-chat FAB hides while the keyboard is open so it no longer floats above the iOS keyboard.
+- **`web/src/components/chat/chat-interface.tsx`** — composer `maxHeight` (textarea auto-resize cap and inline style) clamps to `min(200, viewportHeight * 0.3)` while the keyboard is open, preserving room for message-history scroll. Load-older-messages button shows `Loader2 + "Loading…"` instead of icon-only.
+- **`web/src/components/nav.tsx`** — demo banner is hidden on `/chat` routes (was overlapping chat messages on short threads).
+- **`web/src/app/globals.css`** — added `.scroll-fade-mask` utility (bottom 16px linear-gradient mask) for truncated scroll regions.
+- **`web/src/components/dashboard/tasks-summary.tsx`, `web/src/components/dashboard/habits-checkin.tsx`** — apply `scroll-fade-mask` so users see overflow indication on capped lists.
+
 ### Added (habit `icon_key` column + picker — issue #225)
 - **`supabase/migrations/20260415000003_habit_registry_icon_key.sql`** — adds nullable `icon_key TEXT` to `habit_registry` and backfills existing rows by mirroring the `getHabitIcon` derivation in SQL (category match → name keyword → `target`). **Apply manually in Supabase SQL editor before deploying.**
 - **`web/src/components/habits/habit-icon-picker.tsx`** (new) — radiogroup of 14 Lucide icons (Target, Dumbbell, HeartPulse, Moon, Droplet, Footprints, BookOpen, Code2, GraduationCap, Brain, NotebookPen, Sparkles, Smile, Ban). Inline in the add form ([habit-today-section.tsx](web/src/components/habits/habit-today-section.tsx)) and the edit form ([habit-toggle.tsx](web/src/components/habits/habit-toggle.tsx)).

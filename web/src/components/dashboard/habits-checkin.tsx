@@ -82,7 +82,7 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
       </div>
 
       {/* Habit rows */}
-      <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: 200 }}>
+      <div className="space-y-0.5 overflow-y-auto scroll-fade-mask" style={{ maxHeight: 200 }}>
         {registry.map((habit) => {
           const done = completedMap.get(habit.id) ?? false;
           const isPending = pendingSet.has(habit.id);

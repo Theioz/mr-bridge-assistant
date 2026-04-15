@@ -8,6 +8,7 @@ import MessageBubble from "./message-bubble";
 import ToolStatusBar from "./tool-status-bar";
 import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-command-menu";
 import { formatDaySeparator, isSameDay } from "@/lib/relative-time";
+import { useKeyboardOpen } from "@/lib/use-keyboard-open";
 import type { Message } from "ai";
 
 interface Props {
@@ -40,6 +41,11 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   useEffect(() => {
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
   }, []);
+
+  const { isKeyboardOpen, viewportHeight } = useKeyboardOpen();
+  const composerMaxHeight = isKeyboardOpen
+    ? Math.max(80, Math.min(200, viewportHeight * 0.3))
+    : 200;
 
   type ModelOverride = "auto" | "haiku" | "sonnet";
   const [modelOverride, setModelOverride] = useState<ModelOverride>("auto");
@@ -162,8 +168,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-  }, [input]);
+    el.style.height = `${Math.min(el.scrollHeight, composerMaxHeight)}px`;
+  }, [input, composerMaxHeight]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -188,10 +194,14 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 color: "var(--color-text-muted)",
               }}
             >
-              {loadingMore
-                ? <Loader2 size={12} className="animate-spin" />
-                : "Load older messages"
-              }
+              {loadingMore ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" />
+                  Loading…
+                </>
+              ) : (
+                "Load older messages"
+              )}
             </button>
           </div>
         )}
@@ -321,7 +331,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             style={{
               resize: "none",
               overflow: "hidden",
-              maxHeight: 200,
+              maxHeight: composerMaxHeight,
               overflowY: "auto",
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
