@@ -51,11 +51,17 @@ export default function ImportantEmails() {
                 </p>
                 {email.receivedAt && (
                   <p className="text-[10px] text-neutral-600 shrink-0">
-                    {new Date(email.receivedAt).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}
+                    {(() => {
+                      const d = new Date(email.receivedAt);
+                      const today = new Date();
+                      const sameDay = d.toDateString() === today.toDateString();
+                      const time = d.toLocaleTimeString("en-US", {
+                        hour: "numeric", minute: "2-digit", hour12: true,
+                      });
+                      if (sameDay) return time;
+                      const wd = d.toLocaleDateString("en-US", { weekday: "short" });
+                      return `${wd} ${d.getMonth() + 1}/${d.getDate()} ${time}`;
+                    })()}
                   </p>
                 )}
               </div>

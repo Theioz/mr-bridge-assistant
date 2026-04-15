@@ -172,3 +172,12 @@ export interface StocksCache {
   sparkline: { date: string; close: number }[] | null;
   fetched_at: string;
 }
+
+export interface SportsCache {
+  id: string;
+  user_id: string;
+  team_id: string;
+  league: string;
+  data: import("./sync/sports/provider").SportsCacheData;
+  fetched_at: string;
+}

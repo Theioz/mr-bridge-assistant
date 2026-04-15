@@ -14,14 +14,16 @@ import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import TasksSummary from "@/components/dashboard/tasks-summary";
 import { WatchlistWidget } from "@/components/dashboard/watchlist-widget";
+import { SportsCard } from "@/components/dashboard/sports-card";
 import { syncStocks } from "@/lib/sync/stocks";
-import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task, StocksCache } from "@/lib/types";
+import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
+import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task, StocksCache, SportsCache } from "@/lib/types";
 
-async function refreshStocks() {
+async function refreshStocks(): Promise<{ rateLimited: boolean }> {
   "use server";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { rateLimited: false };
 
   const { data: profileRow } = await supabase
     .from("profile")
@@ -34,8 +36,35 @@ async function refreshStocks() {
     ? (JSON.parse(profileRow.value) as string[])
     : [];
 
+  let rateLimited = false;
   if (tickers.length > 0) {
-    await syncStocks(supabase, user.id, tickers);
+    const result = await syncStocks(supabase, user.id, tickers);
+    rateLimited = !!result.rateLimited;
+  }
+
+  revalidatePath("/dashboard");
+  return { rateLimited };
+}
+
+async function refreshSports() {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: profileRow } = await supabase
+    .from("profile")
+    .select("value")
+    .eq("user_id", user.id)
+    .eq("key", "sports_favorites")
+    .single();
+
+  const favorites: SportsFavorite[] = profileRow?.value
+    ? (JSON.parse(profileRow.value) as SportsFavorite[])
+    : [];
+
+  if (favorites.length > 0) {
+    await syncSports(supabase, user.id, favorites);
   }
 
   revalidatePath("/dashboard");
@@ -69,6 +98,8 @@ export default async function DashboardPage() {
     profileRes,
     tasksRes,
     stocksRes,
+    sportsRes,
+    sportsFavoritesRes,
   ] = await Promise.all([
     // Latest 2 rows with body fat (for delta calculations)
     supabase
@@ -121,6 +152,14 @@ export default async function DashboardPage() {
       .from("stocks_cache")
       .select("*")
       .order("ticker", { ascending: true }),
+    supabase
+      .from("sports_cache")
+      .select("*"),
+    supabase
+      .from("profile")
+      .select("value")
+      .eq("key", "sports_favorites")
+      .maybeSingle(),
   ]);
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
@@ -149,6 +188,10 @@ export default async function DashboardPage() {
   );
 
   const stocksRows = (stocksRes.data ?? []) as StocksCache[];
+  const sportsRows = (sportsRes.data ?? []) as SportsCache[];
+  const sportsFavorites: SportsFavorite[] = sportsFavoritesRes.data?.value
+    ? (JSON.parse(sportsFavoritesRes.data.value) as SportsFavorite[])
+    : [];
 
   const nameRows = (profileRes.data ?? []) as { key: string; value: string }[];
   const userName =
@@ -186,15 +229,8 @@ export default async function DashboardPage() {
         windowLabel={windowKey.toUpperCase()}
       />
 
-      {/* ── Schedule + Watchlist: live time-bounded data ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ScheduleToday />
-        <WatchlistWidget
-          rows={stocksRows}
-          hasApiKey={!!process.env.POLYGON_API_KEY}
-          refreshAction={refreshStocks}
-        />
-      </div>
+      {/* ── Schedule today (full width) ──────────────────────────────── */}
+      <ScheduleToday />
 
       {/* ── Habits + Tasks: fixed height, scrollable ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -206,6 +242,26 @@ export default async function DashboardPage() {
           date={today}
         />
         <TasksSummary tasks={tasks} />
+      </div>
+
+      {/* ── Watchlist + Sports: market + favorite teams ──────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WatchlistWidget
+          rows={stocksRows}
+          hasApiKey={!!process.env.POLYGON_API_KEY}
+          refreshAction={refreshStocks}
+        />
+        <SportsCard
+          rows={sportsRows}
+          favorites={sportsFavorites.map((f) => ({
+            team_id: f.team_id,
+            name: f.name,
+            league: f.league,
+            badge: f.badge,
+            color: f.color,
+          }))}
+          refreshAction={refreshSports}
+        />
       </div>
 
       {/* ── Emails ───────────────────────────────────────────────────── */}

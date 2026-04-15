@@ -7,6 +7,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (sports dashboard widget — issue #141)
+- **`supabase/migrations/20260415000001_add_sports_cache.sql`** — `sports_cache` table (`user_id`, `team_id`, `league`, `data jsonb`, `fetched_at`) with `unique(user_id, team_id)` and RLS on `auth.uid()`.
+- **`web/src/lib/sync/sports/provider.ts`** — `SportsProvider` interface + normalized `Team`, `Game`, `Standing`, `SportsCacheData` types. Sport-agnostic shape so swapping providers is a one-file change.
+- **`web/src/lib/sync/sports/thesportsdb.ts`** — TheSportsDB implementation. Maps raw API shapes into normalized types; computes current season heuristically per league.
+- **`web/src/lib/sync/sports/index.ts`** — `syncSports(db, userId, favorites)`: per-team try/catch, upserts one row per team, evicts cache for teams no longer favorited.
+- **`web/src/app/api/sports/search/route.ts`** — authenticated GET proxy → provider search; keeps API key server-side.
+- **`web/src/app/api/sports/refresh/route.ts`** — authenticated POST → live sync for the user's favorites.
+- **`web/src/components/dashboard/sports-card.tsx`** — dashboard widget. Collapsed row shows team + next game + last result (W/L color-coded); expand reveals standings + last 3 results. Empty-state links to `/settings#sports`. `var(--color-*)` only.
+- **`web/src/components/settings/sports-settings.tsx`** — Settings section with debounced (300ms) team search via the proxy route, picker, and remove buttons.
+- **`web/src/lib/types.ts`** — added `SportsCache` interface.
+
+### Changed (sports dashboard widget — issue #141)
+- **`web/src/app/api/cron/sync/route.ts`** — appended sports step after stocks; reads `sports_favorites`, calls `syncSports` with try/catch, no skip window.
+- **`web/src/app/(protected)/dashboard/page.tsx`** — queries `sports_cache` + `sports_favorites`, renders `<SportsCard>`, exposes `refreshSports` server action.
+- **`web/src/app/(protected)/settings/page.tsx`** — mounts `<SportsSettings>`; `saveSportsFavorites` persists JSON to `profile` and evicts orphaned `sports_cache` rows.
+- **`web/src/app/api/chat/route.ts`** — registered `get_sports_data` tool inline next to `get_stock_quote`. Cache-first; live-fetches when cache is >12h old or the queried game is within 24h of now.
+- **`web/.env.local.example`** + **`README.md`** — documented `SPORTSDB_API_KEY` (defaults to public test key `3` if unset).
+- **`supabase/migrations/20260415000002_sports_cache_unique_per_league.sql`** — re-keys the unique constraint on `sports_cache` to `(user_id, team_id, league)`. ESPN team IDs are only unique within a league (Celtics NBA id=2 ≠ Bills NFL id=2); the previous `(user_id, team_id)` constraint would have merged cross-league rows.
+- **`web/src/lib/sync/sports/espn.ts`** — ESPN unofficial-API provider (NBA/NFL/MLB/NHL/F1). Free, no key, no rate limit. Becomes the default; TheSportsDB stays as opt-in fallback via `SPORTS_PROVIDER=thesportsdb`.
+- **`web/src/lib/sync/sports/provider.ts`** — `SportsProvider.getUpcoming/getRecent/getStandings` now take a `TeamRef` (carrying `league_id`) instead of a bare `teamId` so providers can dispatch per-sport endpoints. `Team` gains a nullable `color` (hex) for fallback badges when no logo is available (e.g. F1 constructors).
+- **F1 special-casing in `sports-card.tsx`** — race name + date in place of "vs/@ opponent"; W/L coloring suppressed; standings line shows constructor rank + championship points without W-L record. Initials-on-color fallback badge for teams without logo URLs.
+- **Smart-stale auto-refresh on dashboard load** — `watchlist-widget.tsx` and `sports-card.tsx` fire their refresh action in a non-blocking `useEffect` when the cache is stale (stocks: >1h during US market hours M-F 9:30am–4pm ET, >12h otherwise; sports: >6h, or any favorite missing a row). Keeps page render fast — auto-refresh hydrates after first paint.
+- **Polygon rate-limit surfacing** — `syncStocks` now returns `{ rateLimited }`; `WatchlistWidget` shows an amber banner with `AlertTriangle` when a *manual* refresh hits the 5/min free-tier limit. Auto-refresh failures stay silent so the banner isn't persistent.
+- **Watchlist sparkline 30-day window** — was 7 trading days (visually flat for stable tickers); now 30. Same Polygon call count, just a wider date range.
+- **Dashboard layout reorder** — Schedule (full width) → Habits + Tasks → Watchlist + Sports → Important Emails. Stock + sports cards now sit together in their own row instead of bracketing Habits/Tasks.
+- **`important-emails.tsx`** — emails received before today now show `Mon 4/13 9:47 AM` instead of just `9:47 AM`; today's emails still show only the time.
+
 ### Added (chat UX — issue #205)
 - **`supabase/migrations/20260415000000_chat_sessions_soft_delete.sql`** — adds `deleted_at timestamptz` column + index to `chat_sessions`; enables archive with 30-day restore window.
 - **`web/src/lib/relative-time.ts`** — dep-free helpers (`formatRelative`, `formatDaySeparator`, `isSameDay`, `daysUntilPurge`) for sidebar and thread timestamps.
