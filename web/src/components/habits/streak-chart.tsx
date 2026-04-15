@@ -45,7 +45,7 @@ export function StreakChart({ habits, streaks }: Props) {
   if (data.every((d) => d.current === 0 && d.best === 0)) {
     return (
       <div
-        className="rounded-xl p-5"
+        className="rounded-xl p-5 transition-all duration-200 card-lift"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--color-text-muted)" }}>
@@ -60,7 +60,7 @@ export function StreakChart({ habits, streaks }: Props) {
 
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-5 transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>

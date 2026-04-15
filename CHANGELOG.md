@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (card-lift missed tiles — follow-up to #240)
+- Applied `transition-all duration-200 card-lift` to tile wrappers the first sweep missed (Link-wrapped tile, empty-state branches, weekly `Card` helper, fitness chart panels that weren't in the first scan):
+  - [dashboard/tasks-summary.tsx](web/src/components/dashboard/tasks-summary.tsx) — Active Tasks tile (wrapper is `<Link>`, not `<div>`)
+  - [fitness/workout-freq-chart.tsx](web/src/components/fitness/workout-freq-chart.tsx), [fitness/active-cal-chart.tsx](web/src/components/fitness/active-cal-chart.tsx), [fitness/active-cal-goal-chart.tsx](web/src/components/fitness/active-cal-goal-chart.tsx), [fitness/body-fat-goal-chart.tsx](web/src/components/fitness/body-fat-goal-chart.tsx)
+  - [habits/heatmap.tsx](web/src/components/habits/heatmap.tsx), [habits/streak-chart.tsx](web/src/components/habits/streak-chart.tsx), [habits/radial-completion.tsx](web/src/components/habits/radial-completion.tsx) — both empty-state and data-state wrappers
+  - [(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx) — shared `Card` component used by every tile on the weekly view
+
 ### Changed (card-lift applied to canonical tile wrappers — issue #240)
 - Follow-up to #229 / #238. `.card-lift` was defined but only applied to `MetricCard`, which is an orphan (defined, never rendered) — so the lift was invisible on the real dashboard. Applied `transition-all duration-200 card-lift` to 13 canonical widget-shell wrappers:
   - **dashboard/** — [recent-workouts-table.tsx](web/src/components/dashboard/recent-workouts-table.tsx), [schedule-today.tsx](web/src/components/dashboard/schedule-today.tsx), [habits-checkin.tsx](web/src/components/dashboard/habits-checkin.tsx), [trends-card.tsx](web/src/components/dashboard/trends-card.tsx), [sports-card.tsx](web/src/components/dashboard/sports-card.tsx), [watchlist-widget.tsx](web/src/components/dashboard/watchlist-widget.tsx), [today-scores-strip.tsx](web/src/components/dashboard/today-scores-strip.tsx), [health-breakdown.tsx](web/src/components/dashboard/health-breakdown.tsx)

@@ -29,7 +29,7 @@ export default function TasksSummary({ tasks }: Props) {
   return (
     <Link
       href="/tasks"
-      className="block rounded-xl p-4 transition-colors"
+      className="block rounded-xl p-4 transition-all duration-200 card-lift"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <p
