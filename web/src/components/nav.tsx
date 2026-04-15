@@ -19,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import Sheet from "@/components/ui/sheet";
 import SignOutButton from "@/components/ui/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
@@ -207,26 +208,10 @@ export default function Nav() {
       </nav>
 
       {/* ── More bottom sheet ────────────────────────────────────────── */}
-      {showMore && (
+      <Sheet open={showMore} onOpenChange={setShowMore} title="More navigation">
         <>
-          {/* Backdrop */}
-          <div
-            className="lg:hidden fixed inset-0 z-[60]"
-            style={{ background: "rgba(0,0,0,0.6)" }}
-            onClick={() => setShowMore(false)}
-          />
-
-          {/* Sheet */}
-          <div
-            className="lg:hidden fixed left-0 right-0 bottom-0 z-[70] rounded-t-2xl"
-            style={{
-              background: "var(--color-surface)",
-              borderTop: "1px solid var(--color-border)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
-          >
-            {/* Handle + header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          {/* Handle + header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                 More
               </span>
@@ -304,9 +289,8 @@ export default function Nav() {
                 <span className="text-sm font-medium">Sign out</span>
               </button>
             </div>
-          </div>
         </>
-      )}
+      </Sheet>
     </>
   );
 }
