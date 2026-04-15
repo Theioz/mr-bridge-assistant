@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (habit emoji-as-icon → Lucide — issue #225)
+- **`web/src/lib/habit-icons.ts`** (new) — `getHabitIcon(habit)` derives a Lucide icon from `habit.category` (Dumbbell/HeartPulse/Sparkles/GraduationCap/Moon/Brain) with a name-keyword fallback (sleep→Moon, water→Droplet, read→BookOpen, code→Code2, step→Footprints, workout→Dumbbell, journal→NotebookPen, alcohol→Ban, meditate→Brain, etc.) and `Target` as the final default. No schema migration — derivation only.
+- **`web/src/components/dashboard/habits-checkin.tsx`, `web/src/components/habits/habit-toggle.tsx`, `web/src/app/(protected)/weekly/page.tsx`** — habit row visual is now the derived Lucide icon. `habit-toggle` retains `habit.emoji` as a small `aria-hidden` accent after the icon. `habits-checkin` (compact dashboard) drops emoji entirely. Dashboard + weekly SSR queries now select `category`.
+- **`web/src/components/habits/habit-toggle.tsx`, `web/src/components/habits/habit-today-section.tsx`** — emoji-picker placeholder is a Lucide `Smile` icon instead of the literal `😀` glyph; the picker itself is unchanged (user can still attach an emoji as sentiment metadata).
+
 ### Changed (light-mode color tokenization — issue #224)
 - **`web/src/app/globals.css`, `design-system/mr-bridge/MASTER.md`** — added 12 new theme tokens (`--color-text-on-cta`, `--overlay-scrim`, `--hover-subtle`, `--warning-subtle{,-strong}`, `--color-danger-subtle`, `--color-positive-subtle{,-strong}`, `--color-cta-subtle{,-strong}`, `--color-skeleton`, `--color-positive-{light,lighter,lightest}`) with per-theme values. Eliminates ~50 hardcoded hex/rgba sites that broke light mode (invisible white-on-white text on CTAs, vanished overlays, ghost skeletons).
 - **Mechanical sweep across ~25 components** — every `"#fff"` literal swapped to `var(--color-text-on-cta)`; rgba overlays/hovers/warning/danger/positive tints swapped to the new tokens. Light-mode-breaking `color-mix()` callsites in [login/page.tsx](web/src/app/login/page.tsx) and [upcoming-birthday.tsx](web/src/components/dashboard/upcoming-birthday.tsx) replaced with the new subtle tokens (Safari <16.4 fallback no longer needed).

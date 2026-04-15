@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { todayString, daysAgoString, getLast7Days } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
+import { getHabitIcon } from "@/lib/habit-icons";
 
 export const metadata: Metadata = {
   title: "Weekly",
@@ -134,7 +135,7 @@ export default async function WeeklyPage() {
     fitnessWeekAgoRes,
     journalCountRes,
   ] = await Promise.all([
-    supabase.from("habit_registry").select("id,name,emoji").eq("active", true),
+    supabase.from("habit_registry").select("id,name,emoji,category").eq("active", true),
     supabase
       .from("habits")
       .select("habit_id,date,completed")
@@ -192,7 +193,7 @@ export default async function WeeklyPage() {
 
   // ── Habits ────────────────────────────────────────────────────────────────
 
-  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji">[];
+  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category">[];
   const weekHabits    = (weekHabitsRes.data ?? []) as { habit_id: string; date: string; completed: boolean }[];
   const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks  = computeStreaks(allCompleted, today);
@@ -278,11 +279,13 @@ export default async function WeeklyPage() {
                 const completedSet = habitCompletedDates.get(habit.id) ?? new Set<string>();
                 const hitCount = completedSet.size;
                 const streak = habitStreaks[habit.id]?.current ?? 0;
+                const Icon = getHabitIcon(habit);
                 return (
                   <div key={habit.id} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                        {habit.emoji ? `${habit.emoji} ` : ""}{habit.name}
+                      <span className="text-sm font-medium inline-flex items-center gap-1.5" style={{ color: "var(--color-text)" }}>
+                        <Icon className="w-3.5 h-3.5" style={{ color: "var(--color-text-muted)" }} aria-hidden />
+                        {habit.name}
                       </span>
                       <div className="flex items-center gap-2 shrink-0">
                         <span

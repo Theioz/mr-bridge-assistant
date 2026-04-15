@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { Smile } from "lucide-react";
 import HabitToggle from "./habit-toggle";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -131,7 +132,7 @@ export default function HabitTodaySection({
               style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
               title="Pick emoji"
             >
-              {emoji || "😀"}
+              {emoji || <Smile className="w-4 h-4" aria-hidden />}
             </button>
             {showEmojiPicker && (
               <div className="absolute left-0 top-10 z-50">

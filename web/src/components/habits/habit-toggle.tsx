@@ -2,8 +2,10 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { Smile } from "lucide-react";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
 import type { EmojiClickData } from "emoji-picker-react";
+import { getHabitIcon } from "@/lib/habit-icons";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
@@ -81,7 +83,7 @@ export default function HabitToggle({
               style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
               title="Pick emoji"
             >
-              {editEmoji || "😀"}
+              {editEmoji || <Smile className="w-4 h-4" aria-hidden />}
             </button>
             {showEmojiPicker && (
               <div className="absolute left-0 top-10 z-50">
@@ -166,7 +168,19 @@ export default function HabitToggle({
                 </svg>
               )}
             </span>
-            <span className="text-lg leading-none">{habit.emoji}</span>
+            {(() => {
+              const Icon = getHabitIcon(habit);
+              return (
+                <Icon
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: "var(--color-text-muted)" }}
+                  aria-hidden
+                />
+              );
+            })()}
+            {habit.emoji && (
+              <span className="text-base leading-none" aria-hidden="true">{habit.emoji}</span>
+            )}
             <span
               className="text-sm"
               style={{
