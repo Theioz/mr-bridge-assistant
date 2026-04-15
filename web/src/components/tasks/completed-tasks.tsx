@@ -61,7 +61,8 @@ export default function CompletedTasks({ tasks }: Props) {
                   <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                     <path
                       d="M1.5 4L3 5.5L6.5 2"
-                      stroke="#fff"
+                      stroke="currentColor"
+                      style={{ color: "var(--color-text-on-cta)" }}
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"

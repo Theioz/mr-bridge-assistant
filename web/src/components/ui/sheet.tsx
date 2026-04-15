@@ -25,7 +25,7 @@ export default function Sheet({
       <Dialog.Portal>
         <Dialog.Overlay
           className="lg:hidden fixed inset-0 z-[60]"
-          style={{ background: "rgba(0,0,0,0.6)" }}
+          style={{ background: "var(--overlay-scrim)" }}
         />
         <Dialog.Content
           className={

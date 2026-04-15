@@ -27,7 +27,7 @@ export function GranularityToggle({ value, onChange, disabled }: Props) {
             className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
             style={{
               background: active ? "var(--color-primary)" : "transparent",
-              color: active ? "#fff" : "var(--color-text-muted)",
+              color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >

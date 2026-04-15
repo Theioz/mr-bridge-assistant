@@ -141,7 +141,7 @@ export default function InlineMealChat({ initialContext, onClose }: Props) {
                 fontSize: 13,
                 maxWidth: "85%",
                 background: m.role === "user" ? "var(--color-primary)" : "var(--color-bg)",
-                color: m.role === "user" ? "#fff" : "var(--color-text)",
+                color: m.role === "user" ? "var(--color-text-on-cta)" : "var(--color-text)",
                 border: m.role === "assistant" ? "1px solid var(--color-border)" : "none",
                 whiteSpace: "pre-wrap",
                 lineHeight: 1.5,
@@ -178,7 +178,7 @@ export default function InlineMealChat({ initialContext, onClose }: Props) {
           disabled={isLoading || !input.trim()}
           style={{
             background: "var(--color-primary)",
-            color: "#fff",
+            color: "var(--color-text-on-cta)",
             border: "none",
             borderRadius: 10,
             padding: "10px 13px",

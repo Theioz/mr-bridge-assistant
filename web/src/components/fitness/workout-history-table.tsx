@@ -144,10 +144,10 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                   background:
                     activityFilter === type
                       ? "var(--color-primary)"
-                      : "var(--color-surface-raised, rgba(255,255,255,0.05))",
+                      : "var(--color-surface-raised)",
                   color:
                     activityFilter === type
-                      ? "#fff"
+                      ? "var(--color-text-on-cta)"
                       : "var(--color-text-muted)",
                   border: "1px solid var(--color-border)",
                 }}

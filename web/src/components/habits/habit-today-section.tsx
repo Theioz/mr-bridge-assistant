@@ -169,7 +169,7 @@ export default function HabitTodaySection({
             onClick={handleAdd}
             disabled={!name.trim() || isPending}
             className="text-xs px-3 py-1.5 rounded disabled:opacity-40 transition-colors cursor-pointer"
-            style={{ background: "var(--color-primary)", color: "#fff", border: "none" }}
+            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none" }}
           >
             Save
           </button>

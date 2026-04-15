@@ -268,7 +268,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
               className="rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-3"
               style={{
                 background: "var(--color-surface)",
-                border: "1px solid rgba(239,68,68,0.3)",
+                border: "1px solid var(--color-danger)",
               }}
             >
               <span style={{ fontSize: 14, color: "var(--color-danger)" }}>
@@ -361,7 +361,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 background: "var(--color-surface)",
                 border: "1px solid var(--color-border)",
                 minWidth: 100,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                boxShadow: "var(--shadow-md)",
               }}
             >
               {(["auto", "haiku", "sonnet"] as ModelOverride[]).map((opt) => (

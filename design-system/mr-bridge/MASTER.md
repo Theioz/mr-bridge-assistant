@@ -28,6 +28,20 @@ Dark mode is the default (per style: Dark Mode OLED). Light mode tokens provided
 | Border | `#1F2937` | `#E2E8F0` | `--color-border` |
 | Text (primary) | `#F8FAFC` | `#0F172A` | `--color-text` |
 | Text (muted) | `#94A3B8` | `#475569` | `--color-text-muted` |
+| Text on CTA/primary surface | `#FFFFFF` | `#FFFFFF` | `--color-text-on-cta` |
+| Modal/sheet scrim | `rgba(0,0,0,0.6)` | `rgba(15,23,42,0.4)` | `--overlay-scrim` |
+| Subtle hover tint | `rgba(255,255,255,0.04)` | `rgba(15,23,42,0.04)` | `--hover-subtle` |
+| Warning surface tint | `rgba(245,158,11,0.08)` | `rgba(180,83,9,0.08)` | `--warning-subtle` |
+| Warning surface tint (strong) | `rgba(245,158,11,0.16)` | `rgba(180,83,9,0.14)` | `--warning-subtle-strong` |
+| Danger surface tint | `rgba(239,68,68,0.15)` | `rgba(185,28,28,0.10)` | `--color-danger-subtle` |
+| Positive surface tint | `rgba(16,185,129,0.15)` | `rgba(5,150,105,0.12)` | `--color-positive-subtle` |
+| Positive surface tint (strong) | `rgba(16,185,129,0.30)` | `rgba(5,150,105,0.24)` | `--color-positive-subtle-strong` |
+| CTA surface tint | `rgba(245,158,11,0.15)` | `rgba(245,158,11,0.18)` | `--color-cta-subtle` |
+| CTA surface tint (strong) | `rgba(245,158,11,0.40)` | `rgba(245,158,11,0.45)` | `--color-cta-subtle-strong` |
+| Skeleton shimmer base | `#181B24` | `#E2E8F0` | `--color-skeleton` |
+| Positive gradient — light | `#34D399` | `#34D399` | `--color-positive-light` |
+| Positive gradient — lighter | `#6EE7B7` | `#6EE7B7` | `--color-positive-lighter` |
+| Positive gradient — lightest | `#A7F3D0` | `#A7F3D0` | `--color-positive-lightest` |
 
 **Color Notes:** Blue = data/identity, amber = CTA/highlights. Keep amber rare — accents and primary actions only.
 

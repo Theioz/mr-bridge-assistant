@@ -21,6 +21,21 @@
   --color-text-muted:     #94A3B8;
   --color-text-faint:     #64748B;
 
+  --color-text-on-cta:        #FFFFFF;
+  --overlay-scrim:            rgba(0, 0, 0, 0.6);
+  --hover-subtle:             rgba(255, 255, 255, 0.04);
+  --warning-subtle:           rgba(245, 158, 11, 0.08);
+  --warning-subtle-strong:    rgba(245, 158, 11, 0.16);
+  --color-danger-subtle:      rgba(239, 68, 68, 0.15);
+  --color-positive-subtle:    rgba(16, 185, 129, 0.15);
+  --color-positive-subtle-strong: rgba(16, 185, 129, 0.30);
+  --color-cta-subtle:         rgba(245, 158, 11, 0.15);
+  --color-cta-subtle-strong:  rgba(245, 158, 11, 0.40);
+  --color-skeleton:           #181B24;
+  --color-positive-light:     #34D399;
+  --color-positive-lighter:   #6EE7B7;
+  --color-positive-lightest:  #A7F3D0;
+
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:   0 4px 12px rgba(0,0,0,0.5);
   --shadow-lg:   0 8px 24px rgba(0,0,0,0.6);
@@ -44,6 +59,21 @@
   --color-text:           #0F172A;
   --color-text-muted:     #475569;
   --color-text-faint:     #64748B;
+
+  --color-text-on-cta:        #FFFFFF;
+  --overlay-scrim:            rgba(15, 23, 42, 0.4);
+  --hover-subtle:             rgba(15, 23, 42, 0.04);
+  --warning-subtle:           rgba(180, 83, 9, 0.08);
+  --warning-subtle-strong:    rgba(180, 83, 9, 0.14);
+  --color-danger-subtle:      rgba(185, 28, 28, 0.10);
+  --color-positive-subtle:    rgba(5, 150, 105, 0.12);
+  --color-positive-subtle-strong: rgba(5, 150, 105, 0.24);
+  --color-cta-subtle:         rgba(245, 158, 11, 0.18);
+  --color-cta-subtle-strong:  rgba(245, 158, 11, 0.45);
+  --color-skeleton:           #E2E8F0;
+  --color-positive-light:     #34D399;
+  --color-positive-lighter:   #6EE7B7;
+  --color-positive-lightest:  #A7F3D0;
 
   --shadow-sm:   0 1px 2px rgba(15,23,42,0.06);
   --shadow-md:   0 4px 6px rgba(15,23,42,0.08);
@@ -105,9 +135,9 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-surface) 25%,
+    var(--color-skeleton) 25%,
     var(--color-border) 50%,
-    var(--color-surface) 75%
+    var(--color-skeleton) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -125,6 +155,6 @@ body {
   }
   .skeleton {
     animation: none;
-    background: var(--color-surface);
+    background: var(--color-skeleton);
   }
 }

@@ -62,10 +62,15 @@ function scoreColor(score: number | null): string {
 function scorePanelStyle(score: number | null): React.CSSProperties {
   if (score == null)
     return { background: "var(--color-surface-raised)", borderRadius: 12, padding: "16px 20px" };
-  const base = score >= 80 ? "16,185,129" : score >= 60 ? "245,158,11" : "239,68,68";
+  const subtle = score >= 80 ? "var(--color-positive-subtle)"
+               : score >= 60 ? "var(--warning-subtle)"
+               : "var(--color-danger-subtle)";
+  const subtleStrong = score >= 80 ? "var(--color-positive-subtle-strong)"
+                     : score >= 60 ? "var(--warning-subtle-strong)"
+                     : "var(--color-danger-subtle)";
   return {
-    background: `rgba(${base},0.10)`,
-    border: `1px solid rgba(${base},0.22)`,
+    background: subtle,
+    border: `1px solid ${subtleStrong}`,
     borderRadius: 12,
     padding: "16px 20px",
   };
@@ -150,7 +155,7 @@ function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>
           className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
           style={{
             background: active === key ? "var(--color-primary)" : "var(--color-surface-raised)",
-            color:      active === key ? "#fff" : "var(--color-text-muted)",
+            color:      active === key ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
           }}
         >
           {label}

@@ -94,7 +94,7 @@ function TeamLogo({ src, name, color }: { src: string | null; name: string; colo
         height: 24,
         borderRadius: 4,
         background: color || "var(--color-surface-raised)",
-        color: color ? "#fff" : "var(--color-text-muted)",
+        color: color ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
         fontSize: 10,
         display: "flex",
         alignItems: "center",
