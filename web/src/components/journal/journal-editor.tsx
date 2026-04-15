@@ -239,7 +239,7 @@ export default function JournalEditor({
               className="w-full py-3 rounded-xl text-sm font-medium transition-opacity"
               style={{
                 background: "var(--color-primary)",
-                color:      "var(--color-primary-foreground)",
+                color:      "#fff",
                 opacity:    saveStatus === "saving" || isEmpty ? 0.5 : 1,
                 cursor:     saveStatus === "saving" || isEmpty ? "not-allowed" : "pointer",
               }}

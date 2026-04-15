@@ -12,8 +12,8 @@ interface Props {
   refreshAction: () => Promise<void>;
 }
 
-const WIN_COLOR = "#22c55e";
-const LOSS_COLOR = "#ef4444";
+const WIN_COLOR = "var(--color-positive)";
+const LOSS_COLOR = "var(--color-danger)";
 
 function fmtDay(iso: string): string {
   const d = new Date(iso);

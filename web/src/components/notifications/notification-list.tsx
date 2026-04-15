@@ -17,9 +17,9 @@ type FilterKey = (typeof TYPE_FILTERS)[number]["key"];
 function typeIcon(type: string) {
   switch (type) {
     case "hrv_alert": return <Activity size={16} style={{ color: "var(--color-primary)", flexShrink: 0 }} />;
-    case "weather":   return <CloudRain size={16} style={{ color: "#38BDF8", flexShrink: 0 }} />;
-    case "task_due":  return <CheckSquare size={16} style={{ color: "#10B981", flexShrink: 0 }} />;
-    case "birthday":  return <Cake size={16} style={{ color: "#F59E0B", flexShrink: 0 }} />;
+    case "weather":   return <CloudRain size={16} style={{ color: "var(--color-info)", flexShrink: 0 }} />;
+    case "task_due":  return <CheckSquare size={16} style={{ color: "var(--color-positive)", flexShrink: 0 }} />;
+    case "birthday":  return <Cake size={16} style={{ color: "var(--color-warning)", flexShrink: 0 }} />;
     default:          return <Bell size={16} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />;
   }
 }

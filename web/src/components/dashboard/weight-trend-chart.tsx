@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface DataPoint {
   date: string;
@@ -36,13 +37,13 @@ function DeltaBadge({ delta, positiveIsDown }: { delta: number; positiveIsDown?:
   );
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
 export function WeightTrendChart({ data, windowLabel = "30D", weightLb, bfPct, weightDelta, bfDelta }: Props) {
+  const c = useChartColors();
+  const tooltipStyle = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
   const [animate, setAnimate] = useState(true);
 
   useEffect(() => {
@@ -107,30 +108,30 @@ export function WeightTrendChart({ data, windowLabel = "30D", weightLb, bfPct, w
       </div>
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
           <XAxis
             dataKey="date"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             domain={["auto", "auto"]}
           />
-          <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v} lb`, "Weight"]} />
+          <Tooltip {...tooltipStyle} formatter={(v: number) => [`${v} lb`, "Weight"]} />
           <Line
             type="monotone"
             dataKey="weight"
-            stroke="#6366F1"
+            stroke={c.primary}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, fill: "#6366F1", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: c.primary, strokeWidth: 0 }}
             connectNulls
             isAnimationActive={animate}
             animationDuration={300}

@@ -45,26 +45,42 @@ function LoginForm() {
     await signIn(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
+  const inputStyle: React.CSSProperties = {
+    background: "var(--color-surface)",
+    border: "1px solid var(--color-border)",
+    color: "var(--color-text)",
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: "var(--color-bg)" }}
+    >
       <div className="w-full max-w-sm space-y-8">
         <div className="flex items-center gap-3">
           <Logo size={36} />
           <div>
-            <h1 className="text-2xl font-semibold text-neutral-100">Mr. Bridge</h1>
-            <p className="mt-0.5 text-sm text-neutral-500">Personal assistant</p>
+            <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>Mr. Bridge</h1>
+            <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>Personal assistant</p>
           </div>
         </div>
 
         {hasAuthError && (
-          <div className="rounded-lg bg-red-950 border border-red-800 px-4 py-3 text-sm text-red-300">
+          <div
+            className="rounded-lg px-4 py-3 text-sm"
+            style={{
+              background: "color-mix(in srgb, var(--color-danger) 15%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)",
+              color: "var(--color-danger)",
+            }}
+          >
             Session expired. Please sign in again.
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm text-neutral-400 mb-1.5">
+            <label htmlFor="email" className="block text-sm mb-1.5" style={{ color: "var(--color-text-muted)" }}>
               Email
             </label>
             <input
@@ -74,12 +90,14 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@example.com"
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2.5 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+              aria-invalid={state === "error"}
+              className="w-full rounded-lg px-4 py-2.5 text-sm"
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm text-neutral-400 mb-1.5">
+            <label htmlFor="password" className="block text-sm mb-1.5" style={{ color: "var(--color-text-muted)" }}>
               Password
             </label>
             <input
@@ -89,18 +107,23 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2.5 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-500"
+              aria-invalid={state === "error"}
+              className="w-full rounded-lg px-4 py-2.5 text-sm"
+              style={inputStyle}
             />
           </div>
 
           {state === "error" && (
-            <p className="text-sm text-red-400">{errorMsg || "Invalid email or password."}</p>
+            <p className="text-sm" style={{ color: "var(--color-danger)" }}>{errorMsg || "Invalid email or password."}</p>
           )}
 
           <button
             type="submit"
             disabled={state === "loading" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password.trim()}
-            className="w-full bg-blue-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-400 transition-colors"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: "var(--color-primary)", color: "#fff" }}
+            onMouseEnter={(e) => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
           >
             {state === "loading" ? "Signing in..." : "Sign in"}
           </button>
@@ -110,20 +133,25 @@ function LoginForm() {
           <div className="pt-2">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-800" />
+                <div className="w-full" style={{ borderTop: "1px solid var(--color-border)" }} />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-neutral-950 px-3 text-neutral-600">or</span>
+                <span className="px-3" style={{ background: "var(--color-bg)", color: "var(--color-text-faint)" }}>or</span>
               </div>
             </div>
             <button
               onClick={handleDemoLogin}
               disabled={state === "loading"}
-              className="mt-4 w-full border border-neutral-700 text-neutral-300 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:border-neutral-500 hover:text-neutral-100 transition-colors"
+              className="mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+                background: "transparent",
+              }}
             >
               Try the demo
             </button>
-            <p className="mt-2 text-center text-xs text-neutral-600">
+            <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-faint)" }}>
               Fictional persona · read-write · resets nightly
             </p>
           </div>

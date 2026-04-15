@@ -5,7 +5,6 @@ import { Calendar, Gift } from "lucide-react";
 import type { CalendarEvent } from "@/app/api/google/calendar/route";
 
 function parseTimeToMinutes(timeStr: string): number | null {
-  // Handles "9:00 AM", "2:30 PM" — returns minutes since midnight
   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
   if (!match) return null;
   let h = parseInt(match[1]);
@@ -36,7 +35,6 @@ export default function ScheduleToday() {
     setNowMinutes(now.getHours() * 60 + now.getMinutes());
   }, []);
 
-  // Split events into past / upcoming based on start time
   type RenderedItem =
     | { type: "event"; event: CalendarEvent; isPast: boolean; index: number }
     | { type: "now" };
@@ -50,7 +48,6 @@ export default function ScheduleToday() {
       const eventMins = parseTimeToMinutes(event.time);
       const isPast = eventMins !== null && eventMins < nowMinutes;
 
-      // Insert "now" divider at the transition from past to upcoming
       if (!nowDividerInserted && eventMins !== null && eventMins >= nowMinutes) {
         const hasPastEvents = renderedItems.some((r) => r.type === "event" && r.isPast);
         if (hasPastEvents) {
@@ -64,25 +61,32 @@ export default function ScheduleToday() {
   }
 
   const useEnhanced = nowMinutes !== null && renderedItems.length > 0;
+  const muted = { color: "var(--color-text-muted)" };
+  const faint = { color: "var(--color-text-faint)" };
+  const text = { color: "var(--color-text)" };
+  const accent = { color: "var(--color-cta)" };
 
   return (
-    <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800 h-full">
+    <div
+      className="rounded-xl p-4 h-full"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
       <div className="flex items-center gap-2 mb-3">
-        <Calendar size={13} className="text-neutral-500 shrink-0" />
-        <p className="text-xs text-neutral-500 uppercase tracking-wide">Schedule Today</p>
+        <Calendar size={13} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+        <p className="text-xs uppercase tracking-wide" style={muted}>Schedule Today</p>
       </div>
 
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-3">
-              <div className="h-3 bg-neutral-800 rounded animate-pulse w-14 shrink-0" />
-              <div className="h-3 bg-neutral-800 rounded animate-pulse flex-1" />
+              <div className="h-3 rounded animate-pulse w-14 shrink-0" style={{ background: "var(--color-surface-raised)" }} />
+              <div className="h-3 rounded animate-pulse flex-1" style={{ background: "var(--color-surface-raised)" }} />
             </div>
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-400/70">Failed to load — check Google credentials</p>
+        <p className="text-sm" style={{ color: "var(--color-danger)" }}>Failed to load — check Google credentials</p>
       ) : events.length > 0 ? (
         <div className="space-y-2.5">
           {useEnhanced ? (
@@ -90,25 +94,25 @@ export default function ScheduleToday() {
               if (item.type === "now") {
                 return (
                   <div key="now-divider" className="flex items-center gap-2 py-0.5">
-                    <span className="text-[10px] text-blue-400 font-[family-name:var(--font-mono)] shrink-0">now</span>
-                    <div className="flex-1 h-px bg-blue-500/30" />
+                    <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--color-primary)" }}>now</span>
+                    <div className="flex-1 h-px" style={{ background: "var(--color-primary)", opacity: 0.3 }} />
                   </div>
                 );
               }
               const { event, isPast } = item;
               return (
                 <div key={idx} className={`flex gap-3 items-start transition-opacity ${isPast ? "opacity-40" : ""}`}>
-                  <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px flex items-center">
+                  <span className="text-xs font-mono shrink-0 w-16 pt-px flex items-center" style={muted}>
                     {event.isBirthday
-                      ? <Gift size={12} className="text-rose-400" />
+                      ? <Gift size={12} style={accent} />
                       : event.time}
                   </span>
                   <div className="min-w-0">
-                    <p className={`text-sm leading-snug truncate ${isPast ? "text-neutral-400" : event.isBirthday ? "text-rose-300" : "text-neutral-200"}`}>
+                    <p className="text-sm leading-snug truncate" style={isPast ? muted : event.isBirthday ? accent : text}>
                       {event.title}
                     </p>
                     {(event.location || !event.isPrimary) && (
-                      <p className="text-xs text-neutral-600 truncate mt-0.5">
+                      <p className="text-xs truncate mt-0.5" style={faint}>
                         {event.location}
                         {!event.isPrimary && (
                           <span className={event.location ? " · " : ""}>{event.calendarName}</span>
@@ -122,15 +126,15 @@ export default function ScheduleToday() {
           ) : (
             events.map((event, i) => (
               <div key={i} className="flex gap-3 items-start">
-                <span className="text-xs font-[family-name:var(--font-mono)] text-neutral-500 shrink-0 w-16 pt-px flex items-center">
+                <span className="text-xs font-mono shrink-0 w-16 pt-px flex items-center" style={muted}>
                   {event.isBirthday
-                    ? <Gift size={12} className="text-rose-400" />
+                    ? <Gift size={12} style={accent} />
                     : event.time}
                 </span>
                 <div className="min-w-0">
-                  <p className={`text-sm leading-snug truncate ${event.isBirthday ? "text-rose-300" : "text-neutral-200"}`}>{event.title}</p>
+                  <p className="text-sm leading-snug truncate" style={event.isBirthday ? accent : text}>{event.title}</p>
                   {(event.location || !event.isPrimary) && (
-                    <p className="text-xs text-neutral-600 truncate mt-0.5">
+                    <p className="text-xs truncate mt-0.5" style={faint}>
                       {event.location}
                       {!event.isPrimary && (
                         <span className={event.location ? " · " : ""}>{event.calendarName}</span>
@@ -143,7 +147,7 @@ export default function ScheduleToday() {
           )}
         </div>
       ) : (
-        <p className="text-sm text-neutral-600">No events today</p>
+        <p className="text-sm" style={faint}>No events today</p>
       )}
     </div>
   );

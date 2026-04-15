@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface DataPoint {
   date: string;
@@ -21,14 +22,15 @@ interface Props {
   windowLabel?: string;
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
 export function ActiveCalChart({ data, windowLabel = "30D" }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+
+  const tooltipStyle = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -59,35 +61,35 @@ export function ActiveCalChart({ data, windowLabel = "30D" }: Props) {
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="cal-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                <stop offset="0%" stopColor={c.warning} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={c.warning} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
             <XAxis
               dataKey="date"
-              stroke="#334155"
-              tick={{ fill: "#64748B", fontSize: 11 }}
+              stroke={c.axis}
+              tick={{ fill: c.textMuted, fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              stroke="#334155"
-              tick={{ fill: "#64748B", fontSize: 11 }}
+              stroke={c.axis}
+              tick={{ fill: c.textMuted, fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               domain={[0, "auto"]}
             />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v} kcal`, "Active Cal"]} />
+            <Tooltip {...tooltipStyle} formatter={(v: number) => [`${v} kcal`, "Active Cal"]} />
             <Area
               type="monotone"
               dataKey="cal"
-              stroke="#F59E0B"
+              stroke={c.warning}
               strokeWidth={2}
               fill="url(#cal-grad)"
               dot={false}
-              activeDot={{ r: 4, fill: "#F59E0B", strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: c.warning, strokeWidth: 0 }}
               connectNulls
               isAnimationActive={animate}
               animationDuration={300}

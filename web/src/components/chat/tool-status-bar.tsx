@@ -83,14 +83,20 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
           return (
             <span
               key={inv.toolCallId}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs bg-neutral-800 border border-neutral-700 ${
-                isDone ? "text-neutral-500" : "text-neutral-400"
-              }`}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
+              style={{
+                background: "var(--color-surface-raised)",
+                border: "1px solid var(--color-border)",
+                color: isDone ? "var(--color-text-muted)" : "var(--color-text)",
+              }}
             >
               {isDone ? (
-                <span className="text-emerald-600 text-[10px] leading-none">✓</span>
+                <span className="text-[10px] leading-none" style={{ color: "var(--color-positive)" }}>✓</span>
               ) : (
-                <span className="inline-block w-2.5 h-2.5 border border-neutral-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-full animate-spin shrink-0"
+                  style={{ border: "1px solid var(--color-text-muted)", borderTopColor: "transparent" }}
+                />
               )}
               {toolLabel(inv.toolName)}{isDone ? "" : "..."}
             </span>

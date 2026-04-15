@@ -353,7 +353,7 @@ function TodayTab({
                         <button
                           onClick={() => saveEdit(m.id)}
                           disabled={editSaving}
-                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-primary-foreground)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
                         >
                           {editSaving ? "Saving…" : "Save"}
                         </button>
@@ -1201,7 +1201,7 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
                           <button
                             onClick={() => saveEdit(m.id)}
                             disabled={editSaving}
-                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-primary-foreground)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
                           >
                             {editSaving ? "Saving…" : "Save"}
                           </button>

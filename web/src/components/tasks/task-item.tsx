@@ -260,7 +260,7 @@ export default function TaskItem({
           {totalCount > 0 && (
             <span
               className="text-xs tabular-nums flex-shrink-0 font-medium"
-              style={{ color: allDone ? "#10B981" : "var(--color-text-muted)" }}
+              style={{ color: allDone ? "var(--color-positive)" : "var(--color-text-muted)" }}
             >
               {completedCount}/{totalCount}
             </span>

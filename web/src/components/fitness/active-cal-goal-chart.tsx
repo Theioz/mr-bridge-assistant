@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { GranularityToggle } from "@/components/ui/granularity-toggle";
 import { formatDate, computeDailyTicks, computeWeeklyTicks, daysToWindowKey } from "@/lib/chart-utils";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface DataPoint {
   date: string;
@@ -20,12 +21,6 @@ interface Props {
   goal?: number | null;
   days: number;
 }
-
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
 
 function getISOWeekLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -51,6 +46,12 @@ function dayOfWeek(dateStr: string): number {
 
 export function ActiveCalGoalChart({ data, goal, days }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
   const weekCount = Math.ceil(days / 7);
   const forceWeekly = days > 90;
   const [granularity, setGranularity] = useState<"daily" | "weekly">(
@@ -156,22 +157,22 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
         <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="acal-goal-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="#F59E0B" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+              <stop offset="0%"   stopColor={c.warning} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={c.warning} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 10 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 10 }}
             tickLine={false}
             axisLine={false}
             ticks={ticks}
           />
           <YAxis
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             domain={[0, "auto"]}
@@ -187,7 +188,7 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
           {hasGoal && granularity === "weekly" && (
             <ReferenceLine
               y={goal}
-              stroke="#64748B"
+              stroke={c.textMuted}
               strokeDasharray="4 3"
               strokeWidth={1.5}
             />
@@ -195,20 +196,20 @@ export function ActiveCalGoalChart({ data, goal, days }: Props) {
           {hasGoal && granularity === "daily" && dailyGoal != null && (
             <ReferenceLine
               y={dailyGoal}
-              stroke="#64748B"
+              stroke={c.textMuted}
               strokeDasharray="4 3"
               strokeWidth={1.5}
-              label={{ value: "Daily target", fill: "#64748B", fontSize: 10, position: "insideTopRight" }}
+              label={{ value: "Daily target", fill: c.textMuted, fontSize: 10, position: "insideTopRight" }}
             />
           )}
           <Area
             type="monotone"
             dataKey="total"
-            stroke="#F59E0B"
+            stroke={c.warning}
             strokeWidth={2}
             fill="url(#acal-goal-grad)"
             dot={false}
-            activeDot={{ r: 4, fill: "#F59E0B", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: c.warning, strokeWidth: 0 }}
             isAnimationActive={animate}
             animationDuration={300}
             connectNulls={false}

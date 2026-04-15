@@ -6,7 +6,7 @@ import type { HabitRegistry, HabitLog } from "@/lib/types";
 interface Props {
   habits: HabitRegistry[];
   logs: HabitLog[];
-  dates: string[]; // ascending YYYY-MM-DD strings
+  dates: string[];
   range: 7 | 30 | 90;
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
 }
@@ -27,14 +27,14 @@ function groupByWeek(dates: string[]): { label: string; dates: string[] }[] {
   return weeks;
 }
 
-function countToOpacity(count: number, total: number): string {
-  if (total === 0) return "opacity-20";
+function countToOpacity(count: number, total: number): number {
+  if (total === 0) return 0.2;
   const ratio = count / total;
-  if (ratio === 0) return "opacity-20";
-  if (ratio <= 0.3) return "opacity-40";
-  if (ratio <= 0.57) return "opacity-60";
-  if (ratio <= 0.86) return "opacity-80";
-  return "opacity-100";
+  if (ratio === 0) return 0.2;
+  if (ratio <= 0.3) return 0.4;
+  if (ratio <= 0.57) return 0.6;
+  if (ratio <= 0.86) return 0.8;
+  return 1;
 }
 
 export default function HabitHistory({ habits, logs, dates, range, toggleAction }: Props) {
@@ -56,7 +56,6 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
       try {
         await toggleAction(habitId, date, next);
       } catch {
-        // revert on error
         setOverrides((prev) => {
           const updated = { ...prev };
           if (current === undefined) {
@@ -70,6 +69,9 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
     });
   }
 
+  const thStyle = { color: "var(--color-text-muted)" };
+  const tdHabitStyle = { color: "var(--color-text)" };
+
   if (range === 90) {
     const weeks = groupByWeek(dates);
     return (
@@ -77,9 +79,9 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
         <table className="w-full text-xs">
           <thead>
             <tr>
-              <th className="text-left text-neutral-500 font-normal pb-2 pr-4 w-32">Habit</th>
+              <th className="text-left font-normal pb-2 pr-4 w-32" style={thStyle}>Habit</th>
               {weeks.map((w) => (
-                <th key={w.label} className="text-neutral-500 font-normal pb-2 px-1 text-center whitespace-nowrap">
+                <th key={w.label} className="font-normal pb-2 px-1 text-center whitespace-nowrap" style={thStyle}>
                   {w.label}
                 </th>
               ))}
@@ -88,16 +90,22 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
           <tbody>
             {habits.map((h) => (
               <tr key={h.id}>
-                <td className="text-neutral-400 py-1.5 pr-4 truncate max-w-[8rem]">
+                <td className="py-1.5 pr-4 truncate max-w-[8rem]" style={tdHabitStyle}>
                   {h.emoji} {h.name}
                 </td>
                 {weeks.map((w) => {
                   const count = w.dates.filter((d) => getCompleted(h.id, d) === true).length;
                   const total = w.dates.length;
+                  const op = countToOpacity(count, total);
                   return (
                     <td key={w.label} className="py-1.5 px-1 text-center">
                       <span
-                        className={`inline-flex items-center justify-center w-6 h-5 rounded text-neutral-100 bg-neutral-100 text-[10px] font-medium ${countToOpacity(count, total)}`}
+                        className="inline-flex items-center justify-center w-6 h-5 rounded text-[10px] font-medium"
+                        style={{
+                          background: "var(--color-primary)",
+                          color: "#fff",
+                          opacity: op,
+                        }}
                         title={`${count}/${total} days`}
                       >
                         {count > 0 ? count : ""}
@@ -118,9 +126,9 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
       <table className="w-full text-xs">
         <thead>
           <tr>
-            <th className="text-left text-neutral-500 font-normal pb-2 pr-4 w-32">Habit</th>
+            <th className="text-left font-normal pb-2 pr-4 w-32" style={thStyle}>Habit</th>
             {dates.map((d) => (
-              <th key={d} className="text-neutral-500 font-normal pb-2 px-1 text-center whitespace-nowrap">
+              <th key={d} className="font-normal pb-2 px-1 text-center whitespace-nowrap" style={thStyle}>
                 {formatHeader(d)}
               </th>
             ))}
@@ -129,7 +137,7 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
         <tbody>
           {habits.map((h) => (
             <tr key={h.id}>
-              <td className="text-neutral-400 py-1.5 pr-4 truncate max-w-[8rem]">
+              <td className="py-1.5 pr-4 truncate max-w-[8rem]" style={tdHabitStyle}>
                 {h.emoji} {h.name}
               </td>
               {dates.map((d) => {
@@ -138,11 +146,12 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
                   <td key={d} className="py-1.5 px-1 text-center">
                     <button
                       onClick={() => handleCellClick(h.id, d)}
-                      className={`inline-block w-4 h-4 rounded-full transition-all hover:ring-1 hover:ring-neutral-500 ${
+                      className="inline-block w-4 h-4 rounded-full transition-all cursor-pointer"
+                      style={
                         done === true
-                          ? "bg-neutral-100"
-                          : "bg-neutral-800 border border-neutral-700 opacity-50"
-                      }`}
+                          ? { background: "var(--color-primary)", border: "none" }
+                          : { background: "transparent", border: "1px solid var(--color-border)", opacity: 0.6 }
+                      }
                       title={`${h.name} — ${formatHeader(d)}`}
                     />
                   </td>

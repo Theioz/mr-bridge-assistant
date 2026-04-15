@@ -33,14 +33,14 @@ Dark mode is the default (per style: Dark Mode OLED). Light mode tokens provided
 
 ### Typography
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.google.com/share?selection.family=Fira+Code:wght@400;500;600;700|Fira+Sans:wght@300;400;500;600;700)
+- **Heading Font:** DM Sans
+- **Body Font:** Inter
+- **Mood:** dashboard, data, analytics, technical, precise (deviation from original Fira spec — cleaner geometric sans preferred)
+- **Google Fonts:** [DM Sans + Inter](https://fonts.google.com/share?selection.family=DM+Sans:wght@400;500;600;700|Inter:wght@300;400;500;600)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 ```
 
 ### Spacing Variables

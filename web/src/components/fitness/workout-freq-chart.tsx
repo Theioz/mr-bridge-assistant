@@ -10,18 +10,13 @@ import type { WorkoutSession } from "@/lib/types";
 import Link from "next/link";
 import { GranularityToggle } from "@/components/ui/granularity-toggle";
 import { formatDate, computeDailyTicks, computeWeeklyTicks, daysToWindowKey } from "@/lib/chart-utils";
+import { useChartColors, type ChartColors } from "@/lib/chart-colors";
 
 interface Props {
   sessions: WorkoutSession[];
   days: number;
   goal?: number | null;
 }
-
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
 
 function getISOWeekLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -41,10 +36,10 @@ function getISOWeekKey(dateStr: string): string {
   return monday.toISOString().slice(0, 10);
 }
 
-function barColor(count: number, goal: number): string {
-  if (count >= goal)      return "#10B981"; // green
-  if (count === goal - 1) return "#F59E0B"; // amber
-  return "#EF4444";                         // red
+function barColor(count: number, goal: number, c: ChartColors): string {
+  if (count >= goal)      return c.positive;
+  if (count === goal - 1) return c.warning;
+  return c.danger;
 }
 
 function dayOfWeek(dateStr: string): number {
@@ -53,6 +48,12 @@ function dayOfWeek(dateStr: string): number {
 
 export function WorkoutFreqChart({ sessions, days, goal }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
   const weekCount = Math.ceil(days / 7);
   const forceWeekly = days > 90;
   const [granularity, setGranularity] = useState<"daily" | "weekly">(
@@ -157,18 +158,18 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
 
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 10 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 10 }}
             tickLine={false}
             axisLine={false}
             ticks={ticks}
           />
           <YAxis
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
@@ -180,7 +181,7 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
           {hasGoal && granularity === "weekly" && (
             <ReferenceLine
               y={goal}
-              stroke="#64748B"
+              stroke={c.textMuted}
               strokeDasharray="4 3"
               strokeWidth={1.5}
             />
@@ -197,14 +198,14 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
                 return (
                   <Cell
                     key={entry.key}
-                    fill={entry.count > 0 ? (hasGoal ? "#10B981" : "#6366F1") : "#1E2130"}
+                    fill={entry.count > 0 ? (hasGoal ? c.positive : c.primary) : c.grid}
                   />
                 );
               }
               return (
                 <Cell
                   key={entry.key}
-                  fill={hasGoal ? barColor(entry.count, goal!) : "#6366F1"}
+                  fill={hasGoal ? barColor(entry.count, goal!, c) : c.primary}
                 />
               );
             })}

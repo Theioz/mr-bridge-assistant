@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { RecoveryMetrics } from "@/lib/types";
+import { useChartColors, type ChartColors } from "@/lib/chart-colors";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,16 +34,21 @@ type SleepTab   = "stages" | "hrv" | "rhr" | "spo2";
 
 // ── Recharts shared config ───────────────────────────────────────────────────
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle:   { color: "#E2E8F0", fontSize: 12 },
-  itemStyle:    { color: "#64748B", fontSize: 11 },
-};
-const GRID  = { strokeDasharray: "3 3", stroke: "#1E2130", vertical: false as const };
-const AXIS  = { stroke: "#334155", tick: { fill: "#64748B", fontSize: 10 }, tickLine: false as const, axisLine: false as const };
 const CHART_H = 180;
-const AVG_LINE = { stroke: "#64748B", strokeWidth: 1.5, strokeDasharray: "4 2", dot: false };
-const LEGEND_STYLE = { fontSize: 10, color: "#64748B", paddingBottom: 4 };
+
+function buildChartConfig(c: ChartColors) {
+  return {
+    TOOLTIP_STYLE: {
+      contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+      labelStyle:   { color: c.text, fontSize: 12 },
+      itemStyle:    { color: c.textMuted, fontSize: 11 },
+    },
+    GRID:  { strokeDasharray: "3 3", stroke: c.grid, vertical: false as const },
+    AXIS:  { stroke: c.axis, tick: { fill: c.textMuted, fontSize: 10 }, tickLine: false as const, axisLine: false as const },
+    AVG_LINE: { stroke: c.textMuted, strokeWidth: 1.5, strokeDasharray: "4 2", dot: false },
+    LEGEND_STYLE: { fontSize: 10, color: c.textMuted, paddingBottom: 4 },
+  };
+}
 
 // ── Score helpers ────────────────────────────────────────────────────────────
 
@@ -186,6 +192,8 @@ function FitnessChartPanel({
   animate: boolean;
 }) {
   const [tab, setTab] = useState<FitnessTab>("weight");
+  const c = useChartColors();
+  const { TOOLTIP_STYLE, GRID, AXIS, AVG_LINE, LEGEND_STYLE } = buildChartConfig(c);
 
   const weightDataRaw = fitnessData.map((d) => ({ date: d.date.slice(5), value: d.weight_lb }));
   const weightAvgs    = trailing7Avg(weightDataRaw);
@@ -229,8 +237,8 @@ function FitnessChartPanel({
             <YAxis {...AXIS} domain={["auto", "auto"]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${v} lb`} />
             <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
-            <Line type="monotone" dataKey="value" name="Weight" stroke="#6366F1" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: "#6366F1", strokeWidth: 0 }} connectNulls
+            <Line type="monotone" dataKey="value" name="Weight" stroke={c.primary} strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: c.primary, strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
             <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
               isAnimationActive={false} />
@@ -246,8 +254,8 @@ function FitnessChartPanel({
             <YAxis {...AXIS} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${(v as number).toFixed(1)}%`} />
             <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
-            <Line type="monotone" dataKey="value" name="Body Fat" stroke="#10B981" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: "#10B981", strokeWidth: 0 }} connectNulls
+            <Line type="monotone" dataKey="value" name="Body Fat" stroke={c.positive} strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: c.positive, strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
             <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
               isAnimationActive={false} />
@@ -263,7 +271,7 @@ function FitnessChartPanel({
             <YAxis {...AXIS} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => v.toLocaleString()} />
             <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
-            <Bar dataKey="value" name="Steps" fill="#38BDF8" radius={[3, 3, 0, 0]}
+            <Bar dataKey="value" name="Steps" fill={c.info} radius={[3, 3, 0, 0]}
               isAnimationActive={animate} animationDuration={300} />
             <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
               isAnimationActive={false} />
@@ -276,8 +284,8 @@ function FitnessChartPanel({
           <ComposedChart data={calData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.02} />
+                <stop offset="5%"  stopColor={c.warning} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={c.warning} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid {...GRID} />
@@ -285,7 +293,7 @@ function FitnessChartPanel({
             <YAxis {...AXIS} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${Math.round(v)} kcal`} />
             <Legend verticalAlign="top" height={20} wrapperStyle={LEGEND_STYLE} />
-            <Area type="monotone" dataKey="value" name="Active Cal" stroke="#F59E0B" strokeWidth={2}
+            <Area type="monotone" dataKey="value" name="Active Cal" stroke={c.warning} strokeWidth={2}
               fill="url(#calGrad)" dot={false} connectNulls
               isAnimationActive={animate} animationDuration={300} />
             <Line type="monotone" dataKey="avg" name="7d avg" {...AVG_LINE} connectNulls
@@ -318,6 +326,8 @@ function SleepChartPanel({
   ];
 
   const [tab, setTab] = useState<SleepTab>("stages");
+  const c = useChartColors();
+  const { TOOLTIP_STYLE, GRID, AXIS } = buildChartConfig(c);
 
   const stagesData = trends.map((d) => ({
     date:  d.date.slice(5),
@@ -357,9 +367,9 @@ function SleepChartPanel({
                 return [m > 0 ? `${h}h ${m}m` : `${h}h`, name];
               }}
             />
-            <Bar dataKey="deep"  name="Deep"  fill="#6366F1" stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
-            <Bar dataKey="rem"   name="REM"   fill="#A78BFA" stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
-            <Bar dataKey="light" name="Light" fill="#38BDF8" stackId="s" radius={[3,3,0,0]} isAnimationActive={animate} animationDuration={300} />
+            <Bar dataKey="deep"  name="Deep"  fill={c.primary} stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
+            <Bar dataKey="rem"   name="REM"   fill={c.secondary} stackId="s" radius={[0,0,0,0]} isAnimationActive={animate} animationDuration={300} />
+            <Bar dataKey="light" name="Light" fill={c.info} stackId="s" radius={[3,3,0,0]} isAnimationActive={animate} animationDuration={300} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -369,15 +379,15 @@ function SleepChartPanel({
           <AreaChart data={hrvData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="hrvGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
+                <stop offset="5%"  stopColor={c.positive} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={c.positive} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} ms`, "HRV"]} />
-            <Area type="monotone" dataKey="value" stroke="#10B981" strokeWidth={2}
+            <Area type="monotone" dataKey="value" stroke={c.positive} strokeWidth={2}
               fill="url(#hrvGrad)" dot={false} connectNulls
               isAnimationActive={animate} animationDuration={300} />
           </AreaChart>
@@ -391,8 +401,8 @@ function SleepChartPanel({
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} domain={["auto", "auto"]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${Math.round(v)} bpm`, "RHR"]} />
-            <Line type="monotone" dataKey="value" stroke="#EF4444" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: "#EF4444", strokeWidth: 0 }} connectNulls
+            <Line type="monotone" dataKey="value" stroke={c.danger} strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: c.danger, strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
           </LineChart>
         </ResponsiveContainer>
@@ -405,8 +415,8 @@ function SleepChartPanel({
             <XAxis dataKey="date" {...AXIS} interval="preserveStartEnd" />
             <YAxis {...AXIS} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "SpO₂"]} />
-            <Line type="monotone" dataKey="value" stroke="#38BDF8" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: "#38BDF8", strokeWidth: 0 }} connectNulls
+            <Line type="monotone" dataKey="value" stroke={c.info} strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: c.info, strokeWidth: 0 }} connectNulls
               isAnimationActive={animate} animationDuration={300} />
           </LineChart>
         </ResponsiveContainer>
@@ -543,7 +553,7 @@ export default function HealthBreakdown({ recovery, trends, fitnessData, windowL
               </div>
 
               {/* Sleep (border-left only on desktop) */}
-              <div className="min-w-0 lg:pl-6 lg:border-l lg:border-[#1E2130]">
+              <div className="min-w-0 lg:pl-6 lg:border-l" style={{ borderColor: "var(--color-border)" }}>
                 <SleepChartPanel trends={trends} windowLabel={windowLabel} animate={animate} />
               </div>
             </div>

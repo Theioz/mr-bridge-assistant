@@ -70,18 +70,19 @@ export default function HabitTodaySection({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs text-neutral-500 uppercase tracking-wide">Today</h2>
+        <h2 className="text-xs uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>Today</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setManageMode((m) => !m);
               setShowAdd(false);
             }}
-            className={`text-xs px-2 py-0.5 rounded transition-colors ${
-              manageMode
-                ? "bg-neutral-700 text-neutral-200"
-                : "text-neutral-500 hover:text-neutral-300"
-            }`}
+            className="text-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+            style={{
+              background: manageMode ? "var(--color-surface-raised)" : "transparent",
+              color: manageMode ? "var(--color-text)" : "var(--color-text-muted)",
+              border: "none",
+            }}
           >
             Manage
           </button>
@@ -90,18 +91,19 @@ export default function HabitTodaySection({
               setShowAdd((s) => !s);
               setManageMode(false);
             }}
-            className={`text-xs px-2 py-0.5 rounded transition-colors ${
-              showAdd
-                ? "bg-neutral-700 text-neutral-200"
-                : "text-neutral-500 hover:text-neutral-300"
-            }`}
+            className="text-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+            style={{
+              background: showAdd ? "var(--color-surface-raised)" : "transparent",
+              color: showAdd ? "var(--color-text)" : "var(--color-text-muted)",
+              border: "none",
+            }}
           >
             + Add
           </button>
         </div>
       </div>
 
-      <div className="divide-y divide-neutral-800/50">
+      <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
         {habits.map((habit) => (
           <HabitToggle
             key={habit.id}
@@ -115,17 +117,18 @@ export default function HabitTodaySection({
           />
         ))}
         {habits.length === 0 && !showAdd && (
-          <p className="text-sm text-neutral-600 py-4">No habits configured.</p>
+          <p className="text-sm py-4" style={{ color: "var(--color-text-faint)" }}>No habits configured.</p>
         )}
       </div>
 
       {showAdd && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 py-3 border-t border-neutral-800/50">
+        <div className="mt-3 flex flex-wrap items-center gap-2 py-3" style={{ borderTop: "1px solid var(--color-border)" }}>
           <div className="relative" ref={pickerRef}>
             <button
               type="button"
               onClick={() => setShowEmojiPicker((v) => !v)}
-              className="w-10 h-8 bg-neutral-800 text-neutral-100 text-lg rounded flex items-center justify-center focus:outline-none focus:ring-1 focus:ring-neutral-600"
+              className="w-10 h-8 text-lg rounded flex items-center justify-center cursor-pointer"
+              style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
               title="Pick emoji"
             >
               {emoji || "😀"}
@@ -151,25 +154,29 @@ export default function HabitTodaySection({
             placeholder="Habit name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 min-w-[120px] bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1.5 placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            className="flex-1 min-w-[120px] text-sm rounded px-2 py-1.5"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
           />
           <input
             type="text"
             placeholder="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-28 bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1.5 placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            className="w-28 text-sm rounded px-2 py-1.5"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
           />
           <button
             onClick={handleAdd}
             disabled={!name.trim() || isPending}
-            className="text-xs px-3 py-1.5 bg-neutral-700 text-neutral-100 rounded hover:bg-neutral-600 disabled:opacity-40 transition-colors"
+            className="text-xs px-3 py-1.5 rounded disabled:opacity-40 transition-colors cursor-pointer"
+            style={{ background: "var(--color-primary)", color: "#fff", border: "none" }}
           >
             Save
           </button>
           <button
             onClick={handleCancel}
-            className="text-xs px-2 py-1.5 text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="text-xs px-2 py-1.5 transition-colors cursor-pointer"
+            style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
           >
             Cancel
           </button>

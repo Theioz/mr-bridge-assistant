@@ -153,7 +153,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 {day.isToday && (
                   <span
                     className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-accent, #6366f1)", color: "#fff" }}
+                    style={{ fontSize: 10, background: "var(--color-primary)", color: "#fff" }}
                   >
                     Today
                   </span>
@@ -197,7 +197,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 {day.isToday && (
                   <span
                     className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-accent, #6366f1)", color: "#fff", flexShrink: 0 }}
+                    style={{ fontSize: 10, background: "var(--color-primary)", color: "#fff", flexShrink: 0 }}
                   >
                     Today
                   </span>
@@ -219,7 +219,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 )}
                 {!day.plan.name && <span style={{ flex: 1 }} />}
                 {day.isCompleted && (
-                  <span style={{ color: "#34d399", fontSize: 14, marginLeft: 4, flexShrink: 0 }}>✓</span>
+                  <span style={{ color: "var(--color-positive)", fontSize: 14, marginLeft: 4, flexShrink: 0 }}>✓</span>
                 )}
                 <span style={{ color: "var(--color-text-faint, var(--color-text-muted))", flexShrink: 0 }}>
                   {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

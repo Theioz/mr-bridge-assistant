@@ -48,7 +48,7 @@ function SortIcon({ col, sortKey, dir }: { col: SortKey; sortKey: SortKey; dir: 
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  fitbit: "var(--color-accent, #6366f1)",
+  fitbit: "var(--color-primary)",
   manual: "var(--color-text-muted)",
 };
 
@@ -143,7 +143,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                   fontWeight: activityFilter === type ? 600 : 400,
                   background:
                     activityFilter === type
-                      ? "var(--color-accent, #6366f1)"
+                      ? "var(--color-primary)"
                       : "var(--color-surface-raised, rgba(255,255,255,0.05))",
                   color:
                     activityFilter === type

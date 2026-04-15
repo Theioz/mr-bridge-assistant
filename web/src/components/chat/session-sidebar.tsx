@@ -72,10 +72,10 @@ export default function SessionSidebar({
             minHeight: 48,
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "#4F52D9";
+            (e.currentTarget as HTMLElement).style.opacity = "0.85";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "var(--color-primary)";
+            (e.currentTarget as HTMLElement).style.opacity = "1";
           }}
         >
           <Plus size={15} />
