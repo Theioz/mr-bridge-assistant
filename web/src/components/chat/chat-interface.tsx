@@ -286,10 +286,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
               </span>
               <button
                 onClick={() => reload()}
-                className="cursor-pointer transition-colors duration-150"
+                className="cursor-pointer transition-colors duration-150 hover-text-brighten"
                 style={{ fontSize: 12, color: "var(--color-text-muted)", textDecoration: "underline", textUnderlineOffset: 2 }}
-                onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "var(--color-text)")}
-                onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "var(--color-text-muted)")}
               >
                 Retry
               </button>
@@ -379,13 +377,11 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                   key={opt}
                   type="button"
                   onClick={() => { setModelOverride(opt); setModelMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors duration-100"
+                  className="w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors duration-100 hover-bg-border"
                   style={{
                     color: modelOverride === opt ? "var(--color-primary)" : "var(--color-text)",
                     background: "transparent",
                   }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--color-border)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
                 >
                   {opt === "auto" ? "Auto" : opt === "haiku" ? "Haiku (fast)" : "Sonnet (smart)"}
                 </button>
@@ -397,15 +393,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="rounded-xl px-3.5 py-2.5 cursor-pointer transition-colors duration-150 disabled:opacity-30 disabled:cursor-default"
+          className="rounded-xl px-3.5 py-2.5 cursor-pointer transition-opacity duration-150 hover:opacity-85 disabled:opacity-30 disabled:cursor-default disabled:hover:opacity-30"
           style={{ background: "var(--color-primary)", color: "white" }}
-          onMouseEnter={(e) => {
-            if (!(e.currentTarget as HTMLButtonElement).disabled)
-              (e.currentTarget as HTMLElement).style.opacity = "0.85";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.opacity = "1";
-          }}
         >
           <Send size={16} />
         </button>

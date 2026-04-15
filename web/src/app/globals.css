@@ -150,6 +150,18 @@ body {
   border-radius: 6px;
 }
 
+/* ─── Hover utilities ─────────────────────────────────────────────────── */
+/* Used where base color/background is set via inline style; !important is
+   required to win against the inline declaration. Pair with a
+   `transition-colors` / `transition-opacity` class for smooth 150ms changes. */
+.hover-text-brighten:hover { color: var(--color-text) !important; }
+.hover-text-danger:hover   { color: var(--color-danger) !important; }
+.hover-bg-subtle:hover     { background: var(--hover-subtle) !important; }
+.hover-bg-border:hover     { background: var(--color-border) !important; }
+.hover-bg-raised:hover     { background: var(--color-surface-raised) !important; }
+.hover-text-muted:hover    { color: var(--color-text-muted) !important; }
+.hover-border-strong:hover { border-color: var(--color-text-faint) !important; }
+
 /* ─── Reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

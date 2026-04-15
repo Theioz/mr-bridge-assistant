@@ -14,10 +14,8 @@ export default function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full transition-colors duration-150"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full transition-colors duration-150 hover-text-brighten"
       style={{ color: "var(--color-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text-muted)"; }}
     >
       <LogOut size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
       Sign out

@@ -157,10 +157,8 @@ function LoginForm() {
             disabled={isDisabled}
             aria-disabled={isDisabled}
             title={isDisabled ? disabledHint : undefined}
-            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity duration-150 cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
             style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
-            onMouseEnter={(e) => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
           >
             {state === "loading" ? "Signing in..." : "Sign in"}
           </button>
