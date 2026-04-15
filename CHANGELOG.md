@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat SSR fetch cache — issue #208)
+- **`web/src/app/(protected)/chat/page.tsx`** — added `export const fetchCache = "force-no-store"` so Supabase queries on the chat route bypass Next.js Data Cache; SSR was replaying cached rows from an earlier render, causing `/chat` to render messages from old positions in the same session. `force-dynamic` alone does not disable sub-request fetch caching.
+
 ### Fixed (chat stale session on tab return — issue #206)
 - **`web/src/components/chat/chat-page-client.tsx`** — visibility-change handler now re-fetches `/api/chat/sessions` and switches to the most recent session before loading messages, mirroring the mount-time correction; fixes residual stale-conversation bug from #195 when `activeSessionId` itself was stale
 
