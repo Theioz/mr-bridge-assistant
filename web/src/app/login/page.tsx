@@ -19,6 +19,11 @@ function LoginForm() {
   const [errorMsg, setErrorMsg] = useState("");
   const searchParams = useSearchParams();
   const hasAuthError = searchParams.get("error") === "auth_error";
+  const nextParam = searchParams.get("next");
+  const redirectTo =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : "/dashboard";
   const router = useRouter();
 
   async function signIn(e: string, p: string) {
@@ -31,7 +36,7 @@ function LoginForm() {
       setState("error");
     } else {
       router.refresh();
-      router.push("/");
+      router.push(redirectTo);
     }
   }
 

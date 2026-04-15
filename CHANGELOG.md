@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat polish bundle — issue #230)
+- **H7 — login redirect drops `next`.** [web/src/app/login/page.tsx](web/src/app/login/page.tsx) now reads `next` from the URL and pushes to it on successful sign-in; default is `/dashboard`. [web/src/app/auth/callback/route.ts](web/src/app/auth/callback/route.ts) defaults to `/dashboard` and validates `next` starts with `/` and not `//` (open-redirect guard).
+- **M1 — chat SSR + client double-fetch.** [web/src/components/chat/chat-page-client.tsx](web/src/components/chat/chat-page-client.tsx) no longer refetches messages for the most-recent session when SSR already provided them (skip when `mostRecent.id === initialSessionId`). Sessions list fetch is retained for the sidebar.
+- **M3 — restore doesn't resync server list.** [web/src/components/chat/chat-page-client.tsx](web/src/components/chat/chat-page-client.tsx) `handleRestoreSession` now calls `fetchSessions()` after a successful `/restore` POST.
+- **M4 — unread badge flickers on route change.** [web/src/components/nav.tsx](web/src/components/nav.tsx) fetches `/api/notifications/unread-count` once on mount + on `visibilitychange` (tab regains focus), instead of on every `pathname` change.
+- **L1 — slash-command menu typography.** [web/src/components/chat/slash-command-menu.tsx](web/src/components/chat/slash-command-menu.tsx) dropped monospace font family on the command name so it matches the description's system sans.
+- **L3 — magic `8rem` header offset.** Added `--header-height: 8rem` to [web/src/app/globals.css](web/src/app/globals.css); [web/src/components/chat/session-sidebar.tsx](web/src/components/chat/session-sidebar.tsx) `maxHeight` now uses `calc(100dvh - var(--header-height))`.
+- **L4 — cursor-pointer on section toggles.** Added inline `cursor: "pointer"` to both "Older" and "Recently deleted" toggle buttons in [web/src/components/chat/session-sidebar.tsx](web/src/components/chat/session-sidebar.tsx).
+
 ### Changed (card-lift applied to canonical tile wrappers — issue #240)
 - Follow-up to #229 / #238. `.card-lift` was defined but only applied to `MetricCard`, which is an orphan (defined, never rendered) — so the lift was invisible on the real dashboard. Applied `transition-all duration-200 card-lift` to 13 canonical widget-shell wrappers:
   - **dashboard/** — [recent-workouts-table.tsx](web/src/components/dashboard/recent-workouts-table.tsx), [schedule-today.tsx](web/src/components/dashboard/schedule-today.tsx), [habits-checkin.tsx](web/src/components/dashboard/habits-checkin.tsx), [trends-card.tsx](web/src/components/dashboard/trends-card.tsx), [sports-card.tsx](web/src/components/dashboard/sports-card.tsx), [watchlist-widget.tsx](web/src/components/dashboard/watchlist-widget.tsx), [today-scores-strip.tsx](web/src/components/dashboard/today-scores-strip.tsx), [health-breakdown.tsx](web/src/components/dashboard/health-breakdown.tsx)

@@ -53,7 +53,7 @@ export default function SessionSidebar({
         flexDirection: "column",
         overflow: "hidden",
         alignSelf: "flex-start",
-        maxHeight: "calc(100dvh - 8rem)",
+        maxHeight: "calc(100dvh - var(--header-height))",
       }}
     >
       <div style={{ padding: "12px 12px 8px" }}>
@@ -102,6 +102,7 @@ export default function SessionSidebar({
                 textTransform: "uppercase",
                 padding: "8px 8px 4px",
                 minHeight: 40,
+                cursor: "pointer",
               }}
             >
               <span style={{ transform: olderExpanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 150ms" }}>
@@ -140,6 +141,7 @@ export default function SessionSidebar({
                 minHeight: 40,
                 marginTop: 4,
                 borderTop: "1px solid var(--color-border)",
+                cursor: "pointer",
               }}
             >
               <span style={{ transform: archivedExpanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 150ms" }}>
