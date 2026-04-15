@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (card-lift applied to canonical tile wrappers — issue #240)
+- Follow-up to #229 / #238. `.card-lift` was defined but only applied to `MetricCard`, which is an orphan (defined, never rendered) — so the lift was invisible on the real dashboard. Applied `transition-all duration-200 card-lift` to 13 canonical widget-shell wrappers:
+  - **dashboard/** — [recent-workouts-table.tsx](web/src/components/dashboard/recent-workouts-table.tsx), [schedule-today.tsx](web/src/components/dashboard/schedule-today.tsx), [habits-checkin.tsx](web/src/components/dashboard/habits-checkin.tsx), [trends-card.tsx](web/src/components/dashboard/trends-card.tsx), [sports-card.tsx](web/src/components/dashboard/sports-card.tsx), [watchlist-widget.tsx](web/src/components/dashboard/watchlist-widget.tsx), [today-scores-strip.tsx](web/src/components/dashboard/today-scores-strip.tsx), [health-breakdown.tsx](web/src/components/dashboard/health-breakdown.tsx)
+  - **fitness/** — [workout-history-table.tsx](web/src/components/fitness/workout-history-table.tsx), [body-comp-dual-chart.tsx](web/src/components/fitness/body-comp-dual-chart.tsx), [weight-goal-chart.tsx](web/src/components/fitness/weight-goal-chart.tsx), [weekly-workout-plan.tsx](web/src/components/fitness/weekly-workout-plan.tsx)
+  - **meals/** — [MacroSummaryCard.tsx](web/src/components/meals/MacroSummaryCard.tsx)
+- List rows, chart sub-panels inside a tile, and chat/settings/modal panels were intentionally excluded — lifting them would re-introduce dense-data jitter.
+
 ### Changed (card hover lift + tab focus ring — issue #229)
 - **`web/src/app/globals.css`** — added `.card-lift` utility (`hover: translateY(-2px) + box-shadow: var(--shadow-lg)`), pairs with `transition-all duration-200` per MASTER.md card spec. Uses `transform` so no layout shift.
 - **`web/src/components/ui/metric-card.tsx`** (H6) — swapped `transition-colors` → `transition-all`, added `.card-lift` so metric cards lift on hover alongside the existing border-color change.
