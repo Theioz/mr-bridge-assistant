@@ -126,6 +126,12 @@ body {
   background: var(--color-text-faint);
 }
 
+/* ─── Scroll fade mask (bottom fade for truncated lists) ─────────────── */
+.scroll-fade-mask {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+          mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+
 /* ─── Skeleton shimmer ────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% center; }

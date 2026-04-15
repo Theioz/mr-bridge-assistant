@@ -174,8 +174,8 @@ export default function Nav() {
         </div>
       </nav>
 
-      {/* Demo banner — mobile (above tab bar) */}
-      {isDemo && (
+      {/* Demo banner — mobile (above tab bar). Hidden on /chat to avoid overlapping the composer. */}
+      {isDemo && !pathname?.startsWith("/chat") && (
         <div
           className="lg:hidden fixed left-0 right-0 z-40 px-4 py-1.5 text-center text-xs"
           style={{ bottom: 56, background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
