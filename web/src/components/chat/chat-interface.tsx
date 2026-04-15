@@ -3,9 +3,11 @@
 import { useChat } from "ai/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send, ChevronDown } from "lucide-react";
+import { Fragment } from "react";
 import MessageBubble from "./message-bubble";
 import ToolStatusBar from "./tool-status-bar";
 import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-command-menu";
+import { formatDaySeparator, isSameDay } from "@/lib/relative-time";
 import type { Message } from "ai";
 
 interface Props {
@@ -198,9 +200,18 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             Ask Mr. Bridge anything.
           </p>
         )}
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
-        ))}
+        {messages.map((m, i) => {
+          const current = m.createdAt ?? new Date();
+          const prev = messages[i - 1];
+          const prevDate = prev?.createdAt ?? null;
+          const showSeparator = !prevDate || !isSameDay(prevDate, current);
+          return (
+            <Fragment key={m.id}>
+              {showSeparator && <DaySeparator date={current} />}
+              <MessageBubble message={m} />
+            </Fragment>
+          );
+        })}
         <ToolStatusBar messages={messages} isLoading={isLoading} />
 
         {/* Typing indicator */}
@@ -385,6 +396,33 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           <Send size={16} />
         </button>
       </form>
+    </div>
+  );
+}
+
+function DaySeparator({ date }: { date: Date }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        margin: "12px 0 4px",
+      }}
+    >
+      <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          color: "var(--color-text-muted)",
+        }}
+      >
+        {formatDaySeparator(date)}
+      </span>
+      <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
     </div>
   );
 }

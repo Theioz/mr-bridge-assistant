@@ -59,7 +59,9 @@ export async function DELETE(
   if (!session || session.user_id !== user.id)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await supabase.from("chat_sessions").delete().eq("id", id);
-  // chat_messages deleted automatically via ON DELETE CASCADE
-  return NextResponse.json({ deleted: true });
+  await supabase
+    .from("chat_sessions")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  return NextResponse.json({ archived: true });
 }
