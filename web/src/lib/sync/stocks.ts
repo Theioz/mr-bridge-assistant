@@ -5,6 +5,7 @@ const POLYGON_BASE = "https://api.polygon.io";
 export interface StocksSyncResult {
   updated: number;
   tickers: string[];
+  rateLimited?: boolean;
 }
 
 interface PolygonBar {
@@ -13,10 +14,18 @@ interface PolygonBar {
   t: number; // timestamp ms
 }
 
+class RateLimitError extends Error {
+  constructor() { super("Polygon rate limit"); this.name = "RateLimitError"; }
+}
+
 async function polygonGet(path: string, apiKey: string): Promise<Record<string, unknown> | null> {
   const sep = path.includes("?") ? "&" : "?";
   const url = `${POLYGON_BASE}${path}${sep}apiKey=${apiKey}`;
   const res = await fetch(url, { cache: "no-store" });
+  if (res.status === 429) {
+    console.error(`[stocks] Polygon ${path} returned 429 (rate limit)`);
+    throw new RateLimitError();
+  }
   if (!res.ok) {
     console.error(`[stocks] Polygon ${path} returned ${res.status}`);
     return null;
@@ -32,15 +41,17 @@ export async function syncStocks(
   const apiKey = process.env.POLYGON_API_KEY;
   if (!apiKey) throw new Error("POLYGON_API_KEY not configured");
 
-  // Sparkline range: 14 calendar days back to guarantee ≥7 trading days
+  // Sparkline range: 45 calendar days back to guarantee ≥30 trading days
   const now = new Date();
   const fromDate = new Date(now);
-  fromDate.setDate(fromDate.getDate() - 14);
+  fromDate.setDate(fromDate.getDate() - 45);
   const from = fromDate.toISOString().slice(0, 10);
   const to = now.toISOString().slice(0, 10);
 
+  let rateLimited = false;
   const rows = await Promise.all(
     tickers.map(async (ticker) => {
+      try {
       const [prevData, rangeData] = await Promise.all([
         polygonGet(`/v2/aggs/ticker/${ticker}/prev`, apiKey),
         polygonGet(`/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}`, apiKey),
@@ -54,8 +65,8 @@ export async function syncStocks(
         : null;
 
       const rangeBars = (rangeData?.results as PolygonBar[] | undefined) ?? [];
-      // Keep last 7 trading days
-      const sparkline = rangeBars.slice(-7).map((bar) => ({
+      // Keep last 30 trading days (~6 weeks of context)
+      const sparkline = rangeBars.slice(-30).map((bar) => ({
         date: new Date(bar.t).toISOString().slice(0, 10),
         close: bar.c,
       }));
@@ -69,14 +80,20 @@ export async function syncStocks(
         sparkline: sparkline.length > 0 ? sparkline : null,
         fetched_at: new Date().toISOString(),
       };
+      } catch (e) {
+        if (e instanceof RateLimitError) { rateLimited = true; return null; }
+        throw e;
+      }
     }),
   );
 
-  const { error } = await db
-    .from("stocks_cache")
-    .upsert(rows, { onConflict: "user_id,ticker" });
+  const validRows = rows.filter((r): r is NonNullable<typeof r> => r !== null);
+  if (validRows.length > 0) {
+    const { error } = await db
+      .from("stocks_cache")
+      .upsert(validRows, { onConflict: "user_id,ticker" });
+    if (error) throw new Error(error.message);
+  }
 
-  if (error) throw new Error(error.message);
-
-  return { updated: rows.length, tickers };
+  return { updated: validRows.length, tickers, rateLimited };
 }

@@ -4,6 +4,7 @@ import { syncOura } from "@/lib/sync/oura";
 import { syncFitbit } from "@/lib/sync/fitbit";
 import { syncGoogleFit } from "@/lib/sync/googlefit";
 import { syncStocks } from "@/lib/sync/stocks";
+import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import { lastSyncAgeSecs } from "@/lib/sync/log";
 
 const SKIP_WINDOW_SECS = 30 * 60; // 30 minutes — same as run-syncs.py
@@ -90,6 +91,28 @@ export async function GET(request: NextRequest) {
     }
   } else {
     results.stocks = { skipped: true, reason: "empty watchlist" };
+  }
+
+  // Sports sync — no skip window; daily refresh of schedules + standings
+  const { data: sportsRow } = await db
+    .from("profile")
+    .select("value")
+    .eq("user_id", ownerUserId)
+    .eq("key", "sports_favorites")
+    .single();
+
+  const sportsFavorites: SportsFavorite[] = sportsRow?.value
+    ? (JSON.parse(sportsRow.value) as SportsFavorite[])
+    : [];
+
+  if (sportsFavorites.length > 0) {
+    try {
+      results.sports = await syncSports(db, ownerUserId, sportsFavorites);
+    } catch (e) {
+      results.sports = { error: (e as Error).message };
+    }
+  } else {
+    results.sports = { skipped: true, reason: "no favorites" };
   }
 
   return NextResponse.json({ success: true, results });

@@ -1,14 +1,29 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import type { StocksCache } from "@/lib/types";
 
 interface Props {
   rows: StocksCache[];
   hasApiKey: boolean;
-  refreshAction: () => Promise<void>;
+  refreshAction: () => Promise<{ rateLimited: boolean }>;
+}
+
+// Stocks staleness: 1h during US market hours (M-F 9:30am-4pm ET), 12h otherwise
+function isStocksStale(latest: string | null): boolean {
+  if (!latest) return true;
+  const ageMs = Date.now() - new Date(latest).getTime();
+  const nyParts = new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short", hour: "numeric", minute: "2-digit", hour12: false,
+  });
+  const isWeekday = !/^Sat|^Sun/.test(nyParts);
+  const [, hh, mm] = nyParts.match(/(\d{1,2}):(\d{2})/) ?? [];
+  const minutesSinceMidnight = (parseInt(hh ?? "0", 10) * 60) + parseInt(mm ?? "0", 10);
+  const marketOpen = isWeekday && minutesSinceMidnight >= 570 && minutesSinceMidnight < 960; // 9:30–16:00
+  return ageMs > (marketOpen ? 60 * 60 * 1000 : 12 * 60 * 60 * 1000);
 }
 
 function formatTime(isoString: string): string {
@@ -94,12 +109,30 @@ function TickerRow({ row }: { row: StocksCache }) {
 
 export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [rateLimited, setRateLimited] = useState(false);
+  const autoRanRef = useRef(false);
 
   function handleRefresh() {
+    setRateLimited(false);
     startTransition(async () => {
-      await refreshAction();
+      const result = await refreshAction();
+      if (result.rateLimited) setRateLimited(true);
     });
   }
+
+  // Auto-refresh on mount if cache is stale (silent — no rate-limit banner)
+  useEffect(() => {
+    if (autoRanRef.current || !hasApiKey || rows.length === 0) return;
+    autoRanRef.current = true;
+    const latest = rows.reduce<string | null>(
+      (acc, r) => (acc == null || r.fetched_at > acc ? r.fetched_at : acc),
+      null,
+    );
+    if (isStocksStale(latest)) {
+      startTransition(async () => { await refreshAction(); });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -166,6 +199,22 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
               POLYGON_API_KEY
             </code>{" "}
             to your environment to enable stock data.
+          </div>
+        )}
+
+        {/* Rate limit warning */}
+        {rateLimited && (
+          <div
+            className="flex items-center gap-2 px-5 py-2.5"
+            style={{
+              fontSize: 12,
+              color: "var(--color-warning)",
+              background: "rgba(245,158,11,0.08)",
+              borderBottom: "1px solid rgba(245,158,11,0.16)",
+            }}
+          >
+            <AlertTriangle size={12} />
+            Polygon rate limit hit (5/min on free tier). Showing cached data — wait a minute and refresh.
           </div>
         )}
 
