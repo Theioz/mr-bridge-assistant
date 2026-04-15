@@ -24,11 +24,12 @@ export default function HabitRangeToggle({ current }: Props) {
         <button
           key={r}
           onClick={() => setRange(r)}
-          className={`text-xs px-2 py-0.5 rounded transition-colors ${
-            current === r
-              ? "bg-neutral-700 text-neutral-100"
-              : "text-neutral-500 hover:text-neutral-300"
-          }`}
+          className="text-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+          style={{
+            background: current === r ? "var(--color-surface-raised)" : "transparent",
+            color: current === r ? "var(--color-text)" : "var(--color-text-muted)",
+            border: "none",
+          }}
         >
           {r}d
         </button>

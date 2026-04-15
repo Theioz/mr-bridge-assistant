@@ -13,20 +13,21 @@ import {
 } from "recharts";
 import type { HabitRegistry } from "@/lib/types";
 import type { HabitStreaks } from "@/lib/streaks";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface Props {
   habits: HabitRegistry[];
   streaks: HabitStreaks;
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
 export function StreakChart({ habits, streaks }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -71,11 +72,11 @@ export function StreakChart({ habits, streaks }: Props) {
           layout="vertical"
           margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} horizontal={false} />
           <XAxis
             type="number"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
@@ -84,8 +85,8 @@ export function StreakChart({ habits, streaks }: Props) {
             type="category"
             dataKey="name"
             width={110}
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 12 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 12 }}
             tickLine={false}
             axisLine={false}
           />
@@ -106,7 +107,7 @@ export function StreakChart({ habits, streaks }: Props) {
             {data.map((entry, i) => (
               <Cell
                 key={i}
-                fill={entry.current > 0 ? "#6366F1" : "#1E2130"}
+                fill={entry.current > 0 ? c.primary : c.grid}
               />
             ))}
           </Bar>

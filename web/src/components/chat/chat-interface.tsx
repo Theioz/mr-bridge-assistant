@@ -387,10 +387,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           style={{ background: "var(--color-primary)", color: "white" }}
           onMouseEnter={(e) => {
             if (!(e.currentTarget as HTMLButtonElement).disabled)
-              (e.currentTarget as HTMLElement).style.background = "#4F52D9";
+              (e.currentTarget as HTMLElement).style.opacity = "0.85";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "var(--color-primary)";
+            (e.currentTarget as HTMLElement).style.opacity = "1";
           }}
         >
           <Send size={16} />

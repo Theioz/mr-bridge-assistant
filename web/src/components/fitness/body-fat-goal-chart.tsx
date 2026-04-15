@@ -10,6 +10,7 @@ import type { FitnessLog } from "@/lib/types";
 import type { WindowKey } from "@/lib/window";
 import { formatDate, computeDailyTicks } from "@/lib/chart-utils";
 import Link from "next/link";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface Props {
   data: FitnessLog[];
@@ -18,14 +19,14 @@ interface Props {
   windowKey: WindowKey;
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
 export function BodyFatGoalChart({ data, goal, windowLabel = "90D", windowKey }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -86,18 +87,18 @@ export function BodyFatGoalChart({ data, goal, windowLabel = "90D", windowKey }:
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
             <XAxis
               dataKey="date"
-              stroke="#334155"
-              tick={{ fill: "#64748B", fontSize: 11 }}
+              stroke={c.axis}
+              tick={{ fill: c.textMuted, fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               ticks={ticks}
             />
             <YAxis
-              stroke="#334155"
-              tick={{ fill: "#64748B", fontSize: 11 }}
+              stroke={c.axis}
+              tick={{ fill: c.textMuted, fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               domain={["auto", "auto"]}
@@ -110,19 +111,19 @@ export function BodyFatGoalChart({ data, goal, windowLabel = "90D", windowKey }:
             {hasGoal && (
               <ReferenceLine
                 y={goal}
-                stroke="#64748B"
+                stroke={c.textMuted}
                 strokeDasharray="4 3"
                 strokeWidth={1.5}
-                label={{ value: `Goal ${goal}%`, fill: "#64748B", fontSize: 10, position: "insideTopRight" }}
+                label={{ value: `Goal ${goal}%`, fill: c.textMuted, fontSize: 10, position: "insideTopRight" }}
               />
             )}
             <Line
               type="monotone"
               dataKey="bf"
-              stroke="#10B981"
+              stroke={c.positive}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: "#10B981", strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: c.positive, strokeWidth: 0 }}
               connectNulls
               isAnimationActive={animate}
               animationDuration={300}

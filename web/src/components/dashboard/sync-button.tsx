@@ -90,7 +90,7 @@ export default function SyncButton() {
           <path d="M8 16H3v5" />
         </svg>
         {state === "error" ? (
-          <span className="text-red-500">Sync failed</span>
+          <span style={{ color: "var(--color-danger)" }}>Sync failed</span>
         ) : state === "syncing" ? (
           "Syncing…"
         ) : syncedAt ? (
@@ -101,7 +101,7 @@ export default function SyncButton() {
       </button>
 
       {state === "error" && errorSummary && (
-        <p className="text-xs text-right" style={{ color: "var(--color-negative, #ef4444)", maxWidth: 260 }}>
+        <p className="text-xs text-right" style={{ color: "var(--color-danger)", maxWidth: 260 }}>
           {errorSummary}
         </p>
       )}

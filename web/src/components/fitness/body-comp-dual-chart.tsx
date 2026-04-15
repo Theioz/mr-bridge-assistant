@@ -14,6 +14,7 @@ import {
 import type { FitnessLog } from "@/lib/types";
 import type { WindowKey } from "@/lib/window";
 import { formatDate, computeDailyTicks } from "@/lib/chart-utils";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface Props {
   data: FitnessLog[];
@@ -21,14 +22,14 @@ interface Props {
   windowKey: WindowKey;
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
 export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,11 +69,11 @@ export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Prop
       </p>
       <ResponsiveContainer width="100%" height={240}>
         <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E2130" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
           <XAxis
             dataKey="date"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             ticks={ticks}
@@ -80,8 +81,8 @@ export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Prop
           <YAxis
             yAxisId="weight"
             orientation="left"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             domain={["auto", "auto"]}
@@ -89,8 +90,8 @@ export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Prop
           <YAxis
             yAxisId="bf"
             orientation="right"
-            stroke="#334155"
-            tick={{ fill: "#64748B", fontSize: 11 }}
+            stroke={c.axis}
+            tick={{ fill: c.textMuted, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             domain={["auto", "auto"]}
@@ -105,17 +106,17 @@ export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Prop
           <Legend
             iconType="circle"
             iconSize={7}
-            wrapperStyle={{ fontSize: 12, color: "#64748B", paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, color: c.textMuted, paddingTop: 8 }}
           />
           <Line
             yAxisId="weight"
             type="monotone"
             dataKey="weight"
             name="Weight (lb)"
-            stroke="#6366F1"
+            stroke={c.primary}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, fill: "#6366F1", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: c.primary, strokeWidth: 0 }}
             connectNulls
             isAnimationActive={animate}
             animationDuration={300}
@@ -125,10 +126,10 @@ export function BodyCompDualChart({ data, windowLabel = "90D", windowKey }: Prop
             type="monotone"
             dataKey="bodyFat"
             name="Body Fat %"
-            stroke="#10B981"
+            stroke={c.positive}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, fill: "#10B981", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: c.positive, strokeWidth: 0 }}
             connectNulls
             isAnimationActive={animate}
             animationDuration={300}

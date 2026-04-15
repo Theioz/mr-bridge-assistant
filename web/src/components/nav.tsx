@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import SignOutButton from "@/components/ui/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
@@ -80,15 +81,16 @@ export default function Nav() {
           borderRight: "1px solid var(--color-border)",
         }}
       >
-        {/* Logo */}
+        {/* Logo + theme toggle */}
         <div className="flex items-center gap-2.5 px-5 pt-6 pb-6">
           <Logo size={26} />
           <span
-            className="font-heading text-sm font-semibold tracking-tight"
+            className="font-heading text-sm font-semibold tracking-tight flex-1"
             style={{ color: "var(--color-text)" }}
           >
             Mr. Bridge
           </span>
+          <ThemeToggle />
         </div>
 
         {/* Nav links */}
@@ -116,7 +118,7 @@ export default function Nav() {
                     <span
                       className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
                       style={{
-                        background: "#EF4444",
+                        background: "var(--color-danger)",
                         minWidth: 14,
                         height: 14,
                         fontSize: 9,
@@ -228,12 +230,15 @@ export default function Nav() {
               <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                 More
               </span>
-              <button
-                onClick={() => setShowMore(false)}
-                style={{ color: "var(--color-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <button
+                  onClick={() => setShowMore(false)}
+                  style={{ color: "var(--color-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="px-3 pb-4 grid grid-cols-2 gap-1">
@@ -261,7 +266,7 @@ export default function Nav() {
                         <span
                           className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
                           style={{
-                            background: "#EF4444",
+                            background: "var(--color-danger)",
                             minWidth: 14,
                             height: 14,
                             fontSize: 9,

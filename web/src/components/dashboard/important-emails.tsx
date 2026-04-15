@@ -20,37 +20,44 @@ export default function ImportantEmails() {
       .finally(() => setLoading(false));
   }, []);
 
+  const muted = { color: "var(--color-text-muted)" };
+  const faint = { color: "var(--color-text-faint)" };
+  const text = { color: "var(--color-text)" };
+
   return (
-    <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
       <div className="flex items-center gap-2 mb-3">
-        <Mail size={13} className="text-neutral-500 shrink-0" />
-        <p className="text-xs text-neutral-500 uppercase tracking-wide">Important Emails</p>
+        <Mail size={13} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+        <p className="text-xs uppercase tracking-wide" style={muted}>Important Emails</p>
       </div>
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
             <div key={i} className="space-y-1.5">
-              <div className="h-3 bg-neutral-800 rounded animate-pulse w-1/3" />
-              <div className="h-3 bg-neutral-800 rounded animate-pulse w-4/5" />
+              <div className="h-3 rounded animate-pulse w-1/3" style={{ background: "var(--color-surface-raised)" }} />
+              <div className="h-3 rounded animate-pulse w-4/5" style={{ background: "var(--color-surface-raised)" }} />
             </div>
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-400/70">Failed to load — check Google credentials</p>
+        <p className="text-sm" style={{ color: "var(--color-danger)" }}>Failed to load — check Google credentials</p>
       ) : emails.length > 0 ? (
-        <div className="divide-y divide-neutral-800/50">
+        <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
           {emails.map((email, i) => (
             <div key={i} className="py-2.5 first:pt-0 last:pb-0 min-w-0">
               <div className="flex items-baseline justify-between gap-3 mb-0.5">
-                <p className="text-xs text-neutral-400 truncate">
+                <p className="text-xs truncate" style={muted}>
                   {email.from}
                   {email.account === "professional" && (
-                    <span className="ml-1.5 text-neutral-600 text-[10px]">work</span>
+                    <span className="ml-1.5 text-[10px]" style={faint}>work</span>
                   )}
                 </p>
                 {email.receivedAt && (
-                  <p className="text-[10px] text-neutral-600 shrink-0">
+                  <p className="text-[10px] shrink-0" style={faint}>
                     {(() => {
                       const d = new Date(email.receivedAt);
                       const today = new Date();
@@ -65,11 +72,12 @@ export default function ImportantEmails() {
                   </p>
                 )}
               </div>
-              <p className="text-sm text-neutral-200 truncate">{email.subject}</p>
+              <p className="text-sm truncate" style={text}>{email.subject}</p>
               {email.snippet && (
                 <p
-                  className="mt-1 text-xs text-neutral-500"
+                  className="mt-1 text-xs"
                   style={{
+                    ...muted,
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
@@ -83,7 +91,7 @@ export default function ImportantEmails() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-neutral-600">Inbox clear</p>
+        <p className="text-sm" style={faint}>Inbox clear</p>
       )}
     </div>
   );

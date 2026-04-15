@@ -5,7 +5,6 @@ import { Gift } from "lucide-react";
 import type { UpcomingBirthday } from "@/app/api/google/calendar/upcoming-birthday/route";
 
 function formatDisplayDate(dateStr: string): string {
-  // dateStr is YYYY-MM-DD; append T12:00 to avoid UTC-shift on date-only strings
   const d = new Date(`${dateStr}T12:00:00`);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -29,19 +28,27 @@ export default function UpcomingBirthdayWidget() {
     ? "Today!"
     : `in ${birthday.daysUntil} day${birthday.daysUntil === 1 ? "" : "s"} (${formatDisplayDate(birthday.date)})`;
 
+  const containerStyle: React.CSSProperties = isToday
+    ? {
+        background: "color-mix(in srgb, var(--color-cta) 15%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--color-cta) 40%, transparent)",
+        color: "var(--color-cta)",
+      }
+    : {
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        color: "var(--color-text-muted)",
+      };
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-      isToday
-        ? "bg-rose-950/40 border-rose-800/50 text-rose-300"
-        : "bg-neutral-900 border-neutral-800 text-neutral-400"
-    }`}>
-      <Gift size={13} className={isToday ? "text-rose-400 shrink-0" : "text-rose-500/70 shrink-0"} />
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={containerStyle}>
+      <Gift size={13} style={{ color: "var(--color-cta)", flexShrink: 0 }} />
       <span>
-        <span className={isToday ? "text-rose-300 font-medium" : "text-neutral-200"}>
+        <span style={{ color: isToday ? "var(--color-cta)" : "var(--color-text)", fontWeight: isToday ? 500 : 400 }}>
           {birthday.name}&apos;s birthday
         </span>
         {" — "}
-        <span className={isToday ? "text-rose-400 font-semibold" : "text-neutral-500"}>
+        <span style={{ color: isToday ? "var(--color-cta)" : "var(--color-text-muted)", fontWeight: isToday ? 600 : 400 }}>
           {label}
         </span>
       </span>

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
+import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
 async function updateProfile(key: string, value: string) {
@@ -92,6 +93,8 @@ export default async function SettingsPage() {
           Edit and save changes inline. Press Enter or click Save on any field.
         </p>
       </div>
+
+      <AppearanceSettings />
 
       <ProfileForm
         values={values}

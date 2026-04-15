@@ -9,27 +9,27 @@ import {
   Legend,
 } from "recharts";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
+import { useChartColors, type ChartColors } from "@/lib/chart-colors";
 
 interface Props {
   habits: HabitRegistry[];
-  /** All logs from the last 7 days */
   weekLogs: HabitLog[];
 }
 
-const TOOLTIP_STYLE = {
-  contentStyle: { background: "#181B24", border: "1px solid #2A2F45", borderRadius: 8 },
-  labelStyle: { color: "#E2E8F0", fontSize: 13 },
-  itemStyle: { color: "#64748B", fontSize: 12 },
-};
-
-function rateColor(rate: number): string {
-  if (rate >= 0.8) return "#10B981";
-  if (rate >= 0.5) return "#F59E0B";
-  return "#EF4444";
+function rateColor(rate: number, c: ChartColors): string {
+  if (rate >= 0.8) return c.positive;
+  if (rate >= 0.5) return c.warning;
+  return c.danger;
 }
 
 export function RadialCompletion({ habits, weekLogs }: Props) {
   const [animate, setAnimate] = useState(true);
+  const c = useChartColors();
+  const TOOLTIP_STYLE = {
+    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
+    labelStyle: { color: c.text, fontSize: 13 },
+    itemStyle: { color: c.textMuted, fontSize: 12 },
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -49,7 +49,7 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
     return {
       name: h.name,
       value: Math.round(rate * 100),
-      fill: rateColor(rate),
+      fill: rateColor(rate, c),
     };
   });
 
@@ -102,7 +102,7 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
           <Legend
             iconType="circle"
             iconSize={7}
-            wrapperStyle={{ fontSize: 11, color: "#64748B" }}
+            wrapperStyle={{ fontSize: 11, color: c.textMuted }}
             formatter={(value) => {
               const entry = data.find((d) => d.name === value);
               return `${value} ${entry ? `(${entry.value}%)` : ""}`;

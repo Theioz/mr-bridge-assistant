@@ -58,7 +58,7 @@ export default function JournalTabs({
             className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
             style={{
               background: tab === t ? "var(--color-primary)"     : "transparent",
-              color:      tab === t ? "var(--color-primary-foreground)" : "var(--color-text-muted)",
+              color:      tab === t ? "#fff" : "var(--color-text-muted)",
             }}
           >
             {label}

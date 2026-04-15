@@ -233,7 +233,7 @@ You only need to do this once. Claude Code will remember the auth for future ses
 
 Mr. Bridge reads a flat key-value `profile` table in Supabase. Fill in your details one of two ways:
 
-- **Web app** → open the web interface → **Settings** → fill in Display Name, Home Location, Target Weight, nutrition goals, and fitness goals, then save each field.
+- **Web app** → open the web interface → **Settings** → fill in Display Name, Home Location, Target Weight, nutrition goals, and fitness goals, then save each field. The Appearance section lets you pick System / Light / Dark (persisted to `profile.theme_preference`; header toggle and Settings radio stay in sync).
 - **Chat** → ask Mr. Bridge: *"Set my weight goal to 160 lbs"* or *"My name is Jason"* — the AI writes these directly to Supabase.
 
 ### Step 11 — First session

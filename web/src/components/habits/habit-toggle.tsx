@@ -77,7 +77,8 @@ export default function HabitToggle({
             <button
               type="button"
               onClick={() => setShowEmojiPicker((v) => !v)}
-              className="w-10 h-8 bg-neutral-800 text-neutral-100 text-lg rounded flex items-center justify-center focus:outline-none focus:ring-1 focus:ring-neutral-600"
+              className="w-10 h-8 text-lg rounded flex items-center justify-center cursor-pointer"
+              style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
               title="Pick emoji"
             >
               {editEmoji || "😀"}
@@ -101,14 +102,16 @@ export default function HabitToggle({
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className="flex-1 min-w-[100px] bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            className="flex-1 min-w-[100px] text-sm rounded px-2 py-1"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
             placeholder="Habit name"
           />
           <input
             type="text"
             value={editCategory}
             onChange={(e) => setEditCategory(e.target.value)}
-            className="w-24 bg-neutral-800 text-neutral-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            className="w-24 text-sm rounded px-2 py-1"
+            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
             placeholder="Category"
           />
           <button
@@ -119,7 +122,8 @@ export default function HabitToggle({
                 setEditing(false);
               });
             }}
-            className="text-xs px-2 py-1 bg-neutral-700 text-neutral-100 rounded hover:bg-neutral-600 disabled:opacity-40"
+            className="text-xs px-2 py-1 rounded disabled:opacity-40 cursor-pointer"
+            style={{ background: "var(--color-primary)", color: "#fff" }}
           >
             Save
           </button>
@@ -130,7 +134,8 @@ export default function HabitToggle({
               setEditCategory(habit.category ?? "");
               setEditing(false);
             }}
-            className="text-xs px-2 py-1 text-neutral-500 hover:text-neutral-300"
+            className="text-xs px-2 py-1 cursor-pointer"
+            style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
           >
             Cancel
           </button>
@@ -140,15 +145,17 @@ export default function HabitToggle({
           <button
             onClick={handleToggle}
             disabled={isPending || archivePending}
-            className="flex-1 flex items-center gap-3 py-3 px-1 text-left hover:bg-neutral-800/50 rounded-lg transition-colors"
+            className="flex-1 flex items-center gap-3 py-3 px-1 text-left rounded-lg transition-colors cursor-pointer"
           >
             <span
-              className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
-                completed ? "bg-blue-500 border-blue-500" : "border-neutral-600"
-              }`}
+              className="w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{
+                background: completed ? "var(--color-primary)" : "transparent",
+                borderColor: completed ? "var(--color-primary)" : "var(--color-border)",
+              }}
             >
               {completed && (
-                <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" style={{ color: "#fff" }}>
                   <path
                     d="M2 6l3 3 5-5"
                     stroke="currentColor"
@@ -161,12 +168,16 @@ export default function HabitToggle({
             </span>
             <span className="text-lg leading-none">{habit.emoji}</span>
             <span
-              className={`text-sm ${completed ? "text-neutral-500 line-through" : "text-neutral-200"}`}
+              className="text-sm"
+              style={{
+                color: completed ? "var(--color-text-muted)" : "var(--color-text)",
+                textDecoration: completed ? "line-through" : "none",
+              }}
             >
               {habit.name}
             </span>
             {!manageMode && habit.category && (
-              <span className="ml-auto text-xs text-neutral-600">{habit.category}</span>
+              <span className="ml-auto text-xs" style={{ color: "var(--color-text-faint)" }}>{habit.category}</span>
             )}
           </button>
           {manageMode ? (
@@ -175,7 +186,8 @@ export default function HabitToggle({
                 <button
                   onClick={() => setEditing(true)}
                   disabled={archivePending}
-                  className="ml-1 text-xs text-neutral-600 hover:text-neutral-300 px-1 py-3 transition-colors disabled:opacity-40"
+                  className="ml-1 text-xs px-1 py-3 transition-colors disabled:opacity-40 cursor-pointer"
+                  style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
                   title="Edit habit"
                 >
                   Edit
@@ -185,7 +197,8 @@ export default function HabitToggle({
                 <button
                   onClick={handleArchive}
                   disabled={archivePending}
-                  className="ml-1 text-xs text-neutral-600 hover:text-red-400 px-1 py-3 transition-colors disabled:opacity-40"
+                  className="ml-1 text-xs px-1 py-3 transition-colors disabled:opacity-40 cursor-pointer"
+                  style={{ color: "var(--color-danger)", background: "transparent", border: "none" }}
                   title="Archive habit"
                 >
                   ✕

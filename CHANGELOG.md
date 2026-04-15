@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (dark/light theme toggle — issue #214)
+- **`web/src/components/theme-provider.tsx`** — wraps `next-themes` `ThemeProvider` with `attribute="data-theme"` and `enableSystem`.
+- **`web/src/components/theme-toggle.tsx`** — header icon button (System/Light/Dark cycle), Lucide `Sun` / `Moon` / `Monitor`. Rendered in the desktop sidebar header and the mobile More sheet header.
+- **`web/src/components/settings/appearance-settings.tsx`** — Settings "Appearance" radio group (System / Light / Dark) synced bidirectionally with the header toggle via `useTheme()`.
+- **`web/src/lib/theme.ts`** — `getServerThemePreference()` reads `profile.theme_preference` (K/V key) so SSR emits the correct `data-theme` on `<html>` and avoids FOUC.
+- **`web/src/lib/theme-actions.ts`** — `setThemePreference()` server action that upserts (or deletes, for `system`) the profile row.
+- **`web/src/lib/chart-colors.ts`** — `useChartColors()` hook reads CSS variables at runtime via `getComputedStyle()` so Recharts responds to theme switches.
+- **Audit deliverable** at `.claude/plans/snappy-twirling-cookie.md`.
+
+### Changed (issue #214)
+- **`web/src/app/globals.css`** — dark tokens aligned to MASTER.md (`--color-primary` now `#3B82F6`, not `#6366F1`); added `:root[data-theme="light"]` with MASTER.md light column values; added global `:focus-visible` outline rule; `html { color-scheme: dark light; }`.
+- **Color migration** — replaced ~200 hardcoded hex values and ~30 Tailwind `neutral-*`/`rose-*`/`blue-*` utilities with CSS vars across dashboard + fitness + habits + chat + nav + settings + login. Chart components now consume `useChartColors()`.
+- **`web/src/components/dashboard/dashboard-header.tsx`** — replaced emoji WMO weather map with Lucide icons (`Sun`, `CloudSun`, `CloudRain`, etc.).
+- **`design-system/mr-bridge/MASTER.md`** — §Typography now documents DM Sans + Inter (intentional deviation from original Fira spec).
+
 ### Added (ui-ux-pro-max skill + design system — prep for issue #10)
 - **`.claude/skills/ui-ux-pro-max/`** — installed via `uipro init --ai claude` (uipro-cli@2.2.3). Provides design intelligence (67 styles, 96 palettes, 57 font pairings, 13 stacks) with a CLI for generating design systems and running domain searches (style, ux, typography, color, chart, stack-specific guidelines).
 - **`design-system/mr-bridge/MASTER.md`** — persisted design system: Dark Mode (OLED) style, Fira Code + Fira Sans typography, blue+amber palette with dark/light tokens, spacing/shadow scales, component specs, anti-patterns, pre-delivery checklist. Page Pattern hand-edited to "Sidebar + Main (Chat/Dashboard App Shell)" after the generator's output was unusable (landing-page layouts + raw CSV leak). Will serve as the source of truth for the web interface work in issue #10.

@@ -49,7 +49,7 @@ function formatChange(changeAbs: number | null, changePct: number | null): strin
 
 function TickerRow({ row }: { row: StocksCache }) {
   const isPositive = (row.change_abs ?? 0) >= 0;
-  const changeColor = isPositive ? "#22c55e" : "#ef4444";
+  const changeColor = isPositive ? "var(--color-positive)" : "var(--color-danger)";
 
   const sparkData = (row.sparkline ?? []).map((p) => ({ close: p.close }));
 

@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Sun, CloudSun, Cloud, Cloudy, CloudFog, CloudRain, CloudSnow, CloudLightning, Thermometer,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import SyncButton from "./sync-button";
 import { WindowSelector } from "@/components/ui/window-selector";
 import type { WeatherData } from "@/app/api/weather/route";
 import type { WindowKey } from "@/lib/window";
 
-const WMO_EMOJI: Record<number, string> = {
-  0: "☀️", 1: "🌤", 2: "⛅", 3: "☁️",
-  45: "🌫", 48: "🌫",
-  51: "🌦", 53: "🌦", 55: "🌧",
-  61: "🌧", 63: "🌧", 65: "🌧",
-  71: "🌨", 73: "🌨", 75: "❄️", 77: "❄️",
-  80: "🌦", 81: "🌦", 82: "⛈",
-  95: "⛈", 96: "⛈", 99: "⛈",
+const WMO_ICON: Record<number, LucideIcon> = {
+  0: Sun, 1: CloudSun, 2: CloudSun, 3: Cloud,
+  45: CloudFog, 48: CloudFog,
+  51: CloudRain, 53: CloudRain, 55: CloudRain,
+  61: CloudRain, 63: CloudRain, 65: CloudRain,
+  71: CloudSnow, 73: CloudSnow, 75: CloudSnow, 77: CloudSnow,
+  80: CloudRain, 81: CloudRain, 82: CloudLightning,
+  95: CloudLightning, 96: CloudLightning, 99: CloudLightning,
 };
 
 interface Props {
@@ -32,11 +36,10 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
       .catch(() => {});
   }, []);
 
-  const emoji = weather?.wmoCode != null ? (WMO_EMOJI[weather.wmoCode] ?? "🌡") : null;
+  const Icon = weather?.wmoCode != null ? (WMO_ICON[weather.wmoCode] ?? Cloudy) : Thermometer;
 
   return (
     <div className="flex items-start justify-between gap-4">
-      {/* Left: greeting + date + weather */}
       <div>
         <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
           {greeting}
@@ -46,7 +49,7 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         </p>
         {weather && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-            {emoji && <span style={{ fontSize: 14, lineHeight: 1 }}>{emoji}</span>}
+            <Icon size={14} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} aria-hidden />
             {weather.temp != null && (
               <span style={{ color: "var(--color-text)" }}>{Math.round(weather.temp)}°</span>
             )}
@@ -60,7 +63,6 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         )}
       </div>
 
-      {/* Right: sync + window */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <SyncButton />
         <WindowSelector current={windowKey} />

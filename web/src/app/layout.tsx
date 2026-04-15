@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { getServerThemePreference } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Mr. Bridge",
@@ -11,13 +13,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const themePref = await getServerThemePreference();
+  const htmlThemeAttr =
+    themePref === "light" || themePref === "dark" ? { "data-theme": themePref } : {};
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning {...htmlThemeAttr}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -27,7 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
-        {children}
+        <ThemeProvider defaultTheme={themePref}>{children}</ThemeProvider>
       </body>
     </html>
   );

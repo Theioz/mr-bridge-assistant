@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ComposedChart,
-  BarChart,
   Bar,
   Line,
   XAxis,
@@ -15,6 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface Props {
   fitnessData: FitnessLog[];
@@ -36,8 +36,14 @@ interface TooltipProps {
 function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs">
-      <p className="text-neutral-400 mb-1">{label}</p>
+    <div
+      className="rounded-lg px-3 py-2 text-xs"
+      style={{
+        background: "var(--color-surface-raised)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      <p style={{ color: "var(--color-text-muted)", marginBottom: 4 }}>{label}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>
           {p.name}: {p.value != null ? p.value : "—"}
@@ -46,18 +52,6 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
     </div>
   );
 }
-
-const axisProps = {
-  tick: { fill: "#737373", fontSize: 11 },
-  tickLine: false,
-  axisLine: false,
-} as const;
-
-const gridProps = {
-  strokeDasharray: "3 3",
-  stroke: "#262626",
-  vertical: false,
-} as const;
 
 const TAB_LABELS: Record<Tab, string> = {
   bodycomp: "Body Comp",
@@ -68,6 +62,19 @@ const TAB_LABELS: Record<Tab, string> = {
 export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }: Props) {
   const [tab, setTab] = useState<Tab>("bodycomp");
   const [window, setWindow] = useState<Window>("30d");
+  const c = useChartColors();
+
+  const axisProps = {
+    tick: { fill: c.textMuted, fontSize: 11 },
+    tickLine: false,
+    axisLine: false,
+  } as const;
+  const gridProps = {
+    strokeDasharray: "3 3",
+    stroke: c.grid,
+    vertical: false,
+  } as const;
+  const legendWrapperStyle = { fontSize: "11px", color: c.textMuted, paddingTop: "8px" };
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -120,8 +127,16 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
       ? recoveryChartData.length === 0
       : activityChartData.length === 0;
 
+  const pillStyle = (active: boolean): React.CSSProperties => ({
+    background: active ? "var(--color-surface-raised)" : "transparent",
+    color: active ? "var(--color-text)" : "var(--color-text-muted)",
+  });
+
   return (
-    <div className="bg-neutral-900 rounded-xl border border-neutral-800 p-4 h-full">
+    <div
+      className="rounded-xl p-4 h-full"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex gap-1">
@@ -129,11 +144,8 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                tab === t
-                  ? "bg-neutral-700 text-neutral-100"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
+              className="text-xs px-3 py-1 rounded-full transition-colors cursor-pointer"
+              style={pillStyle(tab === t)}
             >
               {TAB_LABELS[t]}
             </button>
@@ -144,11 +156,8 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
             <button
               key={w}
               onClick={() => setWindow(w)}
-              className={`text-xs px-2.5 py-1 rounded-full transition-colors font-[family-name:var(--font-mono)] ${
-                window === w
-                  ? "bg-neutral-700 text-neutral-100"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
+              className="text-xs px-2.5 py-1 rounded-full transition-colors cursor-pointer"
+              style={pillStyle(window === w)}
             >
               {w}
             </button>
@@ -158,7 +167,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
 
       {/* Chart */}
       {isEmpty ? (
-        <div className="h-48 flex items-center justify-center text-sm text-neutral-600">
+        <div className="h-48 flex items-center justify-center text-sm" style={{ color: "var(--color-text-faint)" }}>
           No data for this period
         </div>
       ) : tab === "bodycomp" ? (
@@ -169,33 +178,13 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
             <YAxis yAxisId="weight" orientation="left" {...axisProps} domain={["auto", "auto"]} />
             <YAxis yAxisId="bf" orientation="right" {...axisProps} domain={["auto", "auto"]} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              iconType="circle"
-              iconSize={6}
-              wrapperStyle={{ fontSize: "11px", color: "#737373", paddingTop: "8px" }}
-            />
-            <Line
-              yAxisId="weight"
-              type="monotone"
-              dataKey="weight"
-              name="Weight (lb)"
-              stroke="#3b82f6"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-            />
-            <Line
-              yAxisId="bf"
-              type="monotone"
-              dataKey="bodyFat"
-              name="Body fat %"
-              stroke="#f97316"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-            />
+            <Legend iconType="circle" iconSize={6} wrapperStyle={legendWrapperStyle} />
+            <Line yAxisId="weight" type="monotone" dataKey="weight" name="Weight (lb)"
+              stroke={c.primary} strokeWidth={1.5} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls />
+            <Line yAxisId="bf" type="monotone" dataKey="bodyFat" name="Body fat %"
+              stroke={c.warning} strokeWidth={1.5} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
       ) : tab === "recovery" ? (
@@ -206,110 +195,62 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
             <YAxis yAxisId="hrv" orientation="left" {...axisProps} domain={["auto", "auto"]} />
             <YAxis yAxisId="readiness" orientation="right" {...axisProps} domain={[0, 100]} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              iconType="circle"
-              iconSize={6}
-              wrapperStyle={{ fontSize: "11px", color: "#737373", paddingTop: "8px" }}
-            />
-            <Line
-              yAxisId="hrv"
-              type="monotone"
-              dataKey="hrv"
-              name="HRV (ms)"
-              stroke="#3b82f6"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              animationDuration={300}
-            />
-            <Line
-              yAxisId="readiness"
-              type="monotone"
-              dataKey="readiness"
-              name="Readiness"
-              stroke="#a3e635"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              animationDuration={300}
-            />
-            <Line
-              yAxisId="readiness"
-              type="monotone"
-              dataKey="spo2"
-              name="SpO2 %"
-              stroke="#06b6d4"
-              strokeWidth={1}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              animationDuration={300}
-              strokeDasharray="4 2"
-            />
+            <Legend iconType="circle" iconSize={6} wrapperStyle={legendWrapperStyle} />
+            <Line yAxisId="hrv" type="monotone" dataKey="hrv" name="HRV (ms)"
+              stroke={c.primary} strokeWidth={1.5} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls animationDuration={300} />
+            <Line yAxisId="readiness" type="monotone" dataKey="readiness" name="Readiness"
+              stroke={c.positive} strokeWidth={1.5} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls animationDuration={300} />
+            <Line yAxisId="readiness" type="monotone" dataKey="spo2" name="SpO2 %"
+              stroke={c.info} strokeWidth={1} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls animationDuration={300}
+              strokeDasharray="4 2" />
           </ComposedChart>
         </ResponsiveContainer>
       ) : (
-        /* Activity tab: steps bars + active cal line */
         <ResponsiveContainer width="100%" height={200}>
           <ComposedChart data={activityChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} interval="preserveStartEnd" />
-            <YAxis yAxisId="steps" orientation="left" {...axisProps} domain={[0, "auto"]} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <YAxis yAxisId="steps" orientation="left" {...axisProps} domain={[0, "auto"]}
+              tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
             <YAxis yAxisId="cal" orientation="right" {...axisProps} domain={[0, "auto"]} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              iconType="circle"
-              iconSize={6}
-              wrapperStyle={{ fontSize: "11px", color: "#737373", paddingTop: "8px" }}
-            />
-            <Bar
-              yAxisId="steps"
-              dataKey="steps"
-              name="Steps"
-              fill="#6366f1"
-              opacity={0.7}
-              radius={[2, 2, 0, 0]}
-              isAnimationActive
-              animationDuration={300}
-            />
-            <Line
-              yAxisId="cal"
-              type="monotone"
-              dataKey="activeCal"
-              name="Active Cal"
-              stroke="#f97316"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
-              connectNulls
-              animationDuration={300}
-            />
+            <Legend iconType="circle" iconSize={6} wrapperStyle={legendWrapperStyle} />
+            <Bar yAxisId="steps" dataKey="steps" name="Steps" fill={c.primary} opacity={0.7}
+              radius={[2, 2, 0, 0]} isAnimationActive animationDuration={300} />
+            <Line yAxisId="cal" type="monotone" dataKey="activeCal" name="Active Cal"
+              stroke={c.warning} strokeWidth={1.5} dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }} connectNulls animationDuration={300} />
           </ComposedChart>
         </ResponsiveContainer>
       )}
 
       {/* Recent workout row */}
       {recentWorkout && (
-        <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between">
+        <div
+          className="mt-3 pt-3 flex items-center justify-between"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
           <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Last workout</p>
-            <p className="text-sm text-neutral-300 font-medium capitalize">{recentWorkout.activity}</p>
+            <p className="text-xs mb-0.5" style={{ color: "var(--color-text-muted)" }}>Last workout</p>
+            <p className="text-sm font-medium capitalize" style={{ color: "var(--color-text)" }}>{recentWorkout.activity}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-[family-name:var(--font-mono)] text-neutral-400">
+            <p className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
               {recentWorkout.duration_mins != null && <span>{recentWorkout.duration_mins}m</span>}
               {recentWorkout.calories != null && (
                 <span>{recentWorkout.duration_mins != null ? " · " : ""}{recentWorkout.calories} cal</span>
               )}
               {recentWorkout.avg_hr != null && <span> · {recentWorkout.avg_hr} bpm</span>}
             </p>
-            <p className="text-xs text-neutral-600 mt-0.5">{recentWorkout.date}</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-text-faint)" }}>{recentWorkout.date}</p>
           </div>
           <Link
             href="/fitness"
-            className="ml-4 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="ml-4 text-xs transition-colors"
+            style={{ color: "var(--color-text-muted)" }}
             onClick={(e) => e.stopPropagation()}
           >
             View all →

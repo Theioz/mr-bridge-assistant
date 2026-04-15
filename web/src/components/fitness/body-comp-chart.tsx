@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { FitnessLog } from "@/lib/types";
+import { useChartColors } from "@/lib/chart-colors";
 
 interface Props {
   data: FitnessLog[];
@@ -25,8 +26,14 @@ interface TooltipProps {
 function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs">
-      <p className="text-neutral-400 mb-1">{label}</p>
+    <div
+      className="rounded-lg px-3 py-2 text-xs"
+      style={{
+        background: "var(--color-surface-raised)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      <p style={{ color: "var(--color-text-muted)", marginBottom: 4 }}>{label}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>
           {p.name}: {p.value}
@@ -37,15 +44,16 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 }
 
 export default function BodyCompChart({ data }: Props) {
+  const c = useChartColors();
   const chartData = data.map((d) => ({
-    date: d.date.slice(5), // MM-DD
+    date: d.date.slice(5),
     weight: d.weight_lb,
     bodyFat: d.body_fat_pct,
   }));
 
   if (chartData.length === 0) {
     return (
-      <div className="h-48 flex items-center justify-center text-sm text-neutral-600">
+      <div className="h-48 flex items-center justify-center text-sm" style={{ color: "var(--color-text-faint)" }}>
         No fitness data yet
       </div>
     );
@@ -56,7 +64,7 @@ export default function BodyCompChart({ data }: Props) {
       <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
         <XAxis
           dataKey="date"
-          tick={{ fill: "#737373", fontSize: 11 }}
+          tick={{ fill: c.textMuted, fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
@@ -64,7 +72,7 @@ export default function BodyCompChart({ data }: Props) {
         <YAxis
           yAxisId="weight"
           orientation="left"
-          tick={{ fill: "#737373", fontSize: 11 }}
+          tick={{ fill: c.textMuted, fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           domain={["auto", "auto"]}
@@ -72,24 +80,24 @@ export default function BodyCompChart({ data }: Props) {
         <YAxis
           yAxisId="bf"
           orientation="right"
-          tick={{ fill: "#737373", fontSize: 11 }}
+          tick={{ fill: c.textMuted, fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           domain={["auto", "auto"]}
         />
-        <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
         <Tooltip content={<CustomTooltip />} />
         <Legend
           iconType="circle"
           iconSize={6}
-          wrapperStyle={{ fontSize: "11px", color: "#737373", paddingTop: "8px" }}
+          wrapperStyle={{ fontSize: "11px", color: c.textMuted, paddingTop: "8px" }}
         />
         <Line
           yAxisId="weight"
           type="monotone"
           dataKey="weight"
           name="Weight (lb)"
-          stroke="#3b82f6"
+          stroke={c.primary}
           strokeWidth={1.5}
           dot={false}
           connectNulls
@@ -99,7 +107,7 @@ export default function BodyCompChart({ data }: Props) {
           type="monotone"
           dataKey="bodyFat"
           name="Body fat %"
-          stroke="#f97316"
+          stroke={c.warning}
           strokeWidth={1.5}
           dot={false}
           connectNulls

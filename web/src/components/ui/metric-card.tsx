@@ -41,7 +41,7 @@ export function MetricCard({
         border: "1px solid var(--color-border)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "#2A2F45";
+        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-text-faint)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
