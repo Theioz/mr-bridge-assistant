@@ -346,7 +346,8 @@ mr-bridge-assistant/
 │   │   ├── components/
 │   │   │   ├── nav.tsx                    # Left sidebar (desktop); bottom tab bar + More sheet (mobile)
 │   │   │   ├── ui/
-│   │   │   │   └── logo.tsx               # MB monogram SVG
+│   │   │   │   ├── logo.tsx               # MB monogram SVG
+│   │   │   │   └── sheet.tsx              # Radix-Dialog-backed bottom sheet (focus trap, Escape, role=dialog)
 │   │   │   ├── chat/                      # Chat UI with markdown rendering + session history
 │   │   │   ├── tasks/                     # Task CRUD components
 │   │   │   ├── habits/                    # Habit toggle, add/archive UI, heatmap, streak charts

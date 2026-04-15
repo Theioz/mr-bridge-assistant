@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (a11y: sheet focus traps — issue #215)
+- **`web/src/components/ui/sheet.tsx`** — thin `<Sheet>` wrapper over `@radix-ui/react-dialog` preserving the existing bottom-sheet visuals (rounded top, safe-area inset, backdrop tint). Provides focus trap, Escape dismiss, focus restore, `role="dialog"`, and `aria-modal`. Accessible title rendered via `Dialog.Title` (sr-only; each sheet keeps its own visible header).
+- **`web/package.json`** — adds `@radix-ui/react-dialog` dependency.
+
+### Changed (issue #215)
+- **`web/src/components/nav.tsx`** — More sheet migrated to `<Sheet>`. Keyboard users can now Tab within the open sheet, Escape dismisses, and focus returns to the More button on close.
+- **`web/src/components/chat/session-sheet.tsx`** — Chat history sheet migrated to `<Sheet>` with the same a11y benefits; backdrop click still dismisses via `onOpenChange`.
+
 ### Added (dark/light theme toggle — issue #214)
 - **`web/src/components/theme-provider.tsx`** — wraps `next-themes` `ThemeProvider` with `attribute="data-theme"` and `enableSystem`.
 - **`web/src/components/theme-toggle.tsx`** — header icon button (System/Light/Dark cycle), Lucide `Sun` / `Moon` / `Monitor`. Rendered in the desktop sidebar header and the mobile More sheet header.

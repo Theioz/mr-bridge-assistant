@@ -4,6 +4,7 @@ import { Plus, X, Trash2, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
 import { formatRelative, daysUntilPurge } from "@/lib/relative-time";
+import Sheet from "@/components/ui/sheet";
 
 interface Props {
   open: boolean;
@@ -31,25 +32,15 @@ export default function SessionSheet({
   timeTick,
 }: Props) {
   const [archivedExpanded, setArchivedExpanded] = useState(false);
-  if (!open) return null;
 
   return (
-    <>
-      <div
-        className="lg:hidden fixed inset-0 z-[60]"
-        style={{ background: "rgba(0,0,0,0.6)" }}
-        onClick={onClose}
-      />
-
-      <div
-        className="lg:hidden fixed left-0 right-0 bottom-0 z-[70] rounded-t-2xl flex flex-col"
-        style={{
-          background: "var(--color-surface)",
-          borderTop: "1px solid var(--color-border)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          maxHeight: "60vh",
-        }}
-      >
+    <Sheet
+      open={open}
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      title="Chat history"
+      contentClassName="flex flex-col"
+      contentStyle={{ maxHeight: "60vh" }}
+    >
         <div
           className="mx-auto mt-3 mb-1 rounded-full"
           style={{ width: 36, height: 4, background: "var(--color-border)" }}
@@ -274,7 +265,6 @@ export default function SessionSheet({
             )}
           </div>
         </div>
-      </div>
-    </>
+    </Sheet>
   );
 }
