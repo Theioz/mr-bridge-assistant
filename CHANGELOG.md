@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (card hover lift + tab focus ring — issue #229)
+- **`web/src/app/globals.css`** — added `.card-lift` utility (`hover: translateY(-2px) + box-shadow: var(--shadow-lg)`), pairs with `transition-all duration-200` per MASTER.md card spec. Uses `transform` so no layout shift.
+- **`web/src/components/ui/metric-card.tsx`** (H6) — swapped `transition-colors` → `transition-all`, added `.card-lift` so metric cards lift on hover alongside the existing border-color change.
+- **`web/src/components/dashboard/health-breakdown.tsx`** (M13) — `TabPills` now render an explicit 2px primary-colored `focus-visible` outline with 2px offset; global `:focus-visible` was too subtle on the dense pill row.
+
 ### Changed (hover-handler sweep → CSS / Tailwind — issue #227)
 - **`web/src/app/globals.css`** — added hover utility classes (`.hover-text-brighten`, `.hover-text-danger`, `.hover-text-muted`, `.hover-bg-subtle`, `.hover-bg-border`, `.hover-bg-raised`, `.hover-border-strong`) that override inline-style base colors via `!important` on `:hover`. Paired with `transition-colors` / `transition-opacity` they deliver the 150ms MASTER.md spec.
 - **Mechanical sweep across 10 components** — removed `onMouseEnter`/`onMouseLeave` inline-style writes in [login/page.tsx](web/src/app/login/page.tsx), [chat/chat-interface.tsx](web/src/components/chat/chat-interface.tsx), [chat/chat-page-client.tsx](web/src/components/chat/chat-page-client.tsx), [chat/session-sidebar.tsx](web/src/components/chat/session-sidebar.tsx), [ui/sign-out-button.tsx](web/src/components/ui/sign-out-button.tsx), [theme-toggle.tsx](web/src/components/theme-toggle.tsx), [dashboard/habits-checkin.tsx](web/src/components/dashboard/habits-checkin.tsx), [ui/metric-card.tsx](web/src/components/ui/metric-card.tsx), [dashboard/sync-button.tsx](web/src/components/dashboard/sync-button.tsx), [dashboard/recent-workouts-table.tsx](web/src/components/dashboard/recent-workouts-table.tsx). Buttons with opacity hovers use native Tailwind `hover:opacity-85` / `hover:opacity-90`. Remaining `onMouseEnter`/`onMouseLeave` callsites (message-bubble reveal, slash-command-menu active index, heatmap tooltip) are state-driven and kept.

@@ -152,10 +152,11 @@ function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2"
           style={{
             background: active === key ? "var(--color-primary)" : "var(--color-surface-raised)",
             color:      active === key ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+            outlineColor: "var(--color-primary)",
           }}
         >
           {label}
