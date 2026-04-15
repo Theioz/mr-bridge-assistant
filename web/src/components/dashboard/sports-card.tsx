@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { RefreshCw, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { RefreshCw, Loader2, ChevronDown, ChevronRight, Trophy } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { SportsCache } from "@/lib/types";
 import type { Game, Standing } from "@/lib/sync/sports/provider";
 
@@ -253,11 +253,14 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
         </div>
 
         {favorites.length === 0 ? (
-          <div className="px-5 py-6 text-center" style={{ fontSize: 13, color: "var(--color-text-faint)" }}>
-            No teams —{" "}
-            <Link href="/settings#sports" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>
-              add favorites in Settings
-            </Link>
+          <div className="px-5">
+            <EmptyState
+              icon={Trophy}
+              actionHref="/settings#sports"
+              actionLabel="Add"
+            >
+              No teams on watchlist
+            </EmptyState>
           </div>
         ) : (
           <div style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 0.15s" }}>

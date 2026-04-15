@@ -357,6 +357,7 @@ mr-bridge-assistant/
 │   │   │   ├── settings/
 │   │   │   │   └── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
 │   │   │   └── dashboard/
+│   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
 │   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── sync-button.tsx        # Calls all 3 sync routes; spinner + router.refresh()

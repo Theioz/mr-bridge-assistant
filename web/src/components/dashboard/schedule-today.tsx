@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Calendar, Gift } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { CalendarEvent } from "@/app/api/google/calendar/route";
 
 function parseTimeToMinutes(timeStr: string): number | null {
@@ -86,7 +87,9 @@ export default function ScheduleToday() {
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm" style={{ color: "var(--color-danger)" }}>Failed to load — check Google credentials</p>
+        <EmptyState icon={Calendar} variant="error" paddingY={8}>
+          Calendar unavailable — check Google credentials
+        </EmptyState>
       ) : events.length > 0 ? (
         <div className="space-y-2.5">
           {useEnhanced ? (
@@ -147,7 +150,7 @@ export default function ScheduleToday() {
           )}
         </div>
       ) : (
-        <p className="text-sm" style={faint}>No events today</p>
+        <EmptyState icon={Calendar} paddingY={8}>No events today</EmptyState>
       )}
     </div>
   );

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { RefreshCw, Loader2, AlertTriangle } from "lucide-react";
+import { RefreshCw, Loader2, AlertTriangle, LineChart as LineChartIcon } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { StocksCache } from "@/lib/types";
 
 interface Props {
@@ -220,11 +221,14 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
 
         {/* Empty watchlist */}
         {hasApiKey && rows.length === 0 && (
-          <div
-            className="px-5 py-6 text-center"
-            style={{ fontSize: 13, color: "var(--color-text-faint)" }}
-          >
-            No stocks — add tickers in Settings
+          <div className="px-5">
+            <EmptyState
+              icon={LineChartIcon}
+              actionHref="/settings#watchlist"
+              actionLabel="Add"
+            >
+              No stocks on watchlist
+            </EmptyState>
           </div>
         )}
 

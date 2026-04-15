@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ListTodo } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { Task } from "@/lib/types";
 
 interface Props {
@@ -77,9 +79,9 @@ export default function TasksSummary({ tasks }: Props) {
       )}
 
       {tasks.length === 0 && (
-        <p className="mt-2 text-sm" style={{ color: "var(--color-text-faint)" }}>
-          No active tasks
-        </p>
+        <div className="mt-2">
+          <EmptyState icon={ListTodo} paddingY={8}>No active tasks</EmptyState>
+        </div>
       )}
     </Link>
   );

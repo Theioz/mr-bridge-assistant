@@ -52,6 +52,7 @@ export default function Nav() {
   const [showMore, setShowMore] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadError, setUnreadError] = useState(false);
 
   useEffect(() => {
     const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
@@ -64,9 +65,15 @@ export default function Nav() {
 
   useEffect(() => {
     fetch("/api/notifications/unread-count")
-      .then((r) => r.ok ? r.json() : { count: 0 })
-      .then((d) => setUnreadCount(d.count ?? 0))
-      .catch(() => {});
+      .then((r) => {
+        if (!r.ok) throw new Error("unread-count fetch failed");
+        return r.json();
+      })
+      .then((d) => {
+        setUnreadCount(d.count ?? 0);
+        setUnreadError(false);
+      })
+      .catch(() => setUnreadError(true));
   }, [pathname]);
 
   // Is the current page one of the "More" pages? If so, highlight the More button.
@@ -99,6 +106,7 @@ export default function Nav() {
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             const showBadge = href === "/notifications" && unreadCount > 0;
+            const showErrorDot = href === "/notifications" && unreadError && unreadCount === 0;
             return (
               <Link
                 key={href}
@@ -130,6 +138,18 @@ export default function Nav() {
                     >
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
+                  )}
+                  {showErrorDot && (
+                    <span
+                      title="Unread count unavailable"
+                      aria-label="Unread count unavailable"
+                      className="absolute -top-1 -right-1 rounded-full"
+                      style={{
+                        background: "var(--color-text-faint)",
+                        width: 6,
+                        height: 6,
+                      }}
+                    />
                   )}
                 </span>
                 {label}
@@ -230,6 +250,7 @@ export default function Nav() {
               {MOBILE_MORE.map(({ href, label, icon: Icon }) => {
                 const active = isActive(pathname, href);
                 const showBadge = href === "/notifications" && unreadCount > 0;
+            const showErrorDot = href === "/notifications" && unreadError && unreadCount === 0;
                 return (
                   <Link
                     key={href}

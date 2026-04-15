@@ -232,8 +232,9 @@ export default async function DashboardPage() {
       {/* ── Schedule today (full width) ──────────────────────────────── */}
       <ScheduleToday />
 
-      {/* ── Habits + Tasks: fixed height, scrollable ─────────────────── */}
+      {/* ── Tasks + Habits: fixed height, scrollable ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TasksSummary tasks={tasks} />
         <HabitsCheckin
           registry={habitRegistry}
           todayLogs={todayLogs}
@@ -241,7 +242,6 @@ export default async function DashboardPage() {
           toggleAction={toggleHabit}
           date={today}
         />
-        <TasksSummary tasks={tasks} />
       </div>
 
       {/* ── Watchlist + Sports: market + favorite teams ──────────────── */}
