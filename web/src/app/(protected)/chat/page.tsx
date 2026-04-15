@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 import { createClient } from "@/lib/supabase/server";
 import ChatPageClient from "@/components/chat/chat-page-client";
