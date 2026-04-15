@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquare, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -79,6 +79,12 @@ const MEAL_ORDER: Record<string, number> = {
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealType = typeof MEAL_TYPES[number];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function normalizeName(s: string | null | undefined): string {
+  return (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle = {
@@ -152,10 +158,12 @@ function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
 
 function TodayTab({
   todayMeals,
+  pastMeals,
   macroGoals,
   macroTotals,
 }: {
   todayMeals: MealRow[];
+  pastMeals: MealRow[];
   macroGoals: MacroGoals;
   macroTotals: MacroTotals;
 }) {
@@ -168,6 +176,72 @@ function TodayTab({
   const [logCarbs, setLogCarbs] = useState("");
   const [logFat, setLogFat] = useState("");
   const [logging, setLogging] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const [logIngredients, setLogIngredients] = useState("");
+  const logSaveRef = useRef<HTMLButtonElement>(null);
+  const quickLogRef = useRef<HTMLDivElement>(null);
+
+  function prefillLog(m: MealRow) {
+    const name = m.recipes?.name ?? m.notes ?? "";
+    setLogDesc(name);
+    setLogMealType((MEAL_TYPES as readonly string[]).includes(m.meal_type) ? (m.meal_type as MealType) : "breakfast");
+    setLogCal(m.calories != null ? String(m.calories) : "");
+    setLogProtein(m.protein_g != null ? String(m.protein_g) : "");
+    setLogCarbs(m.carbs_g != null ? String(m.carbs_g) : "");
+    setLogFat(m.fat_g != null ? String(m.fat_g) : "");
+    if (m.calories != null || m.protein_g != null || m.carbs_g != null || m.fat_g != null) {
+      setMacrosOpen(true);
+    }
+    quickLogRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => logSaveRef.current?.focus(), 250);
+  }
+
+  async function handleReanalyze() {
+    if (!logIngredients.trim() && !logDesc.trim()) return;
+    setReanalyzing(true);
+    try {
+      const current_macros = {
+        calories: logCal ? Number(logCal) : undefined,
+        protein_g: logProtein ? Number(logProtein) : undefined,
+        carbs_g: logCarbs ? Number(logCarbs) : undefined,
+        fat_g: logFat ? Number(logFat) : undefined,
+      };
+      const res = await fetch("/api/meals/estimate-macros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredients: logIngredients.trim(),
+          dish_name: logDesc.trim(),
+          current_macros,
+        }),
+      });
+      if (!res.ok) return;
+      const est = await res.json();
+      if (est.calories != null) setLogCal(String(est.calories));
+      if (est.protein_g != null) setLogProtein(String(est.protein_g));
+      if (est.carbs_g != null) setLogCarbs(String(est.carbs_g));
+      if (est.fat_g != null) setLogFat(String(est.fat_g));
+      if (est.meal_type_guess && (MEAL_TYPES as readonly string[]).includes(est.meal_type_guess)) {
+        setLogMealType(est.meal_type_guess as MealType);
+      }
+      setMacrosOpen(true);
+    } finally {
+      setReanalyzing(false);
+    }
+  }
+
+  const recentMeals = useMemo(() => {
+    const byKey = new Map<string, MealRow>();
+    const sorted = [...pastMeals].sort((a, b) => (a.date < b.date ? 1 : -1));
+    for (const m of sorted) {
+      const key = normalizeName(m.recipes?.name ?? m.notes);
+      if (!key) continue;
+      if (!byKey.has(key)) byKey.set(key, m);
+    }
+    return Array.from(byKey.values()).slice(0, 10);
+  }, [pastMeals]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<{
     notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
@@ -241,6 +315,8 @@ function TodayTab({
       setLogProtein("");
       setLogCarbs("");
       setLogFat("");
+      setLogIngredients("");
+      setIngredientsOpen(false);
       setMacrosOpen(false);
       router.refresh();
     } finally {
@@ -382,7 +458,7 @@ function TodayTab({
                       >
                         {m.meal_type}
                       </span>
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: 14, color: "var(--color-text)" }}>
                           {m.recipes?.name ?? m.notes ?? "—"}
                         </span>
@@ -392,6 +468,24 @@ function TodayTab({
                           </span>
                         )}
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); prefillLog(m); }}
+                        aria-label="Log again"
+                        title="Log again"
+                        style={{
+                          padding: 4,
+                          color: "var(--color-text-muted)",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -404,6 +498,7 @@ function TodayTab({
         <div style={{ borderTop: "1px solid var(--color-border)", marginBottom: 14 }} />
 
         {/* Quick-log form */}
+        <div ref={quickLogRef}>
         <p
           className="text-xs uppercase tracking-widest mb-3"
           style={{ color: "var(--color-text-faint)", letterSpacing: "0.07em" }}
@@ -431,6 +526,7 @@ function TodayTab({
             style={{ ...inputStyle, flex: 1 }}
           />
           <button
+            ref={logSaveRef}
             onClick={handleLog}
             disabled={logging || !logDesc.trim()}
             className="flex items-center justify-center rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
@@ -447,14 +543,50 @@ function TodayTab({
           </button>
         </div>
 
-        <button
-          onClick={() => setMacrosOpen((v) => !v)}
-          className="flex items-center gap-1 transition-opacity active:opacity-70"
-          style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
-        >
-          {macrosOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          Add macros
-        </button>
+        <div className="flex items-center gap-4 flex-wrap">
+          <button
+            onClick={() => setMacrosOpen((v) => !v)}
+            className="flex items-center gap-1 transition-opacity active:opacity-70"
+            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+          >
+            {macrosOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            Add macros
+          </button>
+          <button
+            onClick={() => setIngredientsOpen((v) => !v)}
+            className="flex items-center gap-1 transition-opacity active:opacity-70"
+            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+          >
+            {ingredientsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            Ingredients
+          </button>
+          <button
+            type="button"
+            onClick={handleReanalyze}
+            disabled={(!logIngredients.trim() && !logDesc.trim()) || reanalyzing}
+            className="flex items-center gap-1 transition-opacity active:opacity-70 disabled:opacity-40"
+            title={logIngredients.trim() ? "Estimate macros from ingredients" : "Estimate macros from dish name"}
+            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+          >
+            {reanalyzing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            Estimate macros
+          </button>
+        </div>
+
+        {ingredientsOpen && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+            <label style={{ display: "block", fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>
+              Ingredients or modifications (optional)
+            </label>
+            <textarea
+              value={logIngredients}
+              onChange={(e) => setLogIngredients(e.target.value)}
+              placeholder="e.g. &quot;added 4oz chicken&quot; or full list: &quot;6oz salmon, 1 cup rice, 1 tbsp oil&quot;"
+              rows={3}
+              style={{ ...inputStyle, fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+            />
+          </div>
+        )}
 
         {macrosOpen && (
           <div
@@ -483,7 +615,86 @@ function TodayTab({
             ))}
           </div>
         )}
+        </div>
       </div>
+
+      {/* Recent meals (deduped past 7 days) */}
+      {recentMeals.length > 0 && (
+        <div
+          className="rounded-xl p-5"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <p
+            className="text-xs uppercase tracking-widest mb-4"
+            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+          >
+            Recent meals
+          </p>
+          <div className="space-y-2">
+            {recentMeals.map((m) => {
+              const hasMacros = m.calories != null || m.protein_g != null;
+              const macroStr = hasMacros
+                ? [
+                    m.calories != null && `${m.calories} cal`,
+                    m.protein_g != null && `P ${m.protein_g}g`,
+                    m.carbs_g != null && `C ${m.carbs_g}g`,
+                    m.fat_g != null && `F ${m.fat_g}g`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : null;
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-baseline gap-3"
+                  onClick={() => prefillLog(m)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: "var(--color-text-muted)",
+                      textTransform: "capitalize",
+                      minWidth: 64,
+                    }}
+                  >
+                    {m.meal_type}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, color: "var(--color-text)" }}>
+                      {m.recipes?.name ?? m.notes ?? "—"}
+                    </span>
+                    {macroStr && (
+                      <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
+                        {macroStr}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); prefillLog(m); }}
+                    aria-label="Log again"
+                    title="Log again"
+                    style={{
+                      padding: 4,
+                      color: "var(--color-text-muted)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Log via chat nudge */}
       <div
@@ -1051,6 +1262,7 @@ export default function MealsClient({
       {tab === "today" && (
         <TodayTab
           todayMeals={todayMeals}
+          pastMeals={pastMeals}
           macroGoals={macroGoals}
           macroTotals={macroTotals}
         />
