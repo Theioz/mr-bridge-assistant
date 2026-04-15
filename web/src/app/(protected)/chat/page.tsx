@@ -1,10 +1,16 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import ChatPageClient from "@/components/chat/chat-page-client";
 import type { ChatMessage, ChatSession } from "@/lib/types";
 import type { Message } from "ai";
+
+export const metadata: Metadata = {
+  title: "Chat",
+  description: "Conversational interface with Mr. Bridge.",
+};
 
 export default async function ChatPage() {
   const supabase = await createClient();

@@ -12,6 +12,16 @@ function formatExactTime(d: Date): string {
   });
 }
 
+function formatExactDateTime(d: Date): string {
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 interface Props {
   message: Message;
 }
@@ -176,13 +186,14 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
       {message.createdAt && (
         <span
           aria-hidden={!showTime}
+          title={formatExactDateTime(message.createdAt)}
           style={{
             fontSize: 10,
             color: "var(--color-text-muted)",
             padding: "2px 6px 0",
             opacity: showTime ? 1 : 0,
             transition: "opacity 120ms",
-            pointerEvents: "none",
+            pointerEvents: showTime ? "auto" : "none",
           }}
         >
           {formatExactTime(message.createdAt)}

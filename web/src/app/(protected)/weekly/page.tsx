@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { todayString, daysAgoString, getLast7Days } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
+
+export const metadata: Metadata = {
+  title: "Weekly",
+  description: "Weekly review — habits, workouts, and recovery trends.",
+};
 import type { HabitRegistry, Task, WorkoutSession, RecoveryMetrics, FitnessLog } from "@/lib/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

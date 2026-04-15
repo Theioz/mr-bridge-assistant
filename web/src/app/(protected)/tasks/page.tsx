@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import TaskItem from "@/components/tasks/task-item";
+
+export const metadata: Metadata = {
+  title: "Tasks",
+  description: "Active tasks with priorities and due dates.",
+};
 import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
 import type { Task } from "@/lib/types";

@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ProfileForm } from "@/components/settings/profile-form";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description: "Appearance, profile, location, watchlist, and sports favorites.",
+};
 import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";

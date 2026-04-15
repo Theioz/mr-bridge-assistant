@@ -7,6 +7,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (UX polish bundle — issue #217)
+- **`web/src/app/error.tsx`** — top-level error boundary with friendly copy, Retry button calling Next.js `reset()`.
+- **`web/src/app/(protected)/error.tsx`** — protected route error boundary with Retry + "Dashboard" fallback link.
+- **`web/src/app/login/layout.tsx`** — server-component wrapper so the (client) login page can still export `metadata`.
+- **Per-page metadata** — `export const metadata` added to dashboard, chat, settings, fitness, habits, journal, meals, notifications, tasks, weekly, and login. Root `layout.tsx` now defines a `title.template` of `"%s · Mr. Bridge"`, so each tab shows a unique browser title.
+- **Skip link** in `web/src/app/(protected)/layout.tsx` — visible on focus, jumps past the sidebar/nav to `#main-content`.
+
+### Changed (issue #217)
+- **`web/src/app/login/page.tsx`** — password visibility toggle (`Eye`/`EyeOff` with `aria-pressed`, `aria-label`); `aria-describedby` on email + password inputs linked to the error `<p>`; submit button now carries `aria-disabled` and a contextual `title` ("Enter a valid email" / "Enter your password") when disabled.
+- **`web/src/components/chat/message-bubble.tsx`** — timestamp tooltip (`title=`) now includes the full date, not just the time, so long-scroll context is visible on hover.
+- **`web/src/components/chat/chat-page-client.tsx`** — session-switch now shows a 3-row shimmer skeleton (respecting `role="status"`) instead of a static "Loading…" line; archive undo window extended from 5s → 10s.
+- **`web/src/components/chat/chat-interface.tsx`** — typing dots gated behind `motion-safe:animate-bounce` with a `motion-reduce:opacity-60` fallback; the container is now `role="status" aria-label="Assistant is typing"`.
+- **`web/src/components/chat/session-sheet.tsx`** — archive now opens a confirmation dialog (Radix Dialog) instead of firing immediately; preview of the chat is shown in the confirmation body; Cancel / Archive actions.
+
 ### Added (dashboard reorder + empty/error states — issue #216)
 - **`web/src/components/dashboard/empty-state.tsx`** — shared `<EmptyState icon children actionHref? actionLabel? variant?>` component. Empty variant uses `--color-text-faint`; error variant swaps icon for `AlertTriangle` and uses `--color-danger` with `role="status"`.
 

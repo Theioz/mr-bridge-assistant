@@ -4,7 +4,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { getServerThemePreference } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "Mr. Bridge",
+  title: {
+    default: "Mr. Bridge",
+    template: "%s · Mr. Bridge",
+  },
   description: "Personal assistant dashboard",
   manifest: "/manifest.json",
 };

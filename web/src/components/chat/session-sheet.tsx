@@ -1,5 +1,6 @@
 "use client";
 
+import * as Dialog from "@radix-ui/react-dialog";
 import { Plus, X, Trash2, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
@@ -32,6 +33,10 @@ export default function SessionSheet({
   timeTick,
 }: Props) {
   const [archivedExpanded, setArchivedExpanded] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const confirmingSession = confirmingId
+    ? sessions.find((s) => s.id === confirmingId)
+    : null;
 
   return (
     <Sheet
@@ -157,9 +162,9 @@ export default function SessionSheet({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onArchive(s.id);
+                      setConfirmingId(s.id);
                     }}
-                    aria-label="Delete chat"
+                    aria-label="Archive chat"
                     style={{
                       position: "absolute",
                       right: 8,
@@ -265,6 +270,77 @@ export default function SessionSheet({
             )}
           </div>
         </div>
+
+        <Dialog.Root
+          open={confirmingId !== null}
+          onOpenChange={(o) => { if (!o) setConfirmingId(null); }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay
+              className="fixed inset-0 z-[80]"
+              style={{ background: "rgba(0,0,0,0.6)" }}
+            />
+            <Dialog.Content
+              className="fixed left-1/2 top-1/2 z-[90] w-[calc(100vw-32px)] max-w-sm rounded-2xl"
+              style={{
+                transform: "translate(-50%, -50%)",
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                padding: 20,
+              }}
+            >
+              <Dialog.Title
+                className="font-heading font-semibold"
+                style={{ fontSize: 16, color: "var(--color-text)" }}
+              >
+                Archive this chat?
+              </Dialog.Title>
+              <Dialog.Description
+                className="mt-2"
+                style={{ fontSize: 13, color: "var(--color-text-muted)" }}
+              >
+                {confirmingSession?.preview
+                  ? `"${confirmingSession.preview.slice(0, 80)}${confirmingSession.preview.length > 80 ? "…" : ""}" — you'll have 10 seconds to undo.`
+                  : "You'll have 10 seconds to undo."}
+              </Dialog.Description>
+              <div className="flex items-center justify-end gap-2" style={{ marginTop: 20 }}>
+                <button
+                  onClick={() => setConfirmingId(null)}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmingId) onArchive(confirmingId);
+                    setConfirmingId(null);
+                  }}
+                  style={{
+                    background: "var(--color-danger)",
+                    border: "none",
+                    color: "white",
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Archive
+                </button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
     </Sheet>
   );
 }

@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgoString, todayString } from "@/lib/timezone";
 import MealsClient, { type MealRow, type RecipeRow, type MacroGoals, type MacroTotals } from "@/components/meals/MealsClient";
+
+export const metadata: Metadata = {
+  title: "Meals",
+  description: "Meal log, macro totals, and recipes.",
+};
 
 export default async function MealsPage() {
   const supabase = await createClient();
