@@ -192,7 +192,7 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
               style={{
                 fontSize: 11,
                 color: "var(--color-warning)",
-                background: "rgba(245,158,11,0.08)",
+                background: "var(--warning-subtle)",
                 padding: "1px 5px",
                 borderRadius: 4,
               }}
@@ -210,8 +210,8 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
             style={{
               fontSize: 12,
               color: "var(--color-warning)",
-              background: "rgba(245,158,11,0.08)",
-              borderBottom: "1px solid rgba(245,158,11,0.16)",
+              background: "var(--warning-subtle)",
+              borderBottom: "1px solid var(--warning-subtle-strong)",
             }}
           >
             <AlertTriangle size={12} />

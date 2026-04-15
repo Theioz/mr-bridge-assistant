@@ -103,7 +103,7 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
                         className="inline-flex items-center justify-center w-6 h-5 rounded text-[10px] font-medium"
                         style={{
                           background: "var(--color-primary)",
-                          color: "#fff",
+                          color: "var(--color-text-on-cta)",
                           opacity: op,
                         }}
                         title={`${count}/${total} days`}

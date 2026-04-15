@@ -71,8 +71,8 @@ function LoginForm() {
           <div
             className="rounded-lg px-4 py-3 text-sm"
             style={{
-              background: "color-mix(in srgb, var(--color-danger) 15%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)",
+              background: "var(--color-danger-subtle)",
+              border: "1px solid var(--color-danger)",
               color: "var(--color-danger)",
             }}
           >
@@ -158,7 +158,7 @@ function LoginForm() {
             aria-disabled={isDisabled}
             title={isDisabled ? disabledHint : undefined}
             className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
+            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
             onMouseEnter={(e) => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
           >

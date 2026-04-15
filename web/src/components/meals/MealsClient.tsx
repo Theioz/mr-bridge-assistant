@@ -429,7 +429,7 @@ function TodayTab({
                         <button
                           onClick={() => saveEdit(m.id)}
                           disabled={editSaving}
-                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
                         >
                           {editSaving ? "Saving…" : "Save"}
                         </button>
@@ -532,7 +532,7 @@ function TodayTab({
             className="flex items-center justify-center rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
             style={{
               background: "var(--color-primary)",
-              color: "#fff",
+              color: "var(--color-text-on-cta)",
               fontSize: 14,
               padding: "10px 14px",
               whiteSpace: "nowrap",
@@ -861,7 +861,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                         className="flex items-center gap-1.5 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
                         style={{
                           background: "var(--color-primary)",
-                          color: "#fff",
+                          color: "var(--color-text-on-cta)",
                           fontSize: 14,
                           padding: "10px 14px",
                         }}
@@ -881,7 +881,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                       className="rounded-xl font-medium transition-opacity active:opacity-70"
                       style={{
                         background: "var(--color-primary)",
-                        color: "#fff",
+                        color: "var(--color-text-on-cta)",
                         fontSize: 14,
                         padding: "9px 16px",
                         border: "none",
@@ -1028,7 +1028,7 @@ function PlanTab({
           className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
           style={{
             background: "var(--color-primary)",
-            color: "#fff",
+            color: "var(--color-text-on-cta)",
             fontSize: 15,
             padding: "12px 20px",
             width: "100%",
@@ -1109,7 +1109,7 @@ function PlanTab({
                       className="flex items-center gap-1.5 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
                       style={{
                         background: "var(--color-primary)",
-                        color: "#fff",
+                        color: "var(--color-text-on-cta)",
                         fontSize: 14,
                         padding: "10px 14px",
                         border: "none",
@@ -1131,7 +1131,7 @@ function PlanTab({
                     className="rounded-xl font-medium transition-opacity active:opacity-70"
                     style={{
                       background: "var(--color-primary)",
-                      color: "#fff",
+                      color: "var(--color-text-on-cta)",
                       fontSize: 14,
                       padding: "9px 16px",
                       border: "none",
@@ -1199,7 +1199,7 @@ export default function MealsClient({
               className="flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150"
               style={{
                 background: active ? "var(--color-primary)" : "transparent",
-                color: active ? "#fff" : "var(--color-text-muted)",
+                color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: "none",
                 cursor: "pointer",
               }}
@@ -1229,7 +1229,7 @@ export default function MealsClient({
             className="rounded-lg transition-opacity active:opacity-70"
             style={{
               background: "var(--color-primary)",
-              color: "#fff",
+              color: "var(--color-text-on-cta)",
               fontSize: 12,
               fontWeight: 500,
               padding: "5px 10px",
@@ -1413,7 +1413,7 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
                           <button
                             onClick={() => saveEdit(m.id)}
                             disabled={editSaving}
-                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
+                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
                           >
                             {editSaving ? "Saving…" : "Save"}
                           </button>

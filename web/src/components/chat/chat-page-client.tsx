@@ -349,7 +349,7 @@ function ChatPageClientInner({
             }}
             onMouseEnter={(e) => {
               if (!historyOpen)
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                (e.currentTarget as HTMLElement).style.background = "var(--hover-subtle)";
             }}
             onMouseLeave={(e) => {
               if (!historyOpen)

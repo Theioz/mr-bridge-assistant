@@ -30,8 +30,8 @@ export default function UpcomingBirthdayWidget() {
 
   const containerStyle: React.CSSProperties = isToday
     ? {
-        background: "color-mix(in srgb, var(--color-cta) 15%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--color-cta) 40%, transparent)",
+        background: "var(--color-cta-subtle)",
+        border: "1px solid var(--color-cta-subtle-strong)",
         color: "var(--color-cta)",
       }
     : {

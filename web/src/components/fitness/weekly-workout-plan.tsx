@@ -140,7 +140,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 key={day.date}
                 className="flex items-center gap-3 rounded-lg px-3.5 py-2.5"
                 style={{
-                  background: "var(--color-surface-raised, rgba(255,255,255,0.03))",
+                  background: "var(--color-surface-raised)",
                   border: "1px solid var(--color-border)",
                 }}
               >
@@ -153,7 +153,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 {day.isToday && (
                   <span
                     className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-primary)", color: "#fff" }}
+                    style={{ fontSize: 10, background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
                   >
                     Today
                   </span>
@@ -184,7 +184,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 onClick={() => toggle(day.date)}
                 className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left cursor-pointer transition-colors duration-150"
                 style={{
-                  background: "var(--color-surface-raised, rgba(255,255,255,0.04))",
+                  background: "var(--color-surface-raised)",
                   border: "none",
                 }}
               >
@@ -197,7 +197,7 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                 {day.isToday && (
                   <span
                     className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-primary)", color: "#fff", flexShrink: 0 }}
+                    style={{ fontSize: 10, background: "var(--color-primary)", color: "var(--color-text-on-cta)", flexShrink: 0 }}
                   >
                     Today
                   </span>

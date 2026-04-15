@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed (light-mode color tokenization — issue #224)
+- **`web/src/app/globals.css`, `design-system/mr-bridge/MASTER.md`** — added 12 new theme tokens (`--color-text-on-cta`, `--overlay-scrim`, `--hover-subtle`, `--warning-subtle{,-strong}`, `--color-danger-subtle`, `--color-positive-subtle{,-strong}`, `--color-cta-subtle{,-strong}`, `--color-skeleton`, `--color-positive-{light,lighter,lightest}`) with per-theme values. Eliminates ~50 hardcoded hex/rgba sites that broke light mode (invisible white-on-white text on CTAs, vanished overlays, ghost skeletons).
+- **Mechanical sweep across ~25 components** — every `"#fff"` literal swapped to `var(--color-text-on-cta)`; rgba overlays/hovers/warning/danger/positive tints swapped to the new tokens. Light-mode-breaking `color-mix()` callsites in [login/page.tsx](web/src/app/login/page.tsx) and [upcoming-birthday.tsx](web/src/components/dashboard/upcoming-birthday.tsx) replaced with the new subtle tokens (Safari <16.4 fallback no longer needed).
+- **`web/src/components/habits/heatmap.tsx`** — completion gradient uses `--color-positive{,-light,-lighter,-lightest}` instead of hardcoded green hexes.
+- **`web/src/components/dashboard/health-breakdown.tsx`** — `scorePanelStyle()` now composes `--color-positive-subtle` / `--warning-subtle` / `--color-danger-subtle` instead of templated rgba strings.
+- **`web/src/app/globals.css` `.skeleton`** — gradient now uses the higher-contrast `--color-skeleton` instead of `--color-surface` (fixes ~1.1:1 light-mode invisible shimmer).
+
 ### Added (re-log past meals — issue #220)
 - **`web/src/components/meals/MealsClient.tsx`** — "Log again" `RefreshCw` icon button on each Today-tab meal row; tap pre-fills the quick-log form (dish name + macros + meal type), scrolls the form into view, and focuses the Log button. Save path unchanged — creates a new `meal_log` row with today's date; the original row is never mutated.
 - **Recent meals section** on the Today tab — renders up to 10 unique dishes from the past 7 days (pulled from existing SSR `pastMeals` prop), deduped by a normalized dish name (lowercase, punctuation stripped). Section is hidden entirely when there's no history (brand-new account).

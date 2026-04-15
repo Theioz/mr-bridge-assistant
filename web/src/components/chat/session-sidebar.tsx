@@ -191,7 +191,7 @@ function SessionRow({
       onMouseLeave={() => onHover(null)}
       style={{
         position: "relative",
-        background: active ? "var(--color-primary-dim)" : hovered ? "rgba(255,255,255,0.04)" : "transparent",
+        background: active ? "var(--color-primary-dim)" : hovered ? "var(--hover-subtle)" : "transparent",
         borderLeft: active ? "2px solid var(--color-primary)" : "2px solid transparent",
         borderRadius: 6,
       }}

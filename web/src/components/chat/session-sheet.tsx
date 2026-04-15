@@ -278,7 +278,7 @@ export default function SessionSheet({
           <Dialog.Portal>
             <Dialog.Overlay
               className="fixed inset-0 z-[80]"
-              style={{ background: "rgba(0,0,0,0.6)" }}
+              style={{ background: "var(--overlay-scrim)" }}
             />
             <Dialog.Content
               className="fixed left-1/2 top-1/2 z-[90] w-[calc(100vw-32px)] max-w-sm rounded-2xl"

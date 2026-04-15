@@ -163,7 +163,7 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
           isUser
             ? {
                 background: "var(--color-primary)",
-                color: "#fff",
+                color: "var(--color-text-on-cta)",
                 borderBottomRightRadius: 4,
                 whiteSpace: "pre-wrap",
               }

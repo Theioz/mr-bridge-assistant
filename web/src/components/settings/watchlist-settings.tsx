@@ -78,15 +78,15 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
           style={{
             fontSize: 12,
             color: "var(--color-text-muted)",
-            background: "rgba(245,158,11,0.06)",
-            borderBottom: "1px solid rgba(245,158,11,0.12)",
+            background: "var(--warning-subtle)",
+            borderBottom: "1px solid var(--warning-subtle-strong)",
           }}
         >
           <code
             style={{
               fontSize: 11,
               color: "var(--color-warning)",
-              background: "rgba(245,158,11,0.08)",
+              background: "var(--warning-subtle)",
               padding: "1px 5px",
               borderRadius: 4,
             }}
@@ -134,7 +134,7 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
             style={{
               background: "var(--color-primary)",
-              color: "#fff",
+              color: "var(--color-text-on-cta)",
               border: "1px solid var(--color-primary)",
               minWidth: 72,
             }}

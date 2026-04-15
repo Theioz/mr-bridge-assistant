@@ -123,7 +123,7 @@ export default function HabitToggle({
               });
             }}
             className="text-xs px-2 py-1 rounded disabled:opacity-40 cursor-pointer"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
+            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
           >
             Save
           </button>
@@ -155,7 +155,7 @@ export default function HabitToggle({
               }}
             >
               {completed && (
-                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" style={{ color: "#fff" }}>
+                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" style={{ color: "var(--color-text-on-cta)" }}>
                   <path
                     d="M2 6l3 3 5-5"
                     stroke="currentColor"

@@ -189,7 +189,7 @@ function SuggestedNutritionCard({
   return (
     <div
       className="relative mx-5 my-3 rounded-lg px-4 py-4 flex flex-col gap-3"
-      style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.22)" }}
+      style={{ background: "var(--color-primary-dim)", border: "1px solid var(--color-primary-dim)" }}
     >
       <button
         onClick={dismiss}
@@ -215,7 +215,7 @@ function SuggestedNutritionCard({
               className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
               style={{
                 background: mode === m.key ? "var(--color-primary)" : "var(--color-surface-raised)",
-                color:      mode === m.key ? "#fff" : "var(--color-text-muted)",
+                color:      mode === m.key ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               }}
             >
               {m.label}
@@ -234,7 +234,7 @@ function SuggestedNutritionCard({
               className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
               style={{
                 background: proteinPerLb === o.value ? "var(--color-primary)" : "var(--color-surface-raised)",
-                color:      proteinPerLb === o.value ? "#fff" : "var(--color-text-muted)",
+                color:      proteinPerLb === o.value ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               }}
             >
               {o.label}
@@ -261,9 +261,9 @@ function SuggestedNutritionCard({
           disabled={isPending}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer disabled:opacity-40"
           style={{
-            background: applied ? "rgba(16,185,129,0.15)" : "var(--color-primary)",
-            color:      applied ? "var(--color-positive)" : "#fff",
-            border:     applied ? "1px solid rgba(16,185,129,0.3)" : "1px solid var(--color-primary)",
+            background: applied ? "var(--color-positive-subtle)" : "var(--color-primary)",
+            color:      applied ? "var(--color-positive)" : "var(--color-text-on-cta)",
+            border:     applied ? "1px solid var(--color-positive-subtle-strong)" : "1px solid var(--color-primary)",
           }}
         >
           {isPending ? (
@@ -344,9 +344,9 @@ function FieldRow({
           disabled={!isDirty || isPending}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
           style={{
-            background: saved ? "rgba(16,185,129,0.15)" : isDirty ? "var(--color-primary)" : "var(--color-surface-raised)",
-            color: saved ? "var(--color-positive)" : isDirty ? "#fff" : "var(--color-text-muted)",
-            border: `1px solid ${saved ? "rgba(16,185,129,0.3)" : isDirty ? "var(--color-primary)" : "var(--color-border)"}`,
+            background: saved ? "var(--color-positive-subtle)" : isDirty ? "var(--color-primary)" : "var(--color-surface-raised)",
+            color: saved ? "var(--color-positive)" : isDirty ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+            border: `1px solid ${saved ? "var(--color-positive-subtle-strong)" : isDirty ? "var(--color-primary)" : "var(--color-border)"}`,
             minWidth: 72,
           }}
         >

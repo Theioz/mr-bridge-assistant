@@ -377,7 +377,7 @@ export default async function WeeklyPage() {
             {overdueTasks.length > 0 && (
               <div
                 className="rounded-lg px-3 py-2"
-                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                style={{ background: "var(--color-danger-subtle)", border: "1px solid var(--color-danger)" }}
               >
                 <p className="text-xs font-medium" style={{ color: "var(--color-danger)" }}>
                   {overdueTasks.length} overdue task{overdueTasks.length > 1 ? "s" : ""}

@@ -63,10 +63,10 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
     const completed = completionMap.get(date);
     if (!completed || completed.size === 0) return "var(--color-border)";
     const ratio = completed.size / totalHabits;
-    if (ratio >= 1) return "#10B981";
-    if (ratio >= 0.66) return "#34D399";
-    if (ratio >= 0.33) return "#6EE7B7";
-    return "#A7F3D0";
+    if (ratio >= 1) return "var(--color-positive)";
+    if (ratio >= 0.66) return "var(--color-positive-light)";
+    if (ratio >= 0.33) return "var(--color-positive-lighter)";
+    return "var(--color-positive-lightest)";
   }
 
   return (
@@ -130,7 +130,7 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
       {/* Legend */}
       <div className="flex items-center gap-1.5 mt-4">
         <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>Less</span>
-        {["var(--color-border)", "#A7F3D0", "#6EE7B7", "#34D399", "#10B981"].map((c, i) => (
+        {["var(--color-border)", "var(--color-positive-lightest)", "var(--color-positive-lighter)", "var(--color-positive-light)", "var(--color-positive)"].map((c, i) => (
           <div key={i} className="rounded-sm" style={{ width: 11, height: 11, background: c }} />
         ))}
         <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>More</span>
