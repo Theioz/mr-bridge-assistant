@@ -1,6 +1,12 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Daily briefing — weather, schedule, health, tasks, habits, markets, and email.",
+};
 import { revalidatePath } from "next/cache";
 import { todayString, daysAgoString, USER_TZ } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";

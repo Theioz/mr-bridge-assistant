@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import JournalTabs from "@/components/journal/journal-tabs";
+
+export const metadata: Metadata = {
+  title: "Journal",
+  description: "Guided journal entries and history.",
+};
 import type { JournalEntry, JournalResponses } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 

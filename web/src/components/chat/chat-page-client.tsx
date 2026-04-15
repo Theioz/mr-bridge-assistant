@@ -287,12 +287,16 @@ function ChatPageClientInner({
         // non-fatal — row remains active on server if request fails
       }
 
-      toast.show("Chat archived", () => {
-        setAllSessions((prev) =>
-          prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
-        );
-        fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" }).catch(() => {});
-      });
+      toast.show(
+        "Chat archived",
+        () => {
+          setAllSessions((prev) =>
+            prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+          );
+          fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" }).catch(() => {});
+        },
+        10000
+      );
     },
     [allSessions, activeSessionId, loadSession, handleNewChat, toast, fetchSessions]
   );
@@ -406,10 +410,30 @@ function ChatPageClientInner({
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {loadingSession ? (
             <div
-              className="flex flex-1 items-center justify-center"
-              style={{ color: "var(--color-text-muted)", fontSize: 14 }}
+              className="flex flex-1 flex-col gap-4 px-4 py-6"
+              role="status"
+              aria-label="Loading conversation"
             >
-              Loading conversation&hellip;
+              {[80, 55, 70].map((w, i) => (
+                <div key={i} className="flex flex-col gap-2" style={{ alignItems: i % 2 ? "flex-end" : "flex-start" }}>
+                  <div
+                    className="rounded-2xl animate-pulse"
+                    style={{
+                      width: `${w}%`,
+                      height: 14,
+                      background: "var(--color-surface-raised)",
+                    }}
+                  />
+                  <div
+                    className="rounded-2xl animate-pulse"
+                    style={{
+                      width: `${w - 20}%`,
+                      height: 14,
+                      background: "var(--color-surface-raised)",
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           ) : (
             <ChatInterface

@@ -1,7 +1,13 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import NotificationList from "@/components/notifications/notification-list";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+  description: "Recent alerts and activity.",
+};
 
 export interface Notification {
   id: string;

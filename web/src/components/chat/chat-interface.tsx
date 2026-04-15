@@ -224,9 +224,13 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 border: "1px solid var(--color-border)",
               }}
             >
-              <span className="flex gap-1">
+              <span
+                className="flex gap-1 motion-reduce:opacity-60"
+                role="status"
+                aria-label="Assistant is typing"
+              >
                 <span
-                  className="rounded-full animate-bounce"
+                  className="rounded-full motion-safe:animate-bounce"
                   style={{
                     width: 6,
                     height: 6,
@@ -235,7 +239,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                   }}
                 />
                 <span
-                  className="rounded-full animate-bounce"
+                  className="rounded-full motion-safe:animate-bounce"
                   style={{
                     width: 6,
                     height: 6,
@@ -244,7 +248,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                   }}
                 />
                 <span
-                  className="rounded-full animate-bounce"
+                  className="rounded-full motion-safe:animate-bounce"
                   style={{
                     width: 6,
                     height: 6,

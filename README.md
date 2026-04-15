@@ -342,7 +342,11 @@ mr-bridge-assistant/
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
-│   │   │   └── login/page.tsx
+│   │   │   ├── error.tsx                   # Top-level error boundary (friendly + retry)
+│   │   │   ├── (protected)/error.tsx       # Protected-route error boundary (retry + dashboard fallback)
+│   │   │   └── login/
+│   │   │       ├── layout.tsx              # Server shell so client login page can export metadata
+│   │   │       └── page.tsx
 │   │   ├── components/
 │   │   │   ├── nav.tsx                    # Left sidebar (desktop); bottom tab bar + More sheet (mobile)
 │   │   │   ├── ui/

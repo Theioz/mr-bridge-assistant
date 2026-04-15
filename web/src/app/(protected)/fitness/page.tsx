@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgoString } from "@/lib/timezone";
 import { getWindow } from "@/lib/window";
+
+export const metadata: Metadata = {
+  title: "Fitness",
+  description: "Body composition, workout frequency, active calories, and goal trends.",
+};
 import { WindowSelector } from "@/components/ui/window-selector";
 import { BodyCompDualChart } from "@/components/fitness/body-comp-dual-chart";
 import { WorkoutFreqChart } from "@/components/fitness/workout-freq-chart";

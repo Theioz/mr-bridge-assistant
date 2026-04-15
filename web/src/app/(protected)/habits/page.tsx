@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { HabitHeatmap } from "@/components/habits/heatmap";
+
+export const metadata: Metadata = {
+  title: "Habits",
+  description: "Daily habit check-ins, streaks, and heatmap.",
+};
 import { StreakChart } from "@/components/habits/streak-chart";
 import { RadialCompletion } from "@/components/habits/radial-completion";
 import HabitHistory from "@/components/habits/habit-history";
