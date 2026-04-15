@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Sun, CloudSun, Cloud, Cloudy, CloudFog, CloudRain, CloudSnow, CloudLightning, Thermometer,
+  Sun, CloudSun, Cloud, Cloudy, CloudFog, CloudRain, CloudSnow, CloudLightning, Thermometer, AlertTriangle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import SyncButton from "./sync-button";
@@ -28,12 +28,16 @@ interface Props {
 
 export default function DashboardHeader({ greeting, dateStr, windowKey }: Props) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherError, setWeatherError] = useState(false);
 
   useEffect(() => {
     fetch("/api/weather")
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setWeather(d); })
-      .catch(() => {});
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error("weather fetch failed")))
+      .then((d) => {
+        if (d.error) setWeatherError(true);
+        else setWeather(d);
+      })
+      .catch(() => setWeatherError(true));
   }, []);
 
   const Icon = weather?.wmoCode != null ? (WMO_ICON[weather.wmoCode] ?? Cloudy) : Thermometer;
@@ -47,6 +51,16 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         <p className="mt-0.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
           {dateStr}
         </p>
+        {!weather && weatherError && (
+          <p
+            className="mt-0.5 flex items-center gap-1.5"
+            style={{ fontSize: 13, color: "var(--color-danger)" }}
+            role="status"
+          >
+            <AlertTriangle size={14} aria-hidden />
+            <span>Weather unavailable</span>
+          </p>
+        )}
         {weather && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
             <Icon size={14} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} aria-hidden />

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { CheckSquare } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { HabitLog, HabitRegistry } from "@/lib/types";
 import type { HabitStreaks } from "@/lib/streaks";
 
@@ -162,9 +164,14 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
         })}
 
         {registry.length === 0 && (
-          <p className="text-sm py-2" style={{ color: "var(--color-text-faint)" }}>
-            No habits configured.
-          </p>
+          <EmptyState
+            icon={CheckSquare}
+            paddingY={8}
+            actionHref="/habits"
+            actionLabel="Configure"
+          >
+            No habits configured
+          </EmptyState>
         )}
       </div>
 

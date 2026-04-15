@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (dashboard reorder + empty/error states — issue #216)
+- **`web/src/components/dashboard/empty-state.tsx`** — shared `<EmptyState icon children actionHref? actionLabel? variant?>` component. Empty variant uses `--color-text-faint`; error variant swaps icon for `AlertTriangle` and uses `--color-danger` with `role="status"`.
+
+### Changed (issue #216)
+- **`web/src/app/(protected)/dashboard/page.tsx`** — Tasks now render before Habits in the 2-column grid, matching the actionable-today cluster for glance-first triage.
+- **`web/src/components/dashboard/dashboard-header.tsx`** — weather failure now surfaces an `AlertTriangle` + "Weather unavailable" line instead of silently hiding the block.
+- **`web/src/components/nav.tsx`** — unread-count fetch errors now surface a small muted dot on the Notifications icon (with `title`/`aria-label`) instead of being silently swallowed.
+- **`web/src/components/dashboard/tasks-summary.tsx`, `habits-checkin.tsx`, `schedule-today.tsx`, `watchlist-widget.tsx`, `sports-card.tsx`** — empty states standardized on the `<EmptyState>` icon + text pattern; watchlist/sports/habits include a settings action link; schedule-today's error branch is now the error variant.
+
 ### Added (a11y: sheet focus traps — issue #215)
 - **`web/src/components/ui/sheet.tsx`** — thin `<Sheet>` wrapper over `@radix-ui/react-dialog` preserving the existing bottom-sheet visuals (rounded top, safe-area inset, backdrop tint). Provides focus trap, Escape dismiss, focus restore, `role="dialog"`, and `aria-modal`. Accessible title rendered via `Dialog.Title` (sr-only; each sheet keeps its own visible header).
 - **`web/package.json`** — adds `@radix-ui/react-dialog` dependency.
