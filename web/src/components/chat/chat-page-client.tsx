@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { History } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { History, Plus } from "lucide-react";
 import type { Message } from "ai";
 import ChatInterface from "./chat-interface";
 import SessionSidebar from "./session-sidebar";
 import SessionSheet from "./session-sheet";
+import { UndoToastProvider, useUndoToast } from "@/components/ui/undo-toast";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
 
 interface Props {
@@ -19,7 +20,15 @@ function newSessionId(): string {
   return crypto.randomUUID();
 }
 
-export default function ChatPageClient({
+export default function ChatPageClient(props: Props) {
+  return (
+    <UndoToastProvider>
+      <ChatPageClientInner {...props} />
+    </UndoToastProvider>
+  );
+}
+
+function ChatPageClientInner({
   initialSessionId,
   initialMessages,
   initialHasMore = false,
@@ -32,25 +41,33 @@ export default function ChatPageClient({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [oldestPosition, setOldestPosition] = useState<number | null>(initialOldestPosition);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Incrementing this key forces ChatInterface to remount with fresh initialMessages
   const [refreshKey, setRefreshKey] = useState(0);
+  const [timeTick, setTimeTick] = useState(0);
 
-  // Desktop sidebar state — persisted in localStorage
   const [historyOpen, setHistoryOpen] = useState(false);
-  // Mobile sheet state
   const [showSheet, setShowSheet] = useState(false);
 
-  const [sessions, setSessions] = useState<SessionPreview[]>([]);
+  const [allSessions, setAllSessions] = useState<SessionPreview[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
   const [chatPrefill, setChatPrefill] = useState<string | null>(null);
 
-  // Hydrate desktop panel state from localStorage after mount
+  const toast = useUndoToast();
+
+  const { sessions, archivedSessions } = useMemo(() => {
+    const active: SessionPreview[] = [];
+    const archived: SessionPreview[] = [];
+    for (const s of allSessions) {
+      if (s.deleted_at) archived.push(s);
+      else active.push(s);
+    }
+    return { sessions: active, archivedSessions: archived };
+  }, [allSessions]);
+
   useEffect(() => {
     const stored = localStorage.getItem("chatHistoryOpen");
     if (stored !== null) setHistoryOpen(stored === "true");
   }, []);
 
-  // Read prefill from Scanner → Chat handoff
   useEffect(() => {
     const prefill = sessionStorage.getItem("chatPrefill");
     if (prefill) {
@@ -59,12 +76,10 @@ export default function ChatPageClient({
     }
   }, []);
 
-  // Persist activeSessionId to sessionStorage on every change (belt-and-suspenders)
   useEffect(() => {
     sessionStorage.setItem("chatActiveSessionId", activeSessionId);
   }, [activeSessionId]);
 
-  // On mount: if SSR couldn't provide a session, check sessionStorage as fallback
   useEffect(() => {
     if (!initialSessionId) {
       const stored = sessionStorage.getItem("chatActiveSessionId");
@@ -78,15 +93,12 @@ export default function ChatPageClient({
       const res = await fetch("/api/chat/sessions");
       if (!res.ok) return;
       const data = await res.json();
-      setSessions(data.sessions ?? []);
+      setAllSessions(data.sessions ?? []);
     } catch {
       // non-fatal
     }
   }, []);
 
-  // On mount: fetch the real session list and auto-correct if the Next.js router
-  // cache (staleTimes.dynamic: 300s) served a stale initialSessionId. API calls
-  // always bypass the router cache, so this gives us the authoritative Supabase state.
   useEffect(() => {
     const initSessions = async () => {
       try {
@@ -94,11 +106,11 @@ export default function ChatPageClient({
         if (!res.ok) return;
         const data = await res.json();
         const list: SessionPreview[] = data.sessions ?? [];
-        setSessions(list);
+        setAllSessions(list);
 
-        const mostRecent = list[0];
+        const active = list.filter((s) => !s.deleted_at);
+        const mostRecent = active[0];
         if (mostRecent && mostRecent.id !== activeSessionIdRef.current) {
-          // Server gave us a stale session — silently switch to the real latest one
           setLoadingSession(true);
           try {
             const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
@@ -127,30 +139,27 @@ export default function ChatPageClient({
       }
     };
     initSessions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch messages when the user returns to this tab so stale router-cache
-  // data doesn't leave the chat a few conversations behind.
   const activeSessionIdRef = useRef(activeSessionId);
   activeSessionIdRef.current = activeSessionId;
 
   useEffect(() => {
     const handleVisibility = async () => {
       if (document.visibilityState !== "visible") return;
-      // Skip if this is a brand-new unsaved session (nothing to fetch yet)
+      setTimeTick((t) => t + 1);
       if (!initialSessionId && activeMessages.length === 0) return;
       try {
-        // Re-check which session should be active — router cache may have given us
-        // a stale activeSessionId, so trust the authoritative sessions list.
         const listRes = await fetch("/api/chat/sessions");
         let sessionId = activeSessionIdRef.current;
         if (listRes.ok) {
           const listData = await listRes.json();
           const list: SessionPreview[] = listData.sessions ?? [];
-          setSessions(list);
-          if (list[0] && list[0].id !== sessionId) {
-            sessionId = list[0].id;
+          setAllSessions(list);
+          const activeList = list.filter((s) => !s.deleted_at);
+          if (activeList[0] && activeList[0].id !== sessionId) {
+            sessionId = activeList[0].id;
             setActiveSessionId(sessionId);
           }
         }
@@ -170,12 +179,12 @@ export default function ChatPageClient({
         setOldestPosition(data.oldestPosition ?? null);
         setRefreshKey((k) => k + 1);
       } catch {
-        // non-fatal — stale messages are better than a broken UI
+        // non-fatal
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSessionId]);
 
   const toggleDesktopHistory = () => {
@@ -184,16 +193,15 @@ export default function ChatPageClient({
     localStorage.setItem("chatHistoryOpen", String(next));
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     setActiveSessionId(newSessionId());
     setActiveMessages([]);
+    setHasMore(false);
+    setOldestPosition(null);
     setShowSheet(false);
-  };
+  }, []);
 
-  const handleSessionSelect = async (sessionId: string) => {
-    setShowSheet(false);
-    if (sessionId === activeSessionId) return;
-
+  const loadSession = useCallback(async (sessionId: string) => {
     setLoadingSession(true);
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}`);
@@ -211,11 +219,15 @@ export default function ChatPageClient({
       setActiveMessages(msgs);
       setHasMore(data.hasMore ?? false);
       setOldestPosition(data.oldestPosition ?? null);
-    } catch {
-      // non-fatal
     } finally {
       setLoadingSession(false);
     }
+  }, []);
+
+  const handleSessionSelect = async (sessionId: string) => {
+    setShowSheet(false);
+    if (sessionId === activeSessionId) return;
+    await loadSession(sessionId);
   };
 
   const handleLoadMore = useCallback(async () => {
@@ -244,17 +256,63 @@ export default function ChatPageClient({
     }
   }, [activeSessionId, oldestPosition, loadingMore]);
 
-  // Refresh session list after a message exchange completes (so preview updates)
   const handleMessageSent = useCallback(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  const handleArchiveSession = useCallback(
+    async (sessionId: string) => {
+      const target = allSessions.find((s) => s.id === sessionId);
+      if (!target) return;
+
+      const nowIso = new Date().toISOString();
+      setAllSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: nowIso } : s))
+      );
+
+      if (activeSessionId === sessionId) {
+        const nextActive = allSessions.find(
+          (s) => !s.deleted_at && s.id !== sessionId
+        );
+        if (nextActive) {
+          await loadSession(nextActive.id);
+        } else {
+          handleNewChat();
+        }
+      }
+
+      try {
+        await fetch(`/api/chat/sessions/${sessionId}`, { method: "DELETE" });
+      } catch {
+        // non-fatal — row remains active on server if request fails
+      }
+
+      toast.show("Chat archived", () => {
+        setAllSessions((prev) =>
+          prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+        );
+        fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" }).catch(() => {});
+      });
+    },
+    [allSessions, activeSessionId, loadSession, handleNewChat, toast, fetchSessions]
+  );
+
+  const handleRestoreSession = useCallback(async (sessionId: string) => {
+    setAllSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+    );
+    try {
+      await fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" });
+    } catch {
+      // non-fatal
+    }
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Page header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          {/* Mobile: opens bottom sheet */}
           <button
             onClick={() => setShowSheet(true)}
             className="lg:hidden flex items-center justify-center rounded-lg transition-colors duration-150"
@@ -273,7 +331,6 @@ export default function ChatPageClient({
             <History size={18} />
           </button>
 
-          {/* Desktop: toggles collapsible sidebar */}
           <button
             onClick={toggleDesktopHistory}
             className="hidden lg:flex items-center justify-center rounded-lg transition-colors duration-150"
@@ -331,19 +388,21 @@ export default function ChatPageClient({
 
       {/* Content row: sidebar + chat */}
       <div className="flex gap-4 items-stretch flex-1 min-h-0">
-        {/* Desktop history sidebar */}
         {historyOpen && (
           <div className="hidden lg:block">
             <SessionSidebar
               sessions={sessions}
+              archivedSessions={archivedSessions}
               activeSessionId={activeSessionId}
               onSessionSelect={handleSessionSelect}
               onNewChat={handleNewChat}
+              onArchive={handleArchiveSession}
+              onRestore={handleRestoreSession}
+              timeTick={timeTick}
             />
           </div>
         )}
 
-        {/* Chat interface */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {loadingSession ? (
             <div
@@ -371,11 +430,42 @@ export default function ChatPageClient({
       <SessionSheet
         open={showSheet}
         sessions={sessions}
+        archivedSessions={archivedSessions}
         activeSessionId={activeSessionId}
         onClose={() => setShowSheet(false)}
         onSessionSelect={handleSessionSelect}
         onNewChat={handleNewChat}
+        onArchive={handleArchiveSession}
+        onRestore={handleRestoreSession}
+        timeTick={timeTick}
       />
+
+      {/* Mobile new-chat FAB */}
+      {!showSheet && (
+        <button
+          onClick={handleNewChat}
+          aria-label="New chat"
+          className="lg:hidden fixed"
+          style={{
+            right: 16,
+            bottom: "calc(96px + env(safe-area-inset-bottom))",
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            background: "var(--color-primary)",
+            color: "white",
+            border: "none",
+            boxShadow: "var(--shadow-md)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+        >
+          <Plus size={22} />
+        </button>
+      )}
     </div>
   );
 }

@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (chat UX — issue #205)
+- **`supabase/migrations/20260415000000_chat_sessions_soft_delete.sql`** — adds `deleted_at timestamptz` column + index to `chat_sessions`; enables archive with 30-day restore window.
+- **`web/src/lib/relative-time.ts`** — dep-free helpers (`formatRelative`, `formatDaySeparator`, `isSameDay`, `daysUntilPurge`) for sidebar and thread timestamps.
+- **`web/src/components/ui/undo-toast.tsx`** — self-contained toast provider with a 5-second undo affordance; mounted at the chat page root, no new dependencies.
+- **`web/src/app/api/chat/sessions/[id]/restore/route.ts`** — `POST` endpoint clears `deleted_at` after ownership check.
+- **`web/src/components/chat/chat-interface.tsx`** — day separators between messages when the day changes (`Today` / `Yesterday` / absolute date).
+- **`web/src/components/chat/message-bubble.tsx`** — exact message time reveals under the bubble on hover (desktop) and long-press (mobile); hidden by default to keep the thread clean.
+- **`web/src/components/chat/session-sidebar.tsx`** & **`session-sheet.tsx`** — relative-time stamps on each row, per-row trash icon, "Recently deleted" collapsible tray with Restore + remaining-days countdown.
+- **`web/src/components/chat/session-sheet.tsx`** — sticky in-drawer header keeps "New chat" reachable while scrolling the session list on mobile.
+- **`web/src/components/chat/chat-page-client.tsx`** — mobile "+" FAB for one-tap new chat; archive-with-undo flow; `visibilitychange` now also bumps a `timeTick` so sidebar relative stamps refresh without reload.
+
+### Changed (chat UX — issue #205)
+- **`web/src/app/api/chat/sessions/[id]/route.ts`** — `DELETE` now soft-deletes via `deleted_at` instead of hard-deleting; restore path lives at `/restore`.
+- **`web/src/app/api/chat/sessions/route.ts`** — returns `deleted_at` with each session and fires a lazy purge of rows deleted >30 days ago (cascade wipes messages).
+
 ### Fixed (chat SSR loaded oldest messages, not latest — issue #210)
 - **`web/src/app/(protected)/chat/page.tsx`** — SSR query was `order("created_at", asc).limit(50)`, returning the **oldest** 50 messages; for long sessions (86+ messages) this rendered positions 1–50 instead of the latest 20. Now mirrors the `/api/chat/sessions/[id]` API: `order("position", desc).limit(20)`, reversed for display. Also passes `initialHasMore` / `initialOldestPosition` to `ChatPageClient` so "Load older" pagination works from first paint.
 - **`web/src/components/chat/chat-page-client.tsx`** — accepts `initialHasMore` / `initialOldestPosition` props and seeds the corresponding state from SSR.

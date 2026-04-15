@@ -1,7 +1,16 @@
-import { memo } from "react";
+"use client";
+
+import { memo, useRef, useState } from "react";
 import type { Message } from "ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+function formatExactTime(d: Date): string {
+  return d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 interface Props {
   message: Message;
@@ -107,9 +116,37 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
 // all prior messages are skipped, eliminating per-token markdown re-parsing.
 const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
+  const [revealed, setRevealed] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchStart = () => {
+    clearLongPress();
+    longPressTimer.current = setTimeout(() => {
+      setPinned((v) => !v);
+      longPressTimer.current = null;
+    }, 500);
+  };
+
+  const showTime = message.createdAt && (revealed || pinned);
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div
+      className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
+    >
       <div
         className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
         style={
@@ -136,6 +173,21 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
           </ReactMarkdown>
         )}
       </div>
+      {message.createdAt && (
+        <span
+          aria-hidden={!showTime}
+          style={{
+            fontSize: 10,
+            color: "var(--color-text-muted)",
+            padding: "2px 6px 0",
+            opacity: showTime ? 1 : 0,
+            transition: "opacity 120ms",
+            pointerEvents: "none",
+          }}
+        >
+          {formatExactTime(message.createdAt)}
+        </span>
+      )}
     </div>
   );
 });
