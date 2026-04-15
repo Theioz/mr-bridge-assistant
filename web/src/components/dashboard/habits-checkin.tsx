@@ -5,9 +5,10 @@ import { CheckSquare } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { HabitLog, HabitRegistry } from "@/lib/types";
 import type { HabitStreaks } from "@/lib/streaks";
+import { getHabitIcon } from "@/lib/habit-icons";
 
 interface Props {
-  registry: Pick<HabitRegistry, "id" | "name" | "emoji">[];
+  registry: Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
   todayLogs: HabitLog[];
   streaks: HabitStreaks;
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
@@ -129,10 +130,17 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
                 )}
               </span>
 
-              {/* Emoji */}
-              {habit.emoji && (
-                <span className="text-base leading-none flex-shrink-0">{habit.emoji}</span>
-              )}
+              {/* Icon */}
+              {(() => {
+                const Icon = getHabitIcon(habit);
+                return (
+                  <Icon
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: "var(--color-text-muted)" }}
+                    aria-hidden
+                  />
+                );
+              })()}
 
               {/* Name */}
               <span

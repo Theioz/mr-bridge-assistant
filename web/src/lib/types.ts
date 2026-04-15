@@ -3,6 +3,7 @@ export interface HabitRegistry {
   name: string;
   emoji: string | null;
   category: string | null;
+  icon_key: string | null;
   active: boolean;
   created_at: string;
 }
