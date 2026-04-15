@@ -29,27 +29,46 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { ingredients: string };
+  let body: {
+    ingredients: string;
+    dish_name?: string;
+    current_macros?: { calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number };
+  };
   try {
     body = await req.json();
   } catch {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.ingredients?.trim()) {
-    return Response.json({ error: "ingredients is required" }, { status: 400 });
+  const ingredients = body.ingredients?.trim() ?? "";
+  const dishName = body.dish_name?.trim() ?? "";
+  if (!ingredients && !dishName) {
+    return Response.json({ error: "ingredients or dish_name is required" }, { status: 400 });
   }
 
-  try {
-    const { object } = await generateObject({
-      model: anthropic("claude-haiku-4-5-20251001"),
-      schema: MacroEstimateSchema,
-      messages: [
-        {
-          role: "user",
-          content: `Estimate the nutritional content of a meal with these ingredients:
+  const cm = body.current_macros;
+  const hasCurrent = cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
 
-"${body.ingredients.trim()}"
+  const prompt = hasCurrent && dishName
+    ? `A user already logged a meal and now wants to adjust its macros.
+
+Base dish: "${dishName}"
+Current macros: ${cm!.calories ?? "?"} cal, P ${cm!.protein_g ?? "?"}g, C ${cm!.carbs_g ?? "?"}g, F ${cm!.fat_g ?? "?"}g
+
+User's modification / additional ingredients:
+"${ingredients || "(none — just re-estimate the base dish)"}"
+
+Instructions:
+- Treat the user's modification as ADDITIONS or CHANGES to the base dish, not a full replacement
+- Start from the current macros and adjust up or down based on what the user added/removed/changed
+- If the modification text is vague (e.g. "added some chicken"), assume a reasonable single-serving quantity (e.g. ~3-4oz for chicken)
+- Use conservative estimates — do not inflate
+- Return the NEW TOTAL macros for the adjusted meal, not just the delta
+- Set confidence to "medium" for vague modifications, "high" for specific quantities
+- Include what you assumed for the modification in notes`
+    : `Estimate the nutritional content of a meal with these ingredients:
+
+"${ingredients || dishName}"
 
 Instructions:
 - Use the listed ingredients and quantities to estimate macros
@@ -57,9 +76,13 @@ Instructions:
 - Use conservative estimates — do not inflate
 - Set confidence to "high" if ingredients and quantities are clearly specified
 - Set confidence to "low" if ingredients are vague or quantities are absent
-- Include any key assumptions in notes`,
-        },
-      ],
+- Include any key assumptions in notes`;
+
+  try {
+    const { object } = await generateObject({
+      model: anthropic("claude-haiku-4-5-20251001"),
+      schema: MacroEstimateSchema,
+      messages: [{ role: "user", content: prompt }],
     });
 
     return Response.json(object);

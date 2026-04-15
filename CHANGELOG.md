@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (re-log past meals — issue #220)
+- **`web/src/components/meals/MealsClient.tsx`** — "Log again" `RefreshCw` icon button on each Today-tab meal row; tap pre-fills the quick-log form (dish name + macros + meal type), scrolls the form into view, and focuses the Log button. Save path unchanged — creates a new `meal_log` row with today's date; the original row is never mutated.
+- **Recent meals section** on the Today tab — renders up to 10 unique dishes from the past 7 days (pulled from existing SSR `pastMeals` prop), deduped by a normalized dish name (lowercase, punctuation stripped). Section is hidden entirely when there's no history (brand-new account).
+- **Estimate macros button + Ingredients textarea** in the quick-log form — collapsible ephemeral textarea (not persisted) for the user to type a full ingredient list OR just a modification (e.g. "added 4oz chicken"). Hits `/api/meals/estimate-macros`, which was extended to accept `dish_name` + `current_macros` as context; when both are present it treats the textarea as additions/modifications to the base dish rather than a full replacement. Macro fields + meal type are overwritten with the AI estimate.
+
 ### Added (UX polish bundle — issue #217)
 - **`web/src/app/error.tsx`** — top-level error boundary with friendly copy, Retry button calling Next.js `reset()`.
 - **`web/src/app/(protected)/error.tsx`** — protected route error boundary with Retry + "Dashboard" fallback link.
