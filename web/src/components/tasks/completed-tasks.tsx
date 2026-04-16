@@ -4,12 +4,6 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Task } from "@/lib/types";
 
-const PRIORITY_COLOR: Record<string, string> = {
-  high:   "var(--color-danger)",
-  medium: "var(--color-warning)",
-  low:    "var(--color-text-faint)",
-};
-
 interface Props {
   tasks: Task[];
 }
@@ -21,25 +15,23 @@ export default function CompletedTasks({ tasks }: Props) {
     <section>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 mb-2"
-        style={{ color: "var(--color-text-muted)" }}
+        className="flex items-center transition-opacity hover:opacity-80"
+        style={{
+          gap: "var(--space-2)",
+          color: "var(--color-text-faint)",
+          marginBottom: "var(--space-2)",
+        }}
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <span
-          className="text-xs uppercase tracking-widest"
-          style={{ letterSpacing: "0.07em" }}
-        >
-          Completed ({tasks.length})
-        </span>
+        <h2 className="db-section-label" style={{ margin: 0 }}>
+          Completed
+          <span className="meta">· {tasks.length}</span>
+        </h2>
       </button>
 
       {open && (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
+        <div>
           {tasks.map((task, i) => {
-            const dot = PRIORITY_COLOR[task.priority ?? "low"] ?? PRIORITY_COLOR.low;
             const completedDate = task.completed_at
               ? new Date(task.completed_at).toLocaleDateString("en-US", {
                   month: "short",
@@ -50,19 +42,28 @@ export default function CompletedTasks({ tasks }: Props) {
             return (
               <div
                 key={task.id}
-                className="flex items-center gap-3 px-4 py-2.5"
-                style={i > 0 ? { borderTop: "1px solid var(--color-border)" } : {}}
+                className="flex items-center"
+                style={{
+                  gap: "var(--space-3)",
+                  paddingTop: "var(--space-3)",
+                  paddingBottom: "var(--space-3)",
+                  borderTop: i > 0 ? "1px solid var(--rule-soft)" : undefined,
+                }}
               >
-                {/* Filled checkmark circle */}
+                {/* Filled checkmark circle — faint */}
                 <span
-                  className="flex-shrink-0 rounded-full border-2 flex items-center justify-center"
-                  style={{ width: 18, height: 18, borderColor: dot, background: dot }}
+                  className="flex-shrink-0 rounded-full flex items-center justify-center"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    background: "var(--color-text-faint)",
+                  }}
+                  aria-hidden
                 >
                   <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                     <path
                       d="M1.5 4L3 5.5L6.5 2"
-                      stroke="currentColor"
-                      style={{ color: "var(--color-text-on-cta)" }}
+                      stroke="var(--color-text-on-cta)"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -71,14 +72,21 @@ export default function CompletedTasks({ tasks }: Props) {
                 </span>
 
                 <span
-                  className="flex-1 text-sm line-through min-w-0 truncate"
-                  style={{ color: "var(--color-text-faint)" }}
+                  className="flex-1 min-w-0 truncate"
+                  style={{
+                    fontSize: "var(--t-body)",
+                    color: "var(--color-text-faint)",
+                    textDecoration: "line-through",
+                  }}
                 >
                   {task.title}
                 </span>
 
                 {completedDate && (
-                  <span className="flex-shrink-0 text-xs" style={{ color: "var(--color-text-faint)" }}>
+                  <span
+                    className="flex-shrink-0 tnum"
+                    style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                  >
                     {completedDate}
                   </span>
                 )}

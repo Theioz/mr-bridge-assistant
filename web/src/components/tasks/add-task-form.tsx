@@ -8,13 +8,13 @@ interface Props {
 }
 
 const PRIORITIES = [
-  { key: "high",   color: "var(--color-danger)"  },
-  { key: "medium", color: "var(--color-warning)"  },
-  { key: "low",    color: "var(--color-text-faint)" },
+  { key: "high",   label: "High",   color: "var(--accent)" },
+  { key: "medium", label: "Medium", color: "var(--color-text-muted)" },
+  { key: "low",    label: "Low",    color: "var(--color-text-faint)" },
 ] as const;
 
 export default function AddTaskForm({ addAction }: Props) {
-  const [title, setPriority_title] = useState("");
+  const [title, setTitle]          = useState("");
   const [priority, setPriority]    = useState<"high" | "medium" | "low">("medium");
   const [dueDate, setDueDate]      = useState("");
   const [error, setError]          = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function AddTaskForm({ addAction }: Props) {
     startTransition(async () => {
       const result = await addAction(title.trim(), priority, dueDate);
       if (result.error) { setError(result.error); return; }
-      setPriority_title("");
+      setTitle("");
       setPriority("medium");
       setDueDate("");
       inputRef.current?.focus();
@@ -38,75 +38,101 @@ export default function AddTaskForm({ addAction }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      style={{
+        background: "transparent",
+        borderBottom: "1px solid var(--rule)",
+      }}
     >
-      <div className="flex items-center gap-3 px-4 py-3 flex-wrap sm:flex-nowrap">
-        {/* Plus icon */}
-        <Plus size={16} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+      <div
+        className="flex items-center flex-wrap sm:flex-nowrap"
+        style={{
+          gap: "var(--space-3)",
+          paddingTop: "var(--space-3)",
+          paddingBottom: "var(--space-3)",
+        }}
+      >
+        <Plus size={16} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden />
 
-        {/* Title */}
         <input
           ref={inputRef}
           value={title}
-          onChange={(e) => setPriority_title(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-          placeholder="Add a task..."
-          className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-          style={{ color: "var(--color-text)" }}
+          placeholder="Add a task…"
+          className="flex-1 bg-transparent focus:outline-none min-w-0"
+          style={{
+            color: "var(--color-text)",
+            fontSize: "var(--t-body)",
+            caretColor: "var(--accent)",
+          }}
         />
 
         {/* Priority dot selector */}
-        <div className="flex items-center gap-1.5 flex-shrink-0" title="Priority">
-          {PRIORITIES.map(({ key, color }) => (
+        <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }} title="Priority">
+          {PRIORITIES.map(({ key, label, color }) => (
             <button
               key={key}
               type="button"
               onClick={() => setPriority(key)}
-              className="flex items-center justify-center transition-all"
+              className="flex items-center justify-center transition-opacity hover:opacity-80"
               style={{ width: 32, height: 32, borderRadius: "50%" }}
-              title={key.charAt(0).toUpperCase() + key.slice(1)}
+              title={label}
             >
               <span
-                className="rounded-full border-2 block transition-all"
+                className="rounded-full block"
                 style={{
-                  width: 14,
-                  height: 14,
-                  borderColor: color,
+                  width: 12,
+                  height: 12,
+                  border: `1.5px solid ${color}`,
                   background: priority === key ? color : "transparent",
+                  transition: "background var(--motion-fast) var(--ease-out-quart)",
                 }}
               />
             </button>
           ))}
         </div>
 
-        {/* Due date */}
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="text-xs focus:outline-none rounded-lg px-2 py-1 flex-shrink-0"
+          className="focus:outline-none flex-shrink-0"
           style={{
-            background: "var(--color-surface-raised)",
-            border: "1px solid var(--color-border)",
-            color: dueDate ? "var(--color-text-muted)" : "var(--color-text-faint)",
-            width: 112,
+            fontSize: "var(--t-micro)",
+            background: "transparent",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--r-1)",
+            padding: "4px 8px",
+            color: dueDate ? "var(--color-text)" : "var(--color-text-faint)",
+            width: 120,
           }}
         />
 
-        {/* Submit */}
         <button
           type="submit"
           disabled={!title.trim() || isPending}
-          className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity disabled:opacity-30"
-          style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
+          className="flex-shrink-0 transition-opacity disabled:opacity-30 hover:opacity-80"
+          style={{
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            background: "var(--accent)",
+            color: "var(--color-text-on-cta)",
+            borderRadius: "var(--r-1)",
+            padding: "6px 12px",
+          }}
         >
           {isPending ? "…" : "Add"}
         </button>
       </div>
 
       {error && (
-        <p className="px-4 pb-3 text-xs" style={{ color: "var(--color-danger)" }}>
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-danger)",
+            paddingBottom: "var(--space-3)",
+          }}
+        >
           {error}
         </p>
       )}
