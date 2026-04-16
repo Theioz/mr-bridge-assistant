@@ -326,7 +326,7 @@ function ChatPageClientInner({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 print:hidden">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowSheet(true)}
@@ -390,7 +390,7 @@ function ChatPageClientInner({
       {/* Content row: sidebar + chat */}
       <div className="flex gap-4 items-stretch flex-1 min-h-0">
         {historyOpen && (
-          <div className="hidden lg:block">
+          <div className="hidden lg:block print:hidden">
             <SessionSidebar
               sessions={sessions}
               archivedSessions={archivedSessions}

@@ -49,7 +49,7 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
           <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
             {greeting}
           </h1>
-          <div className="lg:hidden">
+          <div className="lg:hidden print:hidden">
             <SyncButton />
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         </p>
       </div>
 
-      <div className="hidden lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
+      <div className="hidden lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0 print:hidden">
         <SyncButton />
         <WindowSelector current={windowKey} />
       </div>

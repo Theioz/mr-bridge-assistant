@@ -116,10 +116,11 @@ export default function JournalEditor({
     <div
       className="rounded-xl overflow-hidden"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      data-print-flat=""
     >
       {/* Tab bar */}
       <div
-        className="flex items-center justify-between px-5 pt-4 pb-3"
+        className="flex items-center justify-between px-5 pt-4 pb-3 print:hidden"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="flex gap-1">
@@ -232,7 +233,7 @@ export default function JournalEditor({
           )}
 
           {/* Submit button */}
-          <div className="px-5 pb-5">
+          <div className="px-5 pb-5 print:hidden">
             <button
               onClick={handleSubmit}
               disabled={saveStatus === "saving" || isEmpty}

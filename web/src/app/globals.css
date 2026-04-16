@@ -198,3 +198,159 @@ body {
     background: var(--color-skeleton);
   }
 }
+
+/* ─── Print styles ────────────────────────────────────────────────────── */
+/* Force a light palette regardless of selected theme, strip chrome (nav, FAB,
+   composer, toggles), collapse grids to single column, and preserve cards
+   against awkward page-breaks. Page-specific overrides (briefing reorder,
+   chat bubble stripping) live below. */
+@media print {
+  :root,
+  :root[data-theme="dark"],
+  :root[data-theme="light"] {
+    --color-bg:             #FFFFFF;
+    --color-surface:        #FFFFFF;
+    --color-surface-raised: #FFFFFF;
+    --color-border:         #CBD5E1;
+    --color-border-subtle:  #E2E8F0;
+    --color-text:           #0F172A;
+    --color-text-muted:     #334155;
+    --color-text-faint:     #475569;
+    --color-primary:        #1E40AF;
+    --color-primary-dim:    transparent;
+    --color-secondary:      #1E40AF;
+    --color-cta:             #B45309;
+    --color-positive:       #047857;
+    --color-warning:        #B45309;
+    --color-danger:         #B91C1C;
+    --color-info:           #0369A1;
+    --color-text-on-cta:    #0F172A;
+    --color-skeleton:       #F1F5F9;
+    --hover-subtle:         transparent;
+    --warning-subtle:       transparent;
+    --warning-subtle-strong: transparent;
+    --color-danger-subtle:  transparent;
+    --color-positive-subtle: transparent;
+    --color-positive-subtle-strong: transparent;
+    --color-cta-subtle:     transparent;
+    --color-cta-subtle-strong: transparent;
+    --overlay-scrim:        transparent;
+    --shadow-sm:            none;
+    --shadow-md:            none;
+    --shadow-lg:            none;
+    --shadow-glow:          none;
+    --text-glow:            none;
+  }
+
+  @page { margin: 1.5cm; }
+
+  html,
+  body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Collapse sticky/fixed chrome into normal flow (no overlap on pages 2+) */
+  .fixed,
+  .sticky {
+    position: static !important;
+  }
+
+  /* Global chrome */
+  nav { display: none !important; }
+
+  /* Reset main content so the sidebar margin doesn't push content off-page */
+  main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Let scrollable regions expand to their full content */
+  [class*="overflow-y-auto"],
+  [class*="overflow-auto"],
+  [class*="overflow-x-auto"] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  ::-webkit-scrollbar { display: none !important; }
+
+  /* Single-column stacking — grids collapse in print */
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Avoid splitting top-level widgets across pages */
+  main > div > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .skeleton {
+    animation: none !important;
+    background: #F1F5F9 !important;
+  }
+
+  a[href] {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* ── Journal: soften the card frame; textareas read as prose ──────── */
+  [data-print-flat] {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+  textarea {
+    border: none !important;
+    background: transparent !important;
+    resize: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    color: #0F172A !important;
+    line-height: 1.7 !important;
+  }
+
+  /* ── Chat: flatten bubbles, prefix speaker, left-align ────────────── */
+  [data-print-message-root] {
+    align-items: flex-start !important;
+    margin-bottom: 0.5rem !important;
+  }
+  [data-print-message] {
+    background: transparent !important;
+    color: #0F172A !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    padding: 0.25rem 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  [data-print-message="user"]::before {
+    content: "You: ";
+    font-weight: 600;
+    color: #0F172A;
+  }
+  [data-print-message="assistant"]::before {
+    content: "Mr. Bridge: ";
+    font-weight: 600;
+    color: #1E40AF;
+  }
+  [data-print-message-root] > span[aria-hidden] {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}

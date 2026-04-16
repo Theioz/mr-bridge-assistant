@@ -176,7 +176,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       {/* Message list */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
         {hasMore && (
-          <div className="flex justify-center py-3">
+          <div className="flex justify-center py-3 print:hidden">
             <button
               onClick={() => {
                 const el = scrollContainerRef.current;
@@ -226,7 +226,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
 
         {/* Typing indicator */}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex justify-start">
+          <div className="flex justify-start print:hidden">
             <div
               className="rounded-2xl rounded-bl-sm px-4 py-2.5"
               style={{
@@ -273,7 +273,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
 
         {/* Error state */}
         {error && !isLoading && (
-          <div className="flex justify-start">
+          <div className="flex justify-start print:hidden">
             <div
               className="rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-3"
               style={{
@@ -300,7 +300,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       {/* Input bar */}
       <form
         onSubmit={handleSubmit}
-        className="flex gap-2 py-3"
+        className="flex gap-2 py-3 print:hidden"
         style={{ borderTop: "1px solid var(--color-border)" }}
       >
         {/* Wrapper provides anchor for the floating menu */}

@@ -217,14 +217,16 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:flex print:flex-col">
 
       {/* ── Header: greeting + date + weather + sync + window ───────── */}
-      <DashboardHeader greeting={greeting} dateStr={dateStr} windowKey={windowKey} />
+      <div className="print:order-1">
+        <DashboardHeader greeting={greeting} dateStr={dateStr} windowKey={windowKey} />
+      </div>
 
       {/* Mobile-only sticky time-range selector (desktop keeps it in header) */}
       <div
-        className="lg:hidden"
+        className="lg:hidden print:hidden"
         style={{
           position: "sticky",
           top: 0,
@@ -240,24 +242,34 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
-      <UpcomingBirthdayWidget />
+      <div className="print:order-7">
+        <UpcomingBirthdayWidget />
+      </div>
 
       {/* ── Today's scores strip (readiness + sleep, when today ≠ latest card) ── */}
-      {todayScores && <TodayScoresStrip today={todayScores} />}
+      {todayScores && (
+        <div className="print:order-6">
+          <TodayScoresStrip today={todayScores} />
+        </div>
+      )}
 
       {/* ── Health Breakdown: full-width, readiness + tabbed charts ─── */}
-      <HealthBreakdown
-        recovery={latestRecovery}
-        trends={recoveryTrends}
-        fitnessData={fitnessData}
-        windowLabel={windowKey.toUpperCase()}
-      />
+      <div className="print:order-5">
+        <HealthBreakdown
+          recovery={latestRecovery}
+          trends={recoveryTrends}
+          fitnessData={fitnessData}
+          windowLabel={windowKey.toUpperCase()}
+        />
+      </div>
 
       {/* ── Schedule today (full width) ──────────────────────────────── */}
-      <ScheduleToday />
+      <div className="print:order-2">
+        <ScheduleToday />
+      </div>
 
       {/* ── Tasks + Habits: fixed height, scrollable ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-3">
         <TasksSummary tasks={tasks} />
         <HabitsCheckin
           registry={habitRegistry}
@@ -269,7 +281,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Watchlist + Sports: market + favorite teams ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-8">
         <WatchlistWidget
           rows={stocksRows}
           hasApiKey={!!process.env.POLYGON_API_KEY}
@@ -289,7 +301,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Emails ───────────────────────────────────────────────────── */}
-      <ImportantEmails />
+      <div className="print:order-9">
+        <ImportantEmails />
+      </div>
 
     </div>
   );
