@@ -1,0 +1,46 @@
+[
+  {
+    "antipattern": "bounce-easing",
+    "name": "Bounce or elastic easing",
+    "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly — use exponential easing (ease-out-quart/quint/expo) instead.",
+    "file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/chat-interface.tsx",
+    "line": 243,
+    "snippet": "animate-bounce (Tailwind)",
+    "importedBy": [
+      "chat-page-client.tsx"
+    ]
+  },
+  {
+    "antipattern": "bounce-easing",
+    "name": "Bounce or elastic easing",
+    "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly — use exponential easing (ease-out-quart/quint/expo) instead.",
+    "file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/chat-interface.tsx",
+    "line": 252,
+    "snippet": "animate-bounce (Tailwind)",
+    "importedBy": [
+      "chat-page-client.tsx"
+    ]
+  },
+  {
+    "antipattern": "bounce-easing",
+    "name": "Bounce or elastic easing",
+    "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly — use exponential easing (ease-out-quart/quint/expo) instead.",
+    "file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/chat-interface.tsx",
+    "line": 261,
+    "snippet": "animate-bounce (Tailwind)",
+    "importedBy": [
+      "chat-page-client.tsx"
+    ]
+  },
+  {
+    "antipattern": "layout-transition",
+    "name": "Layout property animation",
+    "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+    "file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/session-sidebar.tsx",
+    "line": 64,
+    "snippet": "transition: width",
+    "importedBy": [
+      "chat-page-client.tsx"
+    ]
+  }
+]
