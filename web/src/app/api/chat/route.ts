@@ -1185,7 +1185,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .lte("date", sunday)
           .order("date", { ascending: true });
         if (error) return { error: error.message };
-        return { week: `${fmt(monday)} – ${fmt(sunday)}`, plans: data ?? [] };
+        return { week: `${monday} – ${sunday}`, plans: data ?? [] };
       },
     }),
 
