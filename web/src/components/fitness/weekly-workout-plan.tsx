@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
-import type { WorkoutPlan, WorkoutExercise, StrengthSession, StrengthSessionSet } from "@/lib/types";
+import type {
+  WorkoutPlan,
+  WorkoutExercise,
+  StrengthSession,
+  StrengthSessionSet,
+} from "@/lib/types";
 import { todayString, addDays } from "@/lib/timezone";
 import type { WeightUnit } from "@/lib/units";
 import { InlineSetLogger } from "./inline-set-logger";
@@ -26,11 +31,9 @@ interface DaySlot {
 
 function buildWeekDays(plans: WorkoutPlan[], completedDates: string[]): DaySlot[] {
   const todayStr = todayString();
-  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7;
   const mondayStr = addDays(todayStr, -dow);
-
   const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
   return DAY_LABELS.map((label, i) => {
     const date = addDays(mondayStr, i);
     return {
@@ -44,8 +47,10 @@ function buildWeekDays(plans: WorkoutPlan[], completedDates: string[]): DaySlot[
 }
 
 function fmtShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function fmtWeekRange(days: DaySlot[]): string {
@@ -71,13 +76,27 @@ function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
   if (ex.weight_lbs) details.push(`@ ${ex.weight_lbs} lbs`);
 
   return (
-    <div style={{ padding: "3px 0" }}>
-      <div className="flex items-baseline gap-1.5">
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>{ex.exercise}</span>
+    <div style={{ padding: "var(--space-1) 0" }}>
+      <div className="flex items-baseline gap-1.5 flex-wrap">
+        <span
+          style={{
+            fontSize: "var(--t-body)",
+            fontWeight: 500,
+            color: "var(--color-text)",
+          }}
+        >
+          {ex.exercise}
+        </span>
         {details.length > 0 && (
           <>
-            <span style={{ fontSize: 11, color: "var(--color-text-faint, var(--color-text-muted))" }}>·</span>
-            <span style={{ fontSize: 12, color: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>·</span>
+            <span
+              className="tnum"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+              }}
+            >
               {details.join(" ")}
             </span>
           </>
@@ -115,17 +134,17 @@ interface PhaseSectionProps {
 function PhaseSection({ label, exercises, loggerBase }: PhaseSectionProps) {
   if (exercises.length === 0) return null;
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: "var(--space-4)" }}>
       <div
-        className="text-xs uppercase tracking-widest"
         style={{
           fontSize: 10,
-          fontWeight: 500,
-          letterSpacing: "0.07em",
-          color: "var(--color-text-faint, var(--color-text-muted))",
-          paddingBottom: 5,
-          marginBottom: 6,
-          borderBottom: "1px solid var(--color-border)",
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--color-text-faint)",
+          paddingBottom: "var(--space-2)",
+          marginBottom: "var(--space-2)",
+          borderBottom: "1px solid var(--rule-soft)",
         }}
       >
         {label}
@@ -179,59 +198,74 @@ export function WeeklyWorkoutPlan({
   if (days.length === 0) return null;
 
   return (
-    <div
-      className="rounded-xl p-5 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    <section
+      className="flex flex-col"
+      style={{ gap: "var(--space-4)", minWidth: 0 }}
     >
-      {/* Header */}
-      <div className="flex items-baseline justify-between mb-4">
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: "var(--font-display), system-ui, sans-serif",
+            fontSize: "var(--t-h2)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.01em",
+          }}
         >
-          Weekly Program
-        </p>
-        <span style={{ fontSize: 11, color: "var(--color-text-faint, var(--color-text-muted))" }}>
+          Weekly program
+        </h2>
+        <span
+          className="tnum"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+        >
           {fmtWeekRange(days)}
         </span>
       </div>
 
-      {/* Day rows */}
-      <div className="flex flex-col gap-1.5">
-        {days.map((day) => {
+      <div className="flex flex-col">
+        {days.map((day, idx) => {
           const isOpen = !!open[day.date];
+          const isFirst = idx === 0;
 
           if (!day.plan) {
-            // Rest day — plain row, no toggle
             return (
               <div
                 key={day.date}
-                className="flex items-center gap-3 rounded-lg px-3.5 py-2.5"
+                className="flex items-center flex-wrap"
                 style={{
-                  background: "var(--color-surface-raised)",
-                  border: "1px solid var(--color-border)",
+                  minHeight: 44,
+                  padding: "var(--space-3) 0",
+                  borderTop: isFirst ? undefined : "1px solid var(--rule-soft)",
+                  gap: "var(--space-3)",
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", width: 28, flexShrink: 0 }}>
+                <span
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    fontWeight: 600,
+                    color: "var(--color-text-muted)",
+                    width: 32,
+                    flexShrink: 0,
+                    letterSpacing: "0.04em",
+                  }}
+                >
                   {day.label}
                 </span>
-                <span style={{ fontSize: 12, color: "var(--color-text-faint, var(--color-text-muted))" }}>
+                <span
+                  className="tnum"
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                >
                   {fmtShortDate(day.date)}
                 </span>
-                {day.isToday && (
-                  <span
-                    className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
-                  >
-                    Today
-                  </span>
-                )}
+                {day.isToday && <TodayPip />}
                 <span
                   style={{
                     marginLeft: "auto",
-                    fontSize: 12,
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
                     fontStyle: "italic",
-                    color: "var(--color-text-faint, var(--color-text-muted))",
                   }}
                 >
                   Rest
@@ -240,40 +274,52 @@ export function WeeklyWorkoutPlan({
             );
           }
 
-          // Plan day — expandable card
           return (
             <div
               key={day.date}
-              className="rounded-lg overflow-hidden"
-              style={{ border: "1px solid var(--color-border)" }}
+              style={{
+                borderTop: isFirst ? undefined : "1px solid var(--rule-soft)",
+              }}
             >
-              {/* Card header */}
               <button
                 onClick={() => toggle(day.date)}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left cursor-pointer transition-colors duration-150"
+                className="w-full flex items-center text-left cursor-pointer flex-wrap"
                 style={{
-                  background: "var(--color-surface-raised)",
+                  minHeight: 44,
+                  padding: "var(--space-3) 0",
+                  background: "transparent",
                   border: "none",
+                  gap: "var(--space-3)",
+                  transition:
+                    "color var(--motion-fast) var(--ease-out-quart)",
+                  color: "var(--color-text)",
                 }}
+                aria-expanded={isOpen}
               >
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", width: 28, flexShrink: 0 }}>
+                <span
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    fontWeight: 600,
+                    color: "var(--color-text-muted)",
+                    width: 32,
+                    flexShrink: 0,
+                    letterSpacing: "0.04em",
+                  }}
+                >
                   {day.label}
                 </span>
-                <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                <span
+                  className="tnum"
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                >
                   {fmtShortDate(day.date)}
                 </span>
-                {day.isToday && (
-                  <span
-                    className="text-xs uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ fontSize: 10, background: "var(--color-primary)", color: "var(--color-text-on-cta)", flexShrink: 0 }}
-                  >
-                    Today
-                  </span>
-                )}
+                {day.isToday && <TodayPip />}
                 {day.plan.name && (
                   <span
                     style={{
-                      fontSize: 13,
+                      fontSize: "var(--t-body)",
                       fontWeight: 500,
                       color: "var(--color-text)",
                       flex: 1,
@@ -287,20 +333,34 @@ export function WeeklyWorkoutPlan({
                 )}
                 {!day.plan.name && <span style={{ flex: 1 }} />}
                 {day.isCompleted && (
-                  <span style={{ color: "var(--color-positive)", fontSize: 14, marginLeft: 4, flexShrink: 0 }}>✓</span>
+                  <span
+                    aria-label="Completed"
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-positive)",
+                      flexShrink: 0,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    ✓
+                  </span>
                 )}
-                <span style={{ color: "var(--color-text-faint, var(--color-text-muted))", flexShrink: 0 }}>
+                <span
+                  style={{
+                    color: "var(--color-text-faint)",
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
                   {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </span>
               </button>
 
-              {/* Card body */}
               {isOpen && (
                 <div
                   style={{
-                    padding: "12px 14px 14px",
-                    borderTop: "1px solid var(--color-border)",
-                    background: "var(--color-bg, var(--color-surface))",
+                    padding: "var(--space-3) 0 var(--space-4) calc(32px + var(--space-3))",
                   }}
                 >
                   <PhaseSection label="Warm-up" exercises={day.plan.warmup} />
@@ -319,11 +379,16 @@ export function WeeklyWorkoutPlan({
                         : undefined
                     }
                   />
-                  <div style={{ marginBottom: 0 }}>
-                    <PhaseSection label="Cool-down" exercises={day.plan.cooldown} />
-                  </div>
+                  <PhaseSection label="Cool-down" exercises={day.plan.cooldown} />
                   {day.plan.notes && (
-                    <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 8, fontStyle: "italic" }}>
+                    <p
+                      style={{
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-muted)",
+                        marginTop: "var(--space-2)",
+                        fontStyle: "italic",
+                      }}
+                    >
                       {day.plan.notes}
                     </p>
                   )}
@@ -341,6 +406,34 @@ export function WeeklyWorkoutPlan({
           );
         })}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function TodayPip() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: "var(--accent)",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: "var(--accent)",
+        }}
+      />
+      Today
+    </span>
   );
 }

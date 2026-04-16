@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import type { WorkoutSession } from "@/lib/types";
 
 interface Props {
@@ -21,7 +27,6 @@ function fmtDate(d: string) {
   });
 }
 
-/** Format HH:MM:SS → h:mm AM/PM */
 function fmtTime(t: string | null): string {
   if (!t) return "—";
   const [h, m] = t.split(":").map(Number);
@@ -30,7 +35,6 @@ function fmtTime(t: string | null): string {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-/** Compute end time from HH:MM:SS start + duration in minutes, formatted as h:mm AM/PM */
 function calcEndTime(startTime: string | null, durationMins: number | null): string {
   if (!startTime || durationMins == null) return "—";
   const [h, m] = startTime.split(":").map(Number);
@@ -42,15 +46,19 @@ function calcEndTime(startTime: string | null, durationMins: number | null): str
   return `${h12}:${String(endM).padStart(2, "0")} ${ampm}`;
 }
 
-function SortIcon({ col, sortKey, dir }: { col: SortKey; sortKey: SortKey; dir: SortDir }) {
-  if (col !== sortKey) return <ChevronsUpDown size={12} style={{ opacity: 0.3 }} />;
+function SortIcon({
+  col,
+  sortKey,
+  dir,
+}: {
+  col: SortKey;
+  sortKey: SortKey;
+  dir: SortDir;
+}) {
+  if (col !== sortKey)
+    return <ChevronsUpDown size={12} style={{ opacity: 0.3 }} />;
   return dir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
 }
-
-const SOURCE_COLORS: Record<string, string> = {
-  fitbit: "var(--color-primary)",
-  manual: "var(--color-text-muted)",
-};
 
 export function WorkoutHistoryTable({ workouts }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("date");
@@ -68,11 +76,15 @@ export function WorkoutHistoryTable({ workouts }: Props) {
     setPage(0);
   }
 
-  // Unique activity types for the filter pills
-  const activityTypes = ["All", ...Array.from(new Set(workouts.map((w) => w.activity))).sort()];
+  const activityTypes = [
+    "All",
+    ...Array.from(new Set(workouts.map((w) => w.activity))).sort(),
+  ];
 
   const filtered =
-    activityFilter === "All" ? workouts : workouts.filter((w) => w.activity === activityFilter);
+    activityFilter === "All"
+      ? workouts
+      : workouts.filter((w) => w.activity === activityFilter);
 
   const sorted = [...filtered].sort((a, b) => {
     const av = a[sortKey] ?? "";
@@ -86,88 +98,115 @@ export function WorkoutHistoryTable({ workouts }: Props) {
 
   const thStyle: React.CSSProperties = {
     textAlign: "left",
-    paddingBottom: 10,
+    paddingBottom: "var(--space-3)",
     fontSize: 11,
-    fontWeight: 500,
-    color: "var(--color-text-muted)",
-    letterSpacing: "0.05em",
+    fontWeight: 600,
+    color: "var(--color-text-faint)",
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
   };
 
-  const thNoSort: React.CSSProperties = {
-    ...thStyle,
-    cursor: "default",
-  };
+  const thNoSort: React.CSSProperties = { ...thStyle, cursor: "default" };
 
   const tdBase: React.CSSProperties = {
-    paddingTop: 10,
-    paddingBottom: 4,
-    borderTop: "1px solid var(--color-border)",
-    fontSize: 13,
+    paddingTop: "var(--space-3)",
+    paddingBottom: "var(--space-2)",
+    borderTop: "1px solid var(--rule-soft)",
+    fontSize: "var(--t-micro)",
     color: "var(--color-text)",
     verticalAlign: "top",
   };
 
   return (
-    <div
-      className="rounded-xl p-5 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    <section
+      className="flex flex-col"
+      style={{ gap: "var(--space-3)", minWidth: 0 }}
     >
-      <p
-        className="text-xs uppercase tracking-widest mb-4"
-        style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-      >
-        Workout History
-      </p>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: "var(--font-display), system-ui, sans-serif",
+            fontSize: "var(--t-h2)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Workout history
+        </h2>
+        <span
+          className="tnum"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+        >
+          {workouts.length} total
+        </span>
+      </div>
 
       {workouts.length === 0 ? (
-        <p style={{ fontSize: 14, color: "var(--color-text-faint)", paddingTop: 8 }}>
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            fontStyle: "italic",
+          }}
+        >
           No workouts logged
         </p>
       ) : (
         <>
-          {/* Activity type filter pills */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {activityTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setActivityFilter(type);
-                  setPage(0);
-                }}
-                className="px-2.5 py-1 rounded-full text-xs transition-colors duration-150 cursor-pointer"
-                style={{
-                  fontSize: 11,
-                  fontWeight: activityFilter === type ? 600 : 400,
-                  background:
-                    activityFilter === type
-                      ? "var(--color-primary)"
-                      : "var(--color-surface-raised)",
-                  color:
-                    activityFilter === type
+          <div className="flex flex-wrap" style={{ gap: "var(--space-2)" }}>
+            {activityTypes.map((type) => {
+              const active = activityFilter === type;
+              return (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setActivityFilter(type);
+                    setPage(0);
+                  }}
+                  className="cursor-pointer"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: active ? 600 : 500,
+                    minHeight: 32,
+                    padding: "0 var(--space-3)",
+                    borderRadius: "var(--r-1)",
+                    background: active ? "var(--accent)" : "transparent",
+                    color: active
                       ? "var(--color-text-on-cta)"
                       : "var(--color-text-muted)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                {type}
-              </button>
-            ))}
+                    border: `1px solid ${active ? "var(--accent)" : "var(--rule)"}`,
+                    textTransform: "capitalize",
+                    transition:
+                      "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
+                  }}
+                >
+                  {type}
+                </button>
+              );
+            })}
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 700 }}>
+            <table
+              className="w-full"
+              style={{ borderCollapse: "collapse", minWidth: 700 }}
+            >
               <thead>
                 <tr>
-                  {([
-                    { key: "date" as SortKey, label: "Date", sortable: true },
-                    { key: "activity" as SortKey, label: "Activity", sortable: true },
-                    { key: "duration_mins" as SortKey, label: "Duration", sortable: true },
-                    { key: "calories" as SortKey, label: "Calories", sortable: true },
-                    { key: "avg_hr" as SortKey, label: "Avg HR", sortable: true },
-                  ] as { key: SortKey; label: string; sortable: boolean }[]).map(({ key, label, sortable }) => (
+                  {(
+                    [
+                      { key: "date" as SortKey, label: "Date", sortable: true },
+                      { key: "activity" as SortKey, label: "Activity", sortable: true },
+                      { key: "duration_mins" as SortKey, label: "Duration", sortable: true },
+                      { key: "calories" as SortKey, label: "Calories", sortable: true },
+                      { key: "avg_hr" as SortKey, label: "Avg HR", sortable: true },
+                    ] as { key: SortKey; label: string; sortable: boolean }[]
+                  ).map(({ key, label, sortable }) => (
                     <th
                       key={key}
                       style={sortable ? thStyle : thNoSort}
@@ -175,7 +214,9 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                     >
                       <span className="flex items-center gap-1">
                         {label}
-                        {sortable && <SortIcon col={key} sortKey={sortKey} dir={sortDir} />}
+                        {sortable && (
+                          <SortIcon col={key} sortKey={sortKey} dir={sortDir} />
+                        )}
                       </span>
                     </th>
                   ))}
@@ -190,13 +231,16 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                   return (
                     <tr key={i}>
                       <td style={{ ...tdBase, color: "var(--color-text-muted)" }}>
-                        <div style={{ paddingBottom: hrZones ? 6 : 10 }}>{fmtDate(w.date)}</div>
+                        <div className="tnum" style={{ paddingBottom: hrZones ? 6 : "var(--space-2)" }}>
+                          {fmtDate(w.date)}
+                        </div>
                         {hrZones && (
                           <div
+                            className="tnum"
                             style={{
                               fontSize: 11,
-                              color: "var(--color-text-faint, var(--color-text-muted))",
-                              paddingBottom: 8,
+                              color: "var(--color-text-faint)",
+                              paddingBottom: "var(--space-2)",
                               paddingTop: 2,
                             }}
                           >
@@ -204,52 +248,47 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                           </div>
                         )}
                       </td>
-                      <td style={{ ...tdBase, fontWeight: 500, textTransform: "capitalize" }}>
-                        <div style={{ paddingBottom: hrZones ? 6 : 10 }}>{w.activity ?? "—"}</div>
-                        {hrZones && <div style={{ paddingBottom: 8, paddingTop: 2 }} />}
-                      </td>
                       <td
                         style={{
                           ...tdBase,
-                          color: "var(--color-text-muted)",
-                          fontVariantNumeric: "tabular-nums",
+                          fontWeight: 500,
+                          textTransform: "capitalize",
                         }}
+                      >
+                        <div style={{ paddingBottom: hrZones ? 6 : "var(--space-2)" }}>
+                          {w.activity ?? "—"}
+                        </div>
+                        {hrZones && (
+                          <div style={{ paddingBottom: "var(--space-2)", paddingTop: 2 }} />
+                        )}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
                       >
                         {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
                       </td>
                       <td
-                        style={{
-                          ...tdBase,
-                          color: "var(--color-text-muted)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
+                        className="tnum"
+                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
                       >
                         {w.calories != null ? `${w.calories}` : "—"}
                       </td>
                       <td
-                        style={{
-                          ...tdBase,
-                          color: "var(--color-text-muted)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
+                        className="tnum"
+                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
                       >
                         {w.avg_hr != null ? `${w.avg_hr} bpm` : "—"}
                       </td>
                       <td
-                        style={{
-                          ...tdBase,
-                          color: "var(--color-text-muted)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
+                        className="tnum"
+                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
                       >
                         {fmtTime(w.start_time)}
                       </td>
                       <td
-                        style={{
-                          ...tdBase,
-                          color: "var(--color-text-muted)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
+                        className="tnum"
+                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
                       >
                         {calcEndTime(w.start_time, w.duration_mins)}
                       </td>
@@ -260,11 +299,11 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                               display: "inline-block",
                               fontSize: 10,
                               fontWeight: 500,
-                              letterSpacing: "0.04em",
+                              letterSpacing: "0.08em",
                               padding: "2px 7px",
                               borderRadius: 999,
-                              border: "1px solid var(--color-border)",
-                              color: SOURCE_COLORS[w.source] ?? "var(--color-text-muted)",
+                              border: "1px solid var(--rule)",
+                              color: "var(--color-text-muted)",
                               textTransform: "lowercase",
                             }}
                           >
@@ -281,25 +320,40 @@ export function WorkoutHistoryTable({ workouts }: Props) {
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div
-              className="flex items-center justify-between mt-4 pt-3"
-              style={{ borderTop: "1px solid var(--color-border)" }}
+              className="flex items-center justify-between flex-wrap"
+              style={{
+                paddingTop: "var(--space-3)",
+                borderTop: "1px solid var(--rule-soft)",
+                gap: "var(--space-3)",
+              }}
             >
-              <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of{" "}
+              <span
+                className="tnum"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                {page * PAGE_SIZE + 1}–
+                {Math.min((page + 1) * PAGE_SIZE, sorted.length)} of{" "}
                 {sorted.length} · Page {page + 1} of {totalPages}
               </span>
-              <div className="flex gap-2">
+              <div className="flex" style={{ gap: "var(--space-2)" }}>
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                  className="flex items-center cursor-pointer disabled:opacity-40 disabled:cursor-default"
                   style={{
+                    minHeight: 44,
+                    padding: "0 var(--space-3)",
+                    borderRadius: "var(--r-1)",
                     background: "transparent",
-                    border: "1px solid var(--color-border)",
+                    border: "1px solid var(--rule)",
                     color: "var(--color-text-muted)",
+                    fontSize: "var(--t-micro)",
+                    gap: 4,
                   }}
                 >
                   <ChevronLeft size={13} /> Prev
@@ -307,11 +361,16 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page === totalPages - 1}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                  className="flex items-center cursor-pointer disabled:opacity-40 disabled:cursor-default"
                   style={{
+                    minHeight: 44,
+                    padding: "0 var(--space-3)",
+                    borderRadius: "var(--r-1)",
                     background: "transparent",
-                    border: "1px solid var(--color-border)",
+                    border: "1px solid var(--rule)",
                     color: "var(--color-text-muted)",
+                    fontSize: "var(--t-micro)",
+                    gap: 4,
                   }}
                 >
                   Next <ChevronRight size={13} />
@@ -321,6 +380,6 @@ export function WorkoutHistoryTable({ workouts }: Props) {
           )}
         </>
       )}
-    </div>
+    </section>
   );
 }

@@ -8,114 +8,113 @@ interface Props {
 }
 
 export function RecentSessionsList({ sessions, unit }: Props) {
-  if (sessions.length === 0) {
-    return (
-      <div
-        className="rounded-xl p-5 transition-all duration-200 card-lift"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em", marginBottom: 10 }}
-        >
-          Recent sessions
-        </p>
-        <p style={{ fontSize: 13, color: "var(--color-text-faint, var(--color-text-muted))", fontStyle: "italic" }}>
-          No strength sessions logged yet. Log a set during your next workout to get started.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    <section
+      className="flex flex-col"
+      style={{ gap: "var(--space-3)", minWidth: 0 }}
     >
-      <div
-        className="px-5 py-3.5"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
+      <h2
+        style={{
+          margin: 0,
+          fontFamily: "var(--font-display), system-ui, sans-serif",
+          fontSize: "var(--t-h2)",
+          fontWeight: 600,
+          color: "var(--color-text)",
+          letterSpacing: "-0.01em",
+        }}
       >
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          Recent sessions
-        </p>
-      </div>
+        Recent sessions
+      </h2>
 
-      <div>
-        {sessions.map((s) => {
-          const exerciseCount = new Set(s.sets.map((set) => set.exercise_name.toLowerCase())).size;
-          const totalSets = s.sets.length;
-          const topLift = pickTopLift(s.sets, unit);
-          return (
-            <div
-              key={s.id}
-              className="flex items-center gap-3 px-5 py-3"
-              style={{ borderBottom: "1px solid var(--color-border)" }}
-            >
-              <div style={{ minWidth: 72 }}>
-                <p
+      {sessions.length === 0 ? (
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            fontStyle: "italic",
+          }}
+        >
+          No strength sessions logged yet. Log a set during your next workout to
+          get started.
+        </p>
+      ) : (
+        <div>
+          {sessions.map((s, idx) => {
+            const exerciseCount = new Set(
+              s.sets.map((set) => set.exercise_name.toLowerCase())
+            ).size;
+            const totalSets = s.sets.length;
+            const topLift = pickTopLift(s.sets, unit);
+            return (
+              <div
+                key={s.id}
+                className="db-row"
+                style={{
+                  gridTemplateColumns: "72px 1fr auto",
+                  alignItems: "baseline",
+                  borderTop: idx === 0 ? undefined : "1px solid var(--rule-soft)",
+                }}
+              >
+                <span
+                  className="tnum"
                   style={{
-                    fontSize: 13,
+                    fontSize: "var(--t-micro)",
                     fontWeight: 500,
                     color: "var(--color-text)",
                   }}
                 >
                   {fmtDate(s.performed_on)}
-                </p>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "var(--color-text-muted)",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} · {totalSets} set{totalSets === 1 ? "" : "s"}
-                  {topLift && (
-                    <>
-                      {" "}· top: {topLift.exercise} {topLift.weight} {unit} × {topLift.reps}
-                    </>
-                  )}
-                </p>
-                {s.notes && (
+                </span>
+                <div style={{ minWidth: 0 }}>
                   <p
+                    className="tnum"
                     style={{
-                      fontSize: 11,
-                      color: "var(--color-text-faint, var(--color-text-muted))",
-                      fontStyle: "italic",
-                      marginTop: 2,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-muted)",
                     }}
                   >
-                    {s.notes}
+                    {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} ·{" "}
+                    {totalSets} set{totalSets === 1 ? "" : "s"}
+                    {topLift && (
+                      <>
+                        {" "}· top: {topLift.exercise} {topLift.weight} {unit} ×{" "}
+                        {topLift.reps}
+                      </>
+                    )}
                   </p>
+                  {s.notes && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "var(--color-text-faint)",
+                        fontStyle: "italic",
+                        marginTop: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {s.notes}
+                    </p>
+                  )}
+                </div>
+                {s.perceived_effort != null && (
+                  <span
+                    className="tnum"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    RPE {s.perceived_effort}/10
+                  </span>
                 )}
               </div>
-
-              {s.perceived_effort != null && (
-                <div
-                  className="flex-shrink-0"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--color-text-muted)",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  RPE {s.perceived_effort}/10
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 
