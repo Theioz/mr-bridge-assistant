@@ -178,7 +178,7 @@ Dark mode is the default (per style: Dark Mode OLED). Light mode tokens provided
 
 **Best For:** Night-mode apps, coding platforms, entertainment, eye-strain prevention, OLED devices, low-light
 
-**Key Effects:** Minimal glow (text-shadow: 0 0 10px), dark-to-light transitions, low white emission, high readability, visible focus
+**Key Effects:** Minimal glow (`text-shadow: var(--text-glow)` on `.font-heading`, dark mode only), dark-to-light transitions, low white emission, high readability, visible focus
 
 ### Page Pattern
 

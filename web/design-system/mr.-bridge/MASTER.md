@@ -337,6 +337,7 @@ const chartDefaults = {
 **Style:** Dark Professional Dashboard (Linear/Raycast-inspired)
 
 **Key Effects:**
+- Text glow: `text-shadow: var(--text-glow)` on `.font-heading` — dark mode only (`0 0 12px rgba(248,250,252,0.3)`; light: `none`)
 - Transitions: 150–200ms ease for interactive elements
 - Hover: border-color shift, no layout-shifting transforms
 - Focus: visible indigo ring (`box-shadow: 0 0 0 3px #6366F120`)

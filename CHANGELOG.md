@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (dark-mode OLED glow — issue #257)
+- **Subtle text glow on headings in dark mode.** New `--text-glow` CSS token (`0 0 12px rgba(248,250,252,0.3)` in dark, `none` in light) applied to all `.font-heading` elements. Covers page titles, metric card values, score numbers, and nav labels. MASTER.md Key Effects updated to match.
+
 ### Fixed (UI/UX mop-up — issues #253 + #254)
 - **Inline hover handlers replaced.** 5 remaining `onMouseOver/Out` sites in settings (profile-form, watchlist-settings, sports-settings) and dashboard (watchlist-widget) now use CSS utility classes (`hover-text-muted`, `hover-text-danger`, `hover-bg-subtle`, `hover-text-brighten`) instead of writing `.style.*` directly.
 - **Hardcoded `color: "white"` tokenized.** 10 sites across chat, tasks, error pages, notifications, and layout now use `var(--color-text-on-cta)`.
