@@ -2,25 +2,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-28" />
-      {/* Editor card */}
-      <div
-        className="rounded-xl p-5"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <Skeleton className="h-4 w-32 mb-4" />
-        <Skeleton style={{ height: 300 }} />
+    <div
+      className="prose-column"
+      style={{ display: "flex", flexDirection: "column", gap: "var(--space-7)" }}
+    >
+      {/* Header */}
+      <div>
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-3 w-44" style={{ marginTop: "var(--space-2)" }} />
       </div>
-      {/* Past entries */}
-      {[1, 2].map((i) => (
+
+      {/* Tab bar hairline */}
+      <div
+        style={{
+          borderBottom: "1px solid var(--rule-soft)",
+          paddingBottom: "var(--space-3)",
+          display: "flex",
+          gap: "var(--space-5)",
+        }}
+      >
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+
+      {/* Prompt fields — flat, hairline-separated */}
+      {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="rounded-xl p-5 flex items-center justify-between"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          style={{
+            paddingTop: i > 1 ? "var(--space-5)" : 0,
+            borderTop: i > 1 ? "1px solid var(--rule-soft)" : "none",
+          }}
         >
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-3 w-28" style={{ marginBottom: "var(--space-3)" }} />
+          <Skeleton style={{ height: 72 }} />
         </div>
       ))}
     </div>

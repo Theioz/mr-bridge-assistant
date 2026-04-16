@@ -45,40 +45,86 @@ export default function JournalTabs({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Outer tab bar */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+      {/* Outer tab bar — hairline rule with amber underline on active */}
       <div
-        className="flex gap-1 p-1 rounded-xl self-start print:hidden"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", display: "inline-flex" }}
+        role="tablist"
+        aria-label="Journal view"
+        className="print:hidden"
+        style={{
+          display: "flex",
+          gap: "var(--space-5)",
+          borderBottom: "1px solid var(--rule-soft)",
+        }}
       >
-        {([["write", "Write"], ["history", "History"]] as [OuterTab, string][]).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            style={{
-              background: tab === t ? "var(--color-primary)"     : "transparent",
-              color:      tab === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-            }}
-          >
-            {label}
-          </button>
-        ))}
+        {([["write", "Write"], ["history", "History"]] as [OuterTab, string][]).map(
+          ([t, label]) => {
+            const isActive = tab === t;
+            return (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setTab(t)}
+                className="transition-colors"
+                style={{
+                  minHeight: 44,
+                  padding: "var(--space-2) var(--space-1)",
+                  fontFamily: "var(--font-display), system-ui, sans-serif",
+                  fontSize: "var(--t-micro)",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: isActive ? "var(--accent)" : "var(--color-text-faint)",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: isActive
+                    ? "2px solid var(--accent)"
+                    : "2px solid transparent",
+                  marginBottom: -1,
+                  transitionDuration: "var(--motion-fast)",
+                  transitionTimingFunction: "var(--ease-out-quart)",
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          }
+        )}
       </div>
 
       {/* Write tab */}
       {tab === "write" && (
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {isEditingPast && (
-            <div className="flex items-center gap-3 print:hidden">
+            <div
+              className="flex items-center print:hidden"
+              style={{ gap: "var(--space-3)" }}
+            >
               <button
                 onClick={() => { setEditingEntry(null); }}
-                className="text-xs"
-                style={{ color: "var(--color-text-muted)" }}
+                className="hover-text-brighten transition-colors"
+                style={{
+                  minHeight: 44,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  transitionDuration: "var(--motion-fast)",
+                  transitionTimingFunction: "var(--ease-out-quart)",
+                }}
               >
                 ← Back to today
               </button>
-              <span className="text-xs" style={{ color: "var(--color-text-faint)" }}>
+              <span
+                className="tnum"
+                style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+              >
                 Editing{" "}
                 {new Date(editingEntry.date + "T00:00:00").toLocaleDateString("en-US", {
                   weekday: "long", month: "long", day: "numeric",

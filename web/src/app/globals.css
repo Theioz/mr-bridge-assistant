@@ -293,6 +293,33 @@ body {
   box-shadow: 0 0 0 3px var(--color-primary-dim) !important;
 }
 
+/* ─── Journal prose field ────────────────────────────────────────────── */
+/* Flat textarea — no chrome at rest; a hairline bottom rule appears on
+   focus so the field feels like a paper ruling rather than a form input. */
+.journal-field {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: var(--space-2) 0;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--t-body);
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-out-quart);
+}
+.journal-field:focus,
+.journal-field:focus-visible {
+  outline: none;
+  border-bottom-color: var(--rule-soft);
+}
+.journal-field::placeholder {
+  color: var(--color-text-faint);
+}
+
 /* Card hover lift — MASTER.md spec. */
 .card-lift { will-change: transform; }
 .card-lift:hover {
