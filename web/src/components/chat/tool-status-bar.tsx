@@ -29,7 +29,6 @@ interface ToolInvocation {
   state: "partial-call" | "call" | "result";
 }
 
-// AI SDK v4 message.parts shape (subset we care about)
 type MessagePart =
   | { type: "text"; text: string }
   | { type: "tool-invocation"; toolInvocation: ToolInvocation }
@@ -56,14 +55,12 @@ function getInvocations(msg: Message): ToolInvocation[] {
 const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props) {
   if (!isLoading) return null;
 
-  // Only look at messages since the last user turn
   const lastUserIdx = messages.reduce((acc, m, i) => (m.role === "user" ? i : acc), -1);
   if (lastUserIdx === -1) return null;
 
   const assistantMessages = messages.slice(lastUserIdx + 1).filter((m) => m.role === "assistant");
   if (assistantMessages.length === 0) return null;
 
-  // Collect all tool invocations across multi-step responses, last state wins per call ID
   const seen = new Map<string, ToolInvocation>();
   for (const msg of assistantMessages) {
     for (const inv of getInvocations(msg)) {
@@ -77,28 +74,52 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
 
   return (
     <div className="flex justify-start print:hidden">
-      <div className="flex flex-wrap gap-1.5 px-1 py-1">
+      <div
+        className="flex flex-wrap"
+        style={{
+          gap: "var(--space-1)",
+          padding: "var(--space-1) 0",
+        }}
+      >
         {chips.map((inv) => {
           const isDone = inv.state === "result";
           return (
             <span
               key={inv.toolCallId}
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
+              className="inline-flex items-center rounded-full tnum"
               style={{
-                background: "var(--color-surface-raised)",
-                border: "1px solid var(--color-border)",
-                color: isDone ? "var(--color-text-muted)" : "var(--color-text)",
+                gap: "var(--space-1)",
+                padding: "var(--space-1) var(--space-3)",
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: `1px solid ${isDone ? "var(--rule-soft)" : "var(--accent)"}`,
+                color: isDone ? "var(--color-text-faint)" : "var(--color-text)",
               }}
             >
               {isDone ? (
-                <span className="text-[10px] leading-none" style={{ color: "var(--color-positive)" }}>✓</span>
+                <span
+                  aria-hidden
+                  style={{
+                    fontSize: 10,
+                    lineHeight: 1,
+                    color: "var(--color-positive)",
+                  }}
+                >
+                  ✓
+                </span>
               ) : (
                 <span
-                  className="inline-block w-2.5 h-2.5 rounded-full animate-spin shrink-0"
-                  style={{ border: "1px solid var(--color-text-muted)", borderTopColor: "transparent" }}
+                  aria-hidden
+                  className="inline-block rounded-full animate-spin shrink-0"
+                  style={{
+                    width: 10,
+                    height: 10,
+                    border: "1.5px solid var(--accent)",
+                    borderTopColor: "transparent",
+                  }}
                 />
               )}
-              {toolLabel(inv.toolName)}{isDone ? "" : "..."}
+              {toolLabel(inv.toolName)}{isDone ? "" : "…"}
             </span>
           );
         })}

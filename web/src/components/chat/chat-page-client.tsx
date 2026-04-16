@@ -326,29 +326,36 @@ function ChatPageClientInner({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5 print:hidden">
-        <div className="flex items-center gap-2">
+      <div
+        className="flex items-center justify-between print:hidden"
+        style={{ marginBottom: "var(--space-5)" }}
+      >
+        <div className="flex items-center" style={{ gap: "var(--space-2)" }}>
           <button
             onClick={() => setShowSheet(true)}
-            className="lg:hidden flex items-center justify-center rounded-lg transition-colors duration-150"
+            className="lg:hidden flex items-center justify-center cursor-pointer hover-bg-subtle hover-text-brighten"
             aria-label="Chat history"
             style={{
               background: "transparent",
               border: "none",
               color: "var(--color-text-muted)",
-              cursor: "pointer",
-              width: 36,
-              height: 36,
-              minWidth: 48,
-              minHeight: 48,
+              width: 44,
+              height: 44,
+              borderRadius: "var(--r-2)",
+              transition: `color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)`,
             }}
           >
             <History size={18} />
           </button>
 
           <h1
-            className="font-heading font-semibold"
-            style={{ fontSize: 24, color: "var(--color-text)" }}
+            className="font-heading"
+            style={{
+              fontSize: "var(--t-h1)",
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+              color: "var(--color-text)",
+            }}
           >
             Chat
           </h1>
@@ -356,15 +363,15 @@ function ChatPageClientInner({
 
         <button
           onClick={handleNewChat}
-          className="transition-colors duration-150 hover-text-brighten"
+          className="cursor-pointer hover-text-brighten"
           style={{
             background: "transparent",
             border: "none",
-            cursor: "pointer",
-            fontSize: 12,
+            fontSize: "var(--t-micro)",
             color: "var(--color-text-muted)",
-            padding: "8px 4px",
-            minHeight: 48,
+            padding: "var(--space-2) var(--space-1)",
+            minHeight: 44,
+            transition: `color var(--motion-fast) var(--ease-out-quart)`,
           }}
         >
           New chat
@@ -372,7 +379,10 @@ function ChatPageClientInner({
       </div>
 
       {/* Content row: sidebar + chat */}
-      <div className="flex gap-4 items-stretch flex-1 min-h-0">
+      <div
+        className="flex items-stretch flex-1 min-h-0"
+        style={{ gap: "var(--space-5)" }}
+      >
         <div className="hidden lg:block print:hidden">
           <SessionSidebar
             sessions={sessions}
@@ -391,27 +401,30 @@ function ChatPageClientInner({
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {loadingSession ? (
             <div
-              className="flex flex-1 flex-col gap-4 px-4 py-6"
+              className="flex flex-1 flex-col"
               role="status"
               aria-label="Loading conversation"
+              style={{
+                gap: "var(--space-4)",
+                padding: "var(--space-5) var(--space-4)",
+              }}
             >
               {[80, 55, 70].map((w, i) => (
-                <div key={i} className="flex flex-col gap-2" style={{ alignItems: i % 2 ? "flex-end" : "flex-start" }}>
+                <div
+                  key={i}
+                  className="flex flex-col"
+                  style={{
+                    gap: "var(--space-2)",
+                    alignItems: i % 2 ? "flex-end" : "flex-start",
+                  }}
+                >
                   <div
-                    className="rounded-2xl animate-pulse"
-                    style={{
-                      width: `${w}%`,
-                      height: 14,
-                      background: "var(--color-surface-raised)",
-                    }}
+                    className="skeleton"
+                    style={{ width: `${w}%`, height: 14 }}
                   />
                   <div
-                    className="rounded-2xl animate-pulse"
-                    style={{
-                      width: `${w - 20}%`,
-                      height: 14,
-                      background: "var(--color-surface-raised)",
-                    }}
+                    className="skeleton"
+                    style={{ width: `${w - 20}%`, height: 14 }}
                   />
                 </div>
               ))}
@@ -450,22 +463,22 @@ function ChatPageClientInner({
         <button
           onClick={handleNewChat}
           aria-label="New chat"
-          className="lg:hidden fixed"
+          className="lg:hidden fixed cursor-pointer"
           style={{
-            right: 16,
+            right: "var(--space-4)",
             bottom: "calc(96px + env(safe-area-inset-bottom))",
             width: 48,
             height: 48,
             borderRadius: 24,
-            background: "var(--color-primary)",
+            background: "var(--accent)",
             color: "var(--color-text-on-cta)",
             border: "none",
             boxShadow: "var(--shadow-md)",
-            cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 50,
+            transition: `opacity var(--motion-fast) var(--ease-out-quart)`,
           }}
         >
           <Plus size={22} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2, RotateCcw, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
 import { formatRelative, daysUntilPurge } from "@/lib/relative-time";
 
@@ -19,6 +19,8 @@ interface Props {
 }
 
 const OLDER_THRESHOLD_DAYS = 30;
+
+const rowTransition = `color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)`;
 
 export default function SessionSidebar({
   sessions,
@@ -45,28 +47,31 @@ export default function SessionSidebar({
     return diffMs >= OLDER_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
   });
 
+  // Collapse-to-rail is an instant width change. Animating `width` is a layout
+  // property (Impeccable "layout-transition"); the alternative grid-template-
+  // columns animation has patchy cross-browser support and the toggle is rare
+  // enough that a snap reads cleaner than a 180ms layout shuffle.
   return (
     <aside
       aria-label="Chat history"
       style={{
         width: expanded ? 280 : 56,
         flexShrink: 0,
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: 12,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         alignSelf: "flex-start",
         position: "sticky",
-        top: "2rem",
-        maxHeight: "calc(100dvh - 4rem)",
-        transition: "width 180ms ease",
+        top: "var(--space-5)",
+        maxHeight: "calc(100dvh - var(--space-6))",
+        borderRight: "1px solid var(--rule-soft)",
       }}
     >
       <div
         style={{
-          padding: expanded ? "8px 12px 0" : "8px 4px 0",
+          padding: expanded
+            ? "var(--space-2) var(--space-3) 0"
+            : "var(--space-2) var(--space-1) 0",
           display: "flex",
           justifyContent: expanded ? "flex-end" : "center",
         }}
@@ -75,15 +80,16 @@ export default function SessionSidebar({
           onClick={onToggleExpanded}
           aria-expanded={expanded}
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
-          className="flex items-center justify-center cursor-pointer transition-colors duration-150 hover-bg-subtle"
+          className="flex items-center justify-center cursor-pointer hover-bg-subtle hover-text-brighten"
           style={{
             background: "transparent",
             border: "none",
             color: "var(--color-text-muted)",
-            width: 48,
-            height: 48,
-            borderRadius: 8,
+            width: 44,
+            height: 44,
+            borderRadius: "var(--r-2)",
             flexShrink: 0,
+            transition: rowTransition,
           }}
         >
           {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
@@ -92,7 +98,9 @@ export default function SessionSidebar({
 
       <div
         style={{
-          padding: expanded ? "8px 12px 8px" : "4px 4px 8px",
+          padding: expanded
+            ? "var(--space-2) var(--space-3) var(--space-3)"
+            : "var(--space-1) var(--space-1) var(--space-3)",
           display: "flex",
           justifyContent: "center",
         }}
@@ -100,110 +108,135 @@ export default function SessionSidebar({
         <button
           onClick={onNewChat}
           aria-label={expanded ? undefined : "New chat"}
-          className="flex items-center cursor-pointer transition-opacity duration-150 hover:opacity-85"
+          className="flex items-center cursor-pointer hover-text-brighten"
           style={{
-            background: "var(--color-primary)",
-            color: "var(--color-text-on-cta)",
-            border: "none",
-            borderRadius: 8,
-            width: expanded ? "100%" : 48,
-            height: 48,
-            padding: expanded ? "10px 14px" : 0,
-            fontSize: 13,
+            background: "transparent",
+            color: "var(--color-text)",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--r-2)",
+            width: expanded ? "100%" : 44,
+            height: 44,
+            padding: expanded ? "0 var(--space-3)" : 0,
+            fontSize: "var(--t-micro)",
             fontWeight: 500,
-            justifyContent: "center",
-            gap: expanded ? 8 : 0,
+            justifyContent: expanded ? "flex-start" : "center",
+            gap: expanded ? "var(--space-2)" : 0,
+            transition: rowTransition,
           }}
         >
-          <Plus size={expanded ? 15 : 18} />
+          <Plus size={15} strokeWidth={1.75} />
           {expanded && "New chat"}
         </button>
       </div>
 
       {expanded && (
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
-        {recent.map((s) => (
-          <SessionRow
-            key={`${s.id}-${timeTick}`}
-            session={s}
-            active={s.id === activeSessionId}
-            onSelect={onSessionSelect}
-            onArchive={onArchive}
-          />
-        ))}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "0 var(--space-3) var(--space-4)",
+          }}
+        >
+          {recent.map((s) => (
+            <SessionRow
+              key={`${s.id}-${timeTick}`}
+              session={s}
+              active={s.id === activeSessionId}
+              onSelect={onSessionSelect}
+              onArchive={onArchive}
+            />
+          ))}
 
-        {older.length > 0 && (
-          <>
-            <button
-              onClick={() => setOlderExpanded((v) => !v)}
-              className="flex items-center gap-1 w-full cursor-pointer transition-colors duration-150"
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--color-text-muted)",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                padding: "8px 8px 4px",
-                minHeight: 40,
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ transform: olderExpanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 150ms" }}>
-                ›
-              </span>
-              Older ({older.length})
-            </button>
+          {older.length > 0 && (
+            <>
+              <SectionToggle
+                open={olderExpanded}
+                onToggle={() => setOlderExpanded((v) => !v)}
+                label={`Older (${older.length})`}
+              />
 
-            {olderExpanded &&
-              older.map((s) => (
-                <SessionRow
-                  key={`${s.id}-${timeTick}`}
-                  session={s}
-                  active={s.id === activeSessionId}
-                  onSelect={onSessionSelect}
-                  onArchive={onArchive}
-                />
-              ))}
-          </>
-        )}
+              {olderExpanded &&
+                older.map((s) => (
+                  <SessionRow
+                    key={`${s.id}-${timeTick}`}
+                    session={s}
+                    active={s.id === activeSessionId}
+                    onSelect={onSessionSelect}
+                    onArchive={onArchive}
+                  />
+                ))}
+            </>
+          )}
 
-        {archivedSessions.length > 0 && (
-          <>
-            <button
-              onClick={() => setArchivedExpanded((v) => !v)}
-              className="flex items-center gap-1 w-full cursor-pointer transition-colors duration-150"
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--color-text-muted)",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                padding: "12px 8px 4px",
-                minHeight: 40,
-                marginTop: 4,
-                borderTop: "1px solid var(--color-border)",
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ transform: archivedExpanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 150ms" }}>
-                ›
-              </span>
-              Recently deleted ({archivedSessions.length})
-            </button>
+          {archivedSessions.length > 0 && (
+            <>
+              <SectionToggle
+                open={archivedExpanded}
+                onToggle={() => setArchivedExpanded((v) => !v)}
+                label={`Recently deleted (${archivedSessions.length})`}
+                dividerTop
+              />
 
-            {archivedExpanded &&
-              archivedSessions.map((s) => (
-                <ArchivedRow key={`${s.id}-${timeTick}`} session={s} onRestore={onRestore} />
-              ))}
-          </>
-        )}
-      </div>
+              {archivedExpanded &&
+                archivedSessions.map((s) => (
+                  <ArchivedRow
+                    key={`${s.id}-${timeTick}`}
+                    session={s}
+                    onRestore={onRestore}
+                  />
+                ))}
+            </>
+          )}
+        </div>
       )}
     </aside>
+  );
+}
+
+function SectionToggle({
+  open,
+  onToggle,
+  label,
+  dividerTop = false,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  label: string;
+  dividerTop?: boolean;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-center w-full cursor-pointer hover-text-brighten"
+      style={{
+        background: "transparent",
+        border: "none",
+        color: "var(--color-text-faint)",
+        fontFamily: "var(--font-display), system-ui, sans-serif",
+        fontSize: "var(--t-micro)",
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        gap: "var(--space-1)",
+        padding: "var(--space-3) var(--space-2) var(--space-1)",
+        minHeight: 44,
+        marginTop: dividerTop ? "var(--space-1)" : 0,
+        borderTop: dividerTop ? "1px solid var(--rule-soft)" : "none",
+        transition: `color var(--motion-fast) var(--ease-out-quart)`,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          transform: open ? "rotate(90deg)" : "none",
+          display: "inline-block",
+          transition: `transform var(--motion-fast) var(--ease-out-quart)`,
+        }}
+      >
+        ›
+      </span>
+      {label}
+    </button>
   );
 }
 
@@ -218,40 +251,59 @@ function SessionRow({
   onSelect: (id: string) => void;
   onArchive: (id: string) => void;
 }) {
+  const rowStyle: CSSProperties = {
+    position: "relative",
+    borderTop: "1px solid var(--rule-soft)",
+    transition: rowTransition,
+  };
   return (
     <div
-      className={`group/row relative transition-colors duration-150 ${active ? "" : "hover-bg-subtle"}`}
-      style={{
-        background: active ? "var(--color-primary-dim)" : "transparent",
-        borderLeft: active ? "2px solid var(--color-primary)" : "2px solid transparent",
-        borderRadius: 6,
-      }}
+      className={`group/row ${active ? "" : "hover-bg-subtle"}`}
+      style={rowStyle}
     >
+      {active && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 0,
+            top: "var(--space-2)",
+            bottom: "var(--space-2)",
+            width: 2,
+            borderRadius: 1,
+            background: "var(--accent)",
+          }}
+        />
+      )}
       <button
         onClick={() => onSelect(session.id)}
+        aria-current={active ? "true" : undefined}
         className="flex flex-col w-full text-left cursor-pointer"
         style={{
           background: "transparent",
           border: "none",
-          padding: "8px 10px",
-          paddingRight: 32,
-          minHeight: 48,
+          padding: "var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) + 2px)",
+          paddingRight: "var(--space-6)",
+          minHeight: 44,
           gap: 2,
         }}
       >
         <span
+          className="tnum"
           style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
             fontWeight: 500,
+            letterSpacing: "0.01em",
           }}
         >
           {formatRelative(session.last_active_at)}
         </span>
         <span
           style={{
-            fontSize: 12,
-            color: active ? "var(--color-primary)" : "var(--color-text)",
+            fontSize: "var(--t-micro)",
+            color: active ? "var(--accent)" : "var(--color-text)",
+            fontWeight: active ? 500 : 400,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -267,20 +319,22 @@ function SessionRow({
           onArchive(session.id);
         }}
         aria-label="Delete chat"
-        className="opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-colors duration-150 hover-text-danger"
+        className="opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover-text-danger"
         style={{
           position: "absolute",
-          right: 8,
+          right: "var(--space-2)",
           top: "50%",
           transform: "translateY(-50%)",
           background: "transparent",
           border: "none",
-          color: "var(--color-text-muted)",
+          color: "var(--color-text-faint)",
           cursor: "pointer",
-          padding: 4,
+          padding: "var(--space-1)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          borderRadius: "var(--r-1)",
+          transition: `color var(--motion-fast) var(--ease-out-quart), opacity var(--motion-fast) var(--ease-out-quart)`,
         }}
       >
         <Trash2 size={14} />
@@ -303,21 +357,25 @@ function ArchivedRow({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "8px 10px",
-        gap: 8,
+        padding: "var(--space-3)",
+        gap: "var(--space-2)",
         opacity: 0.7,
+        borderTop: "1px solid var(--rule-soft)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span
+          className="tnum"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+        >
           {session.deleted_at ? formatRelative(session.deleted_at) : ""} · {daysLeft}d left
         </span>
         <span
           style={{
-            fontSize: 12,
+            fontSize: "var(--t-micro)",
             color: "var(--color-text)",
             textDecoration: "line-through",
-            textDecorationColor: "var(--color-text-muted)",
+            textDecorationColor: "var(--color-text-faint)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -329,17 +387,20 @@ function ArchivedRow({
       <button
         onClick={() => onRestore(session.id)}
         aria-label="Restore chat"
+        className="hover-text-brighten"
         style={{
           background: "transparent",
           border: "none",
-          color: "var(--color-primary)",
-          fontSize: 11,
+          color: "var(--accent)",
+          fontSize: "var(--t-micro)",
           fontWeight: 600,
           cursor: "pointer",
-          padding: 4,
+          padding: "var(--space-1)",
           display: "flex",
           alignItems: "center",
-          gap: 4,
+          gap: "var(--space-1)",
+          minHeight: 44,
+          transition: `color var(--motion-fast) var(--ease-out-quart)`,
         }}
       >
         <RotateCcw size={12} />
