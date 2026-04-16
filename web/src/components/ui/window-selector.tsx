@@ -25,8 +25,12 @@ export function WindowSelector({ current }: Props) {
 
   return (
     <div
-      className="flex items-center gap-0.5 p-0.5 rounded-lg"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      className="flex items-center gap-0.5 p-0.5"
+      style={{
+        background: "transparent",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-1)",
+      }}
     >
       {WINDOWS.map(({ key, label }) => {
         const active = key === current;
