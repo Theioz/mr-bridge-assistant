@@ -34,7 +34,7 @@ export default function ProtectedError({
           className="inline-flex items-center gap-2 rounded-lg"
           style={{
             background: "var(--color-primary)",
-            color: "white",
+            color: "var(--color-text-on-cta)",
             border: "none",
             padding: "10px 16px",
             fontSize: 14,

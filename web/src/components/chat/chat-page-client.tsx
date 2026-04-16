@@ -474,7 +474,7 @@ function ChatPageClientInner({
             height: 48,
             borderRadius: 24,
             background: "var(--color-primary)",
-            color: "white",
+            color: "var(--color-text-on-cta)",
             border: "none",
             boxShadow: "var(--shadow-md)",
             cursor: "pointer",

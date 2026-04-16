@@ -26,7 +26,7 @@ export default async function ProtectedLayout({
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg"
         style={{
           background: "var(--color-primary)",
-          color: "white",
+          color: "var(--color-text-on-cta)",
           padding: "10px 14px",
           fontSize: 14,
           fontWeight: 500,

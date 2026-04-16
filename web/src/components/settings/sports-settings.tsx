@@ -105,7 +105,7 @@ export function SportsSettings({ favorites, saveAction }: Props) {
               }
             }}
             placeholder="Search teams (e.g. Warriors, 49ers, Arsenal)"
-            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none"
+            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
             style={{
               background: "var(--color-surface-raised)",
               border: `1px solid ${error ? "var(--color-danger)" : "var(--color-border)"}`,
@@ -124,10 +124,8 @@ export function SportsSettings({ favorites, saveAction }: Props) {
                 key={`${t.league}-${t.team_id}`}
                 type="button"
                 onClick={() => handleAdd(t)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer transition-colors hover-bg-subtle"
                 style={{ background: "var(--color-surface-raised)", borderBottom: "1px solid var(--color-border)" }}
-                onMouseOver={(e) => { e.currentTarget.style.background = "var(--color-surface)"; }}
-                onMouseOut={(e) => { e.currentTarget.style.background = "var(--color-surface-raised)"; }}
               >
                 {t.badge ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -166,10 +164,8 @@ export function SportsSettings({ favorites, saveAction }: Props) {
             <button
               onClick={() => handleRemove(fav.team_id, fav.league)}
               disabled={isPending}
-              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40"
+              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-danger"
               style={{ color: "var(--color-text-faint)" }}
-              onMouseOver={(e) => { e.currentTarget.style.color = "var(--color-danger)"; }}
-              onMouseOut={(e) => { e.currentTarget.style.color = "var(--color-text-faint)"; }}
               title={`Remove ${fav.name}`}
             >
               <X size={13} />

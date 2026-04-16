@@ -196,10 +196,8 @@ function SuggestedNutritionCard({
         onClick={dismiss}
         disabled={isDismissPending}
         title="Dismiss"
-        className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer disabled:opacity-40"
+        className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-muted"
         style={{ color: "var(--color-text-faint)" }}
-        onMouseOver={(e) => { e.currentTarget.style.color = "var(--color-text-muted)"; }}
-        onMouseOut={(e) => { e.currentTarget.style.color = "var(--color-text-faint)"; }}
       >
         <X size={13} />
       </button>
@@ -335,19 +333,11 @@ function FieldRow({
           value={value}
           onChange={(e) => { setValue(e.target.value); setSaved(false); }}
           placeholder={field.placeholder}
-          className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none"
+          className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
           style={{
             background: "var(--color-surface-raised)",
             border: "1px solid var(--color-border)",
             color: "var(--color-text)",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "var(--color-primary)";
-            e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-primary-dim)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "var(--color-border)";
-            e.currentTarget.style.boxShadow = "none";
           }}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
         />

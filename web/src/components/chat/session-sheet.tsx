@@ -91,7 +91,7 @@ export default function SessionSheet({
               className="flex items-center gap-2 w-full cursor-pointer transition-colors duration-150"
               style={{
                 background: "var(--color-primary)",
-                color: "white",
+                color: "var(--color-text-on-cta)",
                 border: "none",
                 borderRadius: 10,
                 padding: "12px 16px",
@@ -328,7 +328,7 @@ export default function SessionSheet({
                   style={{
                     background: "var(--color-danger)",
                     border: "none",
-                    color: "white",
+                    color: "var(--color-text-on-cta)",
                     padding: "8px 14px",
                     borderRadius: 8,
                     fontSize: 13,

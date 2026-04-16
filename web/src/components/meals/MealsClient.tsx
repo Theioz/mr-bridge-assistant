@@ -814,7 +814,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                           className="rounded-full px-2 py-0.5"
                           style={{
                             fontSize: 11,
-                            background: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                            background: "var(--color-primary-dim)",
                             color: "var(--color-primary)",
                           }}
                         >
@@ -1070,7 +1070,7 @@ function PlanTab({
                     className="rounded-full px-2 py-0.5 inline-block mb-2"
                     style={{
                       fontSize: 11,
-                      background: "color-mix(in srgb, var(--color-positive) 15%, transparent)",
+                      background: "var(--color-positive-subtle)",
                       color: "var(--color-positive)",
                     }}
                   >
