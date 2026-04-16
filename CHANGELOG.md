@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (Impeccable UI revamp — light-mode contrast)
+- **Light-mode text darkened across the three-tier ink scale** in [web/src/app/globals.css](web/src/app/globals.css). `--color-text` 22%L → 16%L, `--color-text-muted` 45%L → 36%L, `--color-text-faint` 52%L → 44%L (chroma kept at the existing tinted-neutral values). The previous Phase A levels read washed on the paper-toned 98.5%L canvas; new levels keep the same 4-step rhythm between tiers but anchor the deepest ink near print-like density. Dark theme untouched.
+
 ### Changed (Impeccable UI revamp — Phase B · Nav shell, issue #295)
 - **Nav shell rebuilt against the universal vocabulary** in [web/src/components/nav.tsx](web/src/components/nav.tsx). Desktop sidebar drops its opaque `--color-bg` fill so the ambient watercolor + grain pass through behind the rail; the only chrome is a single hairline rule (`--rule-soft`) on the right edge. Mobile bottom tab bar stays opaque (it overlays scrolling content) but switches to the same hairline `--rule-soft` top divider — no shadow, no card framing.
 - **Active state retired the filled pill.** Per the spec's "rarity gives it power" rule, the active row no longer fills with `--color-primary-dim`; it shows a 2px `--accent` rail on the left edge plus accent-colored icon and label (`font-weight: 500`). Hover lifts inactive rows to `--hover-subtle`. Mobile primary tabs use the same accent color shift; the `aria-current="page"` attribute is now set on every active item for assistive tech.
