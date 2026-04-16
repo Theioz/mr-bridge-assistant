@@ -175,6 +175,14 @@ Tools available:
 - get_workout_plan: fetch this week's workout plan (Mon–Sun). Call before making any suggestion or edit to the program.
 - assign_workout: upsert one day's workout plan to Supabase and create/update the Google Calendar event. Pre-flight required: call list_calendar_events first, check for overlaps and duplicate Workout titles on that date, surface conflicts to the user, and confirm before proceeding.
 - update_workout_exercise: patch a single exercise within a day's plan by name (case-insensitive) and refresh the calendar event description.
+- get_workout_history: fetch logged strength-session performance (actual sets/reps/weights/RPE/notes). Filter by exercise_name (case-insensitive partial match) and/or days back (default 30). Weights are returned in kg canonically — include the user's weight_unit from get_profile when reporting numbers.
+
+Progression heuristics (apply when the user asks for planning/adjustment — always call get_workout_history first):
+1. If the last 2 sessions for an exercise hit top-of-range reps at the prescribed weight, suggest +2.5 kg upper-body / +5 kg lower-body for the next session.
+2. If RPE ≥ 9 on working sets for 2+ consecutive sessions, hold the weight (do not add).
+3. If the user missed target reps 2 sessions in a row for the same exercise, suggest a 10% deload.
+4. If an exercise hasn't progressed (top weight × reps flat or lower) across 4+ sessions, suggest a variation swap.
+Always surface the evidence ("last 3 bench sessions: 135×8, 135×8, 135×9 — hit top of range twice, ready to go to 137.5") before making the recommendation. The user may override any suggestion.
 
 Recipes and meal planning are in scope.
 
@@ -358,7 +366,7 @@ Tools available:
 - search_gmail, get_email_body (returns demo emails)
 - list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
 - get_recipes, get_today_meals
-- get_workout_plan, assign_workout, update_workout_exercise`;
+- get_workout_plan, assign_workout, update_workout_exercise, get_workout_history`;
 
   const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
@@ -1365,6 +1373,90 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         }
 
         return updated;
+      },
+    }),
+
+    get_workout_history: tool({
+      description: "Fetch logged strength-session performance (actual sets/reps/weights/RPE/notes) for progression analysis. Returns recent sessions scoped to the user, with per-set detail. Use this before suggesting progression for any exercise. Weights are returned in kg canonically — call get_profile for the user's weight_unit preference before reporting numbers.",
+      parameters: jsonSchema<{ exercise_name?: string; days?: number }>({
+        type: "object",
+        properties: {
+          exercise_name: {
+            type: "string",
+            description: "Optional exercise name (case-insensitive partial match). Omit to get the full recent history across all exercises.",
+          },
+          days: {
+            type: "number",
+            description: "Number of days back to include. Defaults to 30.",
+          },
+        },
+      }),
+      execute: async ({ exercise_name, days = 30 }) => {
+        if (!userId) return { error: "Not authenticated" };
+        if (isDemo) return { demo: true, note: "Demo mode — no real strength history.", sessions: [] };
+
+        const sinceStr = daysAgoString(Math.max(1, Math.round(days)));
+        const { data: sessions, error } = await supabase
+          .from("strength_sessions")
+          .select("id, performed_on, started_at, completed_at, perceived_effort, notes, sets:strength_session_sets(exercise_name, exercise_order, set_number, weight_kg, reps, rpe, notes)")
+          .eq("user_id", userId)
+          .gte("performed_on", sinceStr)
+          .order("performed_on", { ascending: false })
+          .limit(30);
+        if (error) return { error: error.message };
+
+        interface SetRow {
+          exercise_name: string;
+          exercise_order: number;
+          set_number: number;
+          weight_kg: number | null;
+          reps: number | null;
+          rpe: number | null;
+          notes: string | null;
+        }
+        interface SessionRow {
+          id: string;
+          performed_on: string;
+          started_at: string | null;
+          completed_at: string | null;
+          perceived_effort: number | null;
+          notes: string | null;
+          sets: SetRow[];
+        }
+
+        const rows = (sessions ?? []) as SessionRow[];
+        const filtered = exercise_name
+          ? rows
+              .map((s) => ({
+                ...s,
+                sets: s.sets.filter((set) =>
+                  set.exercise_name.toLowerCase().includes(exercise_name.toLowerCase())
+                ),
+              }))
+              .filter((s) => s.sets.length > 0)
+          : rows;
+
+        return {
+          window_days: days,
+          exercise_filter: exercise_name ?? null,
+          weight_unit: "kg",
+          session_count: filtered.length,
+          sessions: filtered.map((s) => ({
+            session_id: s.id,
+            performed_on: s.performed_on,
+            started_at: s.started_at,
+            completed_at: s.completed_at,
+            perceived_effort: s.perceived_effort,
+            notes: s.notes,
+            sets: s.sets
+              .slice()
+              .sort((a, b) =>
+                a.exercise_order !== b.exercise_order
+                  ? a.exercise_order - b.exercise_order
+                  : a.set_number - b.set_number
+              ),
+          })),
+        };
       },
     }),
 

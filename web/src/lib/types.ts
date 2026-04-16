@@ -163,6 +163,36 @@ export interface WorkoutPlan {
   updated_at: string;
 }
 
+export interface StrengthSession {
+  id: string;
+  user_id: string;
+  workout_plan_id: string | null;
+  performed_on: string;
+  started_at: string | null;
+  completed_at: string | null;
+  perceived_effort: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface StrengthSessionSet {
+  id: string;
+  session_id: string;
+  exercise_name: string;
+  exercise_order: number;
+  set_number: number;
+  weight_kg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  completed: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface StrengthSessionWithSets extends StrengthSession {
+  sets: StrengthSessionSet[];
+}
+
 export interface StocksCache {
   id: string;
   user_id: string;
