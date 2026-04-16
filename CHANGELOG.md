@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (settings form polish — issue #231)
+- **M10 — unsaved-changes warning on Settings.** New [web/src/lib/use-unsaved-changes-warning.ts](web/src/lib/use-unsaved-changes-warning.ts) hook attaches a `beforeunload` listener and intercepts in-app anchor navigation with `window.confirm` when any field is dirty. [web/src/components/settings/profile-form.tsx](web/src/components/settings/profile-form.tsx) aggregates dirty state across every `FieldRow` and invokes the hook. `FieldRow` now tracks a post-save baseline so dirty clears correctly once saved.
+- **M11 — visible sheet header + focus-trap.** [web/src/components/ui/sheet.tsx](web/src/components/ui/sheet.tsx) renders a visible `Dialog.Title` + `Dialog.Close` by default; added `hideHeader` opt-out for callers with their own header ([web/src/components/chat/session-sheet.tsx](web/src/components/chat/session-sheet.tsx), [web/src/components/nav.tsx](web/src/components/nav.tsx) "More" sheet). Focus-trap verified via `@radix-ui/react-dialog@^1.1.15` (Radix provides trap + restore by default).
+- **M12 — Enter-to-submit on sports search.** [web/src/components/settings/sports-settings.tsx](web/src/components/settings/sports-settings.tsx) adds `onKeyDown` that adds the first search result on Enter, matching the Enter behaviour in `profile-form`, `watchlist-settings`, and `add-task-form`.
+
 <<<<<<< HEAD
 ### Fixed (card-lift missed tiles — follow-up to #240)
 - Applied `transition-all duration-200 card-lift` to tile wrappers the first sweep missed (Link-wrapped tile, empty-state branches, weekly `Card` helper, fitness chart panels that weren't in the first scan):
