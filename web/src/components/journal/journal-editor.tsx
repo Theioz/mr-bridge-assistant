@@ -113,142 +113,192 @@ export default function JournalEditor({
   }, []);
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      data-print-flat=""
-    >
-      {/* Tab bar */}
+    <div data-print-flat="">
+      {/* Inner tab bar — hairline rule with amber underline on active; save status on the right */}
       <div
-        className="flex items-center justify-between px-5 pt-4 pb-3 print:hidden"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
+        className="print:hidden"
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          borderBottom: "1px solid var(--rule-soft)",
+          marginBottom: "var(--space-5)",
+        }}
       >
-        <div className="flex gap-1">
+        <div role="tablist" aria-label="Journal mode" style={{ display: "flex", gap: "var(--space-5)" }}>
           {(
             [
               ["reflect",   "Reflect"   ],
               ["freewrite", "Free Write"],
             ] as [Tab, string][]
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: tab === t ? "var(--color-primary-dim)" : "transparent",
-                color:      tab === t ? "var(--color-primary)"     : "var(--color-text-muted)",
-              }}
-            >
-              {label}
-            </button>
-          ))}
+          ).map(([t, label]) => {
+            const isActive = tab === t;
+            return (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setTab(t)}
+                className="transition-colors"
+                style={{
+                  minHeight: 44,
+                  padding: "var(--space-2) var(--space-1)",
+                  fontFamily: "var(--font-display), system-ui, sans-serif",
+                  fontSize: "var(--t-micro)",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: isActive ? "var(--accent)" : "var(--color-text-faint)",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: isActive
+                    ? "2px solid var(--accent)"
+                    : "2px solid transparent",
+                  marginBottom: -1,
+                  transitionDuration: "var(--motion-fast)",
+                  transitionTimingFunction: "var(--ease-out-quart)",
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Save status */}
         <span
-          className="text-xs transition-opacity"
+          className="tnum transition-opacity"
           style={{
-            color:   saveStatus === "saved" ? "var(--color-positive)" : "var(--color-text-faint)",
-            opacity: saveStatus === "idle"  ? 0 : 1,
+            paddingBottom: "var(--space-2)",
+            fontSize: "var(--t-micro)",
+            letterSpacing: "0.04em",
+            color: saveStatus === "saved" ? "var(--color-positive)" : "var(--color-text-faint)",
+            opacity: saveStatus === "idle" ? 0 : 1,
+            transitionDuration: "var(--motion-base)",
+            transitionTimingFunction: "var(--ease-out-quart)",
           }}
         >
           {saveStatus === "saving" ? "Saving…" : "Saved"}
         </span>
       </div>
 
-      <>
-          {/* Reflect tab */}
-          {tab === "reflect" && (
-            <div className="p-5 space-y-5">
-              {/* Progress dots */}
-              <div className="flex items-center gap-2">
-                {PROMPTS.map((p) => (
-                  <span
-                    key={p.slug}
-                    className="rounded-full transition-colors"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      background: responses[p.slug]?.trim()
-                        ? "var(--color-primary)"
-                        : "var(--color-border)",
-                    }}
-                  />
-                ))}
-                <span className="text-xs ml-1" style={{ color: "var(--color-text-faint)" }}>
-                  {filledCount} / {PROMPTS.length}
-                </span>
-              </div>
-
-              {/* All prompts visible */}
-              {PROMPTS.map((p) => (
-                <div key={p.slug} className="space-y-2">
-                  <label
-                    className="block text-sm font-medium"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {p.question}
-                  </label>
-                  <textarea
-                    value={responses[p.slug] ?? ""}
-                    onChange={(e) => handleResponseChange(p.slug, e.target.value)}
-                    placeholder={p.placeholder}
-                    rows={3}
-                    className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5 transition-colors"
-                    style={{
-                      background: "var(--color-surface-raised)",
-                      border:     "1px solid var(--color-border)",
-                      color:      "var(--color-text)",
-                      lineHeight: "1.6",
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Free Write tab */}
-          {tab === "freewrite" && (
-            <div className="p-5">
-              <textarea
-                value={freeWrite}
-                onChange={(e) => handleFreeWriteChange(e.target.value)}
-                placeholder="Write anything on your mind — no structure, no prompts. Just you and the page."
-                rows={14}
-                className="w-full resize-none text-sm focus:outline-none rounded-lg px-3 py-2.5"
+      {/* Reflect tab */}
+      {tab === "reflect" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+          {/* Progress row — accent dots + tabular count */}
+          <div
+            className="print:hidden"
+            style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+          >
+            {PROMPTS.map((p) => (
+              <span
+                key={p.slug}
+                className="transition-colors"
                 style={{
-                  background: "var(--color-surface-raised)",
-                  border:     "1px solid var(--color-border)",
-                  color:      "var(--color-text)",
-                  lineHeight: "1.75",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "9999px",
+                  background: responses[p.slug]?.trim()
+                    ? "var(--accent)"
+                    : "var(--rule)",
+                  transitionDuration: "var(--motion-fast)",
+                  transitionTimingFunction: "var(--ease-out-quart)",
                 }}
               />
-              <p
-                className="text-xs mt-2 text-right"
-                style={{ color: "var(--color-text-faint)" }}
-              >
-                {wordCount} {wordCount === 1 ? "word" : "words"}
-              </p>
-            </div>
-          )}
-
-          {/* Submit button */}
-          <div className="px-5 pb-5 print:hidden">
-            <button
-              onClick={handleSubmit}
-              disabled={saveStatus === "saving" || isEmpty}
-              className="w-full py-3 rounded-xl text-sm font-medium transition-opacity"
+            ))}
+            <span
+              className="tnum"
               style={{
-                background: "var(--color-primary)",
-                color:      "var(--color-text-on-cta)",
-                opacity:    saveStatus === "saving" || isEmpty ? 0.5 : 1,
-                cursor:     saveStatus === "saving" || isEmpty ? "not-allowed" : "pointer",
+                marginLeft: "var(--space-2)",
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
               }}
             >
-              {saveStatus === "saving" ? "Saving…" : "Submit"}
-            </button>
+              {filledCount} / {PROMPTS.length}
+            </span>
           </div>
-        </>
+
+          {/* Prompts — each as a quiet section header + flat textarea; hairlines between */}
+          {PROMPTS.map((p, i) => (
+            <div
+              key={p.slug}
+              style={{
+                paddingTop: i > 0 ? "var(--space-5)" : 0,
+                borderTop: i > 0 ? "1px solid var(--rule-soft)" : "none",
+              }}
+            >
+              <label
+                htmlFor={`journal-${p.slug}`}
+                className="db-section-label"
+                style={{ display: "block", margin: "0 0 var(--space-2)" }}
+              >
+                {p.question}
+              </label>
+              <textarea
+                id={`journal-${p.slug}`}
+                value={responses[p.slug] ?? ""}
+                onChange={(e) => handleResponseChange(p.slug, e.target.value)}
+                placeholder={p.placeholder}
+                rows={3}
+                className="journal-field"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Free Write tab */}
+      {tab === "freewrite" && (
+        <div>
+          <textarea
+            value={freeWrite}
+            onChange={(e) => handleFreeWriteChange(e.target.value)}
+            placeholder="Write anything on your mind — no structure, no prompts. Just you and the page."
+            rows={18}
+            className="journal-field"
+            style={{ fontSize: "var(--t-body)", lineHeight: 1.75 }}
+          />
+          <p
+            className="tnum"
+            style={{
+              marginTop: "var(--space-2)",
+              textAlign: "right",
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+            }}
+          >
+            {wordCount} {wordCount === 1 ? "word" : "words"}
+          </p>
+        </div>
+      )}
+
+      {/* Submit button — filled accent CTA, 44px min-height */}
+      <div className="print:hidden" style={{ marginTop: "var(--space-6)" }}>
+        <button
+          onClick={handleSubmit}
+          disabled={saveStatus === "saving" || isEmpty}
+          className="transition-opacity"
+          style={{
+            width: "100%",
+            minHeight: 44,
+            padding: "var(--space-3) var(--space-5)",
+            borderRadius: "var(--r-2)",
+            border: "none",
+            background: "var(--accent)",
+            color: "var(--color-text-on-cta)",
+            fontSize: "var(--t-meta)",
+            fontWeight: 500,
+            letterSpacing: "0.01em",
+            opacity: saveStatus === "saving" || isEmpty ? 0.5 : 1,
+            cursor: saveStatus === "saving" || isEmpty ? "not-allowed" : "pointer",
+            transitionDuration: "var(--motion-fast)",
+            transitionTimingFunction: "var(--ease-out-quart)",
+          }}
+        >
+          {saveStatus === "saving" ? "Saving…" : "Submit"}
+        </button>
+      </div>
     </div>
   );
 }

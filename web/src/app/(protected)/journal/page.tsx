@@ -61,16 +61,30 @@ export default async function JournalPage() {
   });
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div
+      className="prose-column"
+      style={{ display: "flex", flexDirection: "column", gap: "var(--space-7)" }}
+    >
       {/* Header */}
-      <div>
-        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+      <header>
+        <h1
+          className="font-heading"
+          style={{ fontSize: "var(--t-h1)", fontWeight: 600, color: "var(--color-text)" }}
+        >
           Journal
         </h1>
-        <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        <p
+          className="tnum"
+          style={{
+            marginTop: "var(--space-1)",
+            fontSize: "var(--t-micro)",
+            letterSpacing: "0.04em",
+            color: "var(--color-text-muted)",
+          }}
+        >
           {dateLabel}
         </p>
-      </div>
+      </header>
 
       <JournalTabs
         today={today}

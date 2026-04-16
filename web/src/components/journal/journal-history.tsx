@@ -31,23 +31,24 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
 
   if (entries.length === 0) {
     return (
-      <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No entries yet.</p>
+      <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>
+        No entries yet.
+      </p>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {entries.map((entry) => {
+    <div>
+      {entries.map((entry, i) => {
         const isOpen    = expanded.has(entry.id);
         const isToday   = today && entry.date === today;
         const date      = new Date(entry.date + "T00:00:00");
-        const dateLabel = isToday
-          ? "Today"
-          : date.toLocaleDateString("en-US", {
-              weekday: "short",
-              month:   "short",
-              day:     "numeric",
-            });
+        const dateLabel = date.toLocaleDateString("en-US", {
+          weekday: "short",
+          month:   "short",
+          day:     "numeric",
+        });
+        const yearLabel = date.toLocaleDateString("en-US", { year: "numeric" });
 
         // Preview: first filled reflect response or first line of free write
         const preview =
@@ -60,39 +61,71 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
         const hasFreeWrite  = !!entry.free_write?.trim();
 
         return (
-          <div
+          <article
             key={entry.id}
-            className="rounded-xl overflow-hidden"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            style={{
+              borderTop: i > 0 ? "1px solid var(--rule-soft)" : "none",
+            }}
           >
-            {/* Accordion header */}
-            <div className="flex items-center">
+            {/* Entry header — hairline row with tabular timestamp + preview */}
+            <div style={{ display: "flex", alignItems: "stretch" }}>
               <button
-                className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
                 onClick={() => toggle(entry.id)}
+                aria-expanded={isOpen}
+                className="hover-text-brighten transition-colors"
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "var(--space-3)",
+                  padding: "var(--space-3) 0",
+                  textAlign: "left",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-faint)",
+                  transitionDuration: "var(--motion-fast)",
+                  transitionTimingFunction: "var(--ease-out-quart)",
+                }}
               >
-                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignSelf: "center",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
                   {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </span>
 
-                <span
-                  className="text-xs font-medium flex-shrink-0"
+                <time
+                  dateTime={entry.date}
+                  className="tnum"
                   style={{
-                    color:    isToday ? "var(--color-primary)" : "var(--color-text-muted)",
-                    minWidth: 88,
+                    flexShrink: 0,
+                    minWidth: 96,
+                    fontSize: "var(--t-micro)",
+                    letterSpacing: "0.04em",
+                    color: isToday ? "var(--accent)" : "var(--color-text-muted)",
+                    fontWeight: isToday ? 600 : 500,
                   }}
                 >
-                  {dateLabel}
-                </span>
+                  {isToday ? "Today" : dateLabel}
+                </time>
 
                 {!isOpen && (
                   <span
-                    className="text-sm truncate"
-                    style={{ color: "var(--color-text-faint)" }}
+                    className="truncate"
+                    style={{
+                      fontSize: "var(--t-meta)",
+                      color: "var(--color-text-faint)",
+                      lineHeight: 1.5,
+                    }}
                   >
-                    {preview
-                      ? preview.slice(0, 80) + (preview.length > 80 ? "…" : "")
-                      : "No responses"}
+                    {preview || "No responses"}
                   </span>
                 )}
               </button>
@@ -100,56 +133,116 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
               {onEdit && (
                 <button
                   onClick={() => onEdit(entry)}
-                  className="px-4 py-3 text-xs flex-shrink-0"
-                  style={{ color: "var(--color-text-faint)" }}
+                  className="hover-text-brighten transition-colors print:hidden"
+                  style={{
+                    flexShrink: 0,
+                    minHeight: 44,
+                    padding: "var(--space-3) var(--space-3)",
+                    fontSize: "var(--t-micro)",
+                    letterSpacing: "0.04em",
+                    color: "var(--color-text-faint)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transitionDuration: "var(--motion-fast)",
+                    transitionTimingFunction: "var(--ease-out-quart)",
+                  }}
                 >
                   Edit
                 </button>
               )}
             </div>
 
-            {/* Expanded body */}
+            {/* Expanded body — reading column, entries as prose */}
             {isOpen && (
               <div
-                className="px-4 pb-4 space-y-4"
-                style={{ borderTop: "1px solid var(--color-border)" }}
+                className="prose-column"
+                style={{
+                  paddingBottom: "var(--space-6)",
+                  paddingLeft: "calc(14px + var(--space-3))",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-5)",
+                }}
               >
+                {/* Full date as a small tabular meta line above the entry content */}
+                <p
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {date.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                  {" · "}
+                  {yearLabel}
+                </p>
+
                 {filledPrompts.map(([slug, value]) => (
-                  <div key={slug} className="pt-4">
-                    <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>
+                  <section key={slug}>
+                    <h3
+                      className="db-section-label"
+                      style={{ margin: "0 0 var(--space-2)" }}
+                    >
                       {PROMPT_LABELS[slug] ?? slug}
-                    </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "var(--color-text)" }}>
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "var(--t-body)",
+                        lineHeight: 1.7,
+                        color: "var(--color-text)",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
                       {value}
                     </p>
-                  </div>
+                  </section>
                 ))}
 
                 {hasFreeWrite && (
-                  <div
-                    className="pt-4"
-                    style={{ borderTop: "1px solid var(--color-border)" }}
+                  <section
+                    style={{
+                      paddingTop: "var(--space-5)",
+                      borderTop: "1px solid var(--rule-soft)",
+                    }}
                   >
-                    <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>
+                    <h3
+                      className="db-section-label"
+                      style={{ margin: "0 0 var(--space-2)" }}
+                    >
                       Free write
-                    </p>
+                    </h3>
                     <p
-                      className="text-sm leading-relaxed whitespace-pre-wrap"
-                      style={{ color: "var(--color-text)" }}
+                      style={{
+                        fontSize: "var(--t-body)",
+                        lineHeight: 1.75,
+                        color: "var(--color-text)",
+                        whiteSpace: "pre-wrap",
+                      }}
                     >
                       {entry.free_write}
                     </p>
-                  </div>
+                  </section>
                 )}
 
                 {filledPrompts.length === 0 && !hasFreeWrite && (
-                  <p className="pt-4 text-sm" style={{ color: "var(--color-text-faint)" }}>
+                  <p
+                    style={{
+                      fontSize: "var(--t-body)",
+                      color: "var(--color-text-faint)",
+                    }}
+                  >
                     No responses recorded.
                   </p>
                 )}
               </div>
             )}
-          </div>
+          </article>
         );
       })}
     </div>
