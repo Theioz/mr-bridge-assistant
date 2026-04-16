@@ -213,43 +213,47 @@ export default async function TasksPage() {
   const low    = tasks.filter((t) => t.priority === "low" || !t.priority);
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl">
       {/* Header */}
-      <div>
+      <div style={{ marginBottom: "var(--space-5)" }}>
         <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
           Tasks
         </h1>
-        <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        <p
+          className="mt-1"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+        >
           {tasks.length} active
           {completedTasks.length > 0 ? ` · ${completedTasks.length} recently completed` : ""}
         </p>
       </div>
 
-      {/* Always-visible add form */}
+      {/* Always-visible add form — inline, hairline bottom rule, transparent */}
       <AddTaskForm addAction={addTask} />
 
-      {/* Priority groups */}
+      {/* Priority groups — hairline-separated rows, no card shell */}
       {tasks.length > 0 && (
-        <div className="space-y-5">
+        <div>
           {[
             { label: "High",   items: high },
             { label: "Medium", items: medium },
             { label: "Low",    items: low },
           ].map(({ label, items }) =>
             items.length > 0 ? (
-              <section key={label}>
-                <p
-                  className="text-xs uppercase tracking-widest mb-2"
-                  style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-                >
+              <section
+                key={label}
+                style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-2)" }}
+              >
+                <h2 className="db-section-label">
                   {label}
-                </p>
-                <div
-                  className="rounded-xl overflow-hidden"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-                >
+                  <span className="meta">· {items.length}</span>
+                </h2>
+                <div>
                   {items.map((task, i) => (
-                    <div key={task.id} style={i > 0 ? { borderTop: "1px solid var(--color-border)" } : {}}>
+                    <div
+                      key={task.id}
+                      style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
+                    >
                       <TaskItem
                         task={task}
                         completeAction={completeTask}
@@ -269,12 +273,22 @@ export default async function TasksPage() {
       )}
 
       {tasks.length === 0 && completedTasks.length === 0 && (
-        <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No tasks. Add one above.</p>
+        <p
+          style={{
+            fontSize: "var(--t-body)",
+            color: "var(--color-text-faint)",
+            paddingTop: "var(--space-6)",
+          }}
+        >
+          No tasks. Add one above.
+        </p>
       )}
 
-      {/* Completed section */}
+      {/* Completed section — low-emphasis, faint, collapsed by default */}
       {completedTasks.length > 0 && (
-        <CompletedTasks tasks={completedTasks} />
+        <div style={{ marginTop: "var(--space-7)" }}>
+          <CompletedTasks tasks={completedTasks} />
+        </div>
       )}
     </div>
   );

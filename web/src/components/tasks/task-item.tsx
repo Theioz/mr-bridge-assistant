@@ -5,12 +5,6 @@ import { Archive, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import type { Task, Subtask } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 
-const PRIORITY_COLOR: Record<string, string> = {
-  high:   "var(--color-danger)",
-  medium: "var(--color-warning)",
-  low:    "var(--color-text-faint)",
-};
-
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
   const today = todayString();
   const diff = Math.round(
@@ -67,29 +61,32 @@ function SubtaskRow({
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2"
+      className="flex items-center gap-2"
       style={{
         opacity: isPending ? 0.4 : 1,
-        transition: "opacity 150ms",
-        borderLeft: "2px solid var(--color-border)",
-        marginLeft: 8,
+        transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+        borderLeft: "1px solid var(--rule-soft)",
+        marginLeft: 18,
+        paddingLeft: "var(--space-3)",
       }}
     >
-      {/* Checkbox */}
+      {/* Checkbox — 32px touch target */}
       <button
         onClick={() => !done && startTransition(async () => { await completeSubtaskAction(subtask.id); })}
         disabled={isPending || done}
         className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-        style={{ width: 32, height: 32, margin: "-8px -4px -8px -8px" }}
+        style={{ width: 32, height: 32 }}
         title={done ? "Completed" : "Mark complete"}
       >
         <span
-          className="rounded-sm border-2 block flex items-center justify-center"
+          className="block flex items-center justify-center"
           style={{
-            width: 15,
-            height: 15,
-            borderColor: done ? "var(--color-text-faint)" : "var(--color-border)",
+            width: 14,
+            height: 14,
+            borderRadius: 3,
+            border: "1.5px solid var(--rule)",
             background: done ? "var(--color-text-faint)" : "transparent",
+            borderColor: done ? "var(--color-text-faint)" : "var(--rule)",
           }}
         />
       </button>
@@ -106,13 +103,14 @@ function SubtaskRow({
               if (e.key === "Enter")  commitEdit();
               if (e.key === "Escape") { setEditTitle(subtask.title); setEditing(false); }
             }}
-            className="w-full bg-transparent text-sm focus:outline-none"
-            style={{ color: "var(--color-text)" }}
+            className="w-full bg-transparent focus:outline-none"
+            style={{ color: "var(--color-text)", fontSize: "var(--t-micro)" }}
           />
         ) : (
           <span
-            className="text-sm cursor-text"
+            className="cursor-text"
             style={{
+              fontSize: "var(--t-micro)",
               color: done ? "var(--color-text-faint)" : "var(--color-text)",
               textDecoration: done ? "line-through" : "none",
             }}
@@ -167,7 +165,7 @@ export default function TaskItem({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const dot = PRIORITY_COLOR[task.priority ?? "low"] ?? PRIORITY_COLOR.low;
+  const markerColor = task.priority === "high" ? "var(--accent)" : "var(--color-text-faint)";
   const due = task.due_date ? relativeDue(task.due_date) : null;
 
   const completedCount = subtasks.filter((s) => s.status === "completed").length;
@@ -200,36 +198,45 @@ export default function TaskItem({
     startTransition(async () => {
       await addSubtaskAction(task.id, trimmed);
     });
-    // Keep focus for rapid entry
     setTimeout(() => addInputRef.current?.focus(), 50);
   }
 
   return (
-    <div style={{ opacity: isPending ? 0.4 : 1, transition: "opacity 150ms" }}>
-      {/* Parent row */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        {/* Completion circle — 44px touch target */}
+    <div
+      style={{
+        opacity: isPending ? 0.4 : 1,
+        transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+      }}
+    >
+      {/* Parent row — hairline-separated, flush left, 44px touch target drives height */}
+      <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+        {/* Completion circle — 44px touch target, neutral hairline border */}
         <button
           onClick={handleComplete}
           disabled={isPending}
           className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ width: 44, height: 44, margin: "-13px -10px -13px -13px" }}
+          style={{ width: 44, height: 44 }}
           title="Mark complete"
         >
           <span
-            className="rounded-full border-2 block"
-            style={{ width: 18, height: 18, borderColor: dot }}
+            className="rounded-full block"
+            style={{
+              width: 18,
+              height: 18,
+              border: "1.5px solid var(--rule)",
+            }}
           />
         </button>
 
-        {/* Priority dot */}
+        {/* Priority marker dot — amber for high, faint otherwise */}
         <span
           className="flex-shrink-0 rounded-full"
-          style={{ width: 6, height: 6, background: dot }}
+          style={{ width: 6, height: 6, background: markerColor }}
+          aria-hidden
         />
 
         {/* Title + subtask progress */}
-        <div className="flex-1 min-w-0 flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex items-center" style={{ gap: "var(--space-2)" }}>
           {editing ? (
             <input
               ref={inputRef}
@@ -240,27 +247,33 @@ export default function TaskItem({
                 if (e.key === "Enter")  commitEdit();
                 if (e.key === "Escape") { setEditTitle(task.title); setEditing(false); }
               }}
-              className="flex-1 bg-transparent text-sm focus:outline-none"
-              style={{ color: "var(--color-text)" }}
+              className="flex-1 bg-transparent focus:outline-none"
+              style={{ color: "var(--color-text)", fontSize: "var(--t-body)" }}
             />
           ) : (
             <span
-              className="text-sm cursor-text truncate"
-              style={{ color: "var(--color-text)" }}
+              className="cursor-text truncate"
+              style={{ color: "var(--color-text)", fontSize: "var(--t-body)" }}
               onClick={() => setEditing(true)}
             >
               {task.title}
             </span>
           )}
           {task.category && (
-            <span className="text-xs flex-shrink-0" style={{ color: "var(--color-text-faint)" }}>
+            <span
+              className="flex-shrink-0"
+              style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+            >
               {task.category}
             </span>
           )}
           {totalCount > 0 && (
             <span
-              className="text-xs tabular-nums flex-shrink-0 font-medium"
-              style={{ color: allDone ? "var(--color-positive)" : "var(--color-text-muted)" }}
+              className="tnum flex-shrink-0"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: allDone ? "var(--color-positive)" : "var(--color-text-faint)",
+              }}
             >
               {completedCount}/{totalCount}
             </span>
@@ -270,19 +283,22 @@ export default function TaskItem({
         {/* Due date */}
         {due && (
           <span
-            className="flex-shrink-0 text-xs tabular-nums"
-            style={{ color: due.urgent ? "var(--color-danger)" : "var(--color-text-muted)" }}
+            className="flex-shrink-0 tnum"
+            style={{
+              fontSize: "var(--t-micro)",
+              color: due.urgent ? "var(--color-danger)" : "var(--color-text-faint)",
+            }}
           >
             {due.label}
           </span>
         )}
 
-        {/* Expand/collapse chevron (only when subtasks exist) */}
+        {/* Expand/collapse chevron */}
         {totalCount > 0 && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
-            style={{ color: "var(--color-text-muted)" }}
+            className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+            style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
             title={expanded ? "Collapse" : "Expand"}
           >
             {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -292,8 +308,8 @@ export default function TaskItem({
         {/* Edit due date / priority */}
         <button
           onClick={() => setShowEditPanel((v) => !v)}
-          className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
-          style={{ color: "var(--color-text-muted)" }}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
           title="Edit due date / priority"
         >
           <Pencil size={13} />
@@ -303,8 +319,8 @@ export default function TaskItem({
         <button
           onClick={handleArchive}
           disabled={isPending}
-          className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
-          style={{ color: "var(--color-text-muted)" }}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
           title="Archive"
         >
           <Archive size={13} />
@@ -313,33 +329,48 @@ export default function TaskItem({
 
       {/* Due date / priority edit panel */}
       {showEditPanel && (
-        <div className="flex items-center gap-3 px-4 pb-3" style={{ marginLeft: 36 }}>
-          {/* Due date */}
+        <div
+          className="flex items-center flex-wrap"
+          style={{
+            gap: "var(--space-3)",
+            paddingBottom: "var(--space-3)",
+            paddingLeft: 56,
+          }}
+        >
           <input
             type="date"
             value={editDueDate}
             onChange={(e) => setEditDueDate(e.target.value)}
-            className="text-xs rounded-lg px-2 py-1 focus:outline-none"
+            className="focus:outline-none"
             style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 8px",
               color: "var(--color-text)",
             }}
           />
-          {/* Clear due date */}
           {editDueDate && (
-            <button onClick={() => setEditDueDate("")} style={{ color: "var(--color-text-faint)" }}>
+            <button
+              onClick={() => setEditDueDate("")}
+              className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+              style={{ color: "var(--color-text-faint)" }}
+              title="Clear date"
+            >
               <X size={12} />
             </button>
           )}
-          {/* Priority */}
           <select
             value={editPriority}
             onChange={(e) => setEditPriority(e.target.value as "high" | "medium" | "low")}
-            className="text-xs rounded-lg px-2 py-1 focus:outline-none"
+            className="focus:outline-none"
             style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 8px",
               color: "var(--color-text)",
             }}
           >
@@ -347,7 +378,6 @@ export default function TaskItem({
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
-          {/* Save */}
           <button
             onClick={() => {
               setShowEditPanel(false);
@@ -358,12 +388,24 @@ export default function TaskItem({
                 });
               });
             }}
-            className="text-xs px-2 py-1 rounded-lg"
-            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 10px",
+            }}
           >
             Save
           </button>
-          <button onClick={() => setShowEditPanel(false)} style={{ color: "var(--color-text-faint)" }}>
+          <button
+            onClick={() => setShowEditPanel(false)}
+            className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+            style={{ color: "var(--color-text-faint)" }}
+            title="Cancel"
+          >
             <X size={12} />
           </button>
         </div>
@@ -371,7 +413,15 @@ export default function TaskItem({
 
       {/* Subtask list + add input */}
       {expanded && (
-        <div className="pb-2 px-4 space-y-0.5">
+        <div
+          style={{
+            paddingLeft: 56,
+            paddingBottom: "var(--space-2)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
           {subtasks.map((sub) => (
             <SubtaskRow
               key={sub.id}
@@ -382,10 +432,15 @@ export default function TaskItem({
             />
           ))}
 
-          {/* Add item input */}
           <div
-            className="flex items-center gap-2 px-3 py-1.5"
-            style={{ borderLeft: "2px solid var(--color-border)", marginLeft: 8 }}
+            className="flex items-center gap-2"
+            style={{
+              borderLeft: "1px solid var(--rule-soft)",
+              marginLeft: 18,
+              paddingLeft: "var(--space-3)",
+              paddingTop: 2,
+              paddingBottom: 2,
+            }}
           >
             <input
               ref={addInputRef}
@@ -393,19 +448,36 @@ export default function TaskItem({
               onChange={(e) => setAddInput(e.target.value)}
               onKeyDown={handleAddSubtask}
               placeholder="Add item…"
-              className="flex-1 bg-transparent text-sm focus:outline-none"
-              style={{ color: "var(--color-text)", caretColor: "var(--color-primary)" }}
+              className="flex-1 bg-transparent focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text)",
+                caretColor: "var(--accent)",
+                paddingTop: 4,
+                paddingBottom: 4,
+              }}
             />
           </div>
         </div>
       )}
 
-      {/* Show add input even when no subtasks yet (collapsed = no subtasks, so always show) */}
+      {/* Show add input even when collapsed with no subtasks */}
       {!expanded && totalCount === 0 && (
-        <div className="pb-2 px-4">
+        <div
+          style={{
+            paddingLeft: 56,
+            paddingBottom: "var(--space-2)",
+          }}
+        >
           <div
-            className="flex items-center gap-2 px-3 py-1.5"
-            style={{ borderLeft: "2px solid var(--color-border)", marginLeft: 8 }}
+            className="flex items-center gap-2"
+            style={{
+              borderLeft: "1px solid var(--rule-soft)",
+              marginLeft: 18,
+              paddingLeft: "var(--space-3)",
+              paddingTop: 2,
+              paddingBottom: 2,
+            }}
           >
             <input
               ref={addInputRef}
@@ -413,8 +485,14 @@ export default function TaskItem({
               onChange={(e) => setAddInput(e.target.value)}
               onKeyDown={handleAddSubtask}
               placeholder="Add item…"
-              className="flex-1 bg-transparent text-sm focus:outline-none"
-              style={{ color: "var(--color-text)", caretColor: "var(--color-primary)" }}
+              className="flex-1 bg-transparent focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text)",
+                caretColor: "var(--accent)",
+                paddingTop: 4,
+                paddingBottom: 4,
+              }}
             />
           </div>
         </div>
