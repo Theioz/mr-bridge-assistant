@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import {
   LayoutDashboard,
   Activity,
@@ -47,6 +47,8 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
+const navTransition = `color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)`;
+
 export default function Nav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
@@ -90,19 +92,31 @@ export default function Nav() {
   return (
     <>
       {/* ── Desktop sidebar (≥ lg) ─────────────────────────────────── */}
+      {/* Transparent surface — ambient watercolor + grain pass through;
+          a single hairline rule separates the rail from the canvas. */}
       <nav
-        className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-60 z-50"
-        style={{
-          background: "var(--color-bg)",
-          borderRight: "1px solid var(--color-border)",
-        }}
+        data-reveal
+        data-stagger="0"
+        className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-60 z-50 print:hidden"
+        style={{ borderRight: "1px solid var(--rule-soft)" }}
       >
-        {/* Logo + theme toggle */}
-        <div className="flex items-center gap-2.5 px-5 pt-6 pb-6">
+        {/* Brand + theme toggle */}
+        <div
+          className="flex items-center"
+          style={{
+            gap: "var(--space-3)",
+            padding: "var(--space-6) var(--space-5) var(--space-6)",
+          }}
+        >
           <Logo size={26} />
           <span
-            className="font-heading text-sm font-semibold tracking-tight flex-1"
-            style={{ color: "var(--color-text)" }}
+            className="font-heading flex-1"
+            style={{
+              color: "var(--color-text)",
+              fontSize: "var(--t-h2)",
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+            }}
           >
             Mr. Bridge
           </span>
@@ -110,38 +124,66 @@ export default function Nav() {
         </div>
 
         {/* Nav links */}
-        <div className="flex flex-col gap-0.5 px-3 overflow-y-auto flex-1">
+        <div
+          className="flex flex-col overflow-y-auto flex-1"
+          style={{ gap: "var(--space-1)", padding: "0 var(--space-3)" }}
+        >
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             const showBadge = href === "/notifications" && unreadCount > 0;
             const showErrorDot = href === "/notifications" && unreadError && unreadCount === 0;
+            const itemStyle: CSSProperties = {
+              position: "relative",
+              minHeight: 44,
+              padding: "var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 2px)",
+              borderRadius: "var(--r-2)",
+              fontSize: "var(--t-meta)",
+              fontWeight: active ? 500 : 400,
+              color: active ? "var(--accent)" : "var(--color-text-muted)",
+              transition: navTransition,
+            };
             return (
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 cursor-pointer"
-                style={{
-                  background: active ? "var(--color-primary-dim)" : "transparent",
-                  color: active ? "var(--color-primary)" : "var(--color-text-muted)",
-                }}
+                aria-current={active ? "page" : undefined}
+                className="flex items-center gap-3 cursor-pointer hover-bg-subtle hover-text-brighten"
+                style={itemStyle}
               >
-                <span className="relative" style={{ flexShrink: 0 }}>
+                {/* Active rail — 2px wide, full row height, restrained accent cue */}
+                {active && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 6,
+                      bottom: 6,
+                      width: 2,
+                      borderRadius: 1,
+                      background: "var(--accent)",
+                    }}
+                  />
+                )}
+                <span className="relative" style={{ flexShrink: 0, lineHeight: 0 }}>
                   <Icon
                     size={18}
                     strokeWidth={active ? 2 : 1.5}
-                    style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                    style={{ color: active ? "var(--accent)" : "currentColor" }}
                   />
                   {showBadge && (
                     <span
-                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
+                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
                       style={{
-                        background: "var(--color-danger)",
+                        background: "var(--accent)",
+                        color: "var(--color-text-on-cta)",
                         minWidth: 14,
                         height: 14,
                         fontSize: 9,
                         fontWeight: 700,
                         padding: "0 3px",
                         lineHeight: 1,
+                        fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {unreadCount > 9 ? "9+" : unreadCount}
@@ -169,8 +211,16 @@ export default function Nav() {
         {/* Demo banner — desktop */}
         {isDemo && (
           <div
-            className="mx-3 mb-4 px-3 py-2.5 rounded-lg text-xs overflow-hidden text-ellipsis whitespace-nowrap"
-            style={{ background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+            className="overflow-hidden text-ellipsis whitespace-nowrap"
+            style={{
+              margin: "0 var(--space-3) var(--space-4)",
+              padding: "var(--space-2) var(--space-3)",
+              borderRadius: "var(--r-2)",
+              background: "var(--warning-subtle)",
+              color: "var(--accent)",
+              fontSize: "var(--t-micro)",
+              letterSpacing: "0.01em",
+            }}
             title="Demo account — changes reset nightly"
           >
             Demo account — changes reset nightly
@@ -178,7 +228,13 @@ export default function Nav() {
         )}
 
         {/* Sign out — desktop */}
-        <div className="px-3 pb-4 mt-auto" style={{ borderTop: "1px solid var(--color-border)" }}>
+        <div
+          style={{
+            padding: "var(--space-3) var(--space-3) var(--space-4)",
+            borderTop: "1px solid var(--rule-soft)",
+            marginTop: "auto",
+          }}
+        >
           <SignOutButton />
         </div>
       </nav>
@@ -186,19 +242,27 @@ export default function Nav() {
       {/* Demo banner — mobile (above tab bar). Hidden on /chat to avoid overlapping the composer. */}
       {isDemo && !pathname?.startsWith("/chat") && (
         <div
-          className="lg:hidden fixed left-0 right-0 z-40 px-4 py-1.5 text-center text-xs overflow-hidden text-ellipsis whitespace-nowrap print:hidden"
-          style={{ bottom: 56, background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+          className="lg:hidden fixed left-0 right-0 z-40 text-center overflow-hidden text-ellipsis whitespace-nowrap print:hidden"
+          style={{
+            bottom: 56,
+            padding: "var(--space-1) var(--space-4)",
+            background: "var(--warning-subtle)",
+            color: "var(--accent)",
+            fontSize: "var(--t-micro)",
+          }}
         >
           Demo account — changes reset nightly
         </div>
       )}
 
       {/* ── Mobile bottom tab bar (< lg) ────────────────────────────── */}
+      {/* Opaque — the bottom bar overlays scrolling content, so the canvas
+          color anchors it. Hairline top rule, no shadow. */}
       <nav
-        className="flex lg:hidden fixed bottom-0 left-0 right-0 z-50"
+        className="flex lg:hidden fixed bottom-0 left-0 right-0 z-50 print:hidden"
         style={{
           background: "var(--color-bg)",
-          borderTop: "1px solid var(--color-border)",
+          borderTop: "1px solid var(--rule-soft)",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
@@ -209,13 +273,26 @@ export default function Nav() {
               <Link
                 key={href}
                 href={href}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors duration-150"
+                aria-current={active ? "page" : undefined}
+                className="flex-1 flex flex-col items-center justify-center cursor-pointer"
                 style={{
-                  color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                  gap: 2,
+                  color: active ? "var(--accent)" : "var(--color-text-muted)",
+                  transition: navTransition,
+                  minHeight: 44,
                 }}
               >
                 <Icon size={18} strokeWidth={active ? 2 : 1.5} />
-                <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, lineHeight: 1 }}>{label}</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: active ? 600 : 400,
+                    lineHeight: 1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {label}
+                </span>
               </Link>
             );
           })}
@@ -223,15 +300,28 @@ export default function Nav() {
           {/* More button */}
           <button
             onClick={() => setShowMore(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors duration-150"
+            aria-current={moreIsActive ? "page" : undefined}
+            className="flex-1 flex flex-col items-center justify-center cursor-pointer"
             style={{
-              color: moreIsActive ? "var(--color-primary)" : "var(--color-text-muted)",
+              gap: 2,
+              color: moreIsActive ? "var(--accent)" : "var(--color-text-muted)",
               background: "transparent",
               border: "none",
+              transition: navTransition,
+              minHeight: 44,
             }}
           >
             <MoreHorizontal size={18} strokeWidth={moreIsActive ? 2 : 1.5} />
-            <span style={{ fontSize: 10, fontWeight: moreIsActive ? 600 : 400, lineHeight: 1 }}>More</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: moreIsActive ? 600 : 400,
+                lineHeight: 1,
+                letterSpacing: "0.02em",
+              }}
+            >
+              More
+            </span>
           </button>
         </div>
       </nav>
@@ -239,86 +329,138 @@ export default function Nav() {
       {/* ── More bottom sheet ────────────────────────────────────────── */}
       <Sheet open={showMore} onOpenChange={setShowMore} title="More navigation" hideHeader>
         <>
-          {/* Handle + header */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-3">
-              <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                More
-              </span>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <button
-                  onClick={() => setShowMore(false)}
-                  style={{ color: "var(--color-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="px-3 pb-4 grid grid-cols-2 gap-1">
-              {MOBILE_MORE.map(({ href, label, icon: Icon }) => {
-                const active = isActive(pathname, href);
-                const showBadge = href === "/notifications" && unreadCount > 0;
-            const showErrorDot = href === "/notifications" && unreadError && unreadCount === 0;
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setShowMore(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150"
-                    style={{
-                      background: active ? "var(--color-primary-dim)" : "var(--color-surface-raised)",
-                      color: active ? "var(--color-primary)" : "var(--color-text-muted)",
-                    }}
-                  >
-                    <span className="relative" style={{ flexShrink: 0 }}>
-                      <Icon
-                        size={18}
-                        strokeWidth={active ? 2 : 1.5}
-                        style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
-                      />
-                      {showBadge && (
-                        <span
-                          className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white"
-                          style={{
-                            background: "var(--color-danger)",
-                            minWidth: 14,
-                            height: 14,
-                            fontSize: 9,
-                            fontWeight: 700,
-                            padding: "0 3px",
-                            lineHeight: 1,
-                          }}
-                        >
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-sm font-medium">{label}</span>
-                  </Link>
-                );
-              })}
-
-              {/* Sign out — mobile More sheet */}
+          {/* Header — flat, hairline rule below */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: "var(--space-4) var(--space-5) var(--space-3)",
+              borderBottom: "1px solid var(--rule-soft)",
+            }}
+          >
+            <span
+              className="font-heading"
+              style={{
+                color: "var(--color-text)",
+                fontSize: "var(--t-h2)",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              More
+            </span>
+            <div className="flex items-center" style={{ gap: "var(--space-2)" }}>
+              <ThemeToggle />
               <button
-                onClick={async () => {
-                  setShowMore(false);
-                  const supabase = createClient();
-                  await supabase.auth.signOut();
-                  window.location.href = "/login";
-                }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150"
+                onClick={() => setShowMore(false)}
+                aria-label="Close"
+                className="flex items-center justify-center cursor-pointer"
                 style={{
-                  background: "var(--color-surface-raised)",
                   color: "var(--color-text-muted)",
+                  background: "transparent",
                   border: "none",
-                  cursor: "pointer",
+                  minWidth: 44,
+                  minHeight: 44,
+                  borderRadius: "var(--r-2)",
+                  transition: navTransition,
                 }}
               >
-                <LogOut size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                <span className="text-sm font-medium">Sign out</span>
+                <X size={18} />
               </button>
             </div>
+          </div>
+
+          {/* Items — flat list, hairline dividers, accent for active */}
+          <div style={{ padding: "var(--space-2) 0 var(--space-4)" }}>
+            {MOBILE_MORE.map(({ href, label, icon: Icon }) => {
+              const active = isActive(pathname, href);
+              const showBadge = href === "/notifications" && unreadCount > 0;
+              const showErrorDot = href === "/notifications" && unreadError && unreadCount === 0;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setShowMore(false)}
+                  aria-current={active ? "page" : undefined}
+                  className="flex items-center hover-bg-subtle"
+                  style={{
+                    gap: "var(--space-3)",
+                    padding: "var(--space-3) var(--space-5)",
+                    minHeight: 48,
+                    color: active ? "var(--accent)" : "var(--color-text)",
+                    fontSize: "var(--t-meta)",
+                    fontWeight: active ? 500 : 400,
+                    transition: navTransition,
+                    borderTop: "1px solid var(--rule-soft)",
+                  }}
+                >
+                  <span className="relative" style={{ flexShrink: 0, lineHeight: 0 }}>
+                    <Icon
+                      size={18}
+                      strokeWidth={active ? 2 : 1.5}
+                      style={{ color: active ? "var(--accent)" : "var(--color-text-muted)" }}
+                    />
+                    {showBadge && (
+                      <span
+                        className="absolute -top-1 -right-1 flex items-center justify-center rounded-full"
+                        style={{
+                          background: "var(--accent)",
+                          color: "var(--color-text-on-cta)",
+                          minWidth: 14,
+                          height: 14,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          padding: "0 3px",
+                          lineHeight: 1,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                    {showErrorDot && (
+                      <span
+                        title="Unread count unavailable"
+                        aria-label="Unread count unavailable"
+                        className="absolute -top-1 -right-1 rounded-full"
+                        style={{
+                          background: "var(--color-text-faint)",
+                          width: 6,
+                          height: 6,
+                        }}
+                      />
+                    )}
+                  </span>
+                  {label}
+                </Link>
+              );
+            })}
+
+            {/* Sign out — mobile More sheet */}
+            <button
+              onClick={async () => {
+                setShowMore(false);
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="flex items-center w-full hover-bg-subtle"
+              style={{
+                gap: "var(--space-3)",
+                padding: "var(--space-3) var(--space-5)",
+                minHeight: 48,
+                color: "var(--color-text-muted)",
+                fontSize: "var(--t-meta)",
+                background: "transparent",
+                border: "none",
+                borderTop: "1px solid var(--rule-soft)",
+                cursor: "pointer",
+                transition: navTransition,
+              }}
+            >
+              <LogOut size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+              Sign out
+            </button>
+          </div>
         </>
       </Sheet>
     </>
