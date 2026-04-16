@@ -1,8 +1,23 @@
 import type { Metadata, Viewport } from "next";
+import { Mona_Sans, Hubot_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { getServerThemePreference } from "@/lib/theme";
+
+const monaSans = Mona_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-body",
+  weight: "variable",
+});
+
+const hubotSans = Hubot_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+  weight: "variable",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -28,15 +43,12 @@ export default async function RootLayout({
     themePref === "light" || themePref === "dark" ? { "data-theme": themePref } : {};
 
   return (
-    <html lang="en" suppressHydrationWarning {...htmlThemeAttr}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${monaSans.variable} ${hubotSans.variable}`}
+      {...htmlThemeAttr}
+    >
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
         <ThemeProvider defaultTheme={themePref}>{children}</ThemeProvider>
         <ServiceWorkerRegister />

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 /* ─── Theme-independent tokens ────────────────────────────────────────── */
@@ -157,7 +156,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
@@ -166,7 +165,7 @@ body {
 }
 
 .font-heading {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
 }
 
 /* Tabular numerals — opt-in utility for numeric stacks. */
