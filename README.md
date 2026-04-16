@@ -11,10 +11,10 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 21 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, stock quotes, session history); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
+- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 22 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, workout history, stock quotes, session history); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
 - **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
-- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync)
+- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals; food photo analyzer (photo → client-side compression → Claude vision → macro estimate → log); nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
@@ -67,7 +67,7 @@ supabase link --project-ref <your-project-ref>   # ref is the part of the URL af
 supabase db push
 ```
 
-This creates all 18 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, etc.).
+This creates all 20 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, etc.).
 
 ### Step 3 — Get your Anthropic API key
 

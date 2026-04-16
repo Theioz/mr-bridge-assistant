@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
-import type { WorkoutPlan, WorkoutExercise } from "@/lib/types";
+import type { WorkoutPlan, WorkoutExercise, StrengthSession, StrengthSessionSet } from "@/lib/types";
 import { todayString, addDays } from "@/lib/timezone";
+import type { WeightUnit } from "@/lib/units";
+import { InlineSetLogger } from "./inline-set-logger";
+import { EndOfWorkoutRecap } from "./end-of-workout-recap";
 
 interface Props {
   plans: WorkoutPlan[];
   completedDates: string[];
+  todaySession?: StrengthSession | null;
+  todaySets?: StrengthSessionSet[];
+  weightUnit?: WeightUnit;
 }
 
 interface DaySlot {
@@ -47,28 +53,66 @@ function fmtWeekRange(days: DaySlot[]): string {
   return `${fmtShortDate(days[0].date)} – ${fmtShortDate(days[6].date)}`;
 }
 
-function ExerciseRow({ ex }: { ex: WorkoutExercise }) {
+interface ExerciseRowProps {
+  ex: WorkoutExercise;
+  loggerContext?: {
+    date: string;
+    workoutPlanId: string | null;
+    exerciseOrder: number;
+    setsForThisExercise: StrengthSessionSet[];
+    unit: WeightUnit;
+  };
+}
+
+function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
   const details: string[] = [];
   if (ex.sets) details.push(`${ex.sets} sets`);
   if (ex.reps) details.push(`× ${ex.reps}`);
   if (ex.weight_lbs) details.push(`@ ${ex.weight_lbs} lbs`);
 
   return (
-    <div className="flex items-baseline gap-1.5" style={{ padding: "3px 0" }}>
-      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>{ex.exercise}</span>
-      {details.length > 0 && (
-        <>
-          <span style={{ fontSize: 11, color: "var(--color-text-faint, var(--color-text-muted))" }}>·</span>
-          <span style={{ fontSize: 12, color: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}>
-            {details.join(" ")}
-          </span>
-        </>
+    <div style={{ padding: "3px 0" }}>
+      <div className="flex items-baseline gap-1.5">
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>{ex.exercise}</span>
+        {details.length > 0 && (
+          <>
+            <span style={{ fontSize: 11, color: "var(--color-text-faint, var(--color-text-muted))" }}>·</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}>
+              {details.join(" ")}
+            </span>
+          </>
+        )}
+      </div>
+      {loggerContext && (
+        <InlineSetLogger
+          date={loggerContext.date}
+          workoutPlanId={loggerContext.workoutPlanId}
+          exerciseName={ex.exercise}
+          exerciseOrder={loggerContext.exerciseOrder}
+          targetSets={ex.sets}
+          targetReps={ex.reps}
+          targetWeightLbs={ex.weight_lbs}
+          existingSets={loggerContext.setsForThisExercise}
+          unit={loggerContext.unit}
+        />
       )}
     </div>
   );
 }
 
-function PhaseSection({ label, exercises }: { label: string; exercises: WorkoutExercise[] }) {
+interface PhaseSectionProps {
+  label: string;
+  exercises: WorkoutExercise[];
+  loggerBase?: {
+    date: string;
+    workoutPlanId: string | null;
+    setsByExercise: Map<string, StrengthSessionSet[]>;
+    orderOffset: number;
+    unit: WeightUnit;
+  };
+}
+
+function PhaseSection({ label, exercises, loggerBase }: PhaseSectionProps) {
   if (exercises.length === 0) return null;
   return (
     <div style={{ marginBottom: 14 }}>
@@ -86,16 +130,43 @@ function PhaseSection({ label, exercises }: { label: string; exercises: WorkoutE
       >
         {label}
       </div>
-      {exercises.map((ex, i) => (
-        <ExerciseRow key={i} ex={ex} />
-      ))}
+      {exercises.map((ex, i) => {
+        const loggerContext = loggerBase
+          ? {
+              date: loggerBase.date,
+              workoutPlanId: loggerBase.workoutPlanId,
+              exerciseOrder: loggerBase.orderOffset + i,
+              setsForThisExercise:
+                loggerBase.setsByExercise.get(ex.exercise.toLowerCase()) ?? [],
+              unit: loggerBase.unit,
+            }
+          : undefined;
+        return <ExerciseRow key={i} ex={ex} loggerContext={loggerContext} />;
+      })}
     </div>
   );
 }
 
-export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
+export function WeeklyWorkoutPlan({
+  plans,
+  completedDates,
+  todaySession = null,
+  todaySets = [],
+  weightUnit = "lb",
+}: Props) {
   const days = buildWeekDays(plans, completedDates);
   const todayDate = todayString();
+
+  const setsByExercise = new Map<string, StrengthSessionSet[]>();
+  for (const set of todaySets) {
+    const key = set.exercise_name.toLowerCase();
+    const list = setsByExercise.get(key) ?? [];
+    list.push(set);
+    setsByExercise.set(key, list);
+  }
+  for (const list of setsByExercise.values()) {
+    list.sort((a, b) => a.set_number - b.set_number);
+  }
 
   const [open, setOpen] = useState<Record<string, boolean>>(() => ({
     [todayDate]: true,
@@ -233,7 +304,21 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                   }}
                 >
                   <PhaseSection label="Warm-up" exercises={day.plan.warmup} />
-                  <PhaseSection label="Workout" exercises={day.plan.workout} />
+                  <PhaseSection
+                    label="Workout"
+                    exercises={day.plan.workout}
+                    loggerBase={
+                      day.isToday
+                        ? {
+                            date: day.date,
+                            workoutPlanId: day.plan.id,
+                            setsByExercise,
+                            orderOffset: 0,
+                            unit: weightUnit,
+                          }
+                        : undefined
+                    }
+                  />
                   <div style={{ marginBottom: 0 }}>
                     <PhaseSection label="Cool-down" exercises={day.plan.cooldown} />
                   </div>
@@ -241,6 +326,14 @@ export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
                     <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 8, fontStyle: "italic" }}>
                       {day.plan.notes}
                     </p>
+                  )}
+                  {day.isToday && (
+                    <EndOfWorkoutRecap
+                      sessionId={todaySession?.id ?? null}
+                      initialPerceivedEffort={todaySession?.perceived_effort ?? null}
+                      initialNotes={todaySession?.notes ?? null}
+                      completedAt={todaySession?.completed_at ?? null}
+                    />
                   )}
                 </div>
               )}
