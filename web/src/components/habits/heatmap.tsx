@@ -10,6 +10,9 @@ interface Props {
   dates: string[];            // ordered list of date strings YYYY-MM-DD
 }
 
+const CELL = 14;
+const GAP = 4;
+
 function fmtDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "short",
@@ -23,19 +26,13 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
 
   if (habits.length === 0 || dates.length === 0) {
     return (
-      <div
-        className="rounded-xl p-5 transition-all duration-200 card-lift"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--color-text-muted)" }}>
-          Completion Heatmap — 90 Days
-        </p>
-        <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No habit data</p>
-      </div>
+      <section>
+        <h2 className="db-section-label">Completion Heatmap</h2>
+        <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>No habit data</p>
+      </section>
     );
   }
 
-  // Build completion map: date → Set<habitId>
   const completionMap = new Map<string, Set<string>>();
   for (const log of logs) {
     if (!log.completed) continue;
@@ -43,82 +40,97 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
     completionMap.get(log.date)!.add(log.habit_id);
   }
 
-  // Build habit name map from full registry (includes archived habits)
   const habitNames = new Map(registry.map((h) => [h.id, h.name]));
+  const today = dates[dates.length - 1];
+  const totalHabits = habits.length;
 
-  // Group dates into weeks (columns of 7)
-  const weeks: string[][] = [];
-  // Pad start so first column aligns to Sunday (0) or Monday (1)
   const firstDate = new Date(dates[0] + "T00:00:00");
-  const startDay = firstDate.getDay(); // 0 = Sunday
-  const paddedDates = Array(startDay).fill(null).concat(dates);
+  const startDay = firstDate.getDay();
+  const paddedDates: (string | null)[] = Array(startDay).fill(null).concat(dates);
+  const weeks: (string | null)[][] = [];
   for (let i = 0; i < paddedDates.length; i += 7) {
     weeks.push(paddedDates.slice(i, i + 7));
   }
 
-  const totalHabits = habits.length;
+  const svgWidth = weeks.length * CELL + (weeks.length - 1) * GAP;
+  const svgHeight = 7 * CELL + 6 * GAP;
 
-  function cellColor(date: string | null): string {
-    if (!date) return "transparent";
+  function cellStyle(date: string): { fill: string; opacity: number } {
     const completed = completionMap.get(date);
-    if (!completed || completed.size === 0) return "var(--color-border)";
-    const ratio = completed.size / totalHabits;
-    if (ratio >= 1) return "var(--color-positive)";
-    if (ratio >= 0.66) return "var(--color-positive-light)";
-    if (ratio >= 0.33) return "var(--color-positive-lighter)";
-    return "var(--color-positive-lightest)";
+    const ratio = completed ? completed.size / totalHabits : 0;
+    if (ratio === 0) return { fill: "var(--rule)", opacity: 1 };
+    // Hits scale 0.4 → 0.85 (mockup baseline for fully-hit cell is 0.85).
+    return { fill: "var(--color-text)", opacity: 0.4 + ratio * 0.45 };
   }
 
   return (
-    <div
-      className="rounded-xl p-5 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-        Completion Heatmap — 90 Days
-      </p>
+    <section>
+      <h2 className="db-section-label">
+        Completion Heatmap
+        <span className="meta">· {dates.length}d</span>
+      </h2>
 
       <div className="overflow-x-auto">
-        <div className="flex gap-1" style={{ minWidth: weeks.length * 14 }}>
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-1">
-              {week.map((date, di) => (
-                <div
-                  key={di}
-                  className="rounded-sm cursor-default transition-opacity duration-100"
-                  style={{
-                    width: 11,
-                    height: 11,
-                    background: cellColor(date),
-                    opacity: date ? 1 : 0,
-                  }}
-                  onMouseEnter={() => {
-                    if (!date) return;
-                    const completed = completionMap.get(date);
-                    const names = completed
-                      ? Array.from(completed).map((id) => habitNames.get(id) ?? id)
-                      : [];
-                    setTooltip({ date, names });
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        <svg
+          width={svgWidth}
+          height={svgHeight}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          role="img"
+          aria-label={`Habit completion heatmap over the last ${dates.length} days`}
+          style={{ display: "block", maxWidth: "100%" }}
+        >
+          {weeks.map((week, wi) =>
+            week.map((date, di) => {
+              if (!date) return null;
+              const { fill, opacity } = cellStyle(date);
+              const x = wi * (CELL + GAP);
+              const y = di * (CELL + GAP);
+              const isToday = date === today;
+              return (
+                <g key={`${wi}-${di}`}>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={CELL}
+                    height={CELL}
+                    rx={3}
+                    fill={fill}
+                    opacity={opacity}
+                    style={{ cursor: "default" }}
+                    onMouseEnter={() => {
+                      const completed = completionMap.get(date);
+                      const names = completed
+                        ? Array.from(completed).map((id) => habitNames.get(id) ?? id)
+                        : [];
+                      setTooltip({ date, names });
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                  />
+                  {isToday && (
+                    <rect
+                      x={x - 2}
+                      y={y - 2}
+                      width={CELL + 4}
+                      height={CELL + 4}
+                      rx={4}
+                      fill="none"
+                      stroke="var(--accent)"
+                      strokeWidth={1.5}
+                      pointerEvents="none"
+                    />
+                  )}
+                </g>
+              );
+            })
+          )}
+        </svg>
       </div>
 
-      {/* Tooltip */}
       {tooltip && (
-        <div
-          className="mt-3 px-3 py-2 rounded-lg"
-          style={{
-            background: "var(--color-surface-raised)",
-            border: "1px solid var(--color-border)",
-            fontSize: 12,
-          }}
-        >
-          <p style={{ color: "var(--color-text-muted)", marginBottom: 4 }}>{fmtDate(tooltip.date)}</p>
+        <div style={{ marginTop: "var(--space-3)", fontSize: "var(--t-micro)" }}>
+          <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+            {fmtDate(tooltip.date)}
+          </p>
           {tooltip.names.length === 0 ? (
             <p style={{ color: "var(--color-text-faint)" }}>No habits completed</p>
           ) : (
@@ -127,14 +139,32 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center gap-1.5 mt-4">
-        <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>Less</span>
-        {["var(--color-border)", "var(--color-positive-lightest)", "var(--color-positive-lighter)", "var(--color-positive-light)", "var(--color-positive)"].map((c, i) => (
-          <div key={i} className="rounded-sm" style={{ width: 11, height: 11, background: c }} />
+      <div
+        className="flex items-center gap-1.5"
+        style={{ marginTop: "var(--space-4)" }}
+      >
+        <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>Less</span>
+        {[
+          { fill: "var(--rule)", opacity: 1 },
+          { fill: "var(--color-text)", opacity: 0.4 },
+          { fill: "var(--color-text)", opacity: 0.55 },
+          { fill: "var(--color-text)", opacity: 0.7 },
+          { fill: "var(--color-text)", opacity: 0.85 },
+        ].map((c, i) => (
+          <span
+            key={i}
+            style={{
+              width: CELL,
+              height: CELL,
+              borderRadius: 3,
+              background: c.fill,
+              opacity: c.opacity,
+              display: "inline-block",
+            }}
+          />
         ))}
-        <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>More</span>
+        <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>More</span>
       </div>
-    </div>
+    </section>
   );
 }

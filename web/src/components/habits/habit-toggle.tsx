@@ -53,6 +53,7 @@ export default function HabitToggle({
   }, [showEmojiPicker]);
 
   const completed = optimistic ?? false;
+  const pending = isPending || archivePending || editPending;
 
   function handleToggle() {
     const next = !completed;
@@ -61,7 +62,7 @@ export default function HabitToggle({
       try {
         await toggleAction(habit.id, date, next);
       } catch {
-        setOptimistic(completed); // revert on error
+        setOptimistic(completed);
       }
     });
   }
@@ -74,21 +75,40 @@ export default function HabitToggle({
   }
 
   return (
-    <div className={`flex items-center ${isPending || archivePending || editPending ? "opacity-60" : ""}`}>
+    <div
+      className="db-row"
+      style={{
+        gridTemplateColumns: "1fr auto",
+        alignItems: "center",
+        padding: 0,
+        opacity: pending ? 0.6 : 1,
+      }}
+    >
       {editing ? (
-        <div className="flex-1 flex flex-wrap items-center gap-2 py-2 px-1">
+        <div
+          className="flex flex-wrap items-center"
+          style={{ gap: "var(--space-2)", padding: "var(--space-3) 0", gridColumn: "1 / -1" }}
+        >
           <div className="relative" ref={pickerRef}>
             <button
               type="button"
               onClick={() => setShowEmojiPicker((v) => !v)}
-              className="w-10 h-8 text-lg rounded flex items-center justify-center cursor-pointer"
-              style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+              className="flex items-center justify-center cursor-pointer"
+              style={{
+                width: 44,
+                height: 44,
+                fontSize: "var(--t-body)",
+                borderRadius: "var(--r-1)",
+                background: "transparent",
+                color: "var(--color-text)",
+                border: "1px solid var(--rule)",
+              }}
               title="Pick emoji"
             >
               {editEmoji || <Smile className="w-4 h-4" aria-hidden />}
             </button>
             {showEmojiPicker && (
-              <div className="absolute left-0 top-10 z-50">
+              <div className="absolute left-0 top-12 z-50">
                 <EmojiPicker
                   onEmojiClick={(data: EmojiClickData) => {
                     setEditEmoji(data.emoji);
@@ -106,16 +126,34 @@ export default function HabitToggle({
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className="flex-1 min-w-[100px] text-sm rounded px-2 py-1"
-            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+            className="flex-1 input-focus-ring"
+            style={{
+              minWidth: 100,
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              fontSize: "var(--t-meta)",
+              borderRadius: "var(--r-1)",
+              background: "transparent",
+              color: "var(--color-text)",
+              border: "1px solid var(--rule)",
+            }}
             placeholder="Habit name"
           />
           <input
             type="text"
             value={editCategory}
             onChange={(e) => setEditCategory(e.target.value)}
-            className="w-24 text-sm rounded px-2 py-1"
-            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+            className="input-focus-ring"
+            style={{
+              width: 140,
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              fontSize: "var(--t-meta)",
+              borderRadius: "var(--r-1)",
+              background: "transparent",
+              color: "var(--color-text)",
+              border: "1px solid var(--rule)",
+            }}
             placeholder="Category"
           />
           <div className="basis-full">
@@ -129,8 +167,16 @@ export default function HabitToggle({
                 setEditing(false);
               });
             }}
-            className="text-xs px-2 py-1 rounded disabled:opacity-40 cursor-pointer"
-            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
+            className="cursor-pointer disabled:opacity-40"
+            style={{
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-4)",
+              borderRadius: "var(--r-1)",
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              border: "none",
+            }}
           >
             Save
           </button>
@@ -142,8 +188,15 @@ export default function HabitToggle({
               setEditIconKey(habit.icon_key ?? "target");
               setEditing(false);
             }}
-            className="text-xs px-2 py-1 cursor-pointer"
-            style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
+            className="cursor-pointer hover-text-brighten"
+            style={{
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              color: "var(--color-text-muted)",
+              background: "transparent",
+              border: "none",
+            }}
           >
             Cancel
           </button>
@@ -153,21 +206,46 @@ export default function HabitToggle({
           <button
             onClick={handleToggle}
             disabled={isPending || archivePending}
-            className="flex-1 flex items-center gap-3 py-3 px-1 text-left rounded-lg transition-colors cursor-pointer"
+            aria-checked={completed}
+            role="checkbox"
+            className="hover-bg-subtle"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto auto auto 1fr auto",
+              alignItems: "center",
+              gap: "var(--space-3)",
+              width: "100%",
+              minHeight: 44,
+              padding: "var(--space-3) 0",
+              background: "transparent",
+              border: 0,
+              textAlign: "left",
+              cursor: isPending ? "wait" : "pointer",
+              transition: "background var(--motion-fast) var(--ease-out-quart)",
+            }}
           >
             <span
-              className="w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors"
+              aria-hidden
               style={{
-                background: completed ? "var(--color-primary)" : "transparent",
-                borderColor: completed ? "var(--color-primary)" : "var(--color-border)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                width: 20,
+                height: 20,
+                borderRadius: "var(--r-1)",
+                border: completed ? "none" : "1px solid var(--color-text-faint)",
+                background: completed ? "var(--accent)" : "transparent",
+                transition:
+                  "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
               }}
             >
               {completed && (
-                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" style={{ color: "var(--color-text-on-cta)" }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path
                     d="M2 6l3 3 5-5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
+                    stroke="var(--color-text-on-cta)"
+                    strokeWidth="1.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -178,36 +256,62 @@ export default function HabitToggle({
               const Icon = getHabitIcon(habit);
               return (
                 <Icon
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: "var(--color-text-muted)" }}
+                  className="w-4 h-4"
+                  style={{ color: "var(--color-text-faint)", flexShrink: 0 }}
                   aria-hidden
                 />
               );
             })()}
-            {habit.emoji && (
-              <span className="text-base leading-none" aria-hidden="true">{habit.emoji}</span>
+            {habit.emoji ? (
+              <span
+                style={{ fontSize: "var(--t-body)", lineHeight: 1, flexShrink: 0 }}
+                aria-hidden="true"
+              >
+                {habit.emoji}
+              </span>
+            ) : (
+              <span />
             )}
             <span
-              className="text-sm"
               style={{
-                color: completed ? "var(--color-text-muted)" : "var(--color-text)",
+                fontSize: "var(--t-body)",
+                color: completed ? "var(--color-text-faint)" : "var(--color-text)",
                 textDecoration: completed ? "line-through" : "none",
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
               {habit.name}
             </span>
             {!manageMode && habit.category && (
-              <span className="ml-auto text-xs" style={{ color: "var(--color-text-faint)" }}>{habit.category}</span>
+              <span
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {habit.category}
+              </span>
             )}
           </button>
-          {manageMode ? (
-            <>
+          {manageMode && (
+            <div className="flex items-center" style={{ gap: "var(--space-1)" }}>
               {updateAction && (
                 <button
                   onClick={() => setEditing(true)}
                   disabled={archivePending}
-                  className="ml-1 text-xs px-1 py-3 transition-colors disabled:opacity-40 cursor-pointer"
-                  style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
+                  className="cursor-pointer hover-text-brighten disabled:opacity-40"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    minHeight: 44,
+                    padding: "0 var(--space-3)",
+                    color: "var(--color-text-muted)",
+                    background: "transparent",
+                    border: "none",
+                  }}
                   title="Edit habit"
                 >
                   Edit
@@ -217,15 +321,23 @@ export default function HabitToggle({
                 <button
                   onClick={handleArchive}
                   disabled={archivePending}
-                  className="ml-1 text-xs px-1 py-3 transition-colors disabled:opacity-40 cursor-pointer"
-                  style={{ color: "var(--color-danger)", background: "transparent", border: "none" }}
+                  className="cursor-pointer hover-text-danger disabled:opacity-40"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    minHeight: 44,
+                    minWidth: 44,
+                    padding: "0 var(--space-3)",
+                    color: "var(--color-text-muted)",
+                    background: "transparent",
+                    border: "none",
+                  }}
                   title="Archive habit"
                 >
                   ✕
                 </button>
               )}
-            </>
-          ) : null}
+            </div>
+          )}
         </>
       )}
     </div>

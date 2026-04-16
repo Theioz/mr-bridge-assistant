@@ -1,115 +1,167 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  RadialBarChart,
-  RadialBar,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
-import { useChartColors, type ChartColors } from "@/lib/chart-colors";
 
 interface Props {
   habits: HabitRegistry[];
   weekLogs: HabitLog[];
 }
 
-function rateColor(rate: number, c: ChartColors): string {
-  if (rate >= 0.8) return c.positive;
-  if (rate >= 0.5) return c.warning;
-  return c.danger;
-}
+const SIZE = 140;
+const STROKE = 4;
 
 export function RadialCompletion({ habits, weekLogs }: Props) {
-  const [animate, setAnimate] = useState(true);
-  const c = useChartColors();
-  const TOOLTIP_STYLE = {
-    contentStyle: { background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 8 },
-    labelStyle: { color: c.text, fontSize: 13 },
-    itemStyle: { color: c.textMuted, fontSize: 12 },
-  };
+  if (habits.length === 0) {
+    return (
+      <section>
+        <h2 className="db-section-label">Weekly Completion</h2>
+        <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>No habits</p>
+      </section>
+    );
+  }
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setAnimate(!mq.matches);
-  }, []);
-
-  // Count completed days per habit in the last 7 days
   const completedByHabit = new Map<string, number>();
   for (const log of weekLogs) {
     if (!log.completed) continue;
     completedByHabit.set(log.habit_id, (completedByHabit.get(log.habit_id) ?? 0) + 1);
   }
 
-  const data = habits.map((h) => {
-    const days = completedByHabit.get(h.id) ?? 0;
-    const rate = days / 7;
-    return {
+  const perHabit = habits
+    .map((h) => ({
       name: h.name,
-      value: Math.round(rate * 100),
-      fill: rateColor(rate, c),
-    };
-  });
+      days: completedByHabit.get(h.id) ?? 0,
+    }))
+    .sort((a, b) => b.days - a.days);
 
-  if (habits.length === 0) {
-    return (
-      <div
-        className="rounded-xl p-5 transition-all duration-200 card-lift"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--color-text-muted)" }}>
-          Weekly Completion
-        </p>
-        <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No habits</p>
-      </div>
-    );
-  }
+  const totalPossible = habits.length * 7;
+  const totalCompleted = perHabit.reduce((s, h) => s + h.days, 0);
+  const pct = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+
+  const radius = (SIZE - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct / 100);
+  const cx = SIZE / 2;
 
   return (
-    <div
-      className="rounded-xl p-5 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
+    <section>
+      <h2 className="db-section-label">
         Weekly Completion
-      </p>
-      <ResponsiveContainer width="100%" height={260}>
-        <RadialBarChart
-          cx="50%"
-          cy="50%"
-          innerRadius={20}
-          outerRadius={80}
-          data={data}
-          startAngle={180}
-          endAngle={-180}
-        >
-          <RadialBar
-            dataKey="value"
-            background={{ fill: "var(--color-border)" }}
-            isAnimationActive={animate}
-            animationDuration={300}
-            label={false}
-          />
-          <Tooltip
-            {...TOOLTIP_STYLE}
-            formatter={(v: number, _: string, props: { payload?: { name: string } }) => [
-              `${v}%`,
-              props.payload?.name ?? "",
-            ]}
-          />
-          <Legend
-            iconType="circle"
-            iconSize={7}
-            wrapperStyle={{ fontSize: 11, color: c.textMuted }}
-            formatter={(value) => {
-              const entry = data.find((d) => d.name === value);
-              return `${value} ${entry ? `(${entry.value}%)` : ""}`;
+        <span className="meta">· 7d</span>
+      </h2>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "var(--space-5)",
+        }}
+      >
+        <div style={{ position: "relative", width: SIZE, height: SIZE }}>
+          <svg
+            width={SIZE}
+            height={SIZE}
+            viewBox={`0 0 ${SIZE} ${SIZE}`}
+            role="img"
+            aria-label={`${pct}% weekly completion`}
+          >
+            <circle
+              cx={cx}
+              cy={cx}
+              r={radius}
+              fill="none"
+              stroke="var(--rule)"
+              strokeWidth={STROKE}
+            />
+            {pct > 0 && (
+              <circle
+                cx={cx}
+                cy={cx}
+                r={radius}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={STROKE}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${cx} ${cx})`}
+                style={{
+                  transition:
+                    "stroke-dashoffset var(--motion-slow) var(--ease-out-quart)",
+                }}
+              />
+            )}
+          </svg>
+          <div
+            className="tnum"
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
             }}
-          />
-        </RadialBarChart>
-      </ResponsiveContainer>
-    </div>
+          >
+            <span
+              className="font-heading"
+              style={{
+                fontSize: "var(--t-h1)",
+                fontWeight: 600,
+                color: "var(--color-text)",
+              }}
+            >
+              {pct}
+              <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>%</span>
+            </span>
+            <span
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                marginTop: "var(--space-2)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {totalCompleted}/{totalPossible}
+            </span>
+          </div>
+        </div>
+
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, width: "100%" }}>
+          {perHabit.map((h) => (
+            <li
+              key={h.name}
+              className="db-row tnum"
+              style={{
+                gridTemplateColumns: "1fr auto",
+                padding: "var(--space-2) 0",
+                alignItems: "baseline",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {h.name}
+              </span>
+              <span
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: h.days === 7 ? "var(--color-text)" : "var(--color-text-muted)",
+                }}
+              >
+                {h.days}<span style={{ color: "var(--color-text-faint)" }}>/7</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }

@@ -72,21 +72,34 @@ export default function HabitTodaySection({
     setShowAdd(false);
   }
 
+  const completed = habits.filter((h) => todayLogMap.get(h.id)?.completed).length;
+
   return (
     <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>Today</h2>
-        <div className="flex items-center gap-2">
+      <div
+        className="flex items-center justify-between"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
+        <h2 className="db-section-label" style={{ margin: 0 }}>
+          Today
+          <span className="meta tnum">· {completed}/{habits.length}</span>
+        </h2>
+        <div className="flex items-center" style={{ gap: "var(--space-1)" }}>
           <button
             onClick={() => {
               setManageMode((m) => !m);
               setShowAdd(false);
             }}
-            className="text-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+            className="cursor-pointer"
             style={{
               background: manageMode ? "var(--color-surface-raised)" : "transparent",
               color: manageMode ? "var(--color-text)" : "var(--color-text-muted)",
               border: "none",
+              borderRadius: "var(--r-1)",
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             Manage
@@ -96,11 +109,16 @@ export default function HabitTodaySection({
               setShowAdd((s) => !s);
               setManageMode(false);
             }}
-            className="text-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+            className="cursor-pointer"
             style={{
               background: showAdd ? "var(--color-surface-raised)" : "transparent",
               color: showAdd ? "var(--color-text)" : "var(--color-text-muted)",
               border: "none",
+              borderRadius: "var(--r-1)",
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             + Add
@@ -108,7 +126,7 @@ export default function HabitTodaySection({
         </div>
       </div>
 
-      <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+      <div>
         {habits.map((habit) => (
           <HabitToggle
             key={habit.id}
@@ -122,24 +140,49 @@ export default function HabitTodaySection({
           />
         ))}
         {habits.length === 0 && !showAdd && (
-          <p className="text-sm py-4" style={{ color: "var(--color-text-faint)" }}>No habits configured.</p>
+          <p
+            style={{
+              fontSize: "var(--t-body)",
+              color: "var(--color-text-faint)",
+              padding: "var(--space-4) 0",
+            }}
+          >
+            No habits configured.
+          </p>
         )}
       </div>
 
       {showAdd && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 py-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+        <div
+          className="flex flex-wrap items-center"
+          style={{
+            gap: "var(--space-2)",
+            padding: "var(--space-3) 0",
+            marginTop: "var(--space-2)",
+            borderTop: "1px solid var(--rule-soft)",
+          }}
+          data-disabled={isPending || undefined}
+        >
           <div className="relative" ref={pickerRef}>
             <button
               type="button"
               onClick={() => setShowEmojiPicker((v) => !v)}
-              className="w-10 h-8 text-lg rounded flex items-center justify-center cursor-pointer"
-              style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+              className="flex items-center justify-center cursor-pointer"
+              style={{
+                width: 44,
+                height: 44,
+                fontSize: "var(--t-body)",
+                borderRadius: "var(--r-1)",
+                background: "transparent",
+                color: "var(--color-text)",
+                border: "1px solid var(--rule)",
+              }}
               title="Pick emoji"
             >
               {emoji || <Smile className="w-4 h-4" aria-hidden />}
             </button>
             {showEmojiPicker && (
-              <div className="absolute left-0 top-10 z-50">
+              <div className="absolute left-0 top-12 z-50">
                 <EmojiPicker
                   onEmojiClick={(data: EmojiClickData) => {
                     setEmoji(data.emoji);
@@ -159,16 +202,34 @@ export default function HabitTodaySection({
             placeholder="Habit name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 min-w-[120px] text-sm rounded px-2 py-1.5"
-            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+            className="flex-1 input-focus-ring"
+            style={{
+              minWidth: 120,
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              fontSize: "var(--t-meta)",
+              borderRadius: "var(--r-1)",
+              background: "transparent",
+              color: "var(--color-text)",
+              border: "1px solid var(--rule)",
+            }}
           />
           <input
             type="text"
             placeholder="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-28 text-sm rounded px-2 py-1.5"
-            style={{ background: "var(--color-surface-raised)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
+            className="input-focus-ring"
+            style={{
+              width: 140,
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              fontSize: "var(--t-meta)",
+              borderRadius: "var(--r-1)",
+              background: "transparent",
+              color: "var(--color-text)",
+              border: "1px solid var(--rule)",
+            }}
           />
           <div className="basis-full">
             <HabitIconPicker value={iconKey} onChange={setIconKey} />
@@ -176,15 +237,30 @@ export default function HabitTodaySection({
           <button
             onClick={handleAdd}
             disabled={!name.trim() || isPending}
-            className="text-xs px-3 py-1.5 rounded disabled:opacity-40 transition-colors cursor-pointer"
-            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none" }}
+            className="cursor-pointer disabled:opacity-40"
+            style={{
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-4)",
+              borderRadius: "var(--r-1)",
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              border: "none",
+            }}
           >
             Save
           </button>
           <button
             onClick={handleCancel}
-            className="text-xs px-2 py-1.5 transition-colors cursor-pointer"
-            style={{ color: "var(--color-text-muted)", background: "transparent", border: "none" }}
+            className="cursor-pointer hover-text-brighten"
+            style={{
+              fontSize: "var(--t-micro)",
+              minHeight: 44,
+              padding: "0 var(--space-3)",
+              color: "var(--color-text-muted)",
+              background: "transparent",
+              border: "none",
+            }}
           >
             Cancel
           </button>

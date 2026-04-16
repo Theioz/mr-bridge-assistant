@@ -28,19 +28,36 @@ function groupByWeek(dates: string[]): { label: string; dates: string[] }[] {
 }
 
 function countToOpacity(count: number, total: number): number {
-  if (total === 0) return 0.2;
+  if (total === 0) return 0;
   const ratio = count / total;
-  if (ratio === 0) return 0.2;
+  if (ratio === 0) return 0;
   if (ratio <= 0.3) return 0.4;
-  if (ratio <= 0.57) return 0.6;
-  if (ratio <= 0.86) return 0.8;
-  return 1;
+  if (ratio <= 0.57) return 0.55;
+  if (ratio <= 0.86) return 0.7;
+  return 0.85;
 }
+
+const thStyle: React.CSSProperties = {
+  color: "var(--color-text-faint)",
+  fontSize: "var(--t-micro)",
+  fontWeight: 400,
+  letterSpacing: "0.04em",
+  textAlign: "center",
+  padding: "var(--space-2) var(--space-1)",
+};
+
+const tdBaseStyle: React.CSSProperties = {
+  padding: "var(--space-2) var(--space-1)",
+  textAlign: "center",
+  verticalAlign: "middle",
+};
 
 export default function HabitHistory({ habits, logs, dates, range, toggleAction }: Props) {
   const logMap = new Map(logs.map((l) => [`${l.habit_id}:${l.date}`, l.completed]));
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
+
+  const today = dates[dates.length - 1];
 
   function getCompleted(habitId: string, date: string): boolean | undefined {
     const key = `${habitId}:${date}`;
@@ -69,42 +86,65 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
     });
   }
 
-  const thStyle = { color: "var(--color-text-muted)" };
-  const tdHabitStyle = { color: "var(--color-text)" };
+  const nameCellStyle: React.CSSProperties = {
+    padding: "var(--space-2) var(--space-3) var(--space-2) 0",
+    color: "var(--color-text)",
+    fontSize: "var(--t-meta)",
+    maxWidth: "10rem",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  };
 
   if (range === 90) {
     const weeks = groupByWeek(dates);
     return (
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full tnum" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th className="text-left font-normal pb-2 pr-4 w-32" style={thStyle}>Habit</th>
+              <th
+                style={{ ...thStyle, textAlign: "left", padding: "var(--space-2) var(--space-3) var(--space-2) 0" }}
+              >
+                Habit
+              </th>
               {weeks.map((w) => (
-                <th key={w.label} className="font-normal pb-2 px-1 text-center whitespace-nowrap" style={thStyle}>
+                <th key={w.label} style={{ ...thStyle, whiteSpace: "nowrap" }}>
                   {w.label}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {habits.map((h) => (
-              <tr key={h.id}>
-                <td className="py-1.5 pr-4 truncate max-w-[8rem]" style={tdHabitStyle}>
-                  {h.emoji} {h.name}
+            {habits.map((h, i) => (
+              <tr
+                key={h.id}
+                style={
+                  i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined
+                }
+              >
+                <td style={nameCellStyle}>
+                  {h.emoji ? `${h.emoji} ${h.name}` : h.name}
                 </td>
                 {weeks.map((w) => {
                   const count = w.dates.filter((d) => getCompleted(h.id, d) === true).length;
                   const total = w.dates.length;
                   const op = countToOpacity(count, total);
                   return (
-                    <td key={w.label} className="py-1.5 px-1 text-center">
+                    <td key={w.label} style={tdBaseStyle}>
                       <span
-                        className="inline-flex items-center justify-center w-6 h-5 rounded text-[10px] font-medium"
+                        className="tnum"
                         style={{
-                          background: "var(--color-primary)",
-                          color: "var(--color-text-on-cta)",
-                          opacity: op,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 22,
+                          height: 14,
+                          borderRadius: 3,
+                          fontSize: "var(--t-micro)",
+                          color: op >= 0.55 ? "var(--color-bg)" : "var(--color-text-muted)",
+                          background: op > 0 ? "var(--color-text)" : "var(--rule)",
+                          opacity: op > 0 ? op : 1,
                         }}
                         title={`${count}/${total} days`}
                       >
@@ -123,37 +163,88 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th className="text-left font-normal pb-2 pr-4 w-32" style={thStyle}>Habit</th>
+            <th
+              style={{ ...thStyle, textAlign: "left", padding: "var(--space-2) var(--space-3) var(--space-2) 0" }}
+            >
+              Habit
+            </th>
             {dates.map((d) => (
-              <th key={d} className="font-normal pb-2 px-1 text-center whitespace-nowrap" style={thStyle}>
+              <th key={d} style={{ ...thStyle, whiteSpace: "nowrap" }}>
                 {formatHeader(d)}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {habits.map((h) => (
-            <tr key={h.id}>
-              <td className="py-1.5 pr-4 truncate max-w-[8rem]" style={tdHabitStyle}>
-                {h.emoji} {h.name}
+          {habits.map((h, i) => (
+            <tr
+              key={h.id}
+              style={
+                i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined
+              }
+            >
+              <td style={nameCellStyle}>
+                {h.emoji ? `${h.emoji} ${h.name}` : h.name}
               </td>
               {dates.map((d) => {
                 const done = getCompleted(h.id, d);
+                const isToday = d === today;
                 return (
-                  <td key={d} className="py-1.5 px-1 text-center">
+                  <td key={d} style={tdBaseStyle}>
                     <button
                       onClick={() => handleCellClick(h.id, d)}
-                      className="inline-block w-4 h-4 rounded-full transition-all cursor-pointer"
-                      style={
-                        done === true
-                          ? { background: "var(--color-primary)", border: "none" }
-                          : { background: "transparent", border: "1px solid var(--color-border)", opacity: 0.6 }
-                      }
+                      className="cursor-pointer"
+                      style={{
+                        position: "relative",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 44,
+                        height: 44,
+                        padding: 0,
+                        background: "transparent",
+                        border: 0,
+                      }}
                       title={`${h.name} — ${formatHeader(d)}`}
-                    />
+                      aria-label={`${h.name} ${formatHeader(d)}: ${done ? "completed" : "not completed"}`}
+                      aria-pressed={done === true}
+                    >
+                      <span
+                        aria-hidden
+                        style={
+                          done === true
+                            ? {
+                                width: 14,
+                                height: 14,
+                                borderRadius: 3,
+                                background: "var(--color-text)",
+                                opacity: 0.85,
+                              }
+                            : {
+                                width: 14,
+                                height: 14,
+                                borderRadius: 3,
+                                background: "var(--rule)",
+                              }
+                        }
+                      />
+                      {isToday && (
+                        <span
+                          aria-hidden
+                          style={{
+                            position: "absolute",
+                            width: 18,
+                            height: 18,
+                            borderRadius: 4,
+                            border: "1.5px solid var(--accent)",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      )}
+                    </button>
                   </td>
                 );
               })}
