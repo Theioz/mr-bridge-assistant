@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (update_workout_exercise silent no-op on swaps — issue #239)
+- **Bridge claimed it had swapped an exercise but the Fitness tab still showed the old name.** The `update_workout_exercise` tool's `updates` schema in [web/src/app/api/chat/route.ts](web/src/app/api/chat/route.ts) only accepted `sets | reps | weight_lbs | notes` — there was no way to change the exercise name. When asked to "replace Bent Over Row with DB Reverse Fly", the rename was dropped by JSON-schema validation, the UPDATE ran with an unchanged array, and Bridge confidently reported success. Schema now accepts `updates.exercise` for swaps/renames, and the tool returns an error when `updates` is empty so Bridge can tell the user truthfully instead of falsely confirming.
+
 ### Fixed (UTC date regressions — Fitness "TODAY" off-by-one)
 - **Fitness weekly plan highlighted the wrong day after ~5pm PT.** [web/src/components/fitness/weekly-workout-plan.tsx](web/src/components/fitness/weekly-workout-plan.tsx) used `new Date().toISOString().slice(0,10)` (UTC) to determine "today" and to build the Mon–Sun week. After UTC rolled over, the "TODAY" badge jumped to tomorrow. Now routed through `todayString()` + `addDays()` from [web/src/lib/timezone.ts](web/src/lib/timezone.ts).
 - **Repo-wide sweep for the same UTC slice pattern.** Replaced UTC-derived date strings in:

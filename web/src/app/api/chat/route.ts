@@ -1290,23 +1290,24 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     }),
 
     update_workout_exercise: tool({
-      description: "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description.",
+      description: "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description. Supports renaming/swapping the exercise via updates.exercise.",
       parameters: jsonSchema<{
         date: string;
         phase: "warmup" | "workout" | "cooldown";
         exercise_name: string;
-        updates: { sets?: number; reps?: string; weight_lbs?: number; notes?: string };
+        updates: { exercise?: string; sets?: number; reps?: string; weight_lbs?: number; notes?: string };
       }>({
         type: "object",
         required: ["date", "phase", "exercise_name", "updates"],
         properties: {
           date: { type: "string", description: "YYYY-MM-DD date of the plan to edit." },
           phase: { type: "string", enum: ["warmup", "workout", "cooldown"], description: "Which phase the exercise is in." },
-          exercise_name: { type: "string", description: "Exercise name to match (case-insensitive)." },
+          exercise_name: { type: "string", description: "Existing exercise name to match (case-insensitive)." },
           updates: {
             type: "object",
-            description: "Fields to merge into the matched exercise object.",
+            description: "Fields to merge into the matched exercise object. Use `exercise` to rename/swap.",
             properties: {
+              exercise: { type: "string", description: "New exercise name (for swaps/renames)." },
               sets: { type: "number" },
               reps: { type: "string" },
               weight_lbs: { type: "number" },
@@ -1330,6 +1331,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         const arr: WorkoutExercise[] = [...(row[phase] as WorkoutExercise[])];
         const idx = arr.findIndex((e) => e.exercise.toLowerCase() === exercise_name.toLowerCase());
         if (idx === -1) return { error: `Exercise "${exercise_name}" not found in ${phase}.` };
+        if (!updates || Object.keys(updates).length === 0) {
+          return { error: "No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes." };
+        }
         arr[idx] = { ...arr[idx], ...updates };
 
         const { data: updated, error: upErr } = await supabase
