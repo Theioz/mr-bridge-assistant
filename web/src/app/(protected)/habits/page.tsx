@@ -85,7 +85,6 @@ export default async function HabitsPage() {
   const today = todayString();
   const { key: windowKey, days } = await getWindow();
 
-  // History dates for the table — cap at 90 for display sanity
   const historyDays = Math.min(days, 90);
   const historyDates = getLastNDays(historyDays);
 
@@ -94,19 +93,16 @@ export default async function HabitsPage() {
       supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
       supabase.from("habit_registry").select("*"),
       supabase.from("habits").select("*").eq("date", today),
-      // Window-based history
       supabase
         .from("habits")
         .select("*")
         .gte("date", daysAgoString(days - 1))
         .lte("date", today),
-      // All completed habits for streak computation (all time)
       supabase
         .from("habits")
         .select("habit_id,date")
         .eq("completed", true)
         .order("date", { ascending: false }),
-      // Last 7 days for radial completion chart
       supabase
         .from("habits")
         .select("*")
@@ -124,59 +120,90 @@ export default async function HabitsPage() {
   const streaks = computeStreaks(allCompleted, today);
   const completed = todayLogs.filter((l) => l.completed).length;
 
-  // Dates for heatmap — use window (capped at 365)
   const heatmapDays = Math.min(days, 365);
   const heatmapDates = getLastNDays(heatmapDays);
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div
+        className="flex items-start justify-between"
+        style={{ gap: "var(--space-4)", marginBottom: "var(--space-6)" }}
+      >
         <div>
-          <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+          <h1
+            className="font-heading"
+            style={{ fontSize: "var(--t-h1)", fontWeight: 600, color: "var(--color-text)" }}
+          >
             Habits
           </h1>
-          <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+          <p
+            className="tnum"
+            style={{
+              marginTop: "var(--space-1)",
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+            }}
+          >
             {completed} / {habits.length} today
           </p>
         </div>
         <WindowSelector current={windowKey} />
       </div>
 
-      {/* Today's habits */}
-      <HabitTodaySection
-        habits={habits}
-        todayLogs={todayLogs}
-        date={today}
-        toggleAction={toggleHabit}
-        archiveAction={archiveHabit}
-        addAction={addHabit}
-        updateAction={updateHabit}
-      />
+      {/* Today's habits — hairline rows, no card shell */}
+      <section style={{ paddingBottom: "var(--space-6)", borderBottom: "1px solid var(--rule-soft)" }}>
+        <HabitTodaySection
+          habits={habits}
+          todayLogs={todayLogs}
+          date={today}
+          toggleAction={toggleHabit}
+          archiveAction={archiveHabit}
+          addAction={addHabit}
+          updateAction={updateHabit}
+        />
+      </section>
 
       {habits.length > 0 && (
         <>
           {/* Charts: Heatmap (2/3) + Radial (1/3) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <section
+            className="grid grid-cols-1 lg:grid-cols-3"
+            style={{
+              gap: "var(--space-7)",
+              paddingTop: "var(--space-6)",
+              paddingBottom: "var(--space-6)",
+              borderBottom: "1px solid var(--rule-soft)",
+            }}
+          >
             <div className="lg:col-span-2">
               <HabitHeatmap habits={habits} registry={allRegistry} logs={historyLogs} dates={heatmapDates} />
             </div>
             <div>
               <RadialCompletion habits={habits} weekLogs={weekLogs} />
             </div>
-          </div>
+          </section>
 
           {/* Streak chart */}
-          <StreakChart habits={habits} streaks={streaks} />
+          <section
+            style={{
+              paddingTop: "var(--space-6)",
+              paddingBottom: "var(--space-6)",
+              borderBottom: "1px solid var(--rule-soft)",
+            }}
+          >
+            <StreakChart habits={habits} streaks={streaks} />
+          </section>
 
           {/* History grid */}
-          <section>
-            <p
-              className="text-xs uppercase tracking-widest mb-3"
-              style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-            >
-              History — {windowKey.toUpperCase()} {historyDays < days ? `(showing ${historyDays}d)` : ""}
-            </p>
+          <section style={{ paddingTop: "var(--space-6)" }}>
+            <h2 className="db-section-label">
+              History
+              <span className="meta">
+                · {windowKey.toUpperCase()}
+                {historyDays < days ? ` (showing ${historyDays}d)` : ""}
+              </span>
+            </h2>
             <HabitHistory
               habits={habits}
               logs={historyLogs.filter((l) => historyDates.includes(l.date))}
