@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (performance profiling — issue #260)
+- **`@next/bundle-analyzer` wired into `next.config.ts`.** Run `ANALYZE=true npm run build` to generate interactive treemap reports in `.next/analyze/`.
+- **Lighthouse audit baseline captured across all 11 pages** (login, dashboard, chat, settings, fitness, habits, journal, meals, notifications, tasks, weekly) in both mobile and desktop modes.
+
+### Fixed (performance profiling — issue #260)
+- **Dashboard CLS 0.68 → 0.006 (desktop), 0.106 → 0.034 (mobile).** Weather line in `dashboard-header.tsx` now renders inside a fixed-height `<p>` with a `minHeight` placeholder during loading instead of conditionally mounting. `upcoming-birthday.tsx` returns a height-stable placeholder while loading instead of `null`.
+- **Dashboard desktop Lighthouse score 73 → 100.** Driven entirely by the CLS fix above.
+- **FoodPhotoAnalyzer lazy-loaded.** `MealsClient.tsx` now imports via `next/dynamic` with `ssr: false`, reducing meals First Load JS from 118kB to 114kB.
+
 ### Added (dark-mode OLED glow — issue #257)
 - **Subtle text glow on headings in dark mode.** New `--text-glow` CSS token (`0 0 12px rgba(248,250,252,0.3)` in dark, `none` in light) applied to all `.font-heading` elements. Covers page titles, metric card values, score numbers, and nav labels. MASTER.md Key Effects updated to match.
 
