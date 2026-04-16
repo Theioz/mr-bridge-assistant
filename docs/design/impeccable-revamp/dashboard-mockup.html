@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mr. Bridge — Dashboard (Impeccable revamp mockup, v4)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hubot+Sans:wght@300..800&family=Mona+Sans:wght@300..700&display=swap" />
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --hue: 240;
+
+  --bg:        oklch(98.5% 0.005 var(--hue));
+  --surface:   oklch(96.5% 0.008 var(--hue));
+  --raised:    oklch(94% 0.011 var(--hue));
+  --text:      oklch(22% 0.018 var(--hue));
+  --muted:     oklch(45% 0.015 var(--hue));
+  --faint:     oklch(60% 0.012 var(--hue));
+  --rule:      oklch(88% 0.010 var(--hue));
+  --rule-soft: oklch(92% 0.008 var(--hue));
+
+  --accent:      oklch(62% 0.13 65);
+  --accent-soft: oklch(94% 0.04 65);
+
+  --positive:  oklch(55% 0.11 155);
+  --negative:  oklch(58% 0.16 28);
+
+  --chart-stroke:        1.5px;
+  --chart-stroke-thin:   1px;
+  --chart-color-primary: var(--text);
+  --chart-color-baseline:var(--rule);
+  --chart-color-today:   var(--accent);
+
+  --font-sans:    'Mona Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Hubot Sans', 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --t-display:  clamp(3.25rem, 4.5vw + 1.25rem, 4.5rem);
+  --t-h1:       clamp(1.5rem, 1.2vw + 1.1rem, 1.875rem);
+  --t-h2:       1.0625rem;
+  --t-body:     1rem;
+  --t-meta:     0.9375rem;
+  --t-micro:    0.8125rem;
+
+  --s-1:  4px;  --s-2:  8px;  --s-3: 12px;  --s-4: 16px;
+  --s-5: 24px;  --s-6: 32px;  --s-7: 48px;  --s-8: 64px;  --s-9: 96px;
+
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --r-1: 4px;  --r-2: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        oklch(15.5% 0.012 var(--hue));
+    --surface:   oklch(19% 0.015 var(--hue));
+    --raised:    oklch(22% 0.017 var(--hue));
+    --text:      oklch(95% 0.006 var(--hue));
+    --muted:     oklch(72% 0.012 var(--hue));
+    --faint:     oklch(56% 0.014 var(--hue));
+    --rule:      oklch(28% 0.013 var(--hue));
+    --rule-soft: oklch(24% 0.013 var(--hue));
+    --accent:      oklch(74% 0.14 70);
+    --accent-soft: oklch(28% 0.05 70);
+    --positive:  oklch(72% 0.15 155);
+    --negative:  oklch(70% 0.18 28);
+  }
+}
+
+html[data-theme="light"] {
+  --bg:        oklch(98.5% 0.005 240);
+  --surface:   oklch(96.5% 0.008 240);
+  --raised:    oklch(94% 0.011 240);
+  --text:      oklch(22% 0.018 240);
+  --muted:     oklch(45% 0.015 240);
+  --faint:     oklch(60% 0.012 240);
+  --rule:      oklch(88% 0.010 240);
+  --rule-soft: oklch(92% 0.008 240);
+  --accent:    oklch(62% 0.13 65);
+  --positive:  oklch(55% 0.11 155);
+  --negative:  oklch(58% 0.16 28);
+}
+html[data-theme="dark"] {
+  --bg:        oklch(15.5% 0.012 240);
+  --surface:   oklch(19% 0.015 240);
+  --raised:    oklch(22% 0.017 240);
+  --text:      oklch(95% 0.006 240);
+  --muted:     oklch(72% 0.012 240);
+  --faint:     oklch(56% 0.014 240);
+  --rule:      oklch(28% 0.013 240);
+  --rule-soft: oklch(24% 0.013 240);
+  --accent:    oklch(74% 0.14 70);
+  --positive:  oklch(72% 0.15 155);
+  --negative:  oklch(70% 0.18 28);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BASE
+   ───────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BACKGROUND — subtle noise grain + a quiet geometric abstraction
+   Both fixed, behind content. The grain reads as "paper" rather than the
+   monotone flat surface; the concentric arcs anchor a corner without
+   competing with the chart vocabulary.
+   ───────────────────────────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+@media (prefers-color-scheme: dark) {
+  body::before { mix-blend-mode: screen; opacity: 0.55; }
+}
+html[data-theme="light"] body::before { mix-blend-mode: multiply; opacity: 0.85; }
+html[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.55; }
+
+/* Watercolor pigment-cloud abstraction. Soft ellipses pushed through an
+   feDisplacementMap to break their geometry into organic, painterly forms.
+   Brand-hue cool blues + amber warmth, layered, low opacity, blended. */
+.bg-watercolor {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.85;
+  mix-blend-mode: multiply;
+}
+@media (prefers-color-scheme: dark) {
+  .bg-watercolor { mix-blend-mode: screen; opacity: 0.55; }
+}
+html[data-theme="light"] .bg-watercolor { mix-blend-mode: multiply; opacity: 0.85; }
+html[data-theme="dark"]  .bg-watercolor { mix-blend-mode: screen;  opacity: 0.55; }
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+.prose { max-width: 62ch; }
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: clamp(var(--s-5), 4vw, var(--s-8)) clamp(var(--s-4), 5vw, var(--s-7)) var(--s-9);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: rise var(--motion-slow) var(--ease-out-quart) forwards;
+  }
+  .reveal[data-stagger="0"] { animation-delay: 0ms; }
+  .reveal[data-stagger="1"] { animation-delay: 60ms; }
+  .reveal[data-stagger="2"] { animation-delay: 120ms; }
+  .reveal[data-stagger="3"] { animation-delay: 180ms; }
+  .reveal[data-stagger="4"] { animation-delay: 240ms; }
+  .reveal[data-stagger="5"] { animation-delay: 300ms; }
+  .reveal[data-stagger="6"] { animation-delay: 360ms; }
+  .reveal[data-stagger="7"] { animation-delay: 420ms; }
+}
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MASTHEAD
+   ───────────────────────────────────────────────────────────────────────── */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+  font-family: var(--font-display);
+  font-size: var(--t-meta);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+.masthead .brand { font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+
+.greeting {
+  margin: var(--s-7) 0 var(--s-4);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--t-h1);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.briefing-copy {
+  margin: 0 0 var(--s-6);
+  color: var(--muted);
+  font-size: var(--t-body);
+  line-height: 1.6;
+}
+.briefing-copy strong { color: var(--text); font-weight: 500; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BIRTHDAY ROW — conditional, only when a birthday is in the next 7 days
+   ───────────────────────────────────────────────────────────────────────── */
+.birthday-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--t-meta);
+  color: var(--muted);
+  margin: 0 0 var(--s-6);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+}
+.birthday-row::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.birthday-row .label {
+  font-family: var(--font-display);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+.birthday-row .name { color: var(--text); font-weight: 500; }
+.birthday-row .when { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FOCAL — Readiness number + supporting meta, vertically centered
+   ───────────────────────────────────────────────────────────────────────── */
+.focal {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-4);
+  padding: var(--s-5) 0 var(--s-7);
+  border-bottom: 1px solid var(--rule);
+}
+@media (min-width: 720px) {
+  .focal {
+    grid-template-columns: auto 1fr;
+    gap: var(--s-7);
+    align-items: center;
+  }
+}
+.focal-figure {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 350;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+.focal-figure sup {
+  display: inline-block;
+  font-size: 0.22em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  vertical-align: top;
+  position: relative;
+  top: -0.1em;
+}
+.focal-stats {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  font-size: var(--t-meta);
+  color: var(--muted);
+}
+.focal-stats span { color: var(--text); font-weight: 500; }
+.focal-stats .label { color: var(--faint); font-weight: 400; margin-right: 4px; text-transform: lowercase; }
+
+.delta-down  { color: var(--positive); }
+.delta-up    { color: var(--negative); }
+.delta-flat  { color: var(--faint); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FLAT SECTION
+   ───────────────────────────────────────────────────────────────────────── */
+section.flat {
+  padding: var(--s-7) 0 var(--s-5);
+  border-bottom: 1px solid var(--rule-soft);
+}
+section.flat:last-of-type { border-bottom: none; }
+
+.section-label {
+  font-family: var(--font-display);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+  margin: 0 0 var(--s-4);
+}
+.section-label .meta {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  text-transform: none;
+  margin-left: var(--s-2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BODY & FITNESS · 7-day summary
+   4 cells: Weight, Body fat, Steps, Active calories.
+   Headline value = 7-day average. Today shown as supporting comparison.
+   Tiny inline trendline below each cell.
+   ───────────────────────────────────────────────────────────────────────── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-5);
+}
+@media (min-width: 520px) {
+  .summary-grid { grid-template-columns: repeat(2, 1fr); gap: var(--s-6); }
+}
+@media (min-width: 860px) {
+  .summary-grid { grid-template-columns: repeat(4, 1fr); gap: var(--s-6); }
+}
+.summary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.summary-cell .label {
+  font-family: var(--font-display);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+.summary-cell .value {
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.summary-cell .value .unit {
+  font-size: 0.55em;
+  color: var(--faint);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.summary-cell .compare {
+  font-size: var(--t-micro);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.summary-cell .compare .k { color: var(--faint); }
+.summary-cell .mini-chart {
+  margin-top: var(--s-2);
+  width: 100%;
+  height: 32px;
+  display: block;
+  overflow: visible;
+}
+.summary-cell .mini-chart .grid-line { stroke: var(--chart-color-baseline); stroke-width: var(--chart-stroke-thin); stroke-dasharray: 2 3; }
+.summary-cell .mini-chart .line { fill: none; stroke: var(--chart-color-primary); stroke-width: var(--chart-stroke); stroke-linejoin: round; stroke-linecap: round; }
+.summary-cell .mini-chart .point-today { fill: var(--chart-color-today); }
+.summary-cell .mini-chart .point-today-ring { fill: none; stroke: var(--chart-color-today); stroke-width: 1; opacity: 0.35; }
+
+.summary-footnote {
+  margin-top: var(--s-5);
+  font-size: var(--t-micro);
+  color: var(--faint);
+  letter-spacing: 0.02em;
+}
+.summary-footnote a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1px;
+  transition: border-color var(--motion-fast) var(--ease-out-quart);
+}
+.summary-footnote a:hover { border-bottom-color: var(--text); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SCHEDULE
+   ───────────────────────────────────────────────────────────────────────── */
+.schedule { list-style: none; margin: 0; padding: 0; }
+.schedule li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.schedule li:first-child { border-top: none; }
+.schedule .time { font-family: var(--font-display); font-weight: 500; font-size: var(--t-body); font-variant-numeric: tabular-nums; color: var(--text); }
+.schedule .title { color: var(--text); }
+.schedule .source { font-size: var(--t-micro); color: var(--faint); text-transform: lowercase; letter-spacing: 0.02em; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TASKS | HABITS SPLIT
+   ───────────────────────────────────────────────────────────────────────── */
+.split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-7);
+  padding: var(--s-7) 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+@media (min-width: 720px) { .split { grid-template-columns: 7fr 5fr; gap: var(--s-7); } }
+
+.tasks-list { list-style: none; margin: 0; padding: 0; }
+.tasks-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--t-body);
+}
+.tasks-list li:first-child { border-top: none; }
+.tasks-list .marker { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); align-self: center; }
+.tasks-list .marker.attn { background: var(--accent); }
+.tasks-list .age { font-size: var(--t-micro); color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.habits { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
+.habit-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.habit-row:first-child { border-top: none; }
+.habit-row .name { font-size: var(--t-body); }
+.habit-row .week { display: flex; gap: 4px; font-variant-numeric: tabular-nums; }
+.habit-row .week span { width: 14px; height: 14px; border-radius: 3px; background: var(--rule); display: inline-block; }
+.habit-row .week .hit { background: var(--text); opacity: 0.85; }
+.habit-row .week .today { outline: 1.5px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   INBOX
+   ───────────────────────────────────────────────────────────────────────── */
+.inbox { list-style: none; margin: 0; padding: 0; }
+.inbox li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule-soft);
+  align-items: baseline;
+}
+.inbox li:first-child { border-top: none; }
+.inbox .pin { width: 6px; height: 6px; border-radius: 50%; background: transparent; align-self: center; }
+.inbox .pin.attn { background: var(--accent); }
+.inbox .subject { color: var(--text); }
+.inbox .from { font-size: var(--t-micro); color: var(--faint); }
+.inbox .age { font-size: var(--t-micro); color: var(--faint); font-variant-numeric: tabular-nums; }
+.inbox .meta { display: flex; gap: var(--s-3); justify-content: flex-end; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   REFERENCE STRIP
+   ───────────────────────────────────────────────────────────────────────── */
+.reference {
+  margin-top: var(--s-7);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-6);
+}
+@media (min-width: 720px) { .reference { grid-template-columns: 1fr 1fr; } }
+.reference h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+  margin: 0 0 var(--s-3);
+}
+.reference .row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--t-meta);
+}
+.reference .row:first-of-type { border-top: none; }
+.reference .ticker { font-family: var(--font-display); font-weight: 500; min-width: 3.5rem; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FOOTER
+   ───────────────────────────────────────────────────────────────────────── */
+footer {
+  margin-top: var(--s-9);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--t-micro);
+  color: var(--faint);
+  letter-spacing: 0.02em;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+footer button {
+  font: inherit;
+  font-family: var(--font-sans);
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: border-color var(--motion-fast) var(--ease-out-quart);
+  min-height: 44px;
+}
+footer button:hover { border-color: var(--text); }
+footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Theme peek toggle */
+.theme-peek {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+}
+.theme-peek button {
+  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  color: var(--faint);
+  cursor: pointer;
+  border-radius: 3px;
+  min-height: 28px;
+}
+.theme-peek button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+</style>
+</head>
+<body>
+
+<!-- Watercolor pigment-cloud background. Soft ellipses warped by a fractal
+     noise displacement map into organic flowing shapes. Brand-hue palette,
+     low opacity, blended into the page surface. -->
+<svg class="bg-watercolor" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <filter id="watercolor" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0085" numOctaves="3" seed="7" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="180" xChannelSelector="R" yChannelSelector="G" result="displaced" />
+      <feGaussianBlur in="displaced" stdDeviation="14" />
+    </filter>
+  </defs>
+  <g filter="url(#watercolor)">
+    <!-- amber warmth — top-right -->
+    <ellipse cx="980" cy="160" rx="360" ry="500" fill="oklch(62% 0.13 65 / 0.42)" />
+    <!-- deep cool blue ink — lower-left -->
+    <ellipse cx="180" cy="780" rx="440" ry="600" fill="oklch(38% 0.10 240 / 0.55)" />
+    <!-- mid-tone cool — right-center -->
+    <ellipse cx="820" cy="640" rx="280" ry="380" fill="oklch(28% 0.08 240 / 0.40)" />
+    <!-- soft amber smear across the top -->
+    <ellipse cx="520" cy="20"  rx="380" ry="180" fill="oklch(72% 0.10 65 / 0.28)" />
+    <!-- secondary cool wisp — upper-left -->
+    <ellipse cx="120" cy="280" rx="240" ry="320" fill="oklch(50% 0.08 240 / 0.32)" />
+  </g>
+</svg>
+
+<main>
+
+  <!-- Masthead -->
+  <header class="masthead reveal" data-stagger="0">
+    <div class="brand">Mr. Bridge</div>
+    <div style="display:flex;gap:var(--s-4);align-items:center;flex-wrap:wrap;">
+      <span class="tnum">06:42 · Thursday, 16 April</span>
+      <div class="theme-peek" role="group" aria-label="Theme preview">
+        <button data-theme-set="auto" aria-pressed="true">Auto</button>
+        <button data-theme-set="light" aria-pressed="false">Light</button>
+        <button data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Greeting + briefing copy -->
+  <h1 class="greeting reveal" data-stagger="1">Morning, Jason.</h1>
+  <p class="briefing-copy prose reveal" data-stagger="1">
+    Light rain easing by noon — high <strong class="tnum">58°F</strong>, low <strong class="tnum">47°F</strong>,
+    wind <strong class="tnum">8 mph</strong>. Schedule is light: one fixed obligation at
+    <strong class="tnum">13:00</strong>. Body trending the right direction; readiness is down
+    <strong class="tnum">3</strong> points but still in the green. One action item in the inbox —
+    domain renewal, due today.
+  </p>
+
+  <!-- Birthday row (conditional: only when a birthday is in the next 7 days) -->
+  <div class="birthday-row reveal" data-stagger="1">
+    <span class="label">Birthday</span>
+    <span class="name">Sarah Hayes</span>
+    <span class="when">in 3 days · April 19</span>
+  </div>
+
+  <!-- Focal: Readiness -->
+  <div class="focal reveal" data-stagger="2">
+    <div class="focal-figure tnum">72<sup>readiness</sup></div>
+    <dl class="focal-stats">
+      <span><span class="label">sleep</span><span class="tnum">84</span></span>
+      <span><span class="label">total</span><span class="tnum">7h 22m</span></span>
+      <span><span class="label">hrv</span><span class="tnum">41 ms</span> <span class="delta-up tnum">↓2</span></span>
+      <span><span class="label">rhr</span><span class="tnum">56 bpm</span></span>
+      <span><span class="label">trend</span><span class="delta-up tnum">↓3 vs base</span></span>
+    </dl>
+  </div>
+
+  <!-- Body & Fitness · 7-day average summary -->
+  <section class="flat reveal" data-stagger="3">
+    <h2 class="section-label">
+      Body &amp; Fitness
+      <span class="meta">7-day average</span>
+    </h2>
+
+    <div class="summary-grid">
+
+      <!-- Weight -->
+      <div class="summary-cell">
+        <span class="label">Weight</span>
+        <span class="value"><span class="tnum">188.0</span><span class="unit">lb</span></span>
+        <span class="compare">
+          <span><span class="k">today</span> <span class="tnum">187.4</span></span>
+          <span class="delta-down tnum">↓0.6</span>
+        </span>
+        <svg class="mini-chart" viewBox="0 0 80 32" preserveAspectRatio="none" role="img" aria-label="Weight, last 7 days">
+          <polyline class="line" points="0,8.4 13.33,10.4 26.67,12.5 40,16.7 53.33,20.8 66.67,18.7 80,22.9" />
+          <circle class="point-today-ring" cx="80" cy="22.9" r="4.5" />
+          <circle class="point-today" cx="80" cy="22.9" r="2.5" />
+        </svg>
+      </div>
+
+      <!-- Body fat -->
+      <div class="summary-cell">
+        <span class="label">Body fat</span>
+        <span class="value"><span class="tnum">18.4</span><span class="unit">%</span></span>
+        <span class="compare">
+          <span><span class="k">today</span> <span class="tnum">18.2%</span></span>
+          <span class="delta-down tnum">↓0.2</span>
+        </span>
+        <svg class="mini-chart" viewBox="0 0 80 32" preserveAspectRatio="none" role="img" aria-label="Body fat percent, last 7 days">
+          <polyline class="line" points="0,12.5 13.33,6.3 26.67,12.5 40,18.7 53.33,12.5 66.67,18.7 80,25" />
+          <circle class="point-today-ring" cx="80" cy="25" r="4.5" />
+          <circle class="point-today" cx="80" cy="25" r="2.5" />
+        </svg>
+      </div>
+
+      <!-- Steps -->
+      <div class="summary-cell">
+        <span class="label">Steps</span>
+        <span class="value"><span class="tnum">9,526</span></span>
+        <span class="compare">
+          <span><span class="k">today</span> <span class="tnum">8,420</span></span>
+          <span class="delta-up tnum">↓1,106</span>
+        </span>
+        <svg class="mini-chart" viewBox="0 0 80 32" preserveAspectRatio="none" role="img" aria-label="Steps, last 7 days">
+          <polyline class="line" points="0,18.6 13.33,21.8 26.67,20.2 40,29.8 53.33,9.3 66.67,2.7 80,23.7" />
+          <circle class="point-today-ring" cx="80" cy="23.7" r="4.5" />
+          <circle class="point-today" cx="80" cy="23.7" r="2.5" />
+        </svg>
+      </div>
+
+      <!-- Active calories -->
+      <div class="summary-cell">
+        <span class="label">Active cal</span>
+        <span class="value"><span class="tnum">429</span></span>
+        <span class="compare">
+          <span><span class="k">today</span> <span class="tnum">412</span></span>
+          <span class="delta-up tnum">↓17</span>
+        </span>
+        <svg class="mini-chart" viewBox="0 0 80 32" preserveAspectRatio="none" role="img" aria-label="Active calories, last 7 days">
+          <polyline class="line" points="0,19 13.33,21.6 26.67,28.8 40,11.2 53.33,21.6 66.67,2.4 80,19" />
+          <circle class="point-today-ring" cx="80" cy="19" r="4.5" />
+          <circle class="point-today" cx="80" cy="19" r="2.5" />
+        </svg>
+      </div>
+
+    </div>
+
+    <p class="summary-footnote">
+      Deeper trends, sleep stages, HRV, recovery, full body composition history live on
+      <a href="#fitness">Fitness →</a>
+    </p>
+  </section>
+
+  <!-- Schedule -->
+  <section class="flat reveal" data-stagger="4">
+    <h2 class="section-label">Schedule</h2>
+    <ul class="schedule">
+      <li><span class="time tnum">09:00</span><span class="title">Standup</span><span class="source">work</span></li>
+      <li><span class="time tnum">13:00</span><span class="title">Lunch with Mom</span><span class="source">personal</span></li>
+      <li><span class="time tnum">16:30</span><span class="title">Renpho weigh-in</span><span class="source">recurring</span></li>
+    </ul>
+  </section>
+
+  <!-- Tasks | Habits split -->
+  <div class="split reveal" data-stagger="5">
+
+    <section>
+      <h2 class="section-label">Tasks · 4 active</h2>
+      <ul class="tasks-list">
+        <li><span class="marker attn"></span><span class="title">Renew domain</span><span class="age">today</span></li>
+        <li><span class="marker"></span><span class="title">Finalize Q2 deck</span><span class="age">2d</span></li>
+        <li><span class="marker"></span><span class="title">Reply to landlord re: lease</span><span class="age">3d</span></li>
+        <li><span class="marker"></span><span class="title">Order Renpho replacement battery</span><span class="age">5d</span></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="section-label">Habits · 7-day</h2>
+      <div class="habits">
+        <div class="habit-row">
+          <span class="name">Morning walk</span>
+          <span class="week" aria-label="6 of 7 days">
+            <span class="hit"></span><span class="hit"></span><span class="hit"></span><span></span><span class="hit"></span><span class="hit"></span><span class="hit today"></span>
+          </span>
+        </div>
+        <div class="habit-row">
+          <span class="name">Japanese · 20 min</span>
+          <span class="week" aria-label="5 of 7 days">
+            <span class="hit"></span><span class="hit"></span><span></span><span class="hit"></span><span class="hit"></span><span class="hit"></span><span class="today"></span>
+          </span>
+        </div>
+        <div class="habit-row">
+          <span class="name">Read · 30 min</span>
+          <span class="week" aria-label="7 of 7 days">
+            <span class="hit"></span><span class="hit"></span><span class="hit"></span><span class="hit"></span><span class="hit"></span><span class="hit"></span><span class="hit today"></span>
+          </span>
+        </div>
+        <div class="habit-row">
+          <span class="name">Strength</span>
+          <span class="week" aria-label="3 of 7 days">
+            <span></span><span class="hit"></span><span></span><span class="hit"></span><span></span><span class="hit"></span><span class="today"></span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Inbox -->
+  <section class="flat reveal" data-stagger="6">
+    <h2 class="section-label">Inbox · 2 important</h2>
+    <ul class="inbox">
+      <li>
+        <span class="pin attn"></span>
+        <span class="subject">Renew domain — action required</span>
+        <span class="meta"><span class="from">namecheap</span><span class="age">today</span></span>
+      </li>
+      <li>
+        <span class="pin"></span>
+        <span class="subject">Invoice #1184 from Acme</span>
+        <span class="meta"><span class="from">billing@acme.co</span><span class="age">2d</span></span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Reference data -->
+  <aside class="reference reveal" data-stagger="7">
+    <div>
+      <h2>Watchlist</h2>
+      <div class="row"><span class="ticker">AAPL</span><span></span><span><span class="tnum">182.41</span> <span class="delta-down">+0.34%</span></span></div>
+      <div class="row"><span class="ticker">MSFT</span><span></span><span><span class="tnum">418.07</span> <span class="delta-down">+0.12%</span></span></div>
+      <div class="row"><span class="ticker">NVDA</span><span></span><span><span class="tnum">912.55</span> <span class="delta-up">−1.02%</span></span></div>
+    </div>
+    <div>
+      <h2>Sports · Bruins</h2>
+      <div class="row"><span class="tnum">Apr 18</span><span>vs Maple Leafs</span><span class="tnum">7:00 PM</span></div>
+      <div class="row"><span class="tnum">Apr 21</span><span>@ Senators</span><span class="tnum">7:30 PM</span></div>
+      <div class="row"><span></span><span style="color:var(--faint)">Series tied 1–1</span><span></span></div>
+    </div>
+  </aside>
+
+  <footer>
+    <span>Last synced 06:39 · Oura, Fitbit, Google Fit, Calendar, Gmail</span>
+    <button type="button">Refresh</button>
+  </footer>
+
+</main>
+
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.theme-peek button');
+  buttons.forEach(b => b.addEventListener('click', () => {
+    const t = b.dataset.themeSet;
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    buttons.forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  }));
+})();
+</script>
+
+</body>
+</html>
