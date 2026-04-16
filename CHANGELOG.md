@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added (PWA installability — issue #261, Phase 1)
+- **`web/public/manifest.json` expanded** with 192/512 PNG icons, dark `theme_color` / `background_color` (`#0B0F19`), `start_url: /dashboard`, `display: standalone`, and `scope: /`.
+- **App-shell service worker at [web/public/sw.js](web/public/sw.js).** Cache-first for `/_next/static/*`, `/icon*`, `/manifest.json`, and Google Fonts origins. Skips API, auth, and navigation requests — no data caching. Registered via [web/src/components/service-worker-register.tsx](web/src/components/service-worker-register.tsx), production-only (dev builds never register a SW).
+- **`<meta name="theme-color">` wired via `viewport.themeColor`** in [web/src/app/layout.tsx](web/src/app/layout.tsx). Existing `metadata.manifest` and the auto-generated `<link rel="apple-touch-icon">` from `src/app/apple-icon.png` cover the remaining head tags.
+- **[web/scripts/generate-pwa-icons.mjs](web/scripts/generate-pwa-icons.mjs)** regenerates `icon-192`, `icon-512`, and `apple-icon` from `src/app/icon.svg` via `sharp`. Run with `node scripts/generate-pwa-icons.mjs` when the SVG logo changes.
+- Phase 2 (offline Supabase caching, queued writes, offline indicator) is out of scope — tracked for a future issue.
+
 ### Added (performance profiling — issue #260)
 - **`@next/bundle-analyzer` wired into `next.config.ts`.** Run `ANALYZE=true npm run build` to generate interactive treemap reports in `.next/analyze/`.
 - **Lighthouse audit baseline captured across all 11 pages** (login, dashboard, chat, settings, fitness, habits, journal, meals, notifications, tasks, weekly) in both mobile and desktop modes.

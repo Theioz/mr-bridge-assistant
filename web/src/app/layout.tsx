@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { getServerThemePreference } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: "#0B0F19",
 };
 
 export default async function RootLayout({
@@ -37,6 +39,7 @@ export default async function RootLayout({
       </head>
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
         <ThemeProvider defaultTheme={themePref}>{children}</ThemeProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
