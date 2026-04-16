@@ -32,6 +32,8 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
   return { start, query: match[1].slice(1).toLowerCase() };
 }
 
+const composerTransition = `border-color var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)`;
+
 export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore, initialInput }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -95,12 +97,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       const cursorPos = el?.selectionStart ?? input.length;
       const token = getSlashToken(input, cursorPos);
       if (!token) return;
-      // Insert "/name " (no placeholder brackets) so user can type the arg
       const insert = `/${cmd.name} `;
       const newValue = input.slice(0, token.start) + insert + input.slice(cursorPos);
       setInput(newValue);
       setMenuCommands([]);
-      // Move cursor to end of inserted text
       const newCursor = token.start + insert.length;
       requestAnimationFrame(() => {
         el?.focus();
@@ -124,8 +124,8 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           setActiveIndex((i) => (i - 1 + menuCommands.length) % menuCommands.length);
           break;
         case "Enter":
-          if (isTouchDevice) return; // mobile: Enter always inserts newline
-          if (e.shiftKey) return; // desktop: Shift+Enter inserts newline
+          if (isTouchDevice) return;
+          if (e.shiftKey) return;
           if (menuCommands.length > 0) {
             e.preventDefault();
             applyCommand(menuCommands[activeIndex]);
@@ -150,11 +150,9 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   );
 
   // ── Scroll to bottom ─────────────────────────────────────────────────
-  // On mount: snap instantly so the chat opens at the most recent message.
-  // On new messages during the session: smooth scroll.
   const hasInitialScrolled = useRef(false);
   useEffect(() => {
-    if (loadingMore) return; // don't jump when prepending older messages
+    if (loadingMore) return;
     if (!hasInitialScrolled.current) {
       bottomRef.current?.scrollIntoView({ behavior: "instant" });
       hasInitialScrolled.current = true;
@@ -174,9 +172,22 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Message list */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto min-h-0"
+        style={{
+          paddingTop: "var(--space-4)",
+          paddingBottom: "var(--space-4)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-3)",
+        }}
+      >
         {hasMore && (
-          <div className="flex justify-center py-3 print:hidden">
+          <div
+            className="flex justify-center print:hidden"
+            style={{ padding: "var(--space-2) 0" }}
+          >
             <button
               onClick={() => {
                 const el = scrollContainerRef.current;
@@ -187,11 +198,17 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 });
               }}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs transition-opacity"
+              className="flex items-center cursor-pointer hover-text-brighten"
               style={{
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
+                gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-4)",
+                borderRadius: "var(--r-2)",
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
                 color: "var(--color-text-muted)",
+                minHeight: 44,
+                transition: `color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)`,
               }}
             >
               {loadingMore ? (
@@ -206,7 +223,14 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           </div>
         )}
         {messages.length === 0 && (
-          <p className="text-center mt-8" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+          <p
+            className="text-center"
+            style={{
+              marginTop: "var(--space-6)",
+              fontSize: "var(--t-meta)",
+              color: "var(--color-text-faint)",
+            }}
+          >
             Ask Mr. Bridge anything.
           </p>
         )}
@@ -224,46 +248,46 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         })}
         <ToolStatusBar messages={messages} isLoading={isLoading} />
 
-        {/* Typing indicator */}
+        {/* Typing indicator — opacity pulse (not bounce), accent as the one
+            attention point during an active turn. */}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start print:hidden">
             <div
-              className="rounded-2xl rounded-bl-sm px-4 py-2.5"
               style={{
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
+                padding: "var(--space-2) var(--space-1)",
               }}
             >
               <span
-                className="flex gap-1 motion-reduce:opacity-60"
+                className="flex motion-reduce:opacity-60"
                 role="status"
                 aria-label="Assistant is typing"
+                style={{ gap: "var(--space-1)" }}
               >
                 <span
-                  className="rounded-full motion-safe:animate-bounce"
+                  className="rounded-full motion-safe:typing-dot-pulse"
                   style={{
                     width: 6,
                     height: 6,
-                    background: "var(--color-text-muted)",
+                    background: "var(--accent)",
                     animationDelay: "0ms",
                   }}
                 />
                 <span
-                  className="rounded-full motion-safe:animate-bounce"
+                  className="rounded-full motion-safe:typing-dot-pulse"
                   style={{
                     width: 6,
                     height: 6,
-                    background: "var(--color-text-muted)",
-                    animationDelay: "150ms",
+                    background: "var(--accent)",
+                    animationDelay: "200ms",
                   }}
                 />
                 <span
-                  className="rounded-full motion-safe:animate-bounce"
+                  className="rounded-full motion-safe:typing-dot-pulse"
                   style={{
                     width: 6,
                     height: 6,
-                    background: "var(--color-text-muted)",
-                    animationDelay: "300ms",
+                    background: "var(--accent)",
+                    animationDelay: "400ms",
                   }}
                 />
               </span>
@@ -275,19 +299,30 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         {error && !isLoading && (
           <div className="flex justify-start print:hidden">
             <div
-              className="rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-3"
+              className="flex items-center"
               style={{
-                background: "var(--color-surface)",
+                gap: "var(--space-3)",
+                padding: "var(--space-2) var(--space-4)",
+                borderRadius: "var(--r-2)",
+                background: "var(--color-danger-subtle)",
                 border: "1px solid var(--color-danger)",
               }}
             >
-              <span style={{ fontSize: 14, color: "var(--color-danger)" }}>
+              <span style={{ fontSize: "var(--t-meta)", color: "var(--color-danger)" }}>
                 {error.message?.includes("overloaded") ? "API overloaded — try again." : "Error — try again."}
               </span>
               <button
                 onClick={() => reload()}
-                className="cursor-pointer transition-colors duration-150 hover-text-brighten"
-                style={{ fontSize: 12, color: "var(--color-text-muted)", textDecoration: "underline", textUnderlineOffset: 2 }}
+                className="cursor-pointer hover-text-brighten"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 2,
+                  background: "transparent",
+                  border: "none",
+                  transition: `color var(--motion-fast) var(--ease-out-quart)`,
+                }}
               >
                 Retry
               </button>
@@ -300,10 +335,13 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       {/* Input bar */}
       <form
         onSubmit={handleSubmit}
-        className="flex gap-2 py-3 print:hidden"
-        style={{ borderTop: "1px solid var(--color-border)" }}
+        className="flex print:hidden"
+        style={{
+          gap: "var(--space-2)",
+          padding: "var(--space-3) 0",
+          borderTop: "1px solid var(--rule-soft)",
+        }}
       >
-        {/* Wrapper provides anchor for the floating menu */}
         <div className="relative flex-1">
           {menuCommands.length > 0 && (
             <SlashCommandMenu
@@ -325,37 +363,48 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             autoComplete="off"
             aria-autocomplete="list"
             aria-expanded={menuCommands.length > 0}
-            className="w-full rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 focus:outline-none"
+            className="w-full focus:outline-none"
             style={{
               resize: "none",
               overflow: "hidden",
               maxHeight: composerMaxHeight,
               overflowY: "auto",
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
+              padding: "var(--space-2) var(--space-4)",
+              fontSize: "var(--t-meta)",
+              borderRadius: "var(--r-2)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
               color: "var(--color-text)",
+              transition: composerTransition,
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-primary)";
+              e.currentTarget.style.borderColor = "var(--accent)";
               e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-primary-dim)";
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.borderColor = "var(--rule)";
               e.currentTarget.style.boxShadow = "none";
               setMenuCommands([]);
             }}
           />
         </div>
+
         {/* Model override chip */}
         <div className="relative flex-shrink-0 self-end mb-0.5">
           <button
             type="button"
             onClick={() => setModelMenuOpen((o) => !o)}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors duration-150"
+            className="flex items-center cursor-pointer hover-text-brighten"
             style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              color: modelOverride === "auto" ? "var(--color-text-muted)" : "var(--color-primary)",
+              gap: "var(--space-1)",
+              borderRadius: "var(--r-2)",
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              color: modelOverride === "auto" ? "var(--color-text-muted)" : "var(--accent)",
+              minHeight: 44,
+              transition: `color var(--motion-fast) var(--ease-out-quart)`,
             }}
             title="Model override — Auto uses smart routing"
           >
@@ -364,11 +413,13 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           </button>
           {modelMenuOpen && (
             <div
-              className="absolute bottom-full mb-1 right-0 rounded-lg overflow-hidden z-10"
+              className="absolute bottom-full right-0 overflow-hidden z-10"
               style={{
+                marginBottom: "var(--space-1)",
+                borderRadius: "var(--r-2)",
                 background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                minWidth: 100,
+                border: "1px solid var(--rule)",
+                minWidth: 108,
                 boxShadow: "var(--shadow-md)",
               }}
             >
@@ -377,10 +428,14 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                   key={opt}
                   type="button"
                   onClick={() => { setModelOverride(opt); setModelMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors duration-100 hover-bg-border"
+                  className="w-full text-left cursor-pointer hover-bg-subtle"
                   style={{
-                    color: modelOverride === opt ? "var(--color-primary)" : "var(--color-text)",
+                    padding: "var(--space-2) var(--space-3)",
+                    fontSize: "var(--t-micro)",
+                    color: modelOverride === opt ? "var(--accent)" : "var(--color-text)",
                     background: "transparent",
+                    border: "none",
+                    transition: `color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)`,
                   }}
                 >
                   {opt === "auto" ? "Auto" : opt === "haiku" ? "Haiku (fast)" : "Sonnet (smart)"}
@@ -393,8 +448,21 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="rounded-xl px-3.5 py-2.5 cursor-pointer transition-opacity duration-150 hover:opacity-85 disabled:opacity-30 disabled:cursor-default disabled:hover:opacity-30"
-          style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
+          className="cursor-pointer hover-text-brighten disabled:opacity-30 disabled:cursor-default"
+          style={{
+            padding: "0 var(--space-4)",
+            minWidth: 44,
+            minHeight: 44,
+            alignSelf: "flex-end",
+            borderRadius: "var(--r-2)",
+            background: "transparent",
+            border: "1px solid var(--accent)",
+            color: "var(--accent)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: `color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart), opacity var(--motion-fast) var(--ease-out-quart)`,
+          }}
         >
           <Send size={16} />
         </button>
@@ -406,26 +474,26 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
 function DaySeparator({ date }: { date: Date }) {
   return (
     <div
+      className="flex items-center"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        margin: "12px 0 4px",
+        gap: "var(--space-3)",
+        margin: "var(--space-3) 0 var(--space-1)",
       }}
     >
-      <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
+      <div style={{ flex: 1, height: 1, background: "var(--rule-soft)" }} />
       <span
+        className="font-heading"
         style={{
-          fontSize: 11,
+          fontSize: "var(--t-micro)",
           fontWeight: 600,
-          letterSpacing: "0.05em",
+          letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: "var(--color-text-muted)",
+          color: "var(--color-text-faint)",
         }}
       >
         {formatDaySeparator(date)}
       </span>
-      <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
+      <div style={{ flex: 1, height: 1, background: "var(--rule-soft)" }} />
     </div>
   );
 }

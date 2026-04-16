@@ -20,6 +20,8 @@ interface Props {
   timeTick: number;
 }
 
+const rowTransition = `color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)`;
+
 export default function SessionSheet({
   open,
   sessions,
@@ -48,8 +50,14 @@ export default function SessionSheet({
       contentStyle={{ maxHeight: "60vh" }}
     >
         <div
-          className="mx-auto mt-3 mb-1 rounded-full"
-          style={{ width: 36, height: 4, background: "var(--color-border)" }}
+          className="mx-auto rounded-full"
+          style={{
+            marginTop: "var(--space-2)",
+            marginBottom: "var(--space-1)",
+            width: 36,
+            height: 4,
+            background: "var(--rule)",
+          }}
         />
 
         {/* Scroll container with sticky header */}
@@ -60,27 +68,37 @@ export default function SessionSheet({
               top: 0,
               zIndex: 1,
               background: "var(--color-surface)",
-              borderBottom: "1px solid var(--color-border)",
-              padding: "4px 16px 12px",
+              borderBottom: "1px solid var(--rule-soft)",
+              padding: "var(--space-1) var(--space-5) var(--space-3)",
             }}
           >
-            <div className="flex items-center justify-between pt-2 pb-3">
-              <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                Chat History
+            <div
+              className="flex items-center justify-between"
+              style={{ paddingTop: "var(--space-2)", paddingBottom: "var(--space-3)" }}
+            >
+              <span
+                className="font-heading"
+                style={{
+                  fontSize: "var(--t-h2)",
+                  fontWeight: 600,
+                  letterSpacing: "-0.01em",
+                  color: "var(--color-text)",
+                }}
+              >
+                Chat history
               </span>
               <button
                 onClick={onClose}
+                aria-label="Close"
+                className="flex items-center justify-center cursor-pointer hover-bg-subtle hover-text-brighten"
                 style={{
                   color: "var(--color-text-muted)",
                   background: "transparent",
                   border: "none",
-                  cursor: "pointer",
-                  padding: 8,
-                  minWidth: 48,
-                  minHeight: 48,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  minWidth: 44,
+                  minHeight: 44,
+                  borderRadius: "var(--r-2)",
+                  transition: rowTransition,
                 }}
               >
                 <X size={18} />
@@ -88,28 +106,34 @@ export default function SessionSheet({
             </div>
             <button
               onClick={onNewChat}
-              className="flex items-center gap-2 w-full cursor-pointer transition-colors duration-150"
+              className="flex items-center w-full cursor-pointer hover-text-brighten"
               style={{
-                background: "var(--color-primary)",
-                color: "var(--color-text-on-cta)",
-                border: "none",
-                borderRadius: 10,
-                padding: "12px 16px",
-                fontSize: 14,
+                gap: "var(--space-2)",
+                background: "transparent",
+                color: "var(--color-text)",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-2)",
+                padding: "0 var(--space-4)",
+                fontSize: "var(--t-meta)",
                 fontWeight: 500,
                 minHeight: 48,
+                transition: rowTransition,
               }}
             >
-              <Plus size={16} />
+              <Plus size={16} strokeWidth={1.75} />
               New chat
             </button>
           </div>
 
-          <div style={{ padding: "8px 12px 16px" }}>
+          <div style={{ padding: "var(--space-2) var(--space-3) var(--space-5)" }}>
             {sessions.length === 0 && (
               <p
-                className="text-center py-4"
-                style={{ fontSize: 13, color: "var(--color-text-muted)" }}
+                className="text-center"
+                style={{
+                  padding: "var(--space-4) 0",
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                }}
               >
                 No previous conversations.
               </p>
@@ -121,27 +145,41 @@ export default function SessionSheet({
                   key={`${s.id}-${timeTick}`}
                   style={{
                     position: "relative",
-                    background: active ? "var(--color-primary-dim)" : "transparent",
-                    borderLeft: active ? "2px solid var(--color-primary)" : "2px solid transparent",
-                    borderRadius: 8,
+                    borderTop: "1px solid var(--rule-soft)",
+                    transition: rowTransition,
                   }}
                 >
+                  {active && (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: "var(--space-2)",
+                        bottom: "var(--space-2)",
+                        width: 2,
+                        borderRadius: 1,
+                        background: "var(--accent)",
+                      }}
+                    />
+                  )}
                   <button
                     onClick={() => onSessionSelect(s.id)}
+                    aria-current={active ? "true" : undefined}
                     className="flex flex-col w-full text-left cursor-pointer"
                     style={{
                       background: "transparent",
                       border: "none",
-                      padding: "10px 12px",
-                      paddingRight: 44,
+                      padding: "var(--space-3) var(--space-7) var(--space-3) calc(var(--space-3) + 2px)",
                       minHeight: 56,
                       gap: 3,
                     }}
                   >
                     <span
+                      className="tnum"
                       style={{
-                        fontSize: 11,
-                        color: "var(--color-text-muted)",
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-faint)",
                         fontWeight: 500,
                       }}
                     >
@@ -149,8 +187,9 @@ export default function SessionSheet({
                     </span>
                     <span
                       style={{
-                        fontSize: 13,
-                        color: active ? "var(--color-primary)" : "var(--color-text)",
+                        fontSize: "var(--t-meta)",
+                        color: active ? "var(--accent)" : "var(--color-text)",
+                        fontWeight: active ? 500 : 400,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -166,19 +205,24 @@ export default function SessionSheet({
                       setConfirmingId(s.id);
                     }}
                     aria-label="Archive chat"
+                    className="hover-text-danger"
                     style={{
                       position: "absolute",
-                      right: 8,
+                      right: "var(--space-2)",
                       top: "50%",
                       transform: "translateY(-50%)",
                       background: "transparent",
                       border: "none",
-                      color: "var(--color-text-muted)",
+                      color: "var(--color-text-faint)",
                       cursor: "pointer",
-                      padding: 8,
+                      padding: "var(--space-2)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      borderRadius: "var(--r-1)",
+                      minWidth: 44,
+                      minHeight: 44,
+                      transition: `color var(--motion-fast) var(--ease-out-quart)`,
                     }}
                   >
                     <Trash2 size={16} />
@@ -191,22 +235,32 @@ export default function SessionSheet({
               <>
                 <button
                   onClick={() => setArchivedExpanded((v) => !v)}
-                  className="flex items-center gap-1 w-full cursor-pointer"
+                  className="flex items-center w-full cursor-pointer hover-text-brighten"
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "var(--color-text-muted)",
-                    fontSize: 11,
+                    color: "var(--color-text-faint)",
+                    fontFamily: "var(--font-display), system-ui, sans-serif",
+                    fontSize: "var(--t-micro)",
                     fontWeight: 600,
-                    letterSpacing: "0.05em",
+                    letterSpacing: "0.14em",
                     textTransform: "uppercase",
-                    padding: "12px 8px 4px",
-                    minHeight: 40,
-                    marginTop: 8,
-                    borderTop: "1px solid var(--color-border)",
+                    gap: "var(--space-1)",
+                    padding: "var(--space-3) var(--space-2) var(--space-1)",
+                    minHeight: 44,
+                    marginTop: "var(--space-2)",
+                    borderTop: "1px solid var(--rule-soft)",
+                    transition: `color var(--motion-fast) var(--ease-out-quart)`,
                   }}
                 >
-                  <span style={{ transform: archivedExpanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 150ms" }}>
+                  <span
+                    aria-hidden
+                    style={{
+                      transform: archivedExpanded ? "rotate(90deg)" : "none",
+                      display: "inline-block",
+                      transition: `transform var(--motion-fast) var(--ease-out-quart)`,
+                    }}
+                  >
                     ›
                   </span>
                   Recently deleted ({archivedSessions.length})
@@ -222,21 +276,28 @@ export default function SessionSheet({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "10px 12px",
-                          gap: 8,
+                          padding: "var(--space-3)",
+                          gap: "var(--space-2)",
                           opacity: 0.7,
+                          borderTop: "1px solid var(--rule-soft)",
                         }}
                       >
                         <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                          <span
+                            className="tnum"
+                            style={{
+                              fontSize: "var(--t-micro)",
+                              color: "var(--color-text-faint)",
+                            }}
+                          >
                             {s.deleted_at ? formatRelative(s.deleted_at) : ""} · {daysLeft}d left
                           </span>
                           <span
                             style={{
-                              fontSize: 13,
+                              fontSize: "var(--t-meta)",
                               color: "var(--color-text)",
                               textDecoration: "line-through",
-                              textDecorationColor: "var(--color-text-muted)",
+                              textDecorationColor: "var(--color-text-faint)",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
@@ -248,17 +309,20 @@ export default function SessionSheet({
                         <button
                           onClick={() => onRestore(s.id)}
                           aria-label="Restore chat"
+                          className="hover-text-brighten"
                           style={{
                             background: "transparent",
                             border: "none",
-                            color: "var(--color-primary)",
-                            fontSize: 12,
+                            color: "var(--accent)",
+                            fontSize: "var(--t-micro)",
                             fontWeight: 600,
                             cursor: "pointer",
-                            padding: 6,
+                            padding: "var(--space-1)",
                             display: "flex",
                             alignItems: "center",
-                            gap: 4,
+                            gap: "var(--space-1)",
+                            minHeight: 44,
+                            transition: `color var(--motion-fast) var(--ease-out-quart)`,
                           }}
                         >
                           <RotateCcw size={12} />
@@ -282,40 +346,54 @@ export default function SessionSheet({
               style={{ background: "var(--overlay-scrim)" }}
             />
             <Dialog.Content
-              className="fixed left-1/2 top-1/2 z-[90] w-[calc(100vw-32px)] max-w-sm rounded-2xl"
+              className="fixed left-1/2 top-1/2 z-[90] w-[calc(100vw-32px)] max-w-sm"
               style={{
                 transform: "translate(-50%, -50%)",
                 background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                padding: 20,
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-2)",
+                padding: "var(--space-5)",
               }}
             >
               <Dialog.Title
-                className="font-heading font-semibold"
-                style={{ fontSize: 16, color: "var(--color-text)" }}
+                className="font-heading"
+                style={{
+                  fontSize: "var(--t-h2)",
+                  fontWeight: 600,
+                  letterSpacing: "-0.01em",
+                  color: "var(--color-text)",
+                }}
               >
                 Archive this chat?
               </Dialog.Title>
               <Dialog.Description
-                className="mt-2"
-                style={{ fontSize: 13, color: "var(--color-text-muted)" }}
+                style={{
+                  marginTop: "var(--space-2)",
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                }}
               >
                 {confirmingSession?.preview
                   ? `"${confirmingSession.preview.slice(0, 80)}${confirmingSession.preview.length > 80 ? "…" : ""}" — you'll have 10 seconds to undo.`
                   : "You'll have 10 seconds to undo."}
               </Dialog.Description>
-              <div className="flex items-center justify-end gap-2" style={{ marginTop: 20 }}>
+              <div
+                className="flex items-center justify-end"
+                style={{ marginTop: "var(--space-5)", gap: "var(--space-2)" }}
+              >
                 <button
                   onClick={() => setConfirmingId(null)}
+                  className="cursor-pointer hover-bg-subtle"
                   style={{
                     background: "transparent",
-                    border: "1px solid var(--color-border)",
+                    border: "1px solid var(--rule)",
                     color: "var(--color-text)",
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
+                    padding: "0 var(--space-4)",
+                    borderRadius: "var(--r-2)",
+                    fontSize: "var(--t-micro)",
                     fontWeight: 500,
-                    cursor: "pointer",
+                    minHeight: 44,
+                    transition: rowTransition,
                   }}
                 >
                   Cancel
@@ -325,15 +403,17 @@ export default function SessionSheet({
                     if (confirmingId) onArchive(confirmingId);
                     setConfirmingId(null);
                   }}
+                  className="cursor-pointer"
                   style={{
                     background: "var(--color-danger)",
                     border: "none",
                     color: "var(--color-text-on-cta)",
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
+                    padding: "0 var(--space-4)",
+                    borderRadius: "var(--r-2)",
+                    fontSize: "var(--t-micro)",
                     fontWeight: 500,
-                    cursor: "pointer",
+                    minHeight: 44,
+                    transition: `opacity var(--motion-fast) var(--ease-out-quart)`,
                   }}
                 >
                   Archive

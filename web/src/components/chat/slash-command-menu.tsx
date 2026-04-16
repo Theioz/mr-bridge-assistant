@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 export interface SlashCommand {
   name: string;
   description: string;
-  usage: string; // display label, e.g. "/workout [type]"
+  usage: string;
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
@@ -39,50 +39,75 @@ export default function SlashCommandMenu({ commands, activeIndex, onSelect, onHo
     <div
       role="listbox"
       aria-label="Slash commands"
-      className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl overflow-hidden"
+      className="absolute left-0 right-0 overflow-hidden"
       style={{
-        background: "var(--color-surface-raised)",
-        border: "1px solid var(--color-border)",
+        bottom: "100%",
+        marginBottom: "var(--space-2)",
+        borderRadius: "var(--r-2)",
+        background: "var(--color-surface)",
+        border: "1px solid var(--rule)",
         boxShadow: "var(--shadow-lg)",
         maxHeight: "calc(6 * 2.75rem)",
         overflowY: "auto",
         zIndex: 50,
       }}
     >
-      {commands.map((cmd, i) => (
-        <button
-          key={cmd.name}
-          ref={i === activeIndex ? activeRef : undefined}
-          role="option"
-          aria-selected={i === activeIndex}
-          type="button"
-          className="w-full text-left px-4 py-2.5 flex items-baseline gap-3 transition-colors duration-100"
-          style={{
-            background: i === activeIndex ? "var(--color-primary-dim)" : "transparent",
-            borderLeft: `2px solid ${i === activeIndex ? "var(--color-primary)" : "transparent"}`,
-          }}
-          onMouseEnter={() => onHover(i)}
-          onMouseDown={(e) => {
-            // prevent input blur before click fires
-            e.preventDefault();
-          }}
-          onClick={() => onSelect(cmd)}
-        >
-          <span
+      {commands.map((cmd, i) => {
+        const active = i === activeIndex;
+        return (
+          <button
+            key={cmd.name}
+            ref={active ? activeRef : undefined}
+            role="option"
+            aria-selected={active}
+            type="button"
+            className="w-full text-left flex items-baseline"
             style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: "var(--color-primary)",
-              flexShrink: 0,
+              position: "relative",
+              gap: "var(--space-3)",
+              padding: "var(--space-2) var(--space-4) var(--space-2) calc(var(--space-4) + 2px)",
+              background: active ? "var(--hover-subtle)" : "transparent",
+              border: "none",
+              transition: `background-color var(--motion-fast) var(--ease-out-quart)`,
+              cursor: "pointer",
+              minHeight: 44,
             }}
+            onMouseEnter={() => onHover(i)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+            }}
+            onClick={() => onSelect(cmd)}
           >
-            {cmd.usage}
-          </span>
-          <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-            {cmd.description}
-          </span>
-        </button>
-      ))}
+            {active && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: "var(--space-1)",
+                  bottom: "var(--space-1)",
+                  width: 2,
+                  borderRadius: 1,
+                  background: "var(--accent)",
+                }}
+              />
+            )}
+            <span
+              style={{
+                fontSize: "var(--t-micro)",
+                fontWeight: 500,
+                color: active ? "var(--accent)" : "var(--color-text)",
+                flexShrink: 0,
+              }}
+            >
+              {cmd.usage}
+            </span>
+            <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              {cmd.description}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

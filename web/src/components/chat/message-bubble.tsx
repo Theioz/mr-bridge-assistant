@@ -26,8 +26,6 @@ interface Props {
   message: Message;
 }
 
-// Stable reference — defined outside the component so it never triggers a
-// ReactMarkdown re-render from a new object identity on each parent update.
 const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   strong: ({ children }) => (
@@ -37,17 +35,17 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
     <em style={{ fontStyle: "italic", color: "var(--color-text-muted)" }}>{children}</em>
   ),
   h1: ({ children }) => (
-    <h1 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)" }}>
+    <h1 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
+    <h2 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mt-2 mb-1 first:mt-0" style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-muted)" }}>
+    <h3 className="mt-2 mb-1 first:mt-0" style={{ fontSize: "var(--t-micro)", fontWeight: 500, color: "var(--color-text-muted)" }}>
       {children}
     </h3>
   ),
@@ -66,15 +64,25 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
     const isBlock = className?.includes("language-");
     return isBlock ? (
       <code
-        className="block rounded-lg px-3 py-2 my-2 text-xs overflow-x-auto whitespace-pre"
-        style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)" }}
+        className="block px-3 py-2 my-2 overflow-x-auto whitespace-pre"
+        style={{
+          fontSize: "var(--t-micro)",
+          background: "var(--color-surface-raised)",
+          color: "var(--color-text-muted)",
+          borderRadius: "var(--r-2)",
+        }}
       >
         {children}
       </code>
     ) : (
       <code
-        className="rounded px-1 py-0.5 text-xs"
-        style={{ background: "var(--color-surface-raised)", color: "var(--color-text-muted)" }}
+        className="px-1 py-0.5"
+        style={{
+          fontSize: "var(--t-micro)",
+          background: "var(--color-surface-raised)",
+          color: "var(--color-text-muted)",
+          borderRadius: "var(--r-1)",
+        }}
       >
         {children}
       </code>
@@ -83,7 +91,7 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
   pre: ({ children }) => <pre className="my-2">{children}</pre>,
   table: ({ children }) => (
     <div className="overflow-x-auto my-2">
-      <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
+      <table className="w-full tnum" style={{ fontSize: "var(--t-micro)", borderCollapse: "collapse" }}>
         {children}
       </table>
     </div>
@@ -91,7 +99,7 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
   thead: ({ children }) => <thead>{children}</thead>,
   tbody: ({ children }) => <tbody>{children}</tbody>,
   tr: ({ children }) => (
-    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>{children}</tr>
+    <tr style={{ borderBottom: "1px solid var(--rule-soft)" }}>{children}</tr>
   ),
   th: ({ children }) => (
     <th
@@ -99,7 +107,7 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
       style={{
         fontWeight: 500,
         color: "var(--color-text-muted)",
-        borderBottom: "1px solid var(--color-border)",
+        borderBottom: "1px solid var(--rule-soft)",
       }}
     >
       {children}
@@ -110,20 +118,17 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
       {children}
     </td>
   ),
-  hr: () => <hr style={{ borderColor: "var(--color-border)", margin: "12px 0" }} />,
+  hr: () => <hr style={{ borderColor: "var(--rule-soft)", margin: "var(--space-3) 0" }} />,
   blockquote: ({ children }) => (
     <blockquote
       className="pl-3 italic my-2"
-      style={{ borderLeft: "2px solid var(--color-border)", color: "var(--color-text-muted)" }}
+      style={{ borderLeft: "2px solid var(--rule)", color: "var(--color-text-muted)" }}
     >
       {children}
     </blockquote>
   ),
 };
 
-// memo: only re-renders when message.content or message.role changes.
-// During streaming, only the last (actively updating) bubble re-renders —
-// all prior messages are skipped, eliminating per-token markdown re-parsing.
 const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
   const [revealed, setRevealed] = useState(false);
@@ -147,6 +152,10 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
 
   const showTime = message.createdAt && (revealed || pinned);
 
+  // Role distinction is carried by layout (alignment + subtle surface tint on
+  // the user side) rather than a color block. Spec: "user/assistant
+  // distinguished by layout + subtle --color-surface-raised tint, NOT by
+  // color blocks."
   return (
     <div
       className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
@@ -159,23 +168,16 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
       onTouchCancel={clearLongPress}
     >
       <div
-        className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+        className="max-w-[85%] leading-relaxed"
         data-print-message={isUser ? "user" : "assistant"}
-        style={
-          isUser
-            ? {
-                background: "var(--color-primary)",
-                color: "var(--color-text-on-cta)",
-                borderBottomRightRadius: 4,
-                whiteSpace: "pre-wrap",
-              }
-            : {
-                background: "var(--color-surface)",
-                color: "var(--color-text)",
-                border: "1px solid var(--color-border)",
-                borderBottomLeftRadius: 4,
-              }
-        }
+        style={{
+          fontSize: "var(--t-meta)",
+          color: "var(--color-text)",
+          background: isUser ? "var(--color-surface-raised)" : "transparent",
+          padding: isUser ? "var(--space-2) var(--space-4)" : "var(--space-1) 0",
+          borderRadius: isUser ? "var(--r-2)" : 0,
+          whiteSpace: isUser ? "pre-wrap" : undefined,
+        }}
       >
         {isUser ? (
           message.content
@@ -189,13 +191,15 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
         <span
           aria-hidden={!showTime}
           title={formatExactDateTime(message.createdAt)}
+          className="tnum"
           style={{
-            fontSize: 10,
-            color: "var(--color-text-muted)",
-            padding: "2px 6px 0",
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            padding: "var(--space-1) var(--space-2) 0",
             opacity: showTime ? 1 : 0,
-            transition: "opacity 120ms",
+            transition: `opacity var(--motion-fast) var(--ease-out-quart)`,
             pointerEvents: showTime ? "auto" : "none",
+            letterSpacing: "0.01em",
           }}
         >
           {formatExactTime(message.createdAt)}

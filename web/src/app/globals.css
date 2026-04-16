@@ -378,6 +378,20 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+/* ─── Typing indicator (chat streaming cursor) ────────────────────────── */
+/* Three-dot opacity pulse using --ease-out-quart — the decelerating-only
+   alternative to a bounce utility. Dots fade in sequence; the cascade comes
+   from per-dot animation-delay on the JSX. */
+@keyframes typing-dot-pulse {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+.typing-dot-pulse {
+  /* 1.2s loop lets the three staggered dots read as a cascading wave; ease
+     tokens cap at 360ms which reads too frenetic for an idle-waiting cue. */
+  animation: typing-dot-pulse 1200ms var(--ease-out-quart) infinite;
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
