@@ -152,7 +152,16 @@ export default async function DashboardPage() {
       .select("habit_id,date")
       .eq("completed", true)
       .order("date", { ascending: false }),
-    supabase.from("profile").select("key,value").in("key", ["name", "Identity/Name"]),
+    supabase
+      .from("profile")
+      .select("key,value")
+      .in("key", [
+        "name",
+        "Identity/Name",
+        "weight_goal_lbs",
+        "body_fat_goal_pct",
+        "weekly_active_cal_goal",
+      ]),
     supabase
       .from("tasks")
       .select("*")
@@ -209,6 +218,15 @@ export default async function DashboardPage() {
     nameRows.find((r) => r.key === "name")?.value ??
     nameRows.find((r) => r.key === "Identity/Name")?.value ??
     null;
+  const goalNum = (key: string): number | null => {
+    const raw = nameRows.find((r) => r.key === key)?.value;
+    if (raw == null) return null;
+    const n = parseFloat(raw);
+    return isNaN(n) ? null : n;
+  };
+  const weightGoal = goalNum("weight_goal_lbs");
+  const bodyFatGoal = goalNum("body_fat_goal_pct");
+  const weeklyActiveCalGoal = goalNum("weekly_active_cal_goal");
 
   const hour = parseInt(
     new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: USER_TZ })
@@ -274,6 +292,9 @@ export default async function DashboardPage() {
           trends={recoveryTrends}
           fitnessData={fitnessData}
           windowLabel={windowKey.toUpperCase()}
+          weightGoal={weightGoal}
+          bodyFatGoal={bodyFatGoal}
+          weeklyActiveCalGoal={weeklyActiveCalGoal}
         />
       </div>
 
