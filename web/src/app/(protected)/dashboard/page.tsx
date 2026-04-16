@@ -11,7 +11,11 @@ import { revalidatePath } from "next/cache";
 import { todayString, daysAgoString, USER_TZ } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
 import { getWindow } from "@/lib/window";
-import DashboardHeader from "@/components/dashboard/dashboard-header";
+import DashboardMasthead from "@/components/dashboard/dashboard-masthead";
+import DashboardGreeting from "@/components/dashboard/dashboard-greeting";
+import DashboardBriefing from "@/components/dashboard/dashboard-briefing";
+import DashboardFooter from "@/components/dashboard/dashboard-footer";
+import BodyFitnessSummary from "@/components/dashboard/body-fitness-summary";
 import HealthBreakdown from "@/components/dashboard/health-breakdown";
 import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
@@ -219,12 +223,22 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 print:flex print:flex-col">
 
-      {/* ── Header: greeting + date + weather + sync + window ───────── */}
-      <div className="print:order-1">
-        <DashboardHeader greeting={greeting} dateStr={dateStr} windowKey={windowKey} />
+      {/* ── Masthead: brand + date + window selector (desktop) ──────── */}
+      <div className="print:order-1" data-reveal data-stagger="0">
+        <DashboardMasthead dateStr={dateStr} windowKey={windowKey} />
       </div>
 
-      {/* Mobile-only sticky time-range selector (desktop keeps it in header) */}
+      {/* ── Greeting ─────────────────────────────────────────────────── */}
+      <div data-reveal data-stagger="1">
+        <DashboardGreeting greeting={greeting} />
+      </div>
+
+      {/* ── Briefing copy (weather + body trend narrative) ──────────── */}
+      <div data-reveal data-stagger="1">
+        <DashboardBriefing />
+      </div>
+
+      {/* Mobile-only sticky time-range selector */}
       <div
         className="lg:hidden print:hidden"
         style={{
@@ -232,7 +246,7 @@ export default async function DashboardPage() {
           top: 0,
           zIndex: 10,
           background: "var(--color-bg)",
-          borderBottom: "1px solid var(--color-border)",
+          borderBottom: "1px solid var(--rule)",
           marginLeft: "-20px",
           marginRight: "-20px",
           padding: "8px 20px",
@@ -242,19 +256,19 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
-      <div className="print:order-7">
+      <div className="print:order-7" data-reveal data-stagger="2">
         <UpcomingBirthdayWidget />
       </div>
 
-      {/* ── Today's scores strip (readiness + sleep, when today ≠ latest card) ── */}
+      {/* ── Today's scores strip (readiness + sleep focal) ─────────── */}
       {todayScores && (
-        <div className="print:order-6">
+        <div className="print:order-6" data-reveal data-stagger="2">
           <TodayScoresStrip today={todayScores} />
         </div>
       )}
 
-      {/* ── Health Breakdown: full-width, readiness + tabbed charts ─── */}
-      <div className="print:order-5">
+      {/* ── Readiness focal + Health Breakdown ───────────────────────── */}
+      <div className="print:order-5" data-reveal data-stagger="3">
         <HealthBreakdown
           recovery={latestRecovery}
           trends={recoveryTrends}
@@ -263,13 +277,28 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* ── Body & Fitness 7-day summary ─────────────────────────────── */}
+      <div data-reveal data-stagger="3">
+        <BodyFitnessSummary fitnessData={fitnessData} trends={recoveryTrends} />
+      </div>
+
       {/* ── Schedule today (full width) ──────────────────────────────── */}
-      <div className="print:order-2">
+      <div className="print:order-2" data-reveal data-stagger="4">
         <ScheduleToday />
       </div>
 
-      {/* ── Tasks + Habits: fixed height, scrollable ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-3">
+      {/* ── Tasks + Habits: asymmetric 7/12 + 5/12 split ─────────────── */}
+      <div
+        className="print:order-3"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr",
+          gap: "var(--space-6)",
+        }}
+        data-revamp-split
+        data-reveal
+        data-stagger="5"
+      >
         <TasksSummary tasks={tasks} />
         <HabitsCheckin
           registry={habitRegistry}
@@ -280,8 +309,17 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── Watchlist + Sports: market + favorite teams ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-8">
+      {/* ── Emails ───────────────────────────────────────────────────── */}
+      <div className="print:order-9" data-reveal data-stagger="6">
+        <ImportantEmails />
+      </div>
+
+      {/* ── Reference: Watchlist + Sports ────────────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-8"
+        data-reveal
+        data-stagger="7"
+      >
         <WatchlistWidget
           rows={stocksRows}
           hasApiKey={!!process.env.POLYGON_API_KEY}
@@ -300,10 +338,9 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── Emails ───────────────────────────────────────────────────── */}
-      <div className="print:order-9">
-        <ImportantEmails />
-      </div>
+      {/* ── Footer: consolidated refresh (syncs Oura, Fitbit, Google Fit,
+             stocks, and sports in parallel) ─────────────────────────── */}
+      <DashboardFooter refreshStocks={refreshStocks} refreshSports={refreshSports} />
 
     </div>
   );

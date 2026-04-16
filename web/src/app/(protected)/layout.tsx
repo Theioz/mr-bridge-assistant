@@ -19,7 +19,7 @@ export default async function ProtectedLayout({
   return (
     <div
       className="flex min-h-screen"
-      style={{ background: "var(--color-bg)", color: "var(--color-text)" }}
+      style={{ color: "var(--color-text)" }}
     >
       <a
         href="#main-content"

@@ -25,8 +25,12 @@ export function WindowSelector({ current }: Props) {
 
   return (
     <div
-      className="flex items-center gap-0.5 p-0.5 rounded-lg"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      className="flex items-center gap-0.5 p-0.5"
+      style={{
+        background: "transparent",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-1)",
+      }}
     >
       {WINDOWS.map(({ key, label }) => {
         const active = key === current;
@@ -34,10 +38,13 @@ export function WindowSelector({ current }: Props) {
           <button
             key={key}
             onClick={() => select(key)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer"
+            className="px-3 rounded-md text-xs font-medium cursor-pointer flex items-center justify-center"
             style={{
-              background: active ? "var(--color-primary)" : "transparent",
+              background: active ? "var(--accent)" : "transparent",
               color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+              minHeight: 44,
+              minWidth: 44,
+              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             {label}

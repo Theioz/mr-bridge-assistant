@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { RefreshCw, Loader2, ChevronDown, ChevronRight, Trophy } from "lucide-react";
+import { ChevronDown, ChevronRight, Trophy } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { SportsCache } from "@/lib/types";
 import type { Game, Standing } from "@/lib/sync/sports/provider";
@@ -117,7 +117,7 @@ function TeamRow({ row, favorite }: {
   const lastLabel = lastResultLabel(last, favorite.league);
 
   return (
-    <div style={{ borderBottom: "1px solid var(--color-border)" }}>
+    <div style={{ borderBottom: "1px solid var(--rule-soft)" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -203,13 +203,6 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
   const [isPending, startTransition] = useTransition();
   const autoRanRef = useRef(false);
 
-  function handleRefresh() {
-    startTransition(async () => {
-      await refreshAction();
-    });
-  }
-
-  // Auto-refresh on mount when cache is stale (>6h) or any favorite is missing a row
   useEffect(() => {
     if (autoRanRef.current || favorites.length === 0) return;
     autoRanRef.current = true;
@@ -219,70 +212,53 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
       null,
     );
     const stale = !latest || (Date.now() - new Date(latest).getTime()) > SPORTS_STALE_MS;
-    if (missingRow || stale) handleRefresh();
+    if (missingRow || stale) {
+      startTransition(async () => {
+        await refreshAction();
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rowsByTeamId = new Map(rows.map((r) => [`${r.team_id}|${r.league}`, r]));
 
   return (
-    <div
-      className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div
-        className="flex items-center justify-between px-5 py-3.5"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          Sports
-        </p>
-        {favorites.length > 0 && (
-          <button
-            onClick={handleRefresh}
-            disabled={isPending}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default print:hidden"
-            style={{
-              background: "var(--color-surface-raised)",
-              border: "1px solid var(--color-border)",
-              color: isPending ? "var(--color-primary)" : "var(--color-text-muted)",
-            }}
-          >
-            {isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-            {isPending ? "Refreshing…" : "Refresh"}
-          </button>
-        )}
-      </div>
+    <section>
+      <h2 className="db-section-label">Sports</h2>
 
       {favorites.length === 0 ? (
-        <div className="px-5">
-          <EmptyState
-            icon={Trophy}
-            actionHref="/settings#sports"
-            actionLabel="Add"
-          >
-            No teams on watchlist
-          </EmptyState>
-        </div>
+        <EmptyState icon={Trophy} actionHref="/settings#sports" actionLabel="Add">
+          No teams on watchlist
+        </EmptyState>
       ) : (
-        <div style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 0.15s" }}>
+        <div
+          style={{
+            opacity: isPending ? 0.5 : 1,
+            transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+          }}
+        >
           {favorites.map((fav) => {
             const row = rowsByTeamId.get(`${fav.team_id}|${fav.league}`);
             if (!row) {
               return (
                 <div
                   key={`${fav.league}-${fav.team_id}`}
-                  className="flex items-center gap-3 px-5 py-3"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
+                  className="db-row"
+                  style={{ gridTemplateColumns: "auto 1fr" }}
                 >
                   <TeamLogo src={fav.badge} name={fav.name} color={fav.color} />
-                  <div className="flex-1">
-                    <p style={{ fontSize: 14, color: "var(--color-text)" }}>{fav.name}</p>
-                    <p style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 2 }}>
-                      Awaiting first sync — hit Refresh
+                  <div>
+                    <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
+                      {fav.name}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-faint)",
+                        marginTop: 2,
+                      }}
+                    >
+                      Awaiting first sync
                     </p>
                   </div>
                 </div>
@@ -292,6 +268,6 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }

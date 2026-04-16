@@ -76,13 +76,6 @@ function scorePanelStyle(score: number | null): React.CSSProperties {
   };
 }
 
-function accentColor(score: number | null): string {
-  if (score == null) return "var(--color-border)";
-  if (score >= 80)   return "var(--color-positive)";
-  if (score >= 60)   return "var(--color-warning)";
-  return "var(--color-danger)";
-}
-
 function statusText(score: number | null): string {
   if (score == null) return "No readiness data";
   if (score >= 85)   return "Recovery optimal — push hard today";
@@ -152,11 +145,13 @@ function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="px-3 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center justify-center"
           style={{
-            background: active === key ? "var(--color-primary)" : "var(--color-surface-raised)",
+            background: active === key ? "var(--accent)" : "var(--color-surface-raised)",
             color:      active === key ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-            outlineColor: "var(--color-primary)",
+            outlineColor: "var(--accent)",
+            minHeight: 44,
+            minWidth: 44,
           }}
         >
           {label}
@@ -440,21 +435,9 @@ export default function HealthBreakdown({ recovery, trends, fitnessData, windowL
     setAnimate(!mq.matches);
   }, []);
 
-  const accentBg = accentColor(recovery?.readiness ?? null);
-
   return (
-    <div
-      className="rounded-xl overflow-hidden flex flex-col transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      {/* Colored top bar */}
-      <div style={{ height: 3, background: accentBg, flexShrink: 0 }} />
-
-      <div className="p-5 flex flex-col gap-5">
-        {/* Header */}
-        <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-          Health Breakdown
-        </p>
+    <section className="flex flex-col gap-5">
+      <h2 className="db-section-label">Health Breakdown</h2>
 
         {recovery ? (
           <>
@@ -566,15 +549,14 @@ export default function HealthBreakdown({ recovery, trends, fitnessData, windowL
           </>
         ) : (
           <div
-            className="flex items-center justify-center py-10 rounded-xl"
-            style={{ background: "var(--color-surface-raised)" }}
+            className="flex items-center justify-center py-10"
+            style={{ borderTop: "1px solid var(--rule-soft)", borderBottom: "1px solid var(--rule-soft)" }}
           >
             <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>
               No recovery data — run a sync to pull latest from Oura
             </p>
           </div>
         )}
-      </div>
-    </div>
+    </section>
   );
 }
