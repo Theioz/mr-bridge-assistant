@@ -50,10 +50,10 @@ const DEMO_EMAILS = [
 ];
 
 const DEMO_CALENDAR_EVENTS = [
-  { title: "Morning run", start: `${new Date().toISOString().slice(0, 10)}T06:30:00`, end: `${new Date().toISOString().slice(0, 10)}T07:15:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
-  { title: "Team standup", start: `${new Date().toISOString().slice(0, 10)}T09:00:00`, end: `${new Date().toISOString().slice(0, 10)}T09:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
-  { title: "Lunch w/ Priya", start: `${new Date().toISOString().slice(0, 10)}T12:30:00`, end: `${new Date().toISOString().slice(0, 10)}T13:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Tartine Manufactory" },
-  { title: "Gym — push day", start: `${new Date().toISOString().slice(0, 10)}T18:00:00`, end: `${new Date().toISOString().slice(0, 10)}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
+  { title: "Morning run", start: `${todayString()}T06:30:00`, end: `${todayString()}T07:15:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
+  { title: "Team standup", start: `${todayString()}T09:00:00`, end: `${todayString()}T09:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
+  { title: "Lunch w/ Priya", start: `${todayString()}T12:30:00`, end: `${todayString()}T13:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Tartine Manufactory" },
+  { title: "Gym — push day", start: `${todayString()}T18:00:00`, end: `${todayString()}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
 ];
 
 const retryOnOverload: LanguageModelV1Middleware = {
@@ -1173,19 +1173,16 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       execute: async () => {
         if (!userId) return { error: "Not authenticated" };
         if (isDemo) return { demo: true, note: "Demo mode — no real workout plans." };
-        const today = new Date();
-        const dow = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - dow);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        const fmt = (d: Date) => d.toISOString().slice(0, 10);
+        const todayStr = todayString();
+        const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+        const monday = addDays(todayStr, -dow);
+        const sunday = addDays(monday, 6);
         const { data, error } = await supabase
           .from("workout_plans")
           .select("*")
           .eq("user_id", userId)
-          .gte("date", fmt(monday))
-          .lte("date", fmt(sunday))
+          .gte("date", monday)
+          .lte("date", sunday)
           .order("date", { ascending: true });
         if (error) return { error: error.message };
         return { week: `${fmt(monday)} – ${fmt(sunday)}`, plans: data ?? [] };

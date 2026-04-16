@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { daysAgoString } from "@/lib/timezone";
+import { daysAgoString, todayString, addDays } from "@/lib/timezone";
 import { getWindow } from "@/lib/window";
 
 export const metadata: Metadata = {
@@ -24,15 +24,11 @@ export default async function FitnessPage() {
   const { key: windowKey, days } = await getWindow();
   const weekCount = Math.ceil(days / 7);
 
-  // Current ISO week bounds (Mon–Sun)
-  const today = new Date();
-  const dow = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dow);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const mondayStr = monday.toISOString().slice(0, 10);
-  const sundayStr = sunday.toISOString().slice(0, 10);
+  // Current ISO week bounds (Mon–Sun) in user's local timezone
+  const todayStr = todayString();
+  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+  const mondayStr = addDays(todayStr, -dow);
+  const sundayStr = addDays(mondayStr, 6);
 
   const [fitnessRes, workoutsRes, recoveryRes, profileRes, weeklyPlansRes] = await Promise.all([
     supabase

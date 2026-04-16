@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { WorkoutPlan, WorkoutExercise } from "@/lib/types";
+import { todayString, addDays } from "@/lib/timezone";
 
 interface Props {
   plans: WorkoutPlan[];
@@ -18,18 +19,14 @@ interface DaySlot {
 }
 
 function buildWeekDays(plans: WorkoutPlan[], completedDates: string[]): DaySlot[] {
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
-  const dow = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dow);
+  const todayStr = todayString();
+  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+  const mondayStr = addDays(todayStr, -dow);
 
   const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return DAY_LABELS.map((label, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const date = d.toISOString().slice(0, 10);
+    const date = addDays(mondayStr, i);
     return {
       label,
       date,
@@ -98,7 +95,7 @@ function PhaseSection({ label, exercises }: { label: string; exercises: WorkoutE
 
 export function WeeklyWorkoutPlan({ plans, completedDates }: Props) {
   const days = buildWeekDays(plans, completedDates);
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = todayString();
 
   const [open, setOpen] = useState<Record<string, boolean>>(() => ({
     [todayDate]: true,

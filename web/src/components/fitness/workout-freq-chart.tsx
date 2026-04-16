@@ -11,6 +11,7 @@ import Link from "next/link";
 import { GranularityToggle } from "@/components/ui/granularity-toggle";
 import { formatDate, computeDailyTicks, computeWeeklyTicks, daysToWindowKey } from "@/lib/chart-utils";
 import { useChartColors, type ChartColors } from "@/lib/chart-colors";
+import { todayString, addDays } from "@/lib/timezone";
 
 interface Props {
   sessions: WorkoutSession[];
@@ -18,22 +19,17 @@ interface Props {
   goal?: number | null;
 }
 
-function getISOWeekLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
+function getISOWeekKey(dateStr: string): string {
+  const day = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  return monday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return addDays(dateStr, diff);
 }
 
-function getISOWeekKey(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  return monday.toISOString().slice(0, 10);
+function getISOWeekLabel(dateStr: string): string {
+  const monday = getISOWeekKey(dateStr);
+  return new Date(`${monday}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", timeZone: "UTC",
+  });
 }
 
 function barColor(count: number, goal: number, c: ChartColors): string {
@@ -43,7 +39,7 @@ function barColor(count: number, goal: number, c: ChartColors): string {
 }
 
 function dayOfWeek(dateStr: string): number {
-  return new Date(dateStr + "T00:00:00").getDay(); // 0 = Sunday, 1 = Monday
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0 = Sunday, 1 = Monday
 }
 
 export function WorkoutFreqChart({ sessions, days, goal }: Props) {
@@ -70,16 +66,14 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
     setAnimate(!mq.matches);
   }, []);
 
-  const now = new Date();
+  const today = todayString();
   const hasGoal = goal != null && goal > 0;
 
   // ── Weekly mode ──────────────────────────────────────────────────────────
   const weekSlots: { key: string; label: string; count: number }[] = [];
   if (granularity === "weekly") {
     for (let i = weekCount - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i * 7);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = addDays(today, -i * 7);
       const key = getISOWeekKey(dateStr);
       if (!weekSlots.find((w) => w.key === key)) {
         weekSlots.push({ key, label: getISOWeekLabel(dateStr), count: 0 });
@@ -96,9 +90,7 @@ export function WorkoutFreqChart({ sessions, days, goal }: Props) {
   const daySlots: { key: string; label: string; count: number; isMonday: boolean }[] = [];
   if (granularity === "daily") {
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = addDays(today, -i);
       daySlots.push({
         key: dateStr,
         label: formatDate(dateStr),
