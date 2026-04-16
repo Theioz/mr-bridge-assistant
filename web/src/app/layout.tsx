@@ -3,6 +3,7 @@ import { Mona_Sans, Hubot_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { AmbientBackground } from "@/components/ui/ambient-background";
 import { getServerThemePreference } from "@/lib/theme";
 
 const monaSans = Mona_Sans({
@@ -50,6 +51,7 @@ export default async function RootLayout({
       {...htmlThemeAttr}
     >
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
+        <AmbientBackground />
         <ThemeProvider defaultTheme={themePref}>{children}</ThemeProvider>
         <ServiceWorkerRegister />
       </body>

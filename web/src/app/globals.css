@@ -179,6 +179,40 @@ body {
   max-width: 62ch;
 }
 
+/* ─── Ambient background (watercolor + noise grain) ───────────────────── */
+/* Two fixed, pointer-events:none layers behind all content. Grain reads as
+   paper; the watercolor pigment-cloud abstraction anchors corners with
+   brand-hue color. Both adapt to light/dark via blend mode + opacity. */
+.ambient-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>");
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.ambient-watercolor {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+:root[data-theme="light"] .ambient-grain {
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+:root[data-theme="light"] .ambient-watercolor {
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+
 /* ─── Focus visible (global) ──────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -362,6 +396,8 @@ body {
 
   /* Global chrome */
   nav { display: none !important; }
+  .ambient-grain,
+  .ambient-watercolor { display: none !important; }
 
   /* Reset main content so the sidebar margin doesn't push content off-page */
   main {
