@@ -268,6 +268,34 @@ export const ESPN: SportsProvider = {
   },
 };
 
+// ESPN season-type IDs: 1=preseason, 2=regular, 3=postseason, 5=NBA play-in.
+// We merge {2, 3, 5} so postseason/play-in games don't get dropped (#268).
+const SCHEDULE_SEASON_TYPES = [2, 3, 5] as const;
+
+async function fetchScheduleEvents(
+  league_id: string,
+  team_id: string,
+  season: number,
+): Promise<RawEvent[]> {
+  const responses = await Promise.all(
+    SCHEDULE_SEASON_TYPES.map((st) =>
+      get<{ events: RawEvent[] | null }>(
+        `${SITE_BASE}/sports/${league_id}/teams/${team_id}/schedule?season=${season}&seasontype=${st}`,
+      ),
+    ),
+  );
+  const seen = new Set<string>();
+  const merged: RawEvent[] = [];
+  for (const r of responses) {
+    for (const e of r?.events ?? []) {
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+      merged.push(e);
+    }
+  }
+  return merged;
+}
+
 // Extra helpers used by syncSports — these need league context that the
 // SportsProvider interface doesn't currently carry on getUpcoming/getRecent.
 // We expose league-aware variants and let syncSports call them directly.
@@ -288,12 +316,17 @@ export async function espnGetUpcoming(
   }
 
   const season = currentSeason(league_id);
-  const json = await get<{ events: RawEvent[] | null }>(
-    `${SITE_BASE}/sports/${league_id}/teams/${team_id}/schedule?season=${season}&seasontype=2`,
-  );
-  const events = (json?.events ?? []).filter(
-    (e) => !e.competitions?.[0]?.status.type.completed,
-  );
+  const nowIso = new Date().toISOString();
+  const raw = await fetchScheduleEvents(league_id, team_id, season);
+  // Guard against ESPN data quirks where a finished game is flagged
+  // `completed: false` (seen on postponed/relocated games). Past-dated
+  // events never belong in "upcoming" regardless of flags.
+  const events = raw.filter((e) => {
+    const st = e.competitions?.[0]?.status.type;
+    if (!st) return false;
+    if (st.completed || st.state === "post") return false;
+    return e.date >= nowIso;
+  });
   const games: Game[] = [];
   for (const e of events) {
     const g = toGame(e, team_id);
@@ -319,12 +352,13 @@ export async function espnGetRecent(
   }
 
   const season = currentSeason(league_id);
-  const json = await get<{ events: RawEvent[] | null }>(
-    `${SITE_BASE}/sports/${league_id}/teams/${team_id}/schedule?season=${season}&seasontype=2`,
-  );
-  const events = (json?.events ?? []).filter(
-    (e) => e.competitions?.[0]?.status.type.completed,
-  );
+  const nowIso = new Date().toISOString();
+  const raw = await fetchScheduleEvents(league_id, team_id, season);
+  const events = raw.filter((e) => {
+    const st = e.competitions?.[0]?.status.type;
+    if (!st) return false;
+    return (st.completed || st.state === "post") && e.date < nowIso;
+  });
   const games: Game[] = [];
   for (const e of events) {
     const g = toGame(e, team_id);
