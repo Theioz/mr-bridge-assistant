@@ -7,14 +7,12 @@ import { getWindow } from "@/lib/window";
 
 export const metadata: Metadata = {
   title: "Fitness",
-  description: "Body composition, workout frequency, active calories, and goal trends.",
+  description: "Body composition, recovery, sleep, and activity trends.",
 };
 import { WindowSelector } from "@/components/ui/window-selector";
-import { BodyCompDualChart } from "@/components/fitness/body-comp-dual-chart";
-import { WorkoutFreqChart } from "@/components/fitness/workout-freq-chart";
-import { ActiveCalGoalChart } from "@/components/fitness/active-cal-goal-chart";
-import { WeightGoalChart } from "@/components/fitness/weight-goal-chart";
-import { BodyFatGoalChart } from "@/components/fitness/body-fat-goal-chart";
+import { BodyCompTrends } from "@/components/fitness/body-comp-trends";
+import { RecoveryTrends } from "@/components/fitness/recovery-trends";
+import { ActivityTrends } from "@/components/fitness/activity-trends";
 import { WorkoutHistoryTable } from "@/components/fitness/workout-history-table";
 import { WeeklyWorkoutPlan } from "@/components/fitness/weekly-workout-plan";
 import { RecentSessionsList } from "@/components/fitness/recent-sessions-list";
@@ -36,11 +34,14 @@ export default async function FitnessPage() {
 
   // Current ISO week bounds (Mon–Sun) in user's local timezone
   const todayStr = todayString();
-  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+  const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7;
   const mondayStr = addDays(todayStr, -dow);
   const sundayStr = addDays(mondayStr, 6);
 
   const strengthSessionsSince = daysAgoString(89);
+  // Recovery-trend window: always at least 30 days so HRV / RHR panels stay
+  // populated even when the user picks a 7d or 14d top-level range.
+  const recoveryDays = Math.max(days, 30);
 
   const [
     fitnessRes,
@@ -59,12 +60,12 @@ export default async function FitnessPage() {
     supabase
       .from("workout_sessions")
       .select("*")
-      .gte("date", daysAgoString((weekCount * 7) - 1))
+      .gte("date", daysAgoString(weekCount * 7 - 1))
       .order("date", { ascending: false }),
     supabase
       .from("recovery_metrics")
-      .select("date,active_cal")
-      .gte("date", daysAgoString((weekCount * 7) - 1))
+      .select("*")
+      .gte("date", daysAgoString(recoveryDays - 1))
       .order("date", { ascending: true }),
     supabase
       .from("profile")
@@ -91,20 +92,21 @@ export default async function FitnessPage() {
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
   const allWorkouts = (workoutsRes.data ?? []) as WorkoutSession[];
-  const recoveryData = (recoveryRes.data ?? []) as Pick<RecoveryMetrics, "date" | "active_cal">[];
+  const recoveryAll = (recoveryRes.data ?? []) as RecoveryMetrics[];
   const weeklyPlans = (weeklyPlansRes.data ?? []) as WorkoutPlan[];
   const completedDates = allWorkouts
     .filter((w) => w.date >= mondayStr && w.date <= sundayStr)
     .map((w) => w.date);
 
-  const workouts     = allWorkouts.filter((w) => !/walk/i.test(w.activity));
+  const workouts = allWorkouts.filter((w) => !/walk/i.test(w.activity));
   const walkSessions = allWorkouts.filter((w) => /walk/i.test(w.activity));
-
-  // "Walks this week" = last 7 days
   const weekStart = daysAgoString(6);
   const walksThisWeek = walkSessions.filter((w) => w.date >= weekStart);
-  const walkCount    = walksThisWeek.length;
-  const walkDuration = walksThisWeek.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
+  const walkCount = walksThisWeek.length;
+  const walkDuration = walksThisWeek.reduce(
+    (s, w) => s + (w.duration_mins ?? 0),
+    0
+  );
 
   const goals: Record<string, number | null> = {};
   let rawWeightUnit: string | null = null;
@@ -118,12 +120,19 @@ export default async function FitnessPage() {
   }
   const weightUnit = parseWeightUnit(rawWeightUnit);
 
-  const weeklyWorkoutGoal   = goals["weekly_workout_goal"]   ?? null;
+  const weeklyWorkoutGoal = goals["weekly_workout_goal"] ?? null;
   const weeklyActiveCalGoal = goals["weekly_active_cal_goal"] ?? null;
-  const weightGoal          = goals["weight_goal_lbs"]        ?? null;
-  const bodyFatGoal         = goals["body_fat_goal_pct"]      ?? null;
+  const weightGoal = goals["weight_goal_lbs"] ?? null;
+  const bodyFatGoal = goals["body_fat_goal_pct"] ?? null;
 
   const latest = fitnessData[fitnessData.length - 1] ?? null;
+  const latestRecovery = recoveryAll[recoveryAll.length - 1] ?? null;
+
+  // Active-cal chart is scoped to the top-level window; recovery panels
+  // always lean on the 30-day slice.
+  const activeCalWindow = recoveryAll
+    .filter((r) => r.date >= daysAgoString(weekCount * 7 - 1))
+    .map((r) => ({ date: r.date, active_cal: r.active_cal }));
 
   type SessionWithSets = StrengthSession & { sets: StrengthSessionSet[] };
   const strengthSessions = (strengthSessionsRes.data ?? []) as SessionWithSets[];
@@ -133,23 +142,47 @@ export default async function FitnessPage() {
   const topExercises = rankExercisesByVolume(strengthSessions, 3);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "var(--space-7)" }}
+    >
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      <header
+        className="flex items-start justify-between flex-wrap"
+        style={{ gap: "var(--space-4)" }}
+      >
+        <div className="flex flex-col" style={{ gap: "var(--space-2)" }}>
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-display), system-ui, sans-serif",
+              fontSize: "var(--t-h1)",
+              fontWeight: 600,
+              color: "var(--color-text)",
+              letterSpacing: "-0.02em",
+            }}
+          >
             Fitness
           </h1>
-          {latest && (
-            <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
-              {latest.weight_lb} lb · {latest.body_fat_pct}% body fat · {latest.date}
-            </p>
-          )}
+          <p
+            className="tnum"
+            style={{
+              margin: 0,
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            <FitnessSubtitle
+              latest={latest}
+              latestRecovery={latestRecovery}
+              weightUnit={weightUnit}
+            />
+          </p>
         </div>
         <WindowSelector current={windowKey} />
-      </div>
+      </header>
 
-      {/* Weekly workout program */}
+      {/* ── Weekly program ───────────────────────────────────────────── */}
       <WeeklyWorkoutPlan
         plans={weeklyPlans}
         completedDates={completedDates}
@@ -158,77 +191,107 @@ export default async function FitnessPage() {
         weightUnit={weightUnit}
       />
 
+      {/* ── Top exercises ────────────────────────────────────────────── */}
       {topExercises.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {topExercises.map((ex) => (
-            <ExerciseSparkline
-              key={ex.name}
-              exerciseName={ex.name}
-              points={ex.points}
-              unit={weightUnit}
-            />
-          ))}
-        </div>
+        <section
+          className="flex flex-col"
+          style={{ gap: "var(--space-3)", minWidth: 0 }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-display), system-ui, sans-serif",
+              fontSize: "var(--t-h2)",
+              fontWeight: 600,
+              color: "var(--color-text)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Top exercises
+          </h2>
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            style={{ gap: "var(--space-5)" }}
+          >
+            {topExercises.map((ex) => (
+              <ExerciseSparkline
+                key={ex.name}
+                exerciseName={ex.name}
+                points={ex.points}
+                unit={weightUnit}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
+      {/* ── Recent sessions ──────────────────────────────────────────── */}
       <RecentSessionsList sessions={recentSessions} unit={weightUnit} />
 
-      {/* Body composition trend */}
-      <BodyCompDualChart data={fitnessData} windowLabel={windowKey.toUpperCase()} windowKey={windowKey} />
+      {/* ── Body composition ─────────────────────────────────────────── */}
+      <BodyCompTrends
+        data={fitnessData}
+        windowKey={windowKey}
+        weightGoal={weightGoal}
+        bodyFatGoal={bodyFatGoal}
+      />
 
-      {/* Weekly frequency + active cal vs goals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
-          <WorkoutFreqChart
-            sessions={workouts}
-            days={days}
-            goal={weeklyWorkoutGoal}
-          />
-          {walkCount > 0 && (
-            <div
-              className="rounded-lg px-4 py-2.5 flex items-center gap-3"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <span className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-                Walks this week
-              </span>
-              <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--color-text)" }}>
-                {walkCount}
-              </span>
-              {walkDuration > 0 && (
-                <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                  {walkDuration >= 60 ? `${Math.floor(walkDuration / 60)}h ${walkDuration % 60}m` : `${walkDuration}m`}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <ActiveCalGoalChart
-          data={recoveryData}
-          goal={weeklyActiveCalGoal}
-          days={days}
-        />
-      </div>
+      {/* ── Recovery + sleep ─────────────────────────────────────────── */}
+      <RecoveryTrends trends={recoveryAll} />
 
-      {/* Weight + body fat progress toward goals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WeightGoalChart
-          data={fitnessData}
-          goal={weightGoal}
-          windowLabel={windowKey.toUpperCase()}
-          windowKey={windowKey}
-        />
-        <BodyFatGoalChart
-          data={fitnessData}
-          goal={bodyFatGoal}
-          windowLabel={windowKey.toUpperCase()}
-          windowKey={windowKey}
-        />
-      </div>
+      {/* ── Activity ─────────────────────────────────────────────────── */}
+      <ActivityTrends
+        sessions={workouts}
+        recovery={activeCalWindow}
+        days={days}
+        weeklyWorkoutGoal={weeklyWorkoutGoal}
+        weeklyActiveCalGoal={weeklyActiveCalGoal}
+        walkCount={walkCount}
+        walkDuration={walkDuration}
+      />
 
+      {/* ── Workout history ──────────────────────────────────────────── */}
       <WorkoutHistoryTable workouts={allWorkouts} />
     </div>
   );
+}
+
+function FitnessSubtitle({
+  latest,
+  latestRecovery,
+  weightUnit,
+}: {
+  latest: FitnessLog | null;
+  latestRecovery: RecoveryMetrics | null;
+  weightUnit: "lb" | "kg";
+}) {
+  const parts: string[] = [];
+  if (latest) {
+    if (latest.weight_lb != null) {
+      parts.push(`${latest.weight_lb} ${weightUnit}`);
+    }
+    if (latest.body_fat_pct != null) {
+      parts.push(`${latest.body_fat_pct}% body fat`);
+    }
+    parts.push(latest.date);
+  }
+  if (latestRecovery) {
+    const extras: string[] = [];
+    if (latestRecovery.readiness != null) {
+      extras.push(`readiness ${latestRecovery.readiness}`);
+    }
+    if (latestRecovery.avg_hrv != null) {
+      extras.push(`HRV ${Math.round(latestRecovery.avg_hrv)} ms`);
+    }
+    if (latestRecovery.resting_hr != null) {
+      extras.push(`RHR ${Math.round(latestRecovery.resting_hr)} bpm`);
+    }
+    if (extras.length > 0) {
+      parts.push(extras.join(" · "));
+    }
+  }
+  if (parts.length === 0) return <>No data yet</>;
+  return <>{parts.join(" · ")}</>;
 }
 
 interface SparklinePoint {
@@ -241,7 +304,14 @@ function rankExercisesByVolume(
   sessions: (StrengthSession & { sets: StrengthSessionSet[] })[],
   limit: number
 ): { name: string; points: SparklinePoint[] }[] {
-  const byExercise = new Map<string, { displayName: string; volume: number; sessionTops: Map<string, SparklinePoint> }>();
+  const byExercise = new Map<
+    string,
+    {
+      displayName: string;
+      volume: number;
+      sessionTops: Map<string, SparklinePoint>;
+    }
+  >();
 
   for (const session of sessions) {
     for (const set of session.sets) {
