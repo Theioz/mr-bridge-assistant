@@ -21,6 +21,7 @@ import ImportantEmails from "@/components/dashboard/important-emails";
 import TasksSummary from "@/components/dashboard/tasks-summary";
 import { WatchlistWidget } from "@/components/dashboard/watchlist-widget";
 import { SportsCard } from "@/components/dashboard/sports-card";
+import { WindowSelector } from "@/components/ui/window-selector";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task, StocksCache, SportsCache } from "@/lib/types";
@@ -220,6 +221,23 @@ export default async function DashboardPage() {
 
       {/* ── Header: greeting + date + weather + sync + window ───────── */}
       <DashboardHeader greeting={greeting} dateStr={dateStr} windowKey={windowKey} />
+
+      {/* Mobile-only sticky time-range selector (desktop keeps it in header) */}
+      <div
+        className="lg:hidden"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--color-bg)",
+          borderBottom: "1px solid var(--color-border)",
+          marginLeft: "-20px",
+          marginRight: "-20px",
+          padding: "8px 20px",
+        }}
+      >
+        <WindowSelector current={windowKey} />
+      </div>
 
       {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
       <UpcomingBirthdayWidget />

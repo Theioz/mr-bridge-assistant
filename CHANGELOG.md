@@ -7,7 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Added (PWA installability — issue #261, Phase 1)
+### Fixed (mobile dashboard layout — issues #258 + #259)
+- **Dashboard header stacks cleanly on mobile.** [web/src/components/dashboard/dashboard-header.tsx](web/src/components/dashboard/dashboard-header.tsx) now renders greeting + Sync button on line 1, date on line 2, weather on line 3 below the `lg:` (1024px) breakpoint; desktop row layout is preserved.
+- **Time-range pills stick to the top on mobile.** [web/src/app/(protected)/dashboard/page.tsx](web/src/app/(protected)/dashboard/page.tsx) renders a mobile-only sticky wrapper (`position: sticky; top: 0; background: var(--color-bg)`) containing the `WindowSelector` below the header, bleeding full-width via negative horizontal margins against the page's `px-5` padding. Desktop keeps the selector in the header's right column.
+- **Sports card team rows stack vertically on mobile.** [web/src/components/dashboard/sports-card.tsx](web/src/components/dashboard/sports-card.tsx) `TeamRow` reshapes below `lg:` to logo (left-anchored) + three-line text stack (team name, next game, last result) + chevron (self-centered, right-anchored). Team names no longer truncate at 375px — `break-words` wraps; `lg:truncate` restores the desktop behaviour. Removed the inline `<style>` block that hid `.sports-card-league` at max-width 480px; the league subtitle is now gated via `hidden lg:block`.
 - **`web/public/manifest.json` expanded** with 192/512 PNG icons, dark `theme_color` / `background_color` (`#0B0F19`), `start_url: /dashboard`, `display: standalone`, and `scope: /`.
 - **App-shell service worker at [web/public/sw.js](web/public/sw.js).** Cache-first for `/_next/static/*`, `/icon*`, `/manifest.json`, and Google Fonts origins. Skips API, auth, and navigation requests — no data caching. Registered via [web/src/components/service-worker-register.tsx](web/src/components/service-worker-register.tsx), production-only (dev builds never register a SW).
 - **`<meta name="theme-color">` wired via `viewport.themeColor`** in [web/src/app/layout.tsx](web/src/app/layout.tsx). Existing `metadata.manifest` and the auto-generated `<link rel="apple-touch-icon">` from `src/app/apple-icon.png` cover the remaining head tags.

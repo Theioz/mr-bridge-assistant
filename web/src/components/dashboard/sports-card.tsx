@@ -121,22 +121,34 @@ function TeamRow({ row, favorite }: {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-5 py-3 cursor-pointer text-left"
+        className="w-full flex items-start gap-3 px-5 py-3 cursor-pointer text-left lg:items-center"
         style={{ background: "transparent" }}
       >
         <TeamLogo src={favorite.badge ?? null} name={favorite.name} color={favorite.color} />
         <div className="flex-1 min-w-0">
           <p
-            className="font-heading font-semibold truncate"
+            className="font-heading font-semibold break-words lg:truncate"
             style={{ fontSize: 14, color: "var(--color-text)", letterSpacing: "0.02em" }}
           >
             {favorite.name}
           </p>
-          <p className="sports-card-league" style={{ fontSize: 10, color: "var(--color-text-faint)", marginTop: 2 }}>
+          <p
+            className="hidden lg:block"
+            style={{ fontSize: 10, color: "var(--color-text-faint)", marginTop: 2 }}
+          >
             {favorite.league}
           </p>
+          <p className="lg:hidden" style={{ fontSize: 12, color: "var(--color-text)", marginTop: 2 }}>
+            {nextGameLabel(next, favorite.league)}
+          </p>
+          <p
+            className="lg:hidden"
+            style={{ fontSize: 11, color: lastLabel?.color ?? "var(--color-text-faint)", marginTop: 2 }}
+          >
+            {lastLabel?.text ?? "No recent result"}
+          </p>
         </div>
-        <div className="flex-shrink-0 text-right" style={{ minWidth: 130 }}>
+        <div className="hidden lg:block flex-shrink-0 text-right" style={{ minWidth: 130 }}>
           <p style={{ fontSize: 12, color: "var(--color-text)" }}>
             {nextGameLabel(next, favorite.league)}
           </p>
@@ -144,7 +156,7 @@ function TeamRow({ row, favorite }: {
             {lastLabel?.text ?? "No recent result"}
           </p>
         </div>
-        <span style={{ color: "var(--color-text-faint)" }}>
+        <span className="self-center flex-shrink-0" style={{ color: "var(--color-text-faint)" }}>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -214,80 +226,72 @@ export function SportsCard({ rows, favorites, refreshAction }: Props) {
   const rowsByTeamId = new Map(rows.map((r) => [`${r.team_id}|${r.league}`, r]));
 
   return (
-    <>
-      <style>{`
-        @media (max-width: 480px) {
-          .sports-card-league { display: none; }
-        }
-      `}</style>
-
+    <div
+      className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
       <div
-        className="rounded-xl overflow-hidden transition-all duration-200 card-lift"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        className="flex items-center justify-between px-5 py-3.5"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
       >
-        <div
-          className="flex items-center justify-between px-5 py-3.5"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
+        <p
+          className="text-xs uppercase tracking-widest"
+          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
         >
-          <p
-            className="text-xs uppercase tracking-widest"
-            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
+          Sports
+        </p>
+        {favorites.length > 0 && (
+          <button
+            onClick={handleRefresh}
+            disabled={isPending}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+            style={{
+              background: "var(--color-surface-raised)",
+              border: "1px solid var(--color-border)",
+              color: isPending ? "var(--color-primary)" : "var(--color-text-muted)",
+            }}
           >
-            Sports
-          </p>
-          {favorites.length > 0 && (
-            <button
-              onClick={handleRefresh}
-              disabled={isPending}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
-              style={{
-                background: "var(--color-surface-raised)",
-                border: "1px solid var(--color-border)",
-                color: isPending ? "var(--color-primary)" : "var(--color-text-muted)",
-              }}
-            >
-              {isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-              {isPending ? "Refreshing…" : "Refresh"}
-            </button>
-          )}
-        </div>
-
-        {favorites.length === 0 ? (
-          <div className="px-5">
-            <EmptyState
-              icon={Trophy}
-              actionHref="/settings#sports"
-              actionLabel="Add"
-            >
-              No teams on watchlist
-            </EmptyState>
-          </div>
-        ) : (
-          <div style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 0.15s" }}>
-            {favorites.map((fav) => {
-              const row = rowsByTeamId.get(`${fav.team_id}|${fav.league}`);
-              if (!row) {
-                return (
-                  <div
-                    key={`${fav.league}-${fav.team_id}`}
-                    className="flex items-center gap-3 px-5 py-3"
-                    style={{ borderBottom: "1px solid var(--color-border)" }}
-                  >
-                    <TeamLogo src={fav.badge} name={fav.name} color={fav.color} />
-                    <div className="flex-1">
-                      <p style={{ fontSize: 14, color: "var(--color-text)" }}>{fav.name}</p>
-                      <p style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 2 }}>
-                        Awaiting first sync — hit Refresh
-                      </p>
-                    </div>
-                  </div>
-                );
-              }
-              return <TeamRow key={`${fav.league}-${fav.team_id}`} row={row} favorite={fav} />;
-            })}
-          </div>
+            {isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+            {isPending ? "Refreshing…" : "Refresh"}
+          </button>
         )}
       </div>
-    </>
+
+      {favorites.length === 0 ? (
+        <div className="px-5">
+          <EmptyState
+            icon={Trophy}
+            actionHref="/settings#sports"
+            actionLabel="Add"
+          >
+            No teams on watchlist
+          </EmptyState>
+        </div>
+      ) : (
+        <div style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 0.15s" }}>
+          {favorites.map((fav) => {
+            const row = rowsByTeamId.get(`${fav.team_id}|${fav.league}`);
+            if (!row) {
+              return (
+                <div
+                  key={`${fav.league}-${fav.team_id}`}
+                  className="flex items-center gap-3 px-5 py-3"
+                  style={{ borderBottom: "1px solid var(--color-border)" }}
+                >
+                  <TeamLogo src={fav.badge} name={fav.name} color={fav.color} />
+                  <div className="flex-1">
+                    <p style={{ fontSize: 14, color: "var(--color-text)" }}>{fav.name}</p>
+                    <p style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 2 }}>
+                      Awaiting first sync — hit Refresh
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            return <TeamRow key={`${fav.league}-${fav.team_id}`} row={row} favorite={fav} />;
+          })}
+        </div>
+      )}
+    </div>
   );
 }
