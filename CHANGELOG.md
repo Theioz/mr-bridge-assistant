@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (UI/UX mop-up — issues #253 + #254)
+- **Inline hover handlers replaced.** 5 remaining `onMouseOver/Out` sites in settings (profile-form, watchlist-settings, sports-settings) and dashboard (watchlist-widget) now use CSS utility classes (`hover-text-muted`, `hover-text-danger`, `hover-bg-subtle`, `hover-text-brighten`) instead of writing `.style.*` directly.
+- **Hardcoded `color: "white"` tokenized.** 10 sites across chat, tasks, error pages, notifications, and layout now use `var(--color-text-on-cta)`.
+- **`color-mix()` removed from MealsClient.** Replaced with existing subtle tokens (`--color-primary-dim`, `--color-positive-subtle`) for Safari <16.4 compatibility.
+- **Mobile demo banner wrap-safety.** Added `overflow-hidden text-ellipsis whitespace-nowrap` to match the desktop variant.
+- **Form focus/blur inline styles migrated.** New `.input-focus-ring` CSS utility in `globals.css` replaces `onFocus/onBlur` handlers in profile-form, watchlist-settings, and sports-settings.
+- **CI token guards added.** `scripts/lint-tokens.sh` with 4 grep guards (onMouseOver/Out, hardcoded white, color-mix outside globals.css, raw hex outside allowlist) wired into GitHub Actions on PRs touching `web/src/`.
+
 ### Fixed (update_workout_exercise silent no-op on swaps — issue #239)
 - **Bridge claimed it had swapped an exercise but the Fitness tab still showed the old name.** The `update_workout_exercise` tool's `updates` schema in [web/src/app/api/chat/route.ts](web/src/app/api/chat/route.ts) only accepted `sets | reps | weight_lbs | notes` — there was no way to change the exercise name. When asked to "replace Bent Over Row with DB Reverse Fly", the rename was dropped by JSON-schema validation, the UPDATE ran with an unchanged array, and Bridge confidently reported success. Schema now accepts `updates.exercise` for swaps/renames, and the tool returns an error when `updates` is empty so Bridge can tell the user truthfully instead of falsely confirming.
 
