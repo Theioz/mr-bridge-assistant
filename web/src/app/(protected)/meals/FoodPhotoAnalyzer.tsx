@@ -407,7 +407,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
             style={{
               background: active ? "var(--color-primary)" : "transparent",
-              color: active ? "#fff" : "var(--color-text-muted)",
+              color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               cursor: "pointer",
               whiteSpace: "nowrap",
             }}
@@ -456,7 +456,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           className="rounded-lg p-3 flex flex-col gap-3"
           style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
         >
-          <div className="flex items-start gap-2" style={{ color: "var(--color-danger, #ef4444)", fontSize: 14 }}>
+          <div className="flex items-start gap-2" style={{ color: "var(--color-danger)", fontSize: 14 }}>
             <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{errorMsg}</span>
           </div>
@@ -470,7 +470,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
               style={{
                 background: "var(--color-primary)",
-                color: "#fff",
+                color: "var(--color-text-on-cta)",
                 fontSize: 13,
                 fontWeight: 500,
                 padding: "8px 14px",
@@ -563,7 +563,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
               style={{
                 background: "var(--color-primary)",
-                color: "#fff",
+                color: "var(--color-text-on-cta)",
                 fontSize: 14,
                 fontWeight: 500,
                 padding: "10px 16px",
@@ -604,7 +604,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
               style={{
                 background: "var(--color-primary)",
-                color: "#fff",
+                color: "var(--color-text-on-cta)",
                 fontSize: 15,
                 padding: "13px 24px",
                 minHeight: 48,
@@ -822,7 +822,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
           {/* Sheet error */}
           {errorMsg && scanPhase === "idle" && (
-            <div className="flex items-center gap-2" style={{ color: "var(--color-danger, #ef4444)", fontSize: 13 }}>
+            <div className="flex items-center gap-2" style={{ color: "var(--color-danger)", fontSize: 13 }}>
               <AlertCircle size={14} />
               {errorMsg}
               <button
@@ -841,7 +841,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="rounded-xl font-medium transition-opacity active:opacity-70"
               style={{
                 background: activeSheet === "log" ? "var(--color-primary)" : "var(--color-bg)",
-                color: activeSheet === "log" ? "#fff" : "var(--color-text)",
+                color: activeSheet === "log" ? "var(--color-text-on-cta)" : "var(--color-text)",
                 border: "1px solid var(--color-border)",
                 fontSize: 14,
                 padding: "10px 14px",
@@ -856,7 +856,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="rounded-xl font-medium transition-opacity active:opacity-70"
               style={{
                 background: activeSheet === "mealprep" ? "var(--color-primary)" : "var(--color-bg)",
-                color: activeSheet === "mealprep" ? "#fff" : "var(--color-text)",
+                color: activeSheet === "mealprep" ? "var(--color-text-on-cta)" : "var(--color-text)",
                 border: "1px solid var(--color-border)",
                 fontSize: 14,
                 padding: "10px 14px",
@@ -900,7 +900,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     style={{
                       ...pillBtnBase,
                       background: logMealType === t ? "var(--color-primary)" : "transparent",
-                      color: logMealType === t ? "#fff" : "var(--color-text-muted)",
+                      color: logMealType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                       borderColor: logMealType === t ? "var(--color-primary)" : "var(--color-border)",
                     }}
                   >
@@ -936,7 +936,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
                 style={{
                   background: "var(--color-primary)",
-                  color: "#fff",
+                  color: "var(--color-text-on-cta)",
                   fontSize: 15,
                   padding: "13px 20px",
                   minHeight: 48,
@@ -1004,7 +1004,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     style={{
                       ...pillBtnBase,
                       background: mealPrepType === t ? "var(--color-primary)" : "transparent",
-                      color: mealPrepType === t ? "#fff" : "var(--color-text-muted)",
+                      color: mealPrepType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                       borderColor: mealPrepType === t ? "var(--color-primary)" : "var(--color-border)",
                     }}
                   >
@@ -1019,7 +1019,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
                 style={{
                   background: "var(--color-primary)",
-                  color: "#fff",
+                  color: "var(--color-text-on-cta)",
                   fontSize: 15,
                   padding: "13px 20px",
                   minHeight: 48,
