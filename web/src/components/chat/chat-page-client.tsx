@@ -45,7 +45,7 @@ function ChatPageClientInner({
   const [refreshKey, setRefreshKey] = useState(0);
   const [timeTick, setTimeTick] = useState(0);
 
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const [showSheet, setShowSheet] = useState(false);
   const { isKeyboardOpen } = useKeyboardOpen();
 
@@ -346,22 +346,6 @@ function ChatPageClientInner({
             <History size={18} />
           </button>
 
-          <button
-            onClick={toggleDesktopHistory}
-            className={`hidden lg:flex items-center justify-center rounded-lg transition-colors duration-150 ${historyOpen ? "" : "hover-bg-subtle"}`}
-            aria-label={historyOpen ? "Close history" : "Open history"}
-            style={{
-              background: historyOpen ? "var(--color-primary-dim)" : "transparent",
-              border: "none",
-              color: historyOpen ? "var(--color-primary)" : "var(--color-text-muted)",
-              cursor: "pointer",
-              width: 36,
-              height: 36,
-            }}
-          >
-            <History size={18} />
-          </button>
-
           <h1
             className="font-heading font-semibold"
             style={{ fontSize: 24, color: "var(--color-text)" }}
@@ -389,20 +373,20 @@ function ChatPageClientInner({
 
       {/* Content row: sidebar + chat */}
       <div className="flex gap-4 items-stretch flex-1 min-h-0">
-        {historyOpen && (
-          <div className="hidden lg:block print:hidden">
-            <SessionSidebar
-              sessions={sessions}
-              archivedSessions={archivedSessions}
-              activeSessionId={activeSessionId}
-              onSessionSelect={handleSessionSelect}
-              onNewChat={handleNewChat}
-              onArchive={handleArchiveSession}
-              onRestore={handleRestoreSession}
-              timeTick={timeTick}
-            />
-          </div>
-        )}
+        <div className="hidden lg:block print:hidden">
+          <SessionSidebar
+            sessions={sessions}
+            archivedSessions={archivedSessions}
+            activeSessionId={activeSessionId}
+            onSessionSelect={handleSessionSelect}
+            onNewChat={handleNewChat}
+            onArchive={handleArchiveSession}
+            onRestore={handleRestoreSession}
+            timeTick={timeTick}
+            expanded={historyOpen}
+            onToggleExpanded={toggleDesktopHistory}
+          />
+        </div>
 
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {loadingSession ? (

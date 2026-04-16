@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, RotateCcw } from "lucide-react";
+import { Plus, Trash2, RotateCcw, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
 import type { SessionPreview } from "@/app/api/chat/sessions/route";
 import { formatRelative, daysUntilPurge } from "@/lib/relative-time";
@@ -14,6 +14,8 @@ interface Props {
   onArchive: (id: string) => void;
   onRestore: (id: string) => void;
   timeTick: number;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
 const OLDER_THRESHOLD_DAYS = 30;
@@ -27,6 +29,8 @@ export default function SessionSidebar({
   onArchive,
   onRestore,
   timeTick,
+  expanded,
+  onToggleExpanded,
 }: Props) {
   const [olderExpanded, setOlderExpanded] = useState(false);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
@@ -43,8 +47,9 @@ export default function SessionSidebar({
 
   return (
     <aside
+      aria-label="Chat history"
       style={{
-        width: 260,
+        width: expanded ? 280 : 56,
         flexShrink: 0,
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
@@ -53,29 +58,69 @@ export default function SessionSidebar({
         flexDirection: "column",
         overflow: "hidden",
         alignSelf: "flex-start",
-        maxHeight: "calc(100dvh - var(--header-height))",
+        position: "sticky",
+        top: "2rem",
+        maxHeight: "calc(100dvh - 4rem)",
+        transition: "width 180ms ease",
       }}
     >
-      <div style={{ padding: "12px 12px 8px" }}>
+      <div
+        style={{
+          padding: expanded ? "8px 12px 0" : "8px 4px 0",
+          display: "flex",
+          justifyContent: expanded ? "flex-end" : "center",
+        }}
+      >
+        <button
+          onClick={onToggleExpanded}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          className="flex items-center justify-center cursor-pointer transition-colors duration-150 hover-bg-subtle"
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "var(--color-text-muted)",
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            flexShrink: 0,
+          }}
+        >
+          {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+        </button>
+      </div>
+
+      <div
+        style={{
+          padding: expanded ? "8px 12px 8px" : "4px 4px 8px",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
         <button
           onClick={onNewChat}
-          className="flex items-center gap-2 w-full cursor-pointer transition-opacity duration-150 hover:opacity-85"
+          aria-label={expanded ? undefined : "New chat"}
+          className="flex items-center cursor-pointer transition-opacity duration-150 hover:opacity-85"
           style={{
             background: "var(--color-primary)",
             color: "var(--color-text-on-cta)",
             border: "none",
             borderRadius: 8,
-            padding: "10px 14px",
+            width: expanded ? "100%" : 48,
+            height: 48,
+            padding: expanded ? "10px 14px" : 0,
             fontSize: 13,
             fontWeight: 500,
-            minHeight: 48,
+            justifyContent: "center",
+            gap: expanded ? 8 : 0,
           }}
         >
-          <Plus size={15} />
-          New chat
+          <Plus size={expanded ? 15 : 18} />
+          {expanded && "New chat"}
         </button>
       </div>
 
+      {expanded && (
       <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
         {recent.map((s) => (
           <SessionRow
@@ -157,6 +202,7 @@ export default function SessionSidebar({
           </>
         )}
       </div>
+      )}
     </aside>
   );
 }
