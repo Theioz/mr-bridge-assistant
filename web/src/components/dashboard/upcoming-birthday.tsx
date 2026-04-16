@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift } from "lucide-react";
 import type { UpcomingBirthday } from "@/app/api/google/calendar/upcoming-birthday/route";
 
 function formatDisplayDate(dateStr: string): string {
@@ -21,42 +20,43 @@ export default function UpcomingBirthdayWidget() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Return an empty but height-stable container while loading to prevent CLS.
-  // Once loaded, collapse if there's no birthday (no shift — loading skeleton
-  // already occupies the slot).
   if (loading) {
-    return <div style={{ minHeight: "2.25rem" }} />;
+    return <div style={{ minHeight: "1.75rem" }} aria-hidden />;
   }
   if (!birthday) return null;
 
   const isToday = birthday.daysUntil === 0;
   const label = isToday
-    ? "Today!"
-    : `in ${birthday.daysUntil} day${birthday.daysUntil === 1 ? "" : "s"} (${formatDisplayDate(birthday.date)})`;
-
-  const containerStyle: React.CSSProperties = isToday
-    ? {
-        background: "var(--color-cta-subtle)",
-        border: "1px solid var(--color-cta-subtle-strong)",
-        color: "var(--color-cta)",
-      }
-    : {
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        color: "var(--color-text-muted)",
-      };
+    ? "today"
+    : `in ${birthday.daysUntil} day${birthday.daysUntil === 1 ? "" : "s"} · ${formatDisplayDate(birthday.date)}`;
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={containerStyle}>
-      <Gift size={13} style={{ color: "var(--color-cta)", flexShrink: 0 }} aria-label="Birthday" role="img" />
-      <span>
-        <span style={{ color: isToday ? "var(--color-cta)" : "var(--color-text)", fontWeight: isToday ? 500 : 400 }}>
-          {birthday.name}&apos;s birthday
-        </span>
-        {" — "}
-        <span style={{ color: isToday ? "var(--color-cta)" : "var(--color-text-muted)", fontWeight: isToday ? 600 : 400 }}>
-          {label}
-        </span>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        padding: "var(--space-2) 0",
+        borderTop: "1px solid var(--rule-soft)",
+        borderBottom: "1px solid var(--rule-soft)",
+        fontSize: "var(--t-meta)",
+        color: "var(--color-text-muted)",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: "var(--accent)",
+        }}
+      />
+      <span style={{ color: "var(--color-text)", fontWeight: isToday ? 500 : 400 }}>
+        {birthday.name}&apos;s birthday
+      </span>
+      <span style={{ color: "var(--color-text-faint)" }} className="tnum">
+        {label}
       </span>
     </div>
   );

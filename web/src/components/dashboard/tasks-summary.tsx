@@ -9,17 +9,7 @@ interface Props {
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 } as const;
 
-const PRIORITY_COLOR: Record<string, string> = {
-  high:   "var(--color-danger)",
-  medium: "var(--color-warning)",
-  low:    "var(--color-text-faint)",
-};
-
 export default function TasksSummary({ tasks }: Props) {
-  const high   = tasks.filter((t) => t.priority === "high").length;
-  const medium = tasks.filter((t) => t.priority === "medium").length;
-  const low    = tasks.filter((t) => t.priority === "low").length;
-
   const topTasks = [...tasks].sort(
     (a, b) =>
       (PRIORITY_ORDER[a.priority ?? "low"] ?? 2) -
@@ -27,62 +17,72 @@ export default function TasksSummary({ tasks }: Props) {
   );
 
   return (
-    <Link
-      href="/tasks"
-      className="block rounded-xl p-4 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <p
-        className="text-xs uppercase tracking-widest mb-3"
-        style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-      >
-        Active tasks
-      </p>
+    <section>
+      <h2 className="db-section-label">
+        Tasks
+        {tasks.length > 0 && <span className="meta">· {tasks.length} active</span>}
+      </h2>
 
-      {/* Count + breakdown */}
-      <div className="flex items-baseline gap-3">
-        <p className="font-heading font-bold" style={{ fontSize: 28, color: "var(--color-text)" }}>
-          {tasks.length}
-        </p>
-        {tasks.length > 0 && (
-          <div className="flex gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {high   > 0 && <span><span style={{ color: "var(--color-danger)"  }}>{high}</span> high</span>}
-            {medium > 0 && <span><span style={{ color: "var(--color-warning)" }}>{medium}</span> med</span>}
-            {low    > 0 && <span><span style={{ color: "var(--color-text-muted)" }}>{low}</span> low</span>}
-          </div>
-        )}
-      </div>
-
-      {/* All tasks with inner scroll */}
-      {topTasks.length > 0 && (
-        <div className="mt-3 space-y-1.5 overflow-y-auto scroll-fade-mask" style={{ maxHeight: 160 }}>
+      {topTasks.length > 0 ? (
+        <ul
+          className="scroll-fade-mask"
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            maxHeight: 240,
+            overflowY: "auto",
+          }}
+        >
           {topTasks.map((t) => {
-            const dot = PRIORITY_COLOR[t.priority ?? "low"] ?? PRIORITY_COLOR.low;
+            const attn = t.priority === "high";
             return (
-              <div key={t.id} className="flex items-center gap-2 min-w-0">
+              <li
+                key={t.id}
+                className="db-row"
+                style={{ gridTemplateColumns: "auto 1fr auto", fontSize: "var(--t-body)" }}
+              >
                 <span
-                  className="flex-shrink-0 rounded-full"
-                  style={{ width: 5, height: 5, background: dot }}
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 999,
+                    background: attn ? "var(--accent)" : "var(--color-text-faint)",
+                    alignSelf: "center",
+                  }}
+                  aria-hidden
                 />
-                <p className="text-xs truncate flex-1" style={{ color: "var(--color-text-muted)" }}>
+                <Link
+                  href="/tasks"
+                  style={{
+                    color: "var(--color-text)",
+                    textDecoration: "none",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {t.title}
-                </p>
+                </Link>
                 {t.due_date && (
-                  <span className="text-xs flex-shrink-0" style={{ color: "var(--color-text-faint)" }}>
+                  <span
+                    className="tnum"
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                    }}
+                  >
                     {t.due_date.slice(5).replace("-", "/")}
                   </span>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
+      ) : (
+        <EmptyState icon={ListTodo} paddingY={16}>No active tasks</EmptyState>
       )}
-
-      {tasks.length === 0 && (
-        <div className="mt-2">
-          <EmptyState icon={ListTodo} paddingY={8}>No active tasks</EmptyState>
-        </div>
-      )}
-    </Link>
+    </section>
   );
 }

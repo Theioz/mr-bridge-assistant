@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Mail } from "lucide-react";
+import EmptyState from "./empty-state";
 import type { EmailSummary } from "@/app/api/google/gmail/route";
 
 export default function ImportantEmails() {
@@ -13,89 +14,113 @@ export default function ImportantEmails() {
     fetch("/api/google/gmail")
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) { setError(true); return; }
+        if (d.error) {
+          setError(true);
+          return;
+        }
         setEmails(d.emails ?? []);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
-  const muted = { color: "var(--color-text-muted)" };
-  const faint = { color: "var(--color-text-faint)" };
-  const text = { color: "var(--color-text)" };
-
   return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Mail size={13} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
-        <p className="text-xs uppercase tracking-wide" style={muted}>Important Emails</p>
-      </div>
+    <section className="db-section">
+      <h2 className="db-section-label">Inbox</h2>
 
       {loading ? (
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           {[1, 2].map((i) => (
-            <div key={i} className="space-y-1.5">
-              <div className="h-3 rounded animate-pulse w-1/3" style={{ background: "var(--color-surface-raised)" }} />
-              <div className="h-3 rounded animate-pulse w-4/5" style={{ background: "var(--color-surface-raised)" }} />
+            <div key={i} style={{ padding: "var(--space-3) 0" }}>
+              <div className="skeleton" style={{ height: 12, width: "30%", marginBottom: 6 }} />
+              <div className="skeleton" style={{ height: 14, width: "80%" }} />
             </div>
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm" style={{ color: "var(--color-danger)" }}>Failed to load — check Google credentials</p>
+        <p style={{ color: "var(--color-danger)", fontSize: "var(--t-meta)" }}>
+          Failed to load — check Google credentials
+        </p>
       ) : emails.length > 0 ? (
-        <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-          {emails.map((email, i) => (
-            <div key={i} className="py-2.5 first:pt-0 last:pb-0 min-w-0">
-              <div className="flex items-baseline justify-between gap-3 mb-0.5">
-                <p className="text-xs truncate" style={muted}>
-                  {email.from}
-                  {email.account === "professional" && (
-                    <span className="ml-1.5 text-[10px]" style={faint}>work</span>
-                  )}
-                </p>
-                {email.receivedAt && (
-                  <p className="text-[10px] shrink-0" style={faint}>
-                    {(() => {
-                      const d = new Date(email.receivedAt);
-                      const today = new Date();
-                      const sameDay = d.toDateString() === today.toDateString();
-                      const time = d.toLocaleTimeString("en-US", {
-                        hour: "numeric", minute: "2-digit", hour12: true,
-                      });
-                      if (sameDay) return time;
-                      const wd = d.toLocaleDateString("en-US", { weekday: "short" });
-                      return `${wd} ${d.getMonth() + 1}/${d.getDate()} ${time}`;
-                    })()}
-                  </p>
-                )}
-              </div>
-              <p className="text-sm truncate" style={text}>{email.subject}</p>
-              {email.snippet && (
-                <p
-                  className="mt-1 text-xs"
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {emails.map((email, i) => {
+            const time = email.receivedAt
+              ? (() => {
+                  const d = new Date(email.receivedAt);
+                  const today = new Date();
+                  const sameDay = d.toDateString() === today.toDateString();
+                  const t = d.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                  if (sameDay) return t;
+                  return d.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" });
+                })()
+              : null;
+
+            return (
+              <li
+                key={i}
+                className="db-row"
+                style={{ gridTemplateColumns: "12px 1fr auto" }}
+              >
+                <span
+                  aria-hidden
                   style={{
-                    ...muted,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    lineClamp: 2,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxHeight: "2.6em",
+                    width: 6,
+                    height: 6,
+                    borderRadius: 999,
+                    background: "var(--accent)",
+                    alignSelf: "center",
                   }}
-                >
-                  {email.snippet}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: "var(--color-text)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {email.subject}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {email.from}
+                    {email.account === "professional" && (
+                      <span style={{ marginLeft: 6 }}>· work</span>
+                    )}
+                  </div>
+                </div>
+                {time && (
+                  <span
+                    className="tnum"
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                    }}
+                  >
+                    {time}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <p className="text-sm" style={faint}>Inbox clear</p>
+        <EmptyState icon={Mail} paddingY={16}>
+          Inbox clear
+        </EmptyState>
       )}
-    </div>
+    </section>
   );
 }
