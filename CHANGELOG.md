@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (chat agent loop — issue #223)
+- **Bridge no longer ends a turn silently.** [web/src/app/api/chat/route.ts](web/src/app/api/chat/route.ts) `onFinish` previously skipped the DB write when the model produced no text (which happens when the AI SDK loop exhausts `maxSteps` on a tool step). It now synthesizes a deterministic summary from the executed `toolCalls` (e.g. *"Done. I updated a calendar event, created a calendar event."*) and persists that as the assistant turn, with a parenthetical note when the step or token cap was the cause. If no tools ran either, it persists a visible *"I hit a snag generating a response — please try again."* so the user is never left staring at silence.
+- **Step cap raised 12 → 20 with a token-budget guardrail.** Multi-step calendar/task flows were regularly hitting the old cap on the summary step. New `TOKEN_BUDGET = 150_000` tracked across steps via `onStepFinish`; when exceeded, an `AbortController` aborts the loop and the fallback-summary path takes over so cost stays bounded.
+- **Diagnostic log on every turn completion.** `[chat] turn complete session=… steps=N/20 tokens=… durationMs=… finishReason=… hitStepCap=… budgetExceeded=… synthesized=…` so we can see step-cap hits and fallback synthesis in production logs.
+
 ### Fixed (dashboard widget polish bundle — issue #232)
 - **M6 — TodayScoresStrip layout shift.** [web/src/components/dashboard/today-scores-strip.tsx](web/src/components/dashboard/today-scores-strip.tsx) switches from `flex-wrap` to `flex-col sm:flex-row`, eliminating the wrap-induced height jump on narrow viewports.
 - **M8 — `WebkitLineClamp` standard fallback.** [web/src/components/dashboard/important-emails.tsx](web/src/components/dashboard/important-emails.tsx) snippet adds standard `lineClamp`, `textOverflow: ellipsis`, and `maxHeight: 2.6em` alongside the `-webkit-box` clamp for browsers without the WebKit prefix.

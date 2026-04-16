@@ -140,7 +140,7 @@ Quantify wherever possible. Conservative estimates. Lead with the answer, then r
 Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
 When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
 When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
-If a task will require more than 12 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
+If a task will require more than 20 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
 Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
 
 Calendar pre-flight rules (apply before every create_calendar_event or assign_workout call):
@@ -194,6 +194,43 @@ When asked what to cook or for recipe ideas:
 6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
 
 export const maxDuration = 60;
+
+// Issue #223: when the agent loop ends without an assistant text message
+// (step-cap exhaustion, token-budget abort, or a quiet model), build a short
+// human-readable summary from the tool calls that did execute so the user
+// sees acknowledgement instead of silence.
+const TOOL_PHRASING: Record<string, string> = {
+  add_task: "added a task",
+  complete_task: "marked a task complete",
+  log_habit: "logged a habit",
+  update_profile: "updated your profile",
+  create_calendar_event: "created a calendar event",
+  update_calendar_event: "updated a calendar event",
+  delete_calendar_event: "deleted a calendar event",
+  assign_workout: "assigned a workout",
+  update_workout_exercise: "updated a workout exercise",
+};
+function synthesizeFallbackSummary(
+  toolNames: string[],
+  flags: { hitStepCap: boolean; budgetExceeded: boolean }
+): string {
+  const counts = new Map<string, number>();
+  for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
+  const phrases: string[] = [];
+  for (const [name, n] of counts) {
+    const phrase = TOOL_PHRASING[name];
+    if (phrase) phrases.push(n > 1 ? `${phrase} (×${n})` : phrase);
+  }
+  const body = phrases.length > 0
+    ? `Done. I ${phrases.join(", ")}.`
+    : `Done — completed ${toolNames.length} action${toolNames.length === 1 ? "" : "s"}.`;
+  const reason = flags.budgetExceeded
+    ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
+    : flags.hitStepCap
+      ? " (Hit my step limit before I could write a longer summary — let me know if you need detail.)"
+      : "";
+  return body + reason;
+}
 
 export async function POST(req: Request) {
   const { messages, sessionId, model: modelOverride } = await req.json() as {
@@ -1505,19 +1542,69 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     ? demoSystemPrompt
     : `${STATIC_SYSTEM_PROMPT}\n\n${dynamicPromptBlock}`;
 
+  // Per-turn safeguards (issue #223): raise step cap from 12→20 so multi-step
+  // calendar/task flows can finish their summary, but bound cost with a token
+  // budget. If the budget is exceeded mid-turn, abort the loop and let onFinish
+  // synthesize a deterministic summary from whatever tools already ran.
+  const MAX_STEPS = 20;
+  const TOKEN_BUDGET = 150_000;
+  const turnStartedAt = Date.now();
+  let cumulativeTokens = 0;
+  let budgetExceeded = false;
+  const turnAbort = new AbortController();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
     model: selectedModel as any,
     system: systemValue,
     messages: [...contextMessages, ...cleanMessages],
     tools,
-    maxSteps: 12,
+    maxSteps: MAX_STEPS,
+    abortSignal: turnAbort.signal,
     onError: ({ error }) => {
       console.error("[chat] streamText error:", JSON.stringify(error));
     },
-    onFinish: async ({ text }) => {
+    onStepFinish: ({ usage }) => {
+      const stepTotal = (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0);
+      cumulativeTokens += stepTotal;
+      if (cumulativeTokens > TOKEN_BUDGET && !budgetExceeded) {
+        budgetExceeded = true;
+        console.warn(`[chat] token budget exceeded session=${sessionId} tokens=${cumulativeTokens} budget=${TOKEN_BUDGET} — aborting turn`);
+        turnAbort.abort();
+      }
+    },
+    onFinish: async ({ text, steps, finishReason }) => {
       if (!sessionId || !userId) return;
-      if (!text.trim()) return; // Don't persist empty assistant responses (failed/tool-only steps)
+
+      const stepCount = steps?.length ?? 0;
+      const hitStepCap = stepCount >= MAX_STEPS;
+      const durationMs = Date.now() - turnStartedAt;
+
+      // Determine what to persist. Three cases:
+      //   1. Model produced text → persist as-is (normal path).
+      //   2. Empty text + tool calls ran → synthesize a deterministic summary from steps.
+      //   3. Empty text + nothing ran → persist a visible error so the user isn't left in silence.
+      let contentToPersist = text.trim();
+      let synthesized = false;
+
+      if (!contentToPersist) {
+        const toolNames = (steps ?? [])
+          .flatMap((s) => s.toolCalls ?? [])
+          .map((c) => c.toolName);
+        if (toolNames.length > 0) {
+          contentToPersist = synthesizeFallbackSummary(toolNames, { hitStepCap, budgetExceeded });
+          synthesized = true;
+        } else {
+          contentToPersist = "I hit a snag generating a response — please try again.";
+          synthesized = true;
+        }
+      }
+
+      console.log(
+        `[chat] turn complete session=${sessionId} steps=${stepCount}/${MAX_STEPS} ` +
+        `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
+        `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} synthesized=${synthesized}`
+      );
 
       try {
         // Update session last_active_at to reflect completed turn.
@@ -1540,7 +1627,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           session_id: sessionId,
           user_id: userId,
           role: "assistant",
-          content: text,
+          content: contentToPersist,
           position: nextPos,
         });
         if (insertError) throw insertError;
