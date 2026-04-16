@@ -4,7 +4,12 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquare, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
 import Link from "next/link";
-import FoodPhotoAnalyzer from "@/app/(protected)/meals/FoodPhotoAnalyzer";
+import dynamic from "next/dynamic";
+
+const FoodPhotoAnalyzer = dynamic(
+  () => import("@/app/(protected)/meals/FoodPhotoAnalyzer"),
+  { ssr: false }
+);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

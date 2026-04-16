@@ -21,7 +21,13 @@ export default function UpcomingBirthdayWidget() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !birthday) return null;
+  // Return an empty but height-stable container while loading to prevent CLS.
+  // Once loaded, collapse if there's no birthday (no shift — loading skeleton
+  // already occupies the slot).
+  if (loading) {
+    return <div style={{ minHeight: "2.25rem" }} />;
+  }
+  if (!birthday) return null;
 
   const isToday = birthday.daysUntil === 0;
   const label = isToday

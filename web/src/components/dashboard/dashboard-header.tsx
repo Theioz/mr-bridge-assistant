@@ -51,30 +51,31 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         <p className="mt-0.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
           {dateStr}
         </p>
-        {!weather && weatherError && (
-          <p
-            className="mt-0.5 flex items-center gap-1.5"
-            style={{ fontSize: 13, color: "var(--color-danger)" }}
-            role="status"
-          >
-            <AlertTriangle size={14} aria-hidden />
-            <span>Weather unavailable</span>
-          </p>
-        )}
-        {weather && (
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-            <Icon size={14} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} aria-hidden />
-            {weather.temp != null && (
-              <span style={{ color: "var(--color-text)" }}>{Math.round(weather.temp)}°</span>
-            )}
-            <span>{weather.condition}</span>
-            {(weather.high != null || weather.low != null) && (
-              <span style={{ color: "var(--color-text-faint)", whiteSpace: "nowrap" }}>
-                · H {weather.high != null ? `${Math.round(weather.high)}°` : "—"} L {weather.low != null ? `${Math.round(weather.low)}°` : "—"}
-              </span>
-            )}
-          </p>
-        )}
+        {/* Reserve a fixed line-height so content below never shifts */}
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0" style={{ fontSize: 13, minHeight: "1.25rem" }}>
+          {!weather && weatherError ? (
+            <span className="flex items-center gap-1.5" style={{ color: "var(--color-danger)" }} role="status">
+              <AlertTriangle size={14} aria-hidden />
+              <span>Weather unavailable</span>
+            </span>
+          ) : weather ? (
+            <>
+              <Icon size={14} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} aria-hidden />
+              {weather.temp != null && (
+                <span style={{ color: "var(--color-text)" }}>{Math.round(weather.temp)}°</span>
+              )}
+              <span style={{ color: "var(--color-text-muted)" }}>{weather.condition}</span>
+              {(weather.high != null || weather.low != null) && (
+                <span style={{ color: "var(--color-text-faint)", whiteSpace: "nowrap" }}>
+                  · H {weather.high != null ? `${Math.round(weather.high)}°` : "—"} L {weather.low != null ? `${Math.round(weather.low)}°` : "—"}
+                </span>
+              )}
+            </>
+          ) : (
+            /* Invisible placeholder while loading — same height as weather text */
+            <span>&nbsp;</span>
+          )}
+        </p>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
