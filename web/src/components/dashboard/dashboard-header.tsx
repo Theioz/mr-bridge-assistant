@@ -43,11 +43,16 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
   const Icon = weather?.wmoCode != null ? (WMO_ICON[weather.wmoCode] ?? Cloudy) : Thermometer;
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
-          {greeting}
-        </h1>
+    <div className="flex flex-col gap-1 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-3 lg:justify-start">
+          <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+            {greeting}
+          </h1>
+          <div className="lg:hidden">
+            <SyncButton />
+          </div>
+        </div>
         <p className="mt-0.5" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
           {dateStr}
         </p>
@@ -78,7 +83,7 @@ export default function DashboardHeader({ greeting, dateStr, windowKey }: Props)
         </p>
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="hidden lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
         <SyncButton />
         <WindowSelector current={windowKey} />
       </div>
