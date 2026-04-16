@@ -1,88 +1,149 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-/* ─── Design Tokens ─────────────────────────────────────────────────── */
-:root,
-:root[data-theme="dark"] {
-  --color-bg:             #0B0F19;
-  --color-surface:        #111827;
-  --color-surface-raised: #181B24;
-  --color-border:         #1F2937;
-  --color-border-subtle:  #161925;
-  --color-primary:        #3B82F6;
-  --color-primary-dim:    rgba(59, 130, 246, 0.15);
-  --color-secondary:      #60A5FA;
-  --color-cta:            #F59E0B;
-  --color-positive:       #10B981;
-  --color-warning:        #F59E0B;
-  --color-danger:         #EF4444;
-  --color-info:           #38BDF8;
-  --color-text:           #F8FAFC;
-  --color-text-muted:     #94A3B8;
-  --color-text-faint:     #64748B;
+/* ─── Theme-independent tokens ────────────────────────────────────────── */
+:root {
+  --hue: 240;
 
-  --color-text-on-cta:        #FFFFFF;
-  --overlay-scrim:            rgba(0, 0, 0, 0.6);
-  --hover-subtle:             rgba(255, 255, 255, 0.04);
-  --warning-subtle:           rgba(245, 158, 11, 0.08);
-  --warning-subtle-strong:    rgba(245, 158, 11, 0.16);
-  --color-danger-subtle:      rgba(239, 68, 68, 0.15);
-  --color-positive-subtle:    rgba(16, 185, 129, 0.15);
-  --color-positive-subtle-strong: rgba(16, 185, 129, 0.30);
-  --color-cta-subtle:         rgba(245, 158, 11, 0.15);
-  --color-cta-subtle-strong:  rgba(245, 158, 11, 0.40);
-  --color-skeleton:           #181B24;
-  --color-positive-light:     #34D399;
-  --color-positive-lighter:   #6EE7B7;
-  --color-positive-lightest:  #A7F3D0;
+  /* Space scale (MASTER.md) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
 
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:   0 4px 12px rgba(0,0,0,0.5);
-  --shadow-lg:   0 8px 24px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 0 3px var(--color-primary-dim);
-  --text-glow:   0 0 12px rgba(248, 250, 252, 0.3);
+  /* Radius */
+  --r-1: 4px;
+  --r-2: 8px;
 
-  --header-height: 8rem;
+  /* Motion */
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Typography scale — 3 tiers plus meta / micro. `--t-h2` is the section
+     header size used across the revamped dashboard; heavier sections reach
+     for `--t-h1`, a single `--t-display` marks the hero metric only. */
+  --t-display: clamp(3.25rem, 4.5vw + 1.25rem, 4.5rem);
+  --t-h1:      clamp(1.5rem, 1.2vw + 1.1rem, 1.875rem);
+  --t-h2:      1.0625rem;
+  --t-body:    1rem;
+  --t-meta:    0.9375rem;
+  --t-micro:   0.8125rem;
 }
 
-:root[data-theme="light"] {
-  --color-bg:             #F8FAFC;
-  --color-surface:        #FFFFFF;
-  --color-surface-raised: #F1F5F9;
-  --color-border:         #E2E8F0;
-  --color-border-subtle:  #EEF2F7;
-  --color-primary:        #1E40AF;
-  --color-primary-dim:    rgba(30, 64, 175, 0.12);
-  --color-secondary:      #3B82F6;
-  --color-cta:            #F59E0B;
-  --color-positive:       #059669;
-  --color-warning:        #B45309;
-  --color-danger:         #B91C1C;
-  --color-info:           #0369A1;
-  --color-text:           #0F172A;
-  --color-text-muted:     #475569;
-  --color-text-faint:     #64748B;
+/* ─── Dark palette (default) ──────────────────────────────────────────── */
+:root,
+:root[data-theme="dark"] {
+  --color-bg:             oklch(15.5% 0.012 var(--hue));
+  --color-surface:        oklch(19% 0.015 var(--hue));
+  --color-surface-raised: oklch(22% 0.017 var(--hue));
+  --color-border:         oklch(28% 0.013 var(--hue));
+  --color-border-subtle:  oklch(24% 0.013 var(--hue));
 
-  --color-text-on-cta:        #FFFFFF;
-  --overlay-scrim:            rgba(15, 23, 42, 0.4);
-  --hover-subtle:             rgba(15, 23, 42, 0.04);
-  --warning-subtle:           rgba(180, 83, 9, 0.08);
-  --warning-subtle-strong:    rgba(180, 83, 9, 0.14);
-  --color-danger-subtle:      rgba(185, 28, 28, 0.10);
-  --color-positive-subtle:    rgba(5, 150, 105, 0.12);
-  --color-positive-subtle-strong: rgba(5, 150, 105, 0.24);
-  --color-cta-subtle:         rgba(245, 158, 11, 0.18);
-  --color-cta-subtle-strong:  rgba(245, 158, 11, 0.45);
-  --color-skeleton:           #E2E8F0;
-  --color-positive-light:     #34D399;
-  --color-positive-lighter:   #6EE7B7;
-  --color-positive-lightest:  #A7F3D0;
+  --color-text:           oklch(95% 0.006 var(--hue));
+  --color-text-muted:     oklch(72% 0.012 var(--hue));
+  /* Lifted from the previous 56%L so 13px passes WCAG AA on raised surfaces. */
+  --color-text-faint:     oklch(65% 0.014 var(--hue));
 
-  --shadow-sm:   0 1px 2px rgba(15,23,42,0.06);
-  --shadow-md:   0 4px 6px rgba(15,23,42,0.08);
-  --shadow-lg:   0 10px 15px rgba(15,23,42,0.10);
+  /* Single accent — muted amber. Focus rings, today markers,
+     attention-required items. Primary/secondary/CTA alias to it: the
+     design spec calls for one accent, not three. */
+  --accent:               oklch(74% 0.14 70);
+  --accent-soft:          oklch(28% 0.05 70);
+  --color-primary:        var(--accent);
+  --color-primary-dim:    oklch(74% 0.14 70 / 0.18);
+  --color-secondary:      var(--accent);
+  --color-cta:            var(--accent);
+  --color-cta-subtle:         oklch(74% 0.14 70 / 0.15);
+  --color-cta-subtle-strong:  oklch(74% 0.14 70 / 0.40);
+  --color-warning:        var(--accent);
+  --warning-subtle:           oklch(74% 0.14 70 / 0.08);
+  --warning-subtle-strong:    oklch(74% 0.14 70 / 0.16);
+
+  /* Status */
+  --color-positive:               oklch(72% 0.15 155);
+  --color-positive-subtle:        oklch(72% 0.15 155 / 0.15);
+  --color-positive-subtle-strong: oklch(72% 0.15 155 / 0.30);
+  --color-positive-light:         oklch(78% 0.14 155);
+  --color-positive-lighter:       oklch(84% 0.12 155);
+  --color-positive-lightest:      oklch(90% 0.10 155);
+  --color-danger:                 oklch(70% 0.18 28);
+  --color-danger-subtle:          oklch(70% 0.18 28 / 0.18);
+  --color-info:                   oklch(72% 0.12 230);
+
+  /* Hairline rules (alias to border — new components prefer `--rule`). */
+  --rule:                 var(--color-border);
+  --rule-soft:            var(--color-border-subtle);
+
+  --color-text-on-cta:    oklch(18% 0.015 var(--hue));
+
+  --overlay-scrim:        oklch(0% 0 0 / 0.6);
+  --hover-subtle:         oklch(100% 0 0 / 0.04);
+
+  --color-skeleton:       var(--color-surface-raised);
+
+  --shadow-sm:   0 1px 3px oklch(0% 0 0 / 0.4);
+  --shadow-md:   0 4px 12px oklch(0% 0 0 / 0.5);
+  --shadow-lg:   0 8px 24px oklch(0% 0 0 / 0.6);
   --shadow-glow: 0 0 0 3px var(--color-primary-dim);
-  --text-glow:   none;
+}
+
+/* ─── Light palette ───────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --color-bg:             oklch(98.5% 0.005 var(--hue));
+  --color-surface:        oklch(96.5% 0.008 var(--hue));
+  --color-surface-raised: oklch(94% 0.011 var(--hue));
+  --color-border:         oklch(88% 0.010 var(--hue));
+  --color-border-subtle:  oklch(92% 0.008 var(--hue));
+
+  --color-text:           oklch(22% 0.018 var(--hue));
+  --color-text-muted:     oklch(45% 0.015 var(--hue));
+  /* Lifted from 60%L so 13px passes WCAG AA on raised surfaces. */
+  --color-text-faint:     oklch(52% 0.013 var(--hue));
+
+  --accent:               oklch(62% 0.13 65);
+  --accent-soft:          oklch(94% 0.04 65);
+  --color-primary:        var(--accent);
+  --color-primary-dim:    oklch(62% 0.13 65 / 0.12);
+  --color-secondary:      var(--accent);
+  --color-cta:            var(--accent);
+  --color-cta-subtle:         oklch(62% 0.13 65 / 0.18);
+  --color-cta-subtle-strong:  oklch(62% 0.13 65 / 0.45);
+  --color-warning:        var(--accent);
+  --warning-subtle:           oklch(62% 0.13 65 / 0.08);
+  --warning-subtle-strong:    oklch(62% 0.13 65 / 0.14);
+
+  --color-positive:               oklch(55% 0.11 155);
+  --color-positive-subtle:        oklch(55% 0.11 155 / 0.12);
+  --color-positive-subtle-strong: oklch(55% 0.11 155 / 0.24);
+  --color-positive-light:         oklch(65% 0.13 155);
+  --color-positive-lighter:       oklch(72% 0.12 155);
+  --color-positive-lightest:      oklch(82% 0.11 155);
+  --color-danger:                 oklch(58% 0.16 28);
+  --color-danger-subtle:          oklch(58% 0.16 28 / 0.10);
+  --color-info:                   oklch(52% 0.14 230);
+
+  --rule:                 var(--color-border);
+  --rule-soft:            var(--color-border-subtle);
+
+  --color-text-on-cta:    oklch(98% 0 0);
+
+  --overlay-scrim:        oklch(22% 0.018 var(--hue) / 0.4);
+  --hover-subtle:         oklch(22% 0.018 var(--hue) / 0.04);
+
+  --color-skeleton:       oklch(92% 0.008 var(--hue));
+
+  --shadow-sm:   0 1px 2px oklch(22% 0.018 var(--hue) / 0.06);
+  --shadow-md:   0 4px 6px oklch(22% 0.018 var(--hue) / 0.08);
+  --shadow-lg:   0 10px 15px oklch(22% 0.018 var(--hue) / 0.10);
+  --shadow-glow: 0 0 0 3px var(--color-primary-dim);
 }
 
 html {
@@ -101,16 +162,27 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv11';
 }
 
 .font-heading {
   font-family: 'DM Sans', system-ui, sans-serif;
-  text-shadow: var(--text-glow);
+}
+
+/* Tabular numerals — opt-in utility for numeric stacks. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Reading column for sentence content. */
+.prose-column {
+  max-width: 62ch;
 }
 
 /* ─── Focus visible (global) ──────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -168,20 +240,38 @@ body {
 .hover-border-strong:hover { border-color: var(--color-text-faint) !important; }
 
 /* ─── Input focus ring ───────────────────────────────────────────────── */
-/* Replaces inline onFocus/onBlur style handlers. Works with inline
-   border/boxShadow base styles — !important wins over inline. */
 .input-focus-ring:focus {
-  border-color: var(--color-primary) !important;
+  border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px var(--color-primary-dim) !important;
 }
 
-/* Card hover lift — MASTER.md spec.
-   Uses transform + box-shadow (no margin/padding change) to avoid layout shift.
-   Pair with a `transition-*` utility on the element; duration 200ms per spec. */
+/* Card hover lift — MASTER.md spec. */
 .card-lift { will-change: transform; }
 .card-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+/* ─── Page-load reveal orchestration ──────────────────────────────────── */
+/* Sections attach `data-reveal` + `data-stagger="N"` to opt in to the
+   orchestrated entrance. Total envelope stays under 500ms. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: rise var(--motion-slow) var(--ease-out-quart) forwards;
+  }
+  [data-reveal][data-stagger="0"] { animation-delay: 0ms; }
+  [data-reveal][data-stagger="1"] { animation-delay: 60ms; }
+  [data-reveal][data-stagger="2"] { animation-delay: 120ms; }
+  [data-reveal][data-stagger="3"] { animation-delay: 180ms; }
+  [data-reveal][data-stagger="4"] { animation-delay: 240ms; }
+  [data-reveal][data-stagger="5"] { animation-delay: 300ms; }
+  [data-reveal][data-stagger="6"] { animation-delay: 360ms; }
+  [data-reveal][data-stagger="7"] { animation-delay: 420ms; }
+}
+@keyframes rise {
+  to { opacity: 1; transform: none; }
 }
 
 /* ─── Reduced motion ──────────────────────────────────────────────────── */
@@ -196,6 +286,11 @@ body {
   .skeleton {
     animation: none;
     background: var(--color-skeleton);
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 }
 
@@ -216,15 +311,15 @@ body {
     --color-text:           #0F172A;
     --color-text-muted:     #334155;
     --color-text-faint:     #475569;
-    --color-primary:        #1E40AF;
+    --color-primary:        #B45309;
     --color-primary-dim:    transparent;
-    --color-secondary:      #1E40AF;
-    --color-cta:             #B45309;
+    --color-secondary:      #B45309;
+    --color-cta:            #B45309;
     --color-positive:       #047857;
     --color-warning:        #B45309;
     --color-danger:         #B91C1C;
     --color-info:           #0369A1;
-    --color-text-on-cta:    #0F172A;
+    --color-text-on-cta:    #FFFFFF;
     --color-skeleton:       #F1F5F9;
     --hover-subtle:         transparent;
     --warning-subtle:       transparent;
@@ -239,7 +334,10 @@ body {
     --shadow-md:            none;
     --shadow-lg:            none;
     --shadow-glow:          none;
-    --text-glow:            none;
+    --accent:               #B45309;
+    --accent-soft:          transparent;
+    --rule:                 #CBD5E1;
+    --rule-soft:            #E2E8F0;
   }
 
   @page { margin: 1.5cm; }
