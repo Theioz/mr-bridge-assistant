@@ -169,8 +169,9 @@ export default function Nav() {
         {/* Demo banner — desktop */}
         {isDemo && (
           <div
-            className="mx-3 mb-4 px-3 py-2.5 rounded-lg text-xs"
+            className="mx-3 mb-4 px-3 py-2.5 rounded-lg text-xs overflow-hidden text-ellipsis whitespace-nowrap"
             style={{ background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+            title="Demo account — changes reset nightly"
           >
             Demo account — changes reset nightly
           </div>

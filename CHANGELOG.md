@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (dashboard widget polish bundle — issue #232)
+- **M6 — TodayScoresStrip layout shift.** [web/src/components/dashboard/today-scores-strip.tsx](web/src/components/dashboard/today-scores-strip.tsx) switches from `flex-wrap` to `flex-col sm:flex-row`, eliminating the wrap-induced height jump on narrow viewports.
+- **M8 — `WebkitLineClamp` standard fallback.** [web/src/components/dashboard/important-emails.tsx](web/src/components/dashboard/important-emails.tsx) snippet adds standard `lineClamp`, `textOverflow: ellipsis`, and `maxHeight: 2.6em` alongside the `-webkit-box` clamp for browsers without the WebKit prefix.
+- **M9 — Birthday Gift icon `aria-label`.** [web/src/components/dashboard/schedule-today.tsx](web/src/components/dashboard/schedule-today.tsx) and [web/src/components/dashboard/upcoming-birthday.tsx](web/src/components/dashboard/upcoming-birthday.tsx) add `aria-label="Birthday"` + `role="img"` to the standalone `Gift` icons used in place of a time/label.
+- **L2 — Demo banner truncation at 375px.** [web/src/components/nav.tsx](web/src/components/nav.tsx) demo banner gets `overflow-hidden text-ellipsis whitespace-nowrap` + `title` for full text on hover.
+- **L6 — Workout history "Page X of Y" indicator.** [web/src/components/fitness/workout-history-table.tsx](web/src/components/fitness/workout-history-table.tsx) appends `· Page X of Y` to the existing row-range counter.
+- **L7 — Habit toggle `aria-checked`.** [web/src/components/dashboard/habits-checkin.tsx](web/src/components/dashboard/habits-checkin.tsx) row button gets `role="checkbox"`, `aria-checked={done}`, and `aria-label={habit.name}` for screen-reader semantics.
+- **L8 — Watchlist refresh button `whitespace-nowrap`.** [web/src/components/dashboard/watchlist-widget.tsx](web/src/components/dashboard/watchlist-widget.tsx) prevents "Refreshing…" from wrapping on narrow mobile.
+
 ### Fixed (settings form polish — issue #231)
 - **M10 — unsaved-changes warning on Settings.** New [web/src/lib/use-unsaved-changes-warning.ts](web/src/lib/use-unsaved-changes-warning.ts) hook attaches a `beforeunload` listener and intercepts in-app anchor navigation with `window.confirm` when any field is dirty. [web/src/components/settings/profile-form.tsx](web/src/components/settings/profile-form.tsx) aggregates dirty state across every `FieldRow` and invokes the hook. `FieldRow` now tracks a post-save baseline so dirty clears correctly once saved.
 - **M11 — visible sheet header + focus-trap.** [web/src/components/ui/sheet.tsx](web/src/components/ui/sheet.tsx) renders a visible `Dialog.Title` + `Dialog.Close` by default; added `hideHeader` opt-out for callers with their own header ([web/src/components/chat/session-sheet.tsx](web/src/components/chat/session-sheet.tsx), [web/src/components/nav.tsx](web/src/components/nav.tsx) "More" sheet). Focus-trap verified via `@radix-ui/react-dialog@^1.1.15` (Radix provides trap + restore by default).

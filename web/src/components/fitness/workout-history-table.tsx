@@ -289,7 +289,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
             >
               <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
                 {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of{" "}
-                {sorted.length}
+                {sorted.length} · Page {page + 1} of {totalPages}
               </span>
               <div className="flex gap-2">
                 <button

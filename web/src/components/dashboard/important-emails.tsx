@@ -81,7 +81,10 @@ export default function ImportantEmails() {
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
+                    lineClamp: 2,
                     overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxHeight: "2.6em",
                   }}
                 >
                   {email.snippet}

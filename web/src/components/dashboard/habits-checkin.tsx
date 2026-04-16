@@ -95,6 +95,9 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
               key={habit.id}
               onClick={() => handleToggle(habit.id)}
               disabled={isPending}
+              role="checkbox"
+              aria-checked={done}
+              aria-label={habit.name}
               className="w-full flex items-center gap-2 py-1.5 px-1.5 rounded-lg text-left transition-colors duration-150 hover-bg-raised"
               style={{
                 opacity: isPending ? 0.5 : 1,
