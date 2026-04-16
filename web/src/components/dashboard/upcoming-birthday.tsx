@@ -42,7 +42,7 @@ export default function UpcomingBirthdayWidget() {
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={containerStyle}>
-      <Gift size={13} style={{ color: "var(--color-cta)", flexShrink: 0 }} />
+      <Gift size={13} style={{ color: "var(--color-cta)", flexShrink: 0 }} aria-label="Birthday" role="img" />
       <span>
         <span style={{ color: isToday ? "var(--color-cta)" : "var(--color-text)", fontWeight: isToday ? 500 : 400 }}>
           {birthday.name}&apos;s birthday

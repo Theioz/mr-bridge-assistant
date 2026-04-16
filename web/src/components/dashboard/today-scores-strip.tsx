@@ -55,7 +55,7 @@ export default function TodayScoresStrip({ today }: Props) {
       <div style={{ height: 2, background: accent, flexShrink: 0 }} />
 
       <div
-        className="flex items-center gap-4 px-5 py-3 flex-wrap"
+        className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-3"
         style={{ minHeight: 48 }}
       >
         {/* TODAY tag */}

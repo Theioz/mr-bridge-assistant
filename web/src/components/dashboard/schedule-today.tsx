@@ -107,7 +107,7 @@ export default function ScheduleToday() {
                 <div key={idx} className={`flex gap-3 items-start transition-opacity ${isPast ? "opacity-40" : ""}`}>
                   <span className="text-xs font-mono shrink-0 w-16 pt-px flex items-center" style={muted}>
                     {event.isBirthday
-                      ? <Gift size={12} style={accent} />
+                      ? <Gift size={12} style={accent} aria-label="Birthday" role="img" />
                       : event.time}
                   </span>
                   <div className="min-w-0">
