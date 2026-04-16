@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { todayString, addDays } from "@/lib/timezone";
 
 // Tables to wipe (children first to respect FK constraints)
 const TABLES = [
@@ -59,12 +60,8 @@ export async function GET(req: Request) {
 type SupabaseClient = ReturnType<typeof createServiceClient>;
 
 async function seedDemoData(supabase: SupabaseClient, uid: string) {
-  const today = new Date();
-  const daysAgo = (n: number) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
-  };
+  const today = todayString();
+  const daysAgo = (n: number) => addDays(today, -n);
 
   // Profile
   const profileRows = [
@@ -193,9 +190,9 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
   // Recovery metrics — 30 nights
   const recoveryRows = [];
   for (let dago = 30; dago > 0; dago--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - dago);
-    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    const dateStr = addDays(today, -dago);
+    const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+    const isWeekend = dow === 0 || dow === 6;
     const hashA = ((dago * 11) % 10) / 10;
     const hashB = ((dago * 17) % 10) / 10;
     recoveryRows.push({

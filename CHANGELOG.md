@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (UTC date regressions — Fitness "TODAY" off-by-one)
+- **Fitness weekly plan highlighted the wrong day after ~5pm PT.** [web/src/components/fitness/weekly-workout-plan.tsx](web/src/components/fitness/weekly-workout-plan.tsx) used `new Date().toISOString().slice(0,10)` (UTC) to determine "today" and to build the Mon–Sun week. After UTC rolled over, the "TODAY" badge jumped to tomorrow. Now routed through `todayString()` + `addDays()` from [web/src/lib/timezone.ts](web/src/lib/timezone.ts).
+- **Repo-wide sweep for the same UTC slice pattern.** Replaced UTC-derived date strings in:
+  - [web/src/components/fitness/active-cal-goal-chart.tsx](web/src/components/fitness/active-cal-goal-chart.tsx), [web/src/components/fitness/workout-freq-chart.tsx](web/src/components/fitness/workout-freq-chart.tsx) — daily/weekly bucket keys and labels.
+  - [web/src/app/(protected)/fitness/page.tsx](web/src/app/(protected)/fitness/page.tsx) — Mon–Sun week bounds for the workout-plans query.
+  - [web/src/components/dashboard/trends-card.tsx](web/src/components/dashboard/trends-card.tsx) — window cutoff.
+  - [web/src/lib/sync/stocks.ts](web/src/lib/sync/stocks.ts), [web/src/lib/sync/fitbit.ts](web/src/lib/sync/fitbit.ts), [web/src/lib/sync/oura.ts](web/src/lib/sync/oura.ts) — external-API date-range params (and Polygon bar timestamps via `Intl.DateTimeFormat` in `USER_TZ`).
+  - [web/src/app/api/cron/reset-demo/route.ts](web/src/app/api/cron/reset-demo/route.ts) — demo seed dates and weekday detection.
+  - [web/src/app/api/chat/route.ts](web/src/app/api/chat/route.ts) — demo calendar events and the `get_workout_plans` weekly tool query.
+  - [web/src/app/api/google/calendar/route.ts](web/src/app/api/google/calendar/route.ts) — removed dead `today` constant.
+
 ### Fixed (chat agent loop — issue #223)
 - **Bridge no longer ends a turn silently.** [web/src/app/api/chat/route.ts](web/src/app/api/chat/route.ts) `onFinish` previously skipped the DB write when the model produced no text (which happens when the AI SDK loop exhausts `maxSteps` on a tool step). It now synthesizes a deterministic summary from the executed `toolCalls` (e.g. *"Done. I updated a calendar event, created a calendar event."*) and persists that as the assistant turn, with a parenthetical note when the step or token cap was the cause. If no tools ran either, it persists a visible *"I hit a snag generating a response — please try again."* so the user is never left staring at silence.
 - **Step cap raised 12 → 20 with a token-budget guardrail.** Multi-step calendar/task flows were regularly hitting the old cap on the summary step. New `TOKEN_BUDGET = 150_000` tracked across steps via `onStepFinish`; when exceeded, an `AbortController` aborts the loop and the fallback-summary path takes over so cost stays bounded.

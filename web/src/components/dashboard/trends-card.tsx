@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import type { FitnessLog, RecoveryMetrics, WorkoutSession } from "@/lib/types";
 import { useChartColors } from "@/lib/chart-colors";
+import { daysAgoString } from "@/lib/timezone";
 
 interface Props {
   fitnessData: FitnessLog[];
@@ -76,11 +77,7 @@ export default function TrendsCard({ fitnessData, recoveryData, recentWorkout }:
   } as const;
   const legendWrapperStyle = { fontSize: "11px", color: c.textMuted, paddingTop: "8px" };
 
-  const cutoff = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - WINDOW_DAYS[window]);
-    return d.toISOString().slice(0, 10);
-  }, [window]);
+  const cutoff = useMemo(() => daysAgoString(WINDOW_DAYS[window]), [window]);
 
   const bodyCompData = useMemo(
     () =>

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
+import { todayString, daysAgoString } from "@/lib/timezone";
 
 const OURA_BASE = "https://api.ouraring.com/v2/usercollection";
 
@@ -53,11 +54,8 @@ export async function syncOura(db: SupabaseClient, userId: string, days = 3): Pr
   const token = process.env.OURA_ACCESS_TOKEN;
   if (!token) throw new Error("OURA_ACCESS_TOKEN not configured");
 
-  const now = new Date();
-  const past = new Date(now);
-  past.setDate(past.getDate() - days);
-  const startStr = past.toISOString().slice(0, 10);
-  const endStr = now.toISOString().slice(0, 10);
+  const startStr = daysAgoString(days);
+  const endStr = todayString();
 
   const [
     sleepData,

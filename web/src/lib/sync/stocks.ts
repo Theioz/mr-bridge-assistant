@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { todayString, daysAgoString, USER_TZ } from "@/lib/timezone";
 
 const POLYGON_BASE = "https://api.polygon.io";
 
@@ -42,11 +43,8 @@ export async function syncStocks(
   if (!apiKey) throw new Error("POLYGON_API_KEY not configured");
 
   // Sparkline range: 45 calendar days back to guarantee ≥30 trading days
-  const now = new Date();
-  const fromDate = new Date(now);
-  fromDate.setDate(fromDate.getDate() - 45);
-  const from = fromDate.toISOString().slice(0, 10);
-  const to = now.toISOString().slice(0, 10);
+  const from = daysAgoString(45);
+  const to = todayString();
 
   let rateLimited = false;
   const rows = await Promise.all(
@@ -67,7 +65,7 @@ export async function syncStocks(
       const rangeBars = (rangeData?.results as PolygonBar[] | undefined) ?? [];
       // Keep last 30 trading days (~6 weeks of context)
       const sparkline = rangeBars.slice(-30).map((bar) => ({
-        date: new Date(bar.t).toISOString().slice(0, 10),
+        date: new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(new Date(bar.t)),
         close: bar.c,
       }));
 

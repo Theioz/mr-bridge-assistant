@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
+import { todayString, daysAgoString } from "@/lib/timezone";
 
 const FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token";
 const FITBIT_API_BASE = "https://api.fitbit.com";
@@ -138,11 +139,8 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
 
   const accessToken = await refreshFitbitToken(db, clientId, clientSecret, refreshToken, userId);
 
-  const now = new Date();
-  const past = new Date(now);
-  past.setDate(past.getDate() - SYNC_DAYS);
-  const startStr = past.toISOString().slice(0, 10);
-  const endStr = now.toISOString().slice(0, 10);
+  const startStr = daysAgoString(SYNC_DAYS);
+  const endStr = todayString();
 
   // Fetch body comp and workouts in parallel
   const weightUnit = (process.env.FITBIT_WEIGHT_UNIT ?? "lbs").toLowerCase();
