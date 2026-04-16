@@ -34,10 +34,13 @@ export function WindowSelector({ current }: Props) {
           <button
             key={key}
             onClick={() => select(key)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer"
+            className="px-3 rounded-md text-xs font-medium cursor-pointer flex items-center justify-center"
             style={{
-              background: active ? "var(--color-primary)" : "transparent",
+              background: active ? "var(--accent)" : "transparent",
               color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+              minHeight: 44,
+              minWidth: 44,
+              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             {label}

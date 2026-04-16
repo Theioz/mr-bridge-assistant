@@ -342,6 +342,14 @@ body {
   overflow: visible;
 }
 
+/* Tasks 7/12 + Habits 5/12 asymmetric split at desktop width. */
+@media (min-width: 1024px) {
+  [data-revamp-split] {
+    grid-template-columns: 7fr 5fr !important;
+    gap: var(--space-7) !important;
+  }
+}
+
 /* ─── Page-load reveal orchestration ──────────────────────────────────── */
 /* Sections attach `data-reveal` + `data-stagger="N"` to opt in to the
    orchestrated entrance. Total envelope stays under 500ms. */
