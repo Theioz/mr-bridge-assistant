@@ -69,7 +69,7 @@ export default function NotificationList({ notifications }: Props) {
               className="px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 cursor-pointer"
               style={{
                 background: active ? "var(--color-primary)" : "var(--color-surface)",
-                color: active ? "white" : "var(--color-text-muted)",
+                color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: active ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
               }}
             >

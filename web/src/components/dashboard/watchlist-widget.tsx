@@ -162,17 +162,11 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
           <button
             onClick={handleRefresh}
             disabled={isPending || !hasApiKey}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default hover-text-brighten"
             style={{
               background: "var(--color-surface-raised)",
               border: "1px solid var(--color-border)",
               color: isPending ? "var(--color-primary)" : "var(--color-text-muted)",
-            }}
-            onMouseOver={(e) => {
-              if (!isPending && hasApiKey) e.currentTarget.style.color = "var(--color-text)";
-            }}
-            onMouseOut={(e) => {
-              if (!isPending) e.currentTarget.style.color = "var(--color-text-muted)";
             }}
           >
             {isPending ? (

@@ -62,7 +62,7 @@ export default function SessionSidebar({
           className="flex items-center gap-2 w-full cursor-pointer transition-opacity duration-150 hover:opacity-85"
           style={{
             background: "var(--color-primary)",
-            color: "white",
+            color: "var(--color-text-on-cta)",
             border: "none",
             borderRadius: 8,
             padding: "10px 14px",

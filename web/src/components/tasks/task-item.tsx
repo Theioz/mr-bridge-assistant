@@ -359,7 +359,7 @@ export default function TaskItem({
               });
             }}
             className="text-xs px-2 py-1 rounded-lg"
-            style={{ background: "var(--color-primary)", color: "white" }}
+            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
           >
             Save
           </button>

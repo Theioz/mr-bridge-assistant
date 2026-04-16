@@ -164,6 +164,14 @@ body {
 .hover-text-muted:hover    { color: var(--color-text-muted) !important; }
 .hover-border-strong:hover { border-color: var(--color-text-faint) !important; }
 
+/* ─── Input focus ring ───────────────────────────────────────────────── */
+/* Replaces inline onFocus/onBlur style handlers. Works with inline
+   border/boxShadow base styles — !important wins over inline. */
+.input-focus-ring:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-dim) !important;
+}
+
 /* Card hover lift — MASTER.md spec.
    Uses transform + box-shadow (no margin/padding change) to avoid layout shift.
    Pair with a `transition-*` utility on the element; duration 200ms per spec. */

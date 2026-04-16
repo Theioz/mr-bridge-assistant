@@ -109,23 +109,13 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
             onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
             placeholder="e.g. AAPL"
             maxLength={12}
-            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none"
+            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
             style={{
               background: "var(--color-surface-raised)",
               border: `1px solid ${error ? "var(--color-danger)" : "var(--color-border)"}`,
               color: "var(--color-text)",
               fontFamily: "monospace",
               letterSpacing: "0.05em",
-            }}
-            onFocus={(e) => {
-              if (!error) {
-                e.currentTarget.style.borderColor = "var(--color-primary)";
-                e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-primary-dim)";
-              }
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = error ? "var(--color-danger)" : "var(--color-border)";
-              e.currentTarget.style.boxShadow = "none";
             }}
           />
           <button
@@ -179,10 +169,8 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
             <button
               onClick={() => handleRemove(ticker)}
               disabled={isPending}
-              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40"
+              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-danger"
               style={{ color: "var(--color-text-faint)" }}
-              onMouseOver={(e) => { e.currentTarget.style.color = "var(--color-danger)"; }}
-              onMouseOut={(e) => { e.currentTarget.style.color = "var(--color-text-faint)"; }}
               title={`Remove ${ticker}`}
             >
               <X size={13} />

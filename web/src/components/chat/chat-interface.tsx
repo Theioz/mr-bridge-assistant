@@ -394,7 +394,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           type="submit"
           disabled={isLoading || !input.trim()}
           className="rounded-xl px-3.5 py-2.5 cursor-pointer transition-opacity duration-150 hover:opacity-85 disabled:opacity-30 disabled:cursor-default disabled:hover:opacity-30"
-          style={{ background: "var(--color-primary)", color: "white" }}
+          style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
         >
           <Send size={16} />
         </button>
