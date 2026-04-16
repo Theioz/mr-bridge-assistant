@@ -32,12 +32,12 @@ export default function Sheet({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay
-          className="lg:hidden fixed inset-0 z-[60]"
+          className="lg:hidden fixed inset-0 z-[60] print:hidden"
           style={{ background: "var(--overlay-scrim)" }}
         />
         <Dialog.Content
           className={
-            "lg:hidden fixed left-0 right-0 bottom-0 z-[70] rounded-t-2xl " +
+            "lg:hidden fixed left-0 right-0 bottom-0 z-[70] rounded-t-2xl print:hidden " +
             (contentClassName ?? "")
           }
           style={{

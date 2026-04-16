@@ -162,7 +162,7 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
           <button
             onClick={handleRefresh}
             disabled={isPending || !hasApiKey}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default hover-text-brighten"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default hover-text-brighten print:hidden"
             style={{
               background: "var(--color-surface-raised)",
               border: "1px solid var(--color-border)",

@@ -48,7 +48,7 @@ export default function JournalTabs({
     <div className="space-y-6">
       {/* Outer tab bar */}
       <div
-        className="flex gap-1 p-1 rounded-xl self-start"
+        className="flex gap-1 p-1 rounded-xl self-start print:hidden"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", display: "inline-flex" }}
       >
         {([["write", "Write"], ["history", "History"]] as [OuterTab, string][]).map(([t, label]) => (
@@ -70,7 +70,7 @@ export default function JournalTabs({
       {tab === "write" && (
         <div className="space-y-3">
           {isEditingPast && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 print:hidden">
               <button
                 onClick={() => { setEditingEntry(null); }}
                 className="text-xs"

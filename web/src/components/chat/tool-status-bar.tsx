@@ -76,7 +76,7 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
   const chips = Array.from(seen.values());
 
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-start print:hidden">
       <div className="flex flex-wrap gap-1.5 px-1 py-1">
         {chips.map((inv) => {
           const isDone = inv.state === "result";
