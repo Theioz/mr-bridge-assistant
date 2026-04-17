@@ -25,7 +25,9 @@ from _supabase import get_client
 
 DEMO_USER_ID = os.environ.get("DEMO_USER_ID", "")
 
-# Tables to wipe (in dependency order — children before parents)
+# Tables to wipe (in dependency order — children before parents).
+# Note: strength_session_sets has no user_id column; it's wiped via ON DELETE
+# CASCADE from strength_sessions(id), so we don't list it here.
 TABLES = [
     "chat_messages",
     "chat_sessions",
@@ -35,6 +37,7 @@ TABLES = [
     "recipes",
     "study_log",
     "journal_entries",
+    "strength_sessions",
     "workout_sessions",
     "workout_plans",
     "recovery_metrics",
@@ -42,6 +45,8 @@ TABLES = [
     "tasks",
     "notifications",
     "timer_state",
+    "stocks_cache",
+    "sports_cache",
     "profile",
 ]
 

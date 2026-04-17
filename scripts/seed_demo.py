@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Seed the demo account with realistic data for persona:
-  Alex Chen — software engineer, San Francisco
+  Demo User — software engineer, San Francisco
 
 Generates:
-  - profile: Alex Chen, SF location, goals
+  - profile: Demo User, SF location, goals
   - habit_registry + habits: 7 habits, ~60% completion over 30 days
   - tasks: 10 tasks (mix of active + completed)
   - fitness_log: 30-day body composition trend (slow improvement arc)
@@ -12,11 +12,20 @@ Generates:
   - recovery_metrics: 30 nights of sleep/HRV data
   - study_log: recent entries
   - journal_entries: 4 entries with demo persona tone
+  - recipes + meal_log: 5 saved recipes, 14 days of meals with macros
+  - notifications: 6 recent notifications
+  - workout_plans: Mon–Fri structured plans for the current week
+  - chat_sessions + chat_messages: 3 sample conversations
+  - stocks_cache: 3 tickers
+  - sports_cache: 3 teams
+  - strength_sessions + strength_session_sets: recent lifting sessions (issue #249)
 
 Usage:
   python3 scripts/seed_demo.py
 
-Requires DEMO_USER_ID in .env.
+Requires DEMO_USER_ID in .env. Every row is written with
+user_id = DEMO_USER_ID — never OWNER_USER_ID, never NULL (see issue #133
+for the journal-leak regression this discipline prevents).
 """
 from __future__ import annotations
 
@@ -48,8 +57,8 @@ def today_minus(n: int) -> str:
 
 def seed_profile(client):
     rows = [
-        {"user_id": DEMO_USER_ID, "key": "name",            "value": "Alex"},
-        {"user_id": DEMO_USER_ID, "key": "Identity/Name",   "value": "Alex Chen"},
+        {"user_id": DEMO_USER_ID, "key": "name",            "value": "Demo User"},
+        {"user_id": DEMO_USER_ID, "key": "Identity/Name",   "value": "Demo User"},
         {"user_id": DEMO_USER_ID, "key": "Identity/Role",   "value": "Software Engineer"},
         {"user_id": DEMO_USER_ID, "key": "Identity/Location","value": "San Francisco, CA"},
         {"user_id": DEMO_USER_ID, "key": "location_city",   "value": "San Francisco"},
@@ -123,7 +132,7 @@ def seed_habits(client):
                 })
 
     client.table("habits").upsert(
-        habit_rows, on_conflict="habit_id,date"
+        habit_rows, on_conflict="user_id,habit_id,date"
     ).execute()
     print(f"[seed] habits: {len(habit_rows)} completions over 30 days")
 
@@ -370,19 +379,19 @@ def seed_meal_log(client, recipe_ids: dict):
     """14 days of meals with realistic macros. Some entries reference saved recipes."""
     rng = random.Random(31)
 
-    # (meal_type, recipe_name_or_None, notes, cal, protein, carbs, fat, fiber, sodium)
+    # (meal_type, recipe_name_or_None, notes, cal, protein, carbs, fat, fiber, sugar, sodium)
     meal_templates = [
-        ("breakfast", "Overnight Oats",              "Pre-workout",              420, 28, 54, 10, 7, 180),
-        ("breakfast", None,                           "Scrambled eggs + toast",   380, 30, 32,  9, 2, 520),
-        ("breakfast", None,                           "Greek yogurt + granola",   350, 22, 42,  8, 3, 210),
-        ("lunch",     "High-Protein Chicken Bowl",    "Meal prep",                540, 48, 52,  9, 5, 680),
-        ("lunch",     "Spicy Tuna Rice Bowl",         None,                       490, 42, 50,  8, 3, 760),
-        ("lunch",     None,                           "Turkey wrap + side salad", 510, 38, 45, 12, 4, 890),
-        ("dinner",    "Greek Salmon with Tzatziki",   None,                       520, 46, 18, 24, 3, 640),
-        ("dinner",    "Turkey and Veggie Stir Fry",   "Extra rice",               580, 50, 58, 12, 6, 820),
-        ("dinner",    None,                           "Steak + roasted potatoes", 650, 52, 44, 22, 4, 740),
-        ("snack",     None,                           "Protein shake",            180, 25,  8,  4, 1, 220),
-        ("snack",     None,                           "Apple + peanut butter",    210,  6, 28,  9, 4,  80),
+        ("breakfast", "Overnight Oats",              "Pre-workout",              420, 28, 54, 10, 7, 22, 180),
+        ("breakfast", None,                           "Scrambled eggs + toast",   380, 30, 32,  9, 2,  4, 520),
+        ("breakfast", None,                           "Greek yogurt + granola",   350, 22, 42,  8, 3, 18, 210),
+        ("lunch",     "High-Protein Chicken Bowl",    "Meal prep",                540, 48, 52,  9, 5,  3, 680),
+        ("lunch",     "Spicy Tuna Rice Bowl",         None,                       490, 42, 50,  8, 3,  2, 760),
+        ("lunch",     None,                           "Turkey wrap + side salad", 510, 38, 45, 12, 4,  6, 890),
+        ("dinner",    "Greek Salmon with Tzatziki",   None,                       520, 46, 18, 24, 3,  5, 640),
+        ("dinner",    "Turkey and Veggie Stir Fry",   "Extra rice",               580, 50, 58, 12, 6,  8, 820),
+        ("dinner",    None,                           "Steak + roasted potatoes", 650, 52, 44, 22, 4,  3, 740),
+        ("snack",     None,                           "Protein shake",            180, 25,  8,  4, 1,  5, 220),
+        ("snack",     None,                           "Apple + peanut butter",    210,  6, 28,  9, 4, 18,  80),
     ]
 
     rows = []
@@ -395,7 +404,7 @@ def seed_meal_log(client, recipe_ids: dict):
         if rng.random() < 0.55:
             daily_templates += rng.sample(meal_templates[9:], 1) # occasional snack
 
-        for meal_type, recipe_name, notes, cal, protein, carbs, fat, fiber, sodium in daily_templates:
+        for meal_type, recipe_name, notes, cal, protein, carbs, fat, fiber, sugar, sodium in daily_templates:
             rid = recipe_ids.get(recipe_name) if recipe_name else None
             rows.append({
                 "user_id":   DEMO_USER_ID,
@@ -408,11 +417,17 @@ def seed_meal_log(client, recipe_ids: dict):
                 "carbs_g":   round(carbs   + rng.uniform(-5, 5), 1),
                 "fat_g":     round(fat     + rng.uniform(-2, 2), 1),
                 "fiber_g":   round(fiber   + rng.uniform(-0.5, 0.5), 1),
+                "sugar_g":   round(sugar   + rng.uniform(-0.8, 0.8), 1),
                 "sodium_mg": sodium + rng.randint(-80, 80),
                 "source":    "manual",
             })
 
-    client.table("meal_log").insert(rows).execute()
+    # Idempotent re-run: upsert on (user_id, date, meal_type, recipe_id).
+    # recipe_id is nullable; Postgres treats NULLs as distinct, so ad-hoc meals
+    # on the same day/meal_type don't collide — matches real logging patterns.
+    client.table("meal_log").upsert(
+        rows, on_conflict="user_id,date,meal_type,recipe_id"
+    ).execute()
     print(f"[seed] meal_log: {len(rows)} entries over 14 days")
 
 
@@ -598,6 +613,231 @@ def seed_workout_plans(client):
     print(f"[seed] workout_plans: {len(rows)} plans (Mon–Fri current week)")
 
 
+def seed_chat(client):
+    """3 sample conversations covering meal Q&A, scheduling, and workout tweaks.
+    chat_messages has a `position` column (migration 20260413000005) for deterministic
+    ordering inside a session — we set it explicitly starting at 1.
+    """
+    sessions = [
+        {
+            "device":     "web",
+            "summary":    "Post-workout meal planning",
+            "started_at_offset_hrs": 3,
+            "messages": [
+                ("user",      "What should I eat after today's leg day to hit my protein goal?"),
+                ("assistant", "You're at 112 g protein with 53 g left against a 165 g goal. Post-lift target: 40–50 g in the next hour. Options from your saved recipes:\n\n- High-Protein Chicken Bowl — 48 g protein, 540 kcal\n- Greek Salmon with Tzatziki — 46 g protein, 520 kcal\n\nChicken bowl is the cheaper fit: closer to your 2,200 kcal target with the meals already logged."),
+                ("user",      "Go with the chicken bowl. Log it."),
+                ("assistant", "Logged: High-Protein Chicken Bowl (dinner, 540 kcal, 48 g protein). Daily total now 160 g protein — 5 g from goal."),
+            ],
+        },
+        {
+            "device":     "web",
+            "summary":    "Finding time for a 30-min review",
+            "started_at_offset_hrs": 26,
+            "messages": [
+                ("user",      "I need 30 minutes this week to review the auth refactor design doc. When's clear?"),
+                ("assistant", "Your calendar this week (ignoring focus blocks):\n\n- Tue 2:30–3:00 PM — open\n- Wed 10:00–11:00 AM — open\n- Thu 4:00–4:30 PM — open\n\nThu 4:00 PM is the weakest fit (post-lunch focus dip + Friday deadline pressure). Recommend Tue 2:30 PM — you're sharpest mid-afternoon based on your study log history."),
+                ("user",      "Tuesday 2:30 works. Block it."),
+                ("assistant", "Blocked: Tue 2:30–3:00 PM \"Review auth refactor design doc\" on your primary calendar. Linked to task \"Write design doc for auth refactor\"."),
+            ],
+        },
+        {
+            "device":     "web",
+            "summary":    "Pull day swap — lingering soreness",
+            "started_at_offset_hrs": 50,
+            "messages": [
+                ("user",      "Lats and traps still wrecked from Monday. Do I push through pull day tomorrow or swap?"),
+                ("assistant", "DOMS in the target muscle group 72+ hours out is a signal, not a virtue — training through it degrades quality and recovery.\n\nOptions:\n\n1. Swap pull → zone 2 cardio (Wed's planned session). Lets lats recover one more day. Lowest risk.\n2. Swap pull → accessory + core (Fri's planned session). Still gets upper-body work in a non-pulling pattern.\n3. Push through at 70% weight. Worst of both — reduced stimulus with continued recovery debt.\n\nRecommendation: option 1. I'll move pull to Wednesday and cardio to tomorrow."),
+                ("user",      "Do it."),
+                ("assistant", "Updated plan: Tuesday → Zone 2 Cardio (35 min treadmill). Wednesday → Pull Day. Friday's accessory session stays."),
+            ],
+        },
+    ]
+
+    session_rows = [
+        {
+            "user_id":        DEMO_USER_ID,
+            "device":         s["device"],
+            "summary":        s["summary"],
+            "started_at":     (datetime.utcnow() - timedelta(hours=s["started_at_offset_hrs"])).isoformat() + "Z",
+            "last_active_at": (datetime.utcnow() - timedelta(hours=s["started_at_offset_hrs"]) + timedelta(minutes=8)).isoformat() + "Z",
+        }
+        for s in sessions
+    ]
+    resp = client.table("chat_sessions").insert(session_rows).execute()
+    session_ids = [r["id"] for r in resp.data]
+
+    message_rows = []
+    for sid, session in zip(session_ids, sessions):
+        for position, (role, content) in enumerate(session["messages"], start=1):
+            message_rows.append({
+                "user_id":    DEMO_USER_ID,
+                "session_id": sid,
+                "role":       role,
+                "content":    content,
+                "position":   position,
+            })
+    client.table("chat_messages").insert(message_rows).execute()
+    print(f"[seed] chat_sessions: {len(session_rows)} sessions, chat_messages: {len(message_rows)} messages")
+
+
+def seed_stocks(client):
+    """Watchlist cache — 3 tickers with recent quote + 20-point sparkline."""
+    rng = random.Random(53)
+
+    def sparkline(base_price: float, spread_pct: float = 0.04) -> list[float]:
+        pts = []
+        price = base_price * (1 - spread_pct / 2)
+        for _ in range(20):
+            price += rng.uniform(-base_price * 0.008, base_price * 0.008)
+            pts.append(round(price, 2))
+        return pts
+
+    tickers = [
+        ("AAPL", 218.45, 1.82,  0.84),
+        ("NVDA", 142.30, -2.15, -1.49),
+        ("MSFT", 425.60, 3.40,  0.80),
+    ]
+    rows = [
+        {
+            "user_id":    DEMO_USER_ID,
+            "ticker":     ticker,
+            "price":      price,
+            "change_abs": change_abs,
+            "change_pct": change_pct,
+            "sparkline":  sparkline(price),
+        }
+        for ticker, price, change_abs, change_pct in tickers
+    ]
+    client.table("stocks_cache").upsert(rows, on_conflict="user_id,ticker").execute()
+    print(f"[seed] stocks_cache: {len(rows)} tickers")
+
+
+def seed_sports(client):
+    """Favorites cache — 3 teams across NBA / NFL / MLS."""
+    teams = [
+        {
+            "team_id": "9",
+            "league":  "nba",
+            "data": {
+                "name":       "Golden State Warriors",
+                "abbreviation":"GSW",
+                "record":     "28-22",
+                "last_game":  {"opponent": "LAL", "result": "W", "score": "118-112", "date": today_minus(1)},
+                "next_game":  {"opponent": "DEN", "date": today_minus(-2), "home": True},
+            },
+        },
+        {
+            "team_id": "25",
+            "league":  "nfl",
+            "data": {
+                "name":       "San Francisco 49ers",
+                "abbreviation":"SF",
+                "record":     "11-6",
+                "last_game":  {"opponent": "SEA", "result": "W", "score": "27-17", "date": today_minus(5)},
+                "next_game":  {"opponent": "DAL", "date": today_minus(-4), "home": False},
+            },
+        },
+        {
+            "team_id": "11690",
+            "league":  "mls",
+            "data": {
+                "name":       "San Jose Earthquakes",
+                "abbreviation":"SJ",
+                "record":     "6-8-4",
+                "last_game":  {"opponent": "LA", "result": "D", "score": "1-1", "date": today_minus(3)},
+                "next_game":  {"opponent": "POR", "date": today_minus(-6), "home": True},
+            },
+        },
+    ]
+    rows = [{"user_id": DEMO_USER_ID, **t} for t in teams]
+    client.table("sports_cache").upsert(
+        rows, on_conflict="user_id,team_id,league"
+    ).execute()
+    print(f"[seed] sports_cache: {len(rows)} teams")
+
+
+def seed_strength(client):
+    """Logged strength sessions + sets (issue #249) — 6 sessions over 3 weeks.
+    strength_session_sets has no user_id column; scoping is enforced via the
+    parent strength_sessions.user_id through an RLS subquery policy (see
+    migration 20260416000000). The seed still references only session IDs
+    created with user_id = DEMO_USER_ID, so the FK path is tight.
+    """
+    sessions_def = [
+        # (days_ago, start_hour, duration_mins, perceived_effort, notes, exercises)
+        # exercises: list of (name, [(weight_lbs, reps, rpe)])
+        (1, 18, 62, 7, "Pull day — felt strong on rows", [
+            ("Barbell row",     [(165, 8, 7.0), (165, 8, 7.5), (175, 6, 8.0), (175, 5, 8.5)]),
+            ("Lat pulldown",    [(130, 10, 7.0), (130, 10, 7.5), (130, 9, 8.0)]),
+            ("Seated cable row",[(120, 12, 7.0), (120, 11, 7.5), (120, 10, 8.0)]),
+            ("DB curl",         [(35, 12, 7.0), (35, 11, 7.5), (35, 10, 8.0)]),
+        ]),
+        (3, 7, 58, 8, "Leg day — squats grinding by set 3", [
+            ("Back squat",       [(205, 8, 7.5), (205, 7, 8.0), (205, 6, 8.5), (205, 5, 9.0)]),
+            ("Romanian deadlift",[(175, 10, 7.0), (175, 10, 7.5), (175, 9, 8.0)]),
+            ("Leg press",        [(270, 12, 7.0), (290, 10, 7.5), (290, 9, 8.0)]),
+            ("Walking lunges",   [(40, 12, 7.5), (40, 12, 8.0)]),
+        ]),
+        (6, 18, 55, 7, "Push day — bench up 5 lb from last week", [
+            ("Barbell bench press",[(185, 7, 7.5), (185, 7, 8.0), (185, 6, 8.5), (185, 5, 9.0)]),
+            ("Incline DB press",   [(65, 10, 7.0), (65, 10, 7.5), (65, 9, 8.0)]),
+            ("Shoulder press",     [(115, 10, 7.5), (115, 9, 8.0), (115, 8, 8.5)]),
+            ("Tricep pushdowns",   [(50, 12, 7.0), (50, 12, 7.5), (50, 11, 8.0)]),
+        ]),
+        (9, 18, 60, 7, "Pull day", [
+            ("Barbell row",     [(160, 8, 7.0), (160, 8, 7.5), (170, 6, 8.0), (170, 5, 8.5)]),
+            ("Lat pulldown",    [(125, 10, 7.0), (125, 10, 7.5), (125, 9, 8.0)]),
+            ("DB curl",         [(35, 12, 7.0), (35, 10, 7.5), (35, 9, 8.0)]),
+        ]),
+        (11, 7, 56, 8, "Leg day — knees warm today", [
+            ("Back squat",       [(200, 8, 7.5), (200, 8, 8.0), (200, 6, 8.5)]),
+            ("Romanian deadlift",[(170, 10, 7.0), (170, 10, 7.5), (170, 9, 8.0)]),
+            ("Leg press",        [(270, 12, 7.0), (270, 11, 7.5), (270, 10, 8.0)]),
+        ]),
+        (14, 18, 50, 6, "Push — deload, focus on form", [
+            ("Barbell bench press",[(155, 10, 6.5), (155, 10, 7.0), (155, 9, 7.5)]),
+            ("Incline DB press",   [(55, 12, 6.5), (55, 12, 7.0), (55, 11, 7.5)]),
+            ("Shoulder press",     [(95, 12, 6.5), (95, 12, 7.0), (95, 11, 7.5)]),
+        ]),
+    ]
+
+    def lbs_to_kg(lbs: float) -> float:
+        return round(lbs * 0.453592, 2)
+
+    session_rows = []
+    for days_ago, start_hour, duration, rpe, notes, _ in sessions_def:
+        start_dt = datetime.combine(date.today() - timedelta(days=days_ago), datetime.min.time()) + timedelta(hours=start_hour)
+        end_dt = start_dt + timedelta(minutes=duration)
+        session_rows.append({
+            "user_id":          DEMO_USER_ID,
+            "performed_on":     str(start_dt.date()),
+            "started_at":       start_dt.isoformat() + "Z",
+            "completed_at":     end_dt.isoformat() + "Z",
+            "perceived_effort": rpe,
+            "notes":            notes,
+        })
+    resp = client.table("strength_sessions").insert(session_rows).execute()
+    session_ids = [r["id"] for r in resp.data]
+
+    set_rows = []
+    for session_id, (_, _, _, _, _, exercises) in zip(session_ids, sessions_def):
+        for order, (exercise_name, sets) in enumerate(exercises, start=1):
+            for set_number, (weight_lbs, reps, rpe) in enumerate(sets, start=1):
+                set_rows.append({
+                    "session_id":     session_id,
+                    "exercise_name":  exercise_name,
+                    "exercise_order": order,
+                    "set_number":     set_number,
+                    "weight_kg":      lbs_to_kg(weight_lbs),
+                    "reps":           reps,
+                    "rpe":            rpe,
+                    "completed":      True,
+                })
+    client.table("strength_session_sets").insert(set_rows).execute()
+    print(f"[seed] strength_sessions: {len(session_rows)} sessions, strength_session_sets: {len(set_rows)} sets")
+
+
 def main():
     require_demo_user_id()
     client = get_client()
@@ -615,6 +855,10 @@ def main():
     seed_meal_log(client, recipe_ids)
     seed_notifications(client)
     seed_workout_plans(client)
+    seed_chat(client)
+    seed_stocks(client)
+    seed_sports(client)
+    seed_strength(client)
     print("[seed] Done.")
 
 

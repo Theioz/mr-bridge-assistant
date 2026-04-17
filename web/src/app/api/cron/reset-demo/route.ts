@@ -65,8 +65,8 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
 
   // Profile
   const profileRows = [
-    { user_id: uid, key: "name",               value: "Alex" },
-    { user_id: uid, key: "Identity/Name",       value: "Alex Chen" },
+    { user_id: uid, key: "name",               value: "Demo User" },
+    { user_id: uid, key: "Identity/Name",       value: "Demo User" },
     { user_id: uid, key: "Identity/Role",       value: "Software Engineer" },
     { user_id: uid, key: "Identity/Location",   value: "San Francisco, CA" },
     { user_id: uid, key: "location_city",       value: "San Francisco" },
@@ -119,7 +119,7 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
         }
       }
     }
-    await supabase.from("habits").upsert(habitRows, { onConflict: "habit_id,date" });
+    await supabase.from("habits").upsert(habitRows, { onConflict: "user_id,habit_id,date" });
   }
 
   // Tasks
