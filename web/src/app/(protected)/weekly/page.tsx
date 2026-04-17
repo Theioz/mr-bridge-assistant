@@ -67,7 +67,7 @@ function fmtDuration(mins: number): string {
 
 // ── Card wrapper ──────────────────────────────────────────────────────────────
 
-function Card({
+function Panel({
   title,
   meta,
   children,
@@ -77,16 +77,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      className="flex flex-col card-lift"
-      style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--r-2)",
-        padding: "var(--space-5)",
-        transition: "transform var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)",
-      }}
-    >
+    <section className="flex flex-col" style={{ minWidth: 0 }}>
       <h2 className="db-section-label">
         {title}
         {meta && <span className="meta">{meta}</span>}
@@ -282,10 +273,17 @@ export default async function WeeklyPage() {
         avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""
       }`;
 
+  const rowStyle: React.CSSProperties = {
+    gap: "var(--space-7)",
+    paddingBottom: "var(--space-7)",
+    borderBottom: "1px solid var(--rule-soft)",
+  };
+  const rowStyleLast: React.CSSProperties = { gap: "var(--space-7)" };
+
   return (
     <div
       className="flex flex-col"
-      style={{ gap: "var(--space-6)" }}
+      style={{ gap: "var(--space-7)" }}
     >
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header>
@@ -316,9 +314,9 @@ export default async function WeeklyPage() {
       {/* ── Row 1: Habits + Tasks ───────────────────────────────────── */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-6)" }}
+        style={rowStyle}
       >
-        <Card
+        <Panel
           title="Habits"
           meta={
             habitRegistry.length === 0
@@ -407,9 +405,9 @@ export default async function WeeklyPage() {
               </table>
             </div>
           )}
-        </Card>
+        </Panel>
 
-        <Card
+        <Panel
           title="Tasks"
           meta={` · ${completedTasks.length} done · ${activeTasks.length} active${
             overdueTasks.length > 0 ? ` · ${overdueTasks.length} overdue` : ""
@@ -553,15 +551,15 @@ export default async function WeeklyPage() {
               )}
             </div>
           )}
-        </Card>
+        </Panel>
       </div>
 
       {/* ── Row 2: Training + Recovery ──────────────────────────────── */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-6)" }}
+        style={rowStyle}
       >
-        <Card title="Training" meta={trainingMeta}>
+        <Panel title="Training" meta={trainingMeta}>
           {allWorkouts.length === 0 ? (
             <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
               No sessions logged this week.
@@ -648,9 +646,9 @@ export default async function WeeklyPage() {
               )}
             </div>
           )}
-        </Card>
+        </Panel>
 
-        <Card title="Recovery" meta={recoveryMeta}>
+        <Panel title="Recovery" meta={recoveryMeta}>
           {recoveryRows.length === 0 ? (
             <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
               No recovery data for this week.
@@ -733,15 +731,15 @@ export default async function WeeklyPage() {
               </table>
             </div>
           )}
-        </Card>
+        </Panel>
       </div>
 
       {/* ── Row 3: Body composition + Journal ───────────────────────── */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-6)" }}
+        style={rowStyleLast}
       >
-        <Card
+        <Panel
           title="Body composition"
           meta={fitnessLatest ? ` · ${fmtDate(fitnessLatest.date)}` : " · no data"}
         >
@@ -837,9 +835,9 @@ export default async function WeeklyPage() {
               )}
             </>
           )}
-        </Card>
+        </Panel>
 
-        <Card
+        <Panel
           title="Journal"
           meta={` · ${journalCount} entr${journalCount === 1 ? "y" : "ies"}${
             journalMissed > 0 ? ` · ${journalMissed} missed` : ""
@@ -889,7 +887,7 @@ export default async function WeeklyPage() {
               </p>
             </div>
           </div>
-        </Card>
+        </Panel>
       </div>
     </div>
   );

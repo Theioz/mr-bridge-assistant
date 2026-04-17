@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (Weekly — switch to dashboard panel pattern, two columns)
+- **Card shells dropped, panels use the dashboard pattern** in [web/src/app/(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx). The `--color-surface` + `--color-border` + `--r-2` + `card-lift` wrappers shipped in #309 were replaced with flat `<section>` panels that match the live dashboard's vocabulary — `db-section-label` headers, no fill, no border, no rounded corners, no hover lift. The local `Card` helper is renamed `Panel` and simplified.
+- **Two-column layout preserved.** Panels remain arranged as three rows of two (`grid-cols-1 lg:grid-cols-2`) so each domain sits side-by-side with its pair (Habits | Tasks, Training | Recovery, Body composition | Journal). Row-to-row separation comes from a `border-bottom: 1px solid var(--rule-soft)` + `padding-bottom: var(--space-7)` treatment (the `.db-section` feel applied to a grid row), with the final row omitting the trailing rule.
+- **Spacing lifted to `--space-7`** for both the inter-row gap and the intra-row column gap so each panel breathes like a dashboard section instead of feeling crowded inside a card.
+- **Hairline tables preserved inside each panel** — tabular numerics, 14×14 habit heatmap squares, `.delta-good` / `.delta-bad` utilities, Mon-Sun header, today flag, Prior measurement hint are all unchanged.
+- **Loading skeleton** rebuilt as three hairline-separated two-column rows of flat `PanelSkeleton` placeholders so hydration does not shift.
+- **No UX changes.** All ten parallel Supabase queries and every computed value preserved byte-identical.
+
 ### Fixed (Weekly — restore card shells, drop narrative recap)
 - **Cards restored around each metrics section** in [web/src/app/(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx). The Phase B flat-sections-with-hairlines treatment shipped in #308 rendered as a wall of text on Weekly — six distinct domains (Habits, Tasks, Training, Recovery, Body composition, Journal) stacked as flat `<section>` blocks lost the spatial chunking the surface needs. Each section is now wrapped in a `--color-surface` + `--color-border` + `--r-2` + `--space-5` card with `card-lift` hover, arranged in a 3-row × 2-column grid (`grid-cols-1 lg:grid-cols-2`, `--space-6` gap) — matching the pre-#308 layout rhythm.
 - **Narrative recap removed.** The `.prose-column` six-paragraph summary intro was replaced by inline `.meta` summaries on each card's `db-section-label` header (e.g. "Habits · 11/35 · 31%", "Training · 3 sessions · 1h 50m · 589 kcal", "Recovery · 7 days · readiness 74 · sleep 69 · HRV 45ms") — the section labels already carry the narrative; paragraphs added noise.
