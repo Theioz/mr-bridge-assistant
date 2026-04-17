@@ -36,13 +36,14 @@ export function ThemeToggle() {
       onClick={handleClick}
       aria-label={`Theme: ${LABEL[current]}. Click to change.`}
       title={`Theme: ${LABEL[current]}`}
-      className="flex items-center justify-center rounded-md transition-colors duration-150 cursor-pointer hover-text-brighten"
+      className="flex items-center justify-center rounded-md cursor-pointer hover-text-brighten"
       style={{
         width: 32,
         height: 32,
         background: "transparent",
         color: "var(--color-text-muted)",
         border: "1px solid var(--color-border)",
+        transition: "color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
       }}
     >
       <Icon size={15} />

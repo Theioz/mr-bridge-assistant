@@ -31,8 +31,15 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
       style={{ height: 4, background: "var(--color-border)" }}
     >
       <div
-        className="h-full rounded-full transition-all duration-300"
-        style={{ width: `${clamped}%`, background: color }}
+        className="h-full"
+        style={{
+          width: "100%",
+          transform: `scaleX(${clamped / 100})`,
+          transformOrigin: "left center",
+          background: color,
+          transition: "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
+          willChange: "transform",
+        }}
       />
     </div>
   );
@@ -131,8 +138,12 @@ export default async function MacroSummaryCard() {
 
   return (
     <div
-      className="rounded-xl p-5 transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      className="rounded-xl p-5 card-lift"
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        transition: "border-color var(--motion-base) var(--ease-out-quart), box-shadow var(--motion-base) var(--ease-out-quart), transform var(--motion-base) var(--ease-out-quart)",
+      }}
     >
       <p
         className="text-xs uppercase tracking-widest mb-4"

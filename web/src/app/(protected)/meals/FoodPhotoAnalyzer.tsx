@@ -547,7 +547,6 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           <button
             key={opt}
             onClick={() => setAnalyzerMode(opt)}
-            className="transition-all duration-150"
             style={{
               padding: "var(--space-1) var(--space-3)",
               borderRadius: "var(--r-1)",
@@ -558,6 +557,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               border: "none",
               cursor: "pointer",
               whiteSpace: "nowrap",
+              transition: "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             {opt === "food" ? "Food Photo" : "Nutrition Label"}

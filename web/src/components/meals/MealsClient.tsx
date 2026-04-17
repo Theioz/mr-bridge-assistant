@@ -209,8 +209,15 @@ function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
       </div>
       <div className="rounded-full overflow-hidden" style={{ height: 3, background: "var(--rule-soft)" }}>
         <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${clamped}%`, background: color }}
+          className="h-full"
+          style={{
+            width: "100%",
+            transform: `scaleX(${clamped / 100})`,
+            transformOrigin: "left center",
+            background: color,
+            transition: "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
+            willChange: "transform",
+          }}
         />
       </div>
     </div>
@@ -1369,7 +1376,7 @@ export default function MealsClient({
             <button
               key={id}
               onClick={() => handleTabClick(id)}
-              className="flex-1 transition-all duration-150"
+              className="flex-1"
               style={{
                 padding: "var(--space-2) var(--space-3)",
                 borderRadius: "var(--r-1)",
@@ -1379,6 +1386,7 @@ export default function MealsClient({
                 color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: "none",
                 cursor: "pointer",
+                transition: "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
               }}
             >
               {label}
