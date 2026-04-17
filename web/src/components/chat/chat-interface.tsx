@@ -14,12 +14,22 @@ import type { Message } from "ai";
 interface Props {
   sessionId: string;
   initialMessages: Message[];
-  onMessageSent?: () => void;
+  onMessageSent?: (info?: { turnComplete: boolean; hadFailures: boolean; deadlineExceeded: boolean }) => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
   initialInput?: string;
 }
+
+// Side-channel sentinel emitted by /api/chat onFinish (issue 319). Absence
+// of this after a turn ends means the Lambda was killed mid-stream and the
+// client should refresh from server rather than trust local stream state.
+type TurnCompleteFrame = {
+  type: "turn-complete";
+  synthesized: boolean;
+  hadFailures: boolean;
+  deadlineExceeded: boolean;
+};
 
 // Returns the slash token the cursor is currently inside, or null.
 // A valid token is "/" at position 0 or preceded by whitespace, with no
@@ -53,11 +63,27 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   const [modelOverride, setModelOverride] = useState<ModelOverride>("auto");
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput } = useChat({
+  // Track the turn-complete sentinel from the server (issue 319). When the
+  // stream ends, we inspect `data` to confirm it arrived; if not, the Lambda
+  // was killed mid-stream and we tell the parent so it can refresh from server.
+  const turnCompleteRef = useRef(false);
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput, data } = useChat({
     api: "/api/chat",
     body: { sessionId, model: modelOverride },
     initialMessages,
-    onFinish: onMessageSent,
+    onFinish: () => {
+      // `data` is set by the time onFinish fires — read latest sentinel.
+      const latest = (data ?? []).slice().reverse().find(
+        (d) => d && typeof d === "object" && (d as { type?: string }).type === "turn-complete"
+      ) as TurnCompleteFrame | undefined;
+      const turnComplete = !!latest;
+      turnCompleteRef.current = turnComplete;
+      onMessageSent?.({
+        turnComplete,
+        hadFailures: latest?.hadFailures ?? false,
+        deadlineExceeded: latest?.deadlineExceeded ?? false,
+      });
+    },
   });
 
   // Seed input from navigation handoff (e.g. Scanner → Chat prefill)

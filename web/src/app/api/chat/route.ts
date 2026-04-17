@@ -1,7 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString, daysAgoString, startOfDayRFC3339, endOfDayRFC3339, addDays } from "@/lib/timezone";
-import { streamText, tool, jsonSchema, wrapLanguageModel } from "ai";
+import { streamText, tool, jsonSchema, wrapLanguageModel, StreamData } from "ai";
 import type { LanguageModelV1Middleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +9,19 @@ import { syncSports } from "@/lib/sync/sports";
 import type { SportsCacheData } from "@/lib/sync/sports/provider";
 import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+
+// Canonical result shape for state-mutating tools (issue #319).
+// Every mutating tool must return one of these so the model can reliably
+// distinguish "the action happened" from "the action didn't happen", and so
+// the synthesizer fallback never claims success for a failed tool result.
+type OkResult<T> = { ok: true } & T;
+type ErrResult = { ok: false; error: string };
+function ok<T extends Record<string, unknown>>(data: T): OkResult<T> {
+  return { ok: true, ...data };
+}
+function err(message: string): ErrResult {
+  return { ok: false, error: message };
+}
 
 // ── Demo mock data ───────────────────────────────────────────────────────────
 const DEMO_EMAILS = [
@@ -143,6 +156,8 @@ When creating multiple calendar events, work one week at a time. After completin
 If a task will require more than 20 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
 Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
 
+Verified-success rule: Every state-mutating tool returns either { ok: true, ... } or { ok: false, error }. Never say a mutating action is "done" or use ✓ unless the most recent tool result for that action has ok: true in this turn. If you don't see a successful tool result, either run the tool now or tell the user the action didn't go through (with the error if you have one). Do not infer success from the user's confirmation alone or from the absence of a visible failure.
+
 Calendar pre-flight rules (apply before every create_calendar_event or assign_workout call):
 1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
 2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
@@ -201,42 +216,88 @@ When asked what to cook or for recipe ideas:
 5. Call get_profile to check for dietary preferences and cuisine preferences (ignore any pantry-related profile keys).
 6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
 
-export const maxDuration = 60;
+// Lambda runtime ceiling. We trigger our own onStepFinish-driven abort at
+// TURN_DEADLINE_MS so onFinish always runs and persists a fallback assistant
+// message before Vercel's hard kill — the silent-stall path #319 hit when
+// the previous 60s ceiling let the Lambda die mid-stream.
+export const maxDuration = 90;
+const TURN_DEADLINE_MS = 80_000;
 
-// Issue #223: when the agent loop ends without an assistant text message
-// (step-cap exhaustion, token-budget abort, or a quiet model), build a short
-// human-readable summary from the tool calls that did execute so the user
-// sees acknowledgement instead of silence.
-const TOOL_PHRASING: Record<string, string> = {
-  add_task: "added a task",
-  complete_task: "marked a task complete",
-  log_habit: "logged a habit",
-  update_profile: "updated your profile",
-  create_calendar_event: "created a calendar event",
-  update_calendar_event: "updated a calendar event",
-  delete_calendar_event: "deleted a calendar event",
-  assign_workout: "assigned a workout",
-  update_workout_exercise: "updated a workout exercise",
+// Issue #223 + #319: when the agent loop ends without an assistant text
+// message (step-cap exhaustion, token-budget abort, Vercel-timeout abort, or
+// a quiet model), build a short human-readable summary from the tool calls
+// that did execute so the user sees acknowledgement instead of silence — and
+// CRUCIALLY, distinguish ok-true from ok-false tool results so we never
+// claim success for an action that failed.
+const TOOL_PHRASING: Record<string, [success: string, attempt: string]> = {
+  add_task: ["added a task", "add a task"],
+  complete_task: ["marked a task complete", "mark a task complete"],
+  log_habit: ["logged a habit", "log a habit"],
+  update_profile: ["updated your profile", "update your profile"],
+  create_calendar_event: ["created a calendar event", "create a calendar event"],
+  update_calendar_event: ["updated a calendar event", "update a calendar event"],
+  delete_calendar_event: ["deleted a calendar event", "delete a calendar event"],
+  assign_workout: ["assigned a workout", "assign a workout"],
+  update_workout_exercise: ["updated a workout exercise", "update a workout exercise"],
 };
-function synthesizeFallbackSummary(
-  toolNames: string[],
-  flags: { hitStepCap: boolean; budgetExceeded: boolean }
-): string {
-  const counts = new Map<string, number>();
-  for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
-  const phrases: string[] = [];
-  for (const [name, n] of counts) {
-    const phrase = TOOL_PHRASING[name];
-    if (phrase) phrases.push(n > 1 ? `${phrase} (×${n})` : phrase);
+
+interface CompletedToolStep {
+  toolName: string;
+  ok: boolean;
+  error?: string;
+}
+
+function isToolResultOk(result: unknown): boolean {
+  // Mutating tools: explicit { ok: true | false }
+  if (result && typeof result === "object" && "ok" in result) {
+    return (result as { ok: boolean }).ok === true;
   }
-  const body = phrases.length > 0
-    ? `Done. I ${phrases.join(", ")}.`
-    : `Done — completed ${toolNames.length} action${toolNames.length === 1 ? "" : "s"}.`;
-  const reason = flags.budgetExceeded
-    ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
-    : flags.hitStepCap
-      ? " (Hit my step limit before I could write a longer summary — let me know if you need detail.)"
-      : "";
+  // Read-only tools: anything without an `error` key counts as ok for the
+  // purposes of "did this complete?"
+  if (result && typeof result === "object" && "error" in result) return false;
+  return true;
+}
+
+function synthesizeFallbackSummary(
+  steps: CompletedToolStep[],
+  flags: { hitStepCap: boolean; budgetExceeded: boolean; aborted: boolean }
+): string {
+  const succeeded = steps.filter((s) => s.ok && TOOL_PHRASING[s.toolName]);
+  const failed = steps.filter((s) => !s.ok && TOOL_PHRASING[s.toolName]);
+
+  const phraseList = (subset: CompletedToolStep[], idx: 0 | 1): string => {
+    const counts = new Map<string, number>();
+    for (const s of subset) counts.set(s.toolName, (counts.get(s.toolName) ?? 0) + 1);
+    const out: string[] = [];
+    for (const [name, n] of counts) {
+      const phrase = TOOL_PHRASING[name][idx];
+      out.push(n > 1 ? `${phrase} (×${n})` : phrase);
+    }
+    return out.join(", ");
+  };
+
+  let body: string;
+  if (failed.length === 0 && succeeded.length === 0) {
+    body = "I hit a snag generating a response — please try again.";
+  } else if (failed.length === 0) {
+    body = `Done. I ${phraseList(succeeded, 0)}.`;
+  } else if (succeeded.length === 0) {
+    const firstError = failed.find((f) => f.error)?.error;
+    body = `I tried to ${phraseList(failed, 1)} but it didn't go through${firstError ? ` — ${firstError}` : ""}. Please try again.`;
+  } else {
+    const firstError = failed.find((f) => f.error)?.error;
+    body =
+      `Partial: I ${phraseList(succeeded, 0)}, but failed to ${phraseList(failed, 1)}` +
+      `${firstError ? ` (${firstError})` : ""}. Check before retrying the failed parts.`;
+  }
+
+  const reason = flags.aborted
+    ? " (I ran out of time before I could finish a full summary — your request may or may not have completed; check before retrying.)"
+    : flags.budgetExceeded
+      ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
+      : flags.hitStepCap
+        ? " (Hit my step limit before I could write a longer summary — let me know if you need detail.)"
+        : "";
   return body + reason;
 }
 
@@ -272,21 +333,24 @@ export async function POST(req: Request) {
     if (nameRow) userName = nameRow.value as string;
   }
 
-  // Load the last 20 messages from this session as context
+  // Load the last 10 messages from this session as context (#319: was loading
+  // the FIRST 10 by ordering ascending then limiting — for any session past 10
+  // turns the model lost recent context, including its own prior tool results).
   let contextMessages: { role: "user" | "assistant"; content: string }[] = [];
   if (sessionId) {
     const { data } = await supabase
       .from("chat_messages")
-      .select("role, content")
+      .select("role, content, position")
       .eq("session_id", sessionId)
       .in("role", ["user", "assistant"])
-      .order("position", { ascending: true, nullsFirst: false })
+      .order("position", { ascending: false, nullsFirst: false })
       .limit(10);
     if (data) {
-      // Filter out empty-content messages — they cause Anthropic 400 errors
-      contextMessages = (data as { role: "user" | "assistant"; content: string }[]).filter(
-        (m) => m.content.trim() !== ""
-      );
+      // Filter out empty-content messages — they cause Anthropic 400 errors —
+      // then reverse so messages flow oldest→newest into the model.
+      contextMessages = (data as { role: "user" | "assistant"; content: string }[])
+        .filter((m) => m.content.trim() !== "")
+        .reverse();
     }
   }
 
@@ -468,7 +532,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }),
       execute: async ({ title, priority, category, due_date, parent_id }) => {
         if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
-          return { error: `due_date must be YYYY-MM-DD format, got: "${due_date}"` };
+          return err(`due_date must be YYYY-MM-DD format, got: "${due_date}"`);
         }
 
         // Deduplication guard — prevents double-inserts from stream retries
@@ -488,9 +552,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         }
 
         const { data: existing } = await dupQuery.maybeSingle();
-        if (existing) return existing;
+        if (existing) return ok({ task: existing, deduped: true });
 
-        const { data, error } = await supabase
+        const { data, error: insertError } = await supabase
           .from("tasks")
           .insert({
             user_id: userId,
@@ -503,8 +567,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           })
           .select("id, title, priority, status, due_date, category, parent_id, created_at")
           .single();
-        if (error) return { error: error.message };
-        return data;
+        if (insertError) return err(insertError.message);
+        if (!data) return err("Insert returned no row — task may not have been saved.");
+        return ok({ task: data });
       },
     }),
 
@@ -523,9 +588,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .update({ status: "completed", completed_at: new Date().toISOString() })
           .eq("id", id);
         if (userId) q = q.eq("user_id", userId);
-        const { data, error } = await q.select("id, title, status, completed_at").single();
-        if (error) return { error: error.message };
-        return data;
+        const { data, error: updateError } = await q.select("id, title, status, completed_at").maybeSingle();
+        if (updateError) return err(updateError.message);
+        if (!data) return err(`No active task found with id ${id} for this user — nothing was changed.`);
+        return ok({ task: data });
       },
     }),
 
@@ -579,10 +645,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .limit(1);
         if (userId) habQ = habQ.eq("user_id", userId);
         const { data: habits, error: lookupError } = await habQ;
-        if (lookupError) return { error: lookupError.message };
-        if (!habits || habits.length === 0) return { error: `No active habit matching "${name}" found.` };
+        if (lookupError) return err(lookupError.message);
+        if (!habits || habits.length === 0) return err(`No active habit matching "${name}" found.`);
         const habit = habits[0];
-        const { data, error } = await supabase
+        const { data, error: upsertError } = await supabase
           .from("habits")
           .upsert(
             { user_id: userId, habit_id: habit.id, date: targetDate, completed: true, notes: notes ?? null },
@@ -590,8 +656,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           )
           .select("habit_id, date, completed, notes")
           .single();
-        if (error) return { error: error.message };
-        return { habit: habit.name, ...data };
+        if (upsertError) return err(upsertError.message);
+        if (!data) return err("Upsert returned no row — habit may not have been logged.");
+        return ok({ habit: habit.name, log: data });
       },
     }),
 
@@ -679,12 +746,15 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }),
       execute: async ({ updates }) => {
         const rows = updates.map(({ key, value }) => ({ key, value, ...(userId ? { user_id: userId } : {}) }));
-        const { data, error } = await supabase
+        const { data, error: upsertError } = await supabase
           .from("profile")
           .upsert(rows, { onConflict: "user_id,key" })
           .select("key, value, updated_at");
-        if (error) return { error: error.message };
-        return { written: data ?? [] };
+        if (upsertError) return err(upsertError.message);
+        if (!data || data.length !== rows.length) {
+          return err(`Profile upsert returned ${data?.length ?? 0} rows, expected ${rows.length} — values may not be saved.`);
+        }
+        return ok({ written: data });
       },
     }),
 
@@ -960,14 +1030,20 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }),
       execute: async ({ title, date, start_time, end_time, location, description, all_day = false }) => {
         if (isDemo) {
-          return { id: `demo-${Date.now()}`, title, start: { date, dateTime: start_time ? `${date}T${start_time}:00` : date }, end: { date, dateTime: end_time ? `${date}T${end_time}:00` : date }, note: "Demo mode — event not saved to real calendar." };
+          return ok({
+            id: `demo-${Date.now()}`,
+            title,
+            start: { date, dateTime: start_time ? `${date}T${start_time}:00` : date },
+            end: { date, dateTime: end_time ? `${date}T${end_time}:00` : date },
+            note: "Demo mode — event not saved to real calendar.",
+          });
         }
         try {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            return { error: `date must be YYYY-MM-DD, got: "${date}"` };
+            return err(`date must be YYYY-MM-DD, got: "${date}"`);
           }
           if (!all_day && !start_time) {
-            return { error: "start_time is required for timed events. Use all_day: true for all-day events." };
+            return err("start_time is required for timed events. Use all_day: true for all-day events.");
           }
 
           const auth = getGoogleAuthClient();
@@ -1004,16 +1080,31 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
             calendarId: "primary",
             requestBody: eventBody,
           });
+          if (!res.data.id) return err("Google returned no event id — create may not have persisted.");
 
-          return {
+          // Read-after-write verification (#319): confirm the event Google
+          // actually stored matches what we asked for. Catches wrong-target /
+          // partial-write / silent-rewrite classes that a 200 response can't.
+          const verify = await calendar.events.get({ calendarId: "primary", eventId: res.data.id });
+          const verifiedStart = verify.data.start?.dateTime ?? verify.data.start?.date ?? null;
+          const verifiedEnd = verify.data.end?.dateTime ?? verify.data.end?.date ?? null;
+          const expectedStart = all_day ? date : `${date}T${start_time}:00`;
+          if (!verifiedStart?.startsWith(expectedStart.slice(0, all_day ? 10 : 16))) {
+            return err(
+              `Calendar accepted the create but a follow-up read shows start=${verifiedStart}, expected to start with ${expectedStart}. The event may not be where you wanted it.`
+            );
+          }
+
+          return ok({
             id: res.data.id,
             title: res.data.summary,
             start: res.data.start,
             end: res.data.end,
             link: res.data.htmlLink,
-          };
-        } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to create calendar event" };
+            verified: { start: verifiedStart, end: verifiedEnd },
+          });
+        } catch (caughtErr) {
+          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to create calendar event");
         }
       },
     }),
@@ -1030,15 +1121,35 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }),
       execute: async ({ eventId }) => {
         if (isDemo) {
-          return { deleted: true, eventId, note: "Demo mode — event not deleted from real calendar." };
+          return ok({ eventId, note: "Demo mode — event not deleted from real calendar." });
         }
         try {
           const auth = getGoogleAuthClient();
           const calendar = google.calendar({ version: "v3", auth });
           await calendar.events.delete({ calendarId: "primary", eventId });
-          return { deleted: true, eventId };
-        } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to delete calendar event" };
+
+          // Read-after-write verification (#319): confirm the event is gone or
+          // marked cancelled. Google delete returns 204 even if the event was
+          // already gone, so we re-read to be sure.
+          try {
+            const verify = await calendar.events.get({ calendarId: "primary", eventId });
+            if (verify.data.status !== "cancelled") {
+              return err(`Calendar accepted the delete but a follow-up read still shows status=${verify.data.status}. The event may not be deleted.`);
+            }
+          } catch (verifyErr) {
+            // 404/410 on get-after-delete means the event is gone — that's success.
+            const status = (verifyErr as { code?: number; response?: { status?: number } }).code
+              ?? (verifyErr as { response?: { status?: number } }).response?.status;
+            if (status !== 404 && status !== 410) {
+              return err(
+                `Calendar accepted the delete but verification failed: ${verifyErr instanceof Error ? verifyErr.message : "unknown error"}`
+              );
+            }
+          }
+
+          return ok({ eventId });
+        } catch (caughtErr) {
+          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to delete calendar event");
         }
       },
     }),
@@ -1067,7 +1178,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }),
       execute: async ({ eventId, summary, start, end, location, description }) => {
         if (isDemo) {
-          return { updated: true, eventId, note: "Demo mode — event not updated in real calendar." };
+          return ok({ eventId, note: "Demo mode — event not updated in real calendar." });
         }
         try {
           const auth = getGoogleAuthClient();
@@ -1097,16 +1208,45 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
             requestBody,
           });
 
-          return {
-            updated: true,
+          // Read-after-write verification (#319): the original symptom of the
+          // bug was a "successful" patch that didn't actually change the event.
+          // Re-read and check the requested fields match what we asked for.
+          const verify = await calendar.events.get({ calendarId: "primary", eventId });
+          const mismatches: string[] = [];
+          if (summary !== undefined && verify.data.summary !== summary) {
+            mismatches.push(`summary expected "${summary}", got "${verify.data.summary}"`);
+          }
+          if (start !== undefined) {
+            const verifiedStart = verify.data.start?.dateTime ?? verify.data.start?.date ?? "";
+            const expectedPrefix = /T/.test(start) ? start.slice(0, 16) : start;
+            if (!verifiedStart.startsWith(expectedPrefix)) {
+              mismatches.push(`start expected to begin with "${expectedPrefix}", got "${verifiedStart}"`);
+            }
+          }
+          if (end !== undefined) {
+            const verifiedEnd = verify.data.end?.dateTime ?? verify.data.end?.date ?? "";
+            const expectedPrefix = /T/.test(end) ? end.slice(0, 16) : end;
+            if (!verifiedEnd.startsWith(expectedPrefix)) {
+              mismatches.push(`end expected to begin with "${expectedPrefix}", got "${verifiedEnd}"`);
+            }
+          }
+          if (location !== undefined && verify.data.location !== location) {
+            mismatches.push(`location expected "${location}", got "${verify.data.location}"`);
+          }
+          if (mismatches.length > 0) {
+            return err(`Calendar accepted the update but a follow-up read shows it didn't take: ${mismatches.join("; ")}`);
+          }
+
+          return ok({
             eventId: res.data.id,
             title: res.data.summary,
             start: res.data.start,
             end: res.data.end,
             link: res.data.htmlLink,
-          };
-        } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to update calendar event" };
+            verified: true,
+          });
+        } catch (caughtErr) {
+          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to update calendar event");
         }
       },
     }),
@@ -1225,10 +1365,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         },
       }),
       execute: async ({ date, name, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
-        if (!userId) return { error: "Not authenticated" };
-        if (isDemo) return { demo: true, note: "Demo mode — plan not saved." };
+        if (!userId) return err("Not authenticated");
+        if (isDemo) return ok({ demo: true, note: "Demo mode — plan not saved." });
 
-        const { data: upserted, error } = await supabase
+        const { data: upserted, error: upsertError } = await supabase
           .from("workout_plans")
           .upsert(
             { user_id: userId, date, name: name ?? null, warmup, workout, cooldown, notes: notes ?? null, updated_at: new Date().toISOString() },
@@ -1236,64 +1376,72 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           )
           .select()
           .single();
-        if (error) return { error: error.message };
+        if (upsertError) return err(upsertError.message);
+        if (!upserted) return err("Workout plan upsert returned no row — plan may not have been saved.");
 
-        if (update_calendar) {
-          try {
-            const auth = getGoogleAuthClient();
-            const calendar = google.calendar({ version: "v3", auth });
-            const description = buildCalendarDescription(warmup, workout, cooldown);
-            const title = `Workout — ${new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}`;
-            const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
-
-            let startObj: object;
-            let endObj: object;
-            if (start_time) {
-              const computedEnd = end_time ?? (() => {
-                const [h, m] = start_time.split(":").map(Number);
-                return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-              })();
-              startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
-              endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
-            } else {
-              startObj = { date };
-              endObj = { date };
-            }
-
-            let eventId: string | null = upserted.calendar_event_id ?? null;
-            if (eventId) {
-              await withTimeout(
-                calendar.events.patch({
-                  calendarId: "primary",
-                  eventId,
-                  requestBody: { summary: title, description, start: startObj, end: endObj },
-                }),
-                8000,
-                "calendar patch"
-              );
-            } else {
-              const res = await withTimeout(
-                calendar.events.insert({
-                  calendarId: "primary",
-                  requestBody: { summary: title, start: startObj, end: endObj, description },
-                }),
-                8000,
-                "calendar insert"
-              );
-              eventId = res.data.id ?? null;
-              await supabase
-                .from("workout_plans")
-                .update({ calendar_event_id: eventId })
-                .eq("user_id", userId)
-                .eq("date", date);
-              upserted.calendar_event_id = eventId;
-            }
-          } catch (calErr) {
-            return { ...upserted, calendar_warning: calErr instanceof Error ? calErr.message : "Calendar sync failed" };
-          }
+        if (!update_calendar) {
+          return ok({ plan: upserted, calendar_synced: false });
         }
 
-        return upserted;
+        try {
+          const auth = getGoogleAuthClient();
+          const calendar = google.calendar({ version: "v3", auth });
+          const description = buildCalendarDescription(warmup, workout, cooldown);
+          const title = `Workout — ${new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}`;
+          const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
+
+          let startObj: object;
+          let endObj: object;
+          if (start_time) {
+            const computedEnd = end_time ?? (() => {
+              const [h, m] = start_time.split(":").map(Number);
+              return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            })();
+            startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
+            endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
+          } else {
+            startObj = { date };
+            endObj = { date };
+          }
+
+          let eventId: string | null = upserted.calendar_event_id ?? null;
+          if (eventId) {
+            await withTimeout(
+              calendar.events.patch({
+                calendarId: "primary",
+                eventId,
+                requestBody: { summary: title, description, start: startObj, end: endObj },
+              }),
+              8000,
+              "calendar patch"
+            );
+          } else {
+            const res = await withTimeout(
+              calendar.events.insert({
+                calendarId: "primary",
+                requestBody: { summary: title, start: startObj, end: endObj, description },
+              }),
+              8000,
+              "calendar insert"
+            );
+            eventId = res.data.id ?? null;
+            await supabase
+              .from("workout_plans")
+              .update({ calendar_event_id: eventId })
+              .eq("user_id", userId)
+              .eq("date", date);
+            upserted.calendar_event_id = eventId;
+          }
+          return ok({ plan: upserted, calendar_synced: true });
+        } catch (calErr) {
+          // Plan saved but calendar sync failed — partial success surfaced to
+          // the model so it tells the user instead of claiming full success.
+          return ok({
+            plan: upserted,
+            calendar_synced: false,
+            calendar_error: calErr instanceof Error ? calErr.message : "Calendar sync failed",
+          });
+        }
       },
     }),
 
@@ -1325,8 +1473,8 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         },
       }),
       execute: async ({ date, phase, exercise_name, updates }) => {
-        if (!userId) return { error: "Not authenticated" };
-        if (isDemo) return { demo: true, note: "Demo mode — not saved." };
+        if (!userId) return err("Not authenticated");
+        if (isDemo) return ok({ demo: true, note: "Demo mode — not saved." });
 
         const { data: row, error: fetchErr } = await supabase
           .from("workout_plans")
@@ -1334,15 +1482,17 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .eq("user_id", userId)
           .eq("date", date)
           .single();
-        if (fetchErr || !row) return { error: fetchErr?.message ?? "No plan found for that date." };
+        if (fetchErr) return err(fetchErr.message);
+        if (!row) return err("No plan found for that date.");
 
         const arr: WorkoutExercise[] = [...(row[phase] as WorkoutExercise[])];
         const idx = arr.findIndex((e) => e.exercise.toLowerCase() === exercise_name.toLowerCase());
-        if (idx === -1) return { error: `Exercise "${exercise_name}" not found in ${phase}.` };
+        if (idx === -1) return err(`Exercise "${exercise_name}" not found in ${phase}.`);
         if (!updates || Object.keys(updates).length === 0) {
-          return { error: "No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes." };
+          return err("No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes.");
         }
-        arr[idx] = { ...arr[idx], ...updates };
+        const expectedExercise = { ...arr[idx], ...updates };
+        arr[idx] = expectedExercise;
 
         const { data: updated, error: upErr } = await supabase
           .from("workout_plans")
@@ -1351,8 +1501,28 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           .eq("date", date)
           .select()
           .single();
-        if (upErr) return { error: upErr.message };
+        if (upErr) return err(upErr.message);
+        if (!updated) return err("Workout plan update returned no row — change may not have been saved.");
 
+        // Read-after-write verification (#319 / #239 pattern): re-read the row
+        // and confirm the matched exercise actually contains the requested
+        // updates. Catches the silent-mismatch class where the update appears
+        // to succeed but the row reads back unchanged.
+        const verifiedArr = (updated[phase] as WorkoutExercise[]) ?? [];
+        const verifiedExercise = verifiedArr[idx];
+        const fieldChecks = Object.entries(updates).filter(
+          ([key, value]) => (verifiedExercise as unknown as Record<string, unknown>)[key] !== value
+        );
+        if (fieldChecks.length > 0) {
+          return err(
+            `Workout plan update returned but the row read-back doesn't show the change: ${fieldChecks
+              .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+              .join(", ")}`
+          );
+        }
+
+        let calendar_synced: boolean | null = null;
+        let calendar_error: string | undefined;
         if (updated.calendar_event_id) {
           try {
             const auth = getGoogleAuthClient();
@@ -1367,12 +1537,14 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
               8000,
               "calendar patch"
             );
-          } catch {
-            // Non-fatal — plan is already saved
+            calendar_synced = true;
+          } catch (calErr) {
+            calendar_synced = false;
+            calendar_error = calErr instanceof Error ? calErr.message : "Calendar description sync failed";
           }
         }
 
-        return updated;
+        return ok({ plan: updated, calendar_synced, ...(calendar_error ? { calendar_error } : {}) });
       },
     }),
 
@@ -1635,16 +1807,28 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     ? demoSystemPrompt
     : `${STATIC_SYSTEM_PROMPT}\n\n${dynamicPromptBlock}`;
 
-  // Per-turn safeguards (issue #223): raise step cap from 12→20 so multi-step
-  // calendar/task flows can finish their summary, but bound cost with a token
-  // budget. If the budget is exceeded mid-turn, abort the loop and let onFinish
-  // synthesize a deterministic summary from whatever tools already ran.
+  // Per-turn safeguards (issues #223 + #319): raise step cap from 12→20 so
+  // multi-step calendar/task flows can finish their summary, bound cost with a
+  // token budget, and bound wall-time with TURN_DEADLINE_MS so onFinish ALWAYS
+  // runs before Vercel's maxDuration kill — the silent-stall path #319 hit
+  // when the Lambda died mid-stream and onFinish never persisted the fallback.
   const MAX_STEPS = 20;
   const TOKEN_BUDGET = 150_000;
   const turnStartedAt = Date.now();
   let cumulativeTokens = 0;
   let budgetExceeded = false;
+  let deadlineExceeded = false;
   const turnAbort = new AbortController();
+  const deadlineTimer = setTimeout(() => {
+    deadlineExceeded = true;
+    console.warn(`[chat] turn deadline exceeded session=${sessionId} ms=${TURN_DEADLINE_MS} — aborting turn so onFinish can run`);
+    turnAbort.abort();
+  }, TURN_DEADLINE_MS);
+
+  // Side-channel data stream (#319) — emit a "turn-complete" sentinel from
+  // onFinish so the client can distinguish a clean stream end from a Lambda
+  // kill mid-stream and refresh from the server in the latter case.
+  const streamData = new StreamData();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
@@ -1667,70 +1851,101 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }
     },
     onFinish: async ({ text, steps, finishReason }) => {
-      if (!sessionId || !userId) return;
+      clearTimeout(deadlineTimer);
 
       const stepCount = steps?.length ?? 0;
       const hitStepCap = stepCount >= MAX_STEPS;
       const durationMs = Date.now() - turnStartedAt;
 
+      // Pair up tool calls with their results so the synthesizer can tell
+      // "tool ran and succeeded" from "tool ran and failed" — the bug #319
+      // fix for the synthesizer claiming success from toolCalls alone.
+      const completedSteps: CompletedToolStep[] = [];
+      const allCalls = (steps ?? []).flatMap((s) => s.toolCalls ?? []);
+      const allResults = (steps ?? []).flatMap((s) => s.toolResults ?? []);
+      const resultByCallId = new Map<string, unknown>();
+      for (const r of allResults) {
+        const callId = (r as { toolCallId?: string }).toolCallId;
+        if (callId) resultByCallId.set(callId, (r as { result?: unknown }).result);
+      }
+      for (const call of allCalls) {
+        const result = resultByCallId.get(call.toolCallId);
+        const stepOk = result === undefined ? false : isToolResultOk(result);
+        const stepError = result && typeof result === "object" && "error" in result
+          ? String((result as { error?: unknown }).error)
+          : undefined;
+        completedSteps.push({ toolName: call.toolName, ok: stepOk, error: stepError });
+      }
+      const failedToolCount = completedSteps.filter((s) => !s.ok).length;
+      const hadFailures = failedToolCount > 0;
+
       // Determine what to persist. Three cases:
       //   1. Model produced text → persist as-is (normal path).
-      //   2. Empty text + tool calls ran → synthesize a deterministic summary from steps.
-      //   3. Empty text + nothing ran → persist a visible error so the user isn't left in silence.
+      //   2. Empty text + tool calls ran → synthesize from steps + results.
+      //   3. Empty text + nothing ran → persist a visible error so the user
+      //      isn't left in silence.
       let contentToPersist = text.trim();
       let synthesized = false;
-
       if (!contentToPersist) {
-        const toolNames = (steps ?? [])
-          .flatMap((s) => s.toolCalls ?? [])
-          .map((c) => c.toolName);
-        if (toolNames.length > 0) {
-          contentToPersist = synthesizeFallbackSummary(toolNames, { hitStepCap, budgetExceeded });
-          synthesized = true;
-        } else {
-          contentToPersist = "I hit a snag generating a response — please try again.";
-          synthesized = true;
-        }
+        contentToPersist = synthesizeFallbackSummary(completedSteps, {
+          hitStepCap,
+          budgetExceeded,
+          aborted: deadlineExceeded,
+        });
+        synthesized = true;
       }
 
       console.log(
         `[chat] turn complete session=${sessionId} steps=${stepCount}/${MAX_STEPS} ` +
         `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
-        `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} synthesized=${synthesized}`
+        `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} deadlineExceeded=${deadlineExceeded} ` +
+        `synthesized=${synthesized} toolFailures=${failedToolCount}/${completedSteps.length}`
       );
 
-      try {
-        // Update session last_active_at to reflect completed turn.
-        await supabase.from("chat_sessions").upsert(
-          { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
-          { onConflict: "id" }
-        );
+      if (sessionId && userId) {
+        try {
+          // Update session last_active_at to reflect completed turn.
+          await supabase.from("chat_sessions").upsert(
+            { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
+            { onConflict: "id" }
+          );
 
-        // Derive next position so the assistant message sorts after the user message.
-        const { data: posRow } = await supabase
-          .from("chat_messages")
-          .select("position")
-          .eq("session_id", sessionId)
-          .order("position", { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
-        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
+          // Derive next position so the assistant message sorts after the user message.
+          const { data: posRow } = await supabase
+            .from("chat_messages")
+            .select("position")
+            .eq("session_id", sessionId)
+            .order("position", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+          const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
 
-        const { error: insertError } = await supabase.from("chat_messages").insert({
-          session_id: sessionId,
-          user_id: userId,
-          role: "assistant",
-          content: contentToPersist,
-          position: nextPos,
-        });
-        if (insertError) throw insertError;
-      } catch (err) {
-        console.error("[chat] onFinish persist error:", err);
+          const { error: insertError } = await supabase.from("chat_messages").insert({
+            session_id: sessionId,
+            user_id: userId,
+            role: "assistant",
+            content: contentToPersist,
+            position: nextPos,
+          });
+          if (insertError) throw insertError;
+        } catch (persistErr) {
+          console.error("[chat] onFinish persist error:", persistErr);
+        }
       }
+
+      // Emit the turn-complete sentinel so the client knows the turn ended
+      // cleanly (vs the Lambda being killed mid-stream).
+      streamData.append({
+        type: "turn-complete",
+        synthesized,
+        hadFailures,
+        deadlineExceeded,
+      });
+      await streamData.close();
     },
   };
 
   const result = streamText(streamOptions);
 
-  return result.toDataStreamResponse();
+  return result.toDataStreamResponse({ data: streamData });
 }
