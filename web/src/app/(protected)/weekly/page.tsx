@@ -65,6 +65,37 @@ function fmtDuration(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// ── Card wrapper ──────────────────────────────────────────────────────────────
+
+function Card({
+  title,
+  meta,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className="flex flex-col card-lift"
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "var(--r-2)",
+        padding: "var(--space-5)",
+        transition: "transform var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)",
+      }}
+    >
+      <h2 className="db-section-label">
+        {title}
+        {meta && <span className="meta">{meta}</span>}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function WeeklyPage() {
@@ -166,9 +197,6 @@ export default async function WeeklyPage() {
   const totalPossible = habitRegistry.length * 7;
   const totalHits = habitSummaries.reduce((s, x) => s + x.hits, 0);
   const habitPct = totalPossible > 0 ? Math.round((totalHits / totalPossible) * 100) : 0;
-  const bestHabit = habitSummaries[0] ?? null;
-  const worstHabit =
-    habitSummaries.length > 1 ? habitSummaries[habitSummaries.length - 1] : null;
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
@@ -216,78 +244,6 @@ export default async function WeeklyPage() {
 
   const rangeLabel = `${fmtDate(weekStart)} – ${fmtDate(today)}`;
 
-  // ── Narrative paragraphs ─────────────────────────────────────────────────
-
-  const habitNarrative =
-    habitRegistry.length === 0
-      ? "No active habits tracked this week."
-      : bestHabit && bestHabit.hits === 0
-      ? `Logged 0 of ${totalPossible} habit check-ins. Nothing completed across ${habitRegistry.length} active habit${habitRegistry.length === 1 ? "" : "s"}.`
-      : `Logged ${totalHits} of ${totalPossible} habit check-ins (${habitPct}%). ${bestHabit!.habit.name} led at ${bestHabit!.hits}/7${
-          worstHabit && worstHabit.hits !== bestHabit!.hits
-            ? `; ${worstHabit.habit.name} trailed at ${worstHabit.hits}/7.`
-            : "."
-        }`;
-
-  const taskNarrative =
-    completedTasks.length === 0 && activeTasks.length === 0
-      ? "Task inbox is clear."
-      : `Closed ${completedTasks.length} task${completedTasks.length === 1 ? "" : "s"} this week. ${activeTasks.length} still active${
-          overdueTasks.length > 0 ? `, ${overdueTasks.length} overdue.` : "."
-        }`;
-
-  const trainingNarrative =
-    allWorkouts.length === 0
-      ? "No training or walks logged."
-      : (() => {
-          const parts: string[] = [];
-          if (workouts.length > 0) {
-            const bits = [`${workouts.length} session${workouts.length === 1 ? "" : "s"}`];
-            if (totalDuration > 0) bits.push(fmtDuration(totalDuration));
-            if (totalCalories > 0) bits.push(`${Math.round(totalCalories).toLocaleString()} kcal`);
-            parts.push(`Trained ${bits.join(" · ")}.`);
-          } else {
-            parts.push("No structured sessions.");
-          }
-          if (walkWorkouts.length > 0) {
-            parts.push(
-              `Added ${walkWorkouts.length} walk${walkWorkouts.length === 1 ? "" : "s"}${
-                walkDuration > 0 ? ` at ${fmtDuration(walkDuration)}` : ""
-              }.`
-            );
-          }
-          return parts.join(" ");
-        })();
-
-  const recoveryNarrative =
-    recoveryRows.length === 0
-      ? "No recovery data captured this week."
-      : `Averaged readiness ${fmtNum(avgReadiness)}, sleep ${fmtNum(avgSleep)}, HRV ${fmtNum(avgHrv)} ms across ${recoveryRows.length} day${recoveryRows.length === 1 ? "" : "s"}.`;
-
-  const bodyNarrative =
-    fitnessLatest == null
-      ? "No body composition measurements on file."
-      : (() => {
-          const bits: string[] = [];
-          bits.push(
-            `Latest weigh-in ${fmtNum(fitnessLatest.weight_lb, 1)} lb at ${fmtNum(fitnessLatest.body_fat_pct, 1)}% body fat (${fmtDate(fitnessLatest.date)}).`
-          );
-          if (fitnessWeekAgo && (weightDiff != null || bodyFatDiff != null)) {
-            const deltaBits: string[] = [];
-            if (weightDiff != null) deltaBits.push(`weight ${deltaText(fitnessLatest.weight_lb, fitnessWeekAgo.weight_lb)} lb`);
-            if (bodyFatDiff != null) deltaBits.push(`body fat ${deltaText(fitnessLatest.body_fat_pct, fitnessWeekAgo.body_fat_pct)}%`);
-            bits.push(`Vs ${fmtDate(fitnessWeekAgo.date)}: ${deltaBits.join(", ")}.`);
-          }
-          return bits.join(" ");
-        })();
-
-  const journalNarrative =
-    journalCount === 0
-      ? "Nothing journaled this week."
-      : journalCount >= 7
-      ? "Journaled every day."
-      : `${journalCount} journal entr${journalCount === 1 ? "y" : "ies"} — ${journalMissed} day${journalMissed === 1 ? "" : "s"} without a note.`;
-
   // ── Shared table tokens ──────────────────────────────────────────────────
 
   const thStyle: React.CSSProperties = {
@@ -311,10 +267,25 @@ export default async function WeeklyPage() {
   const tdMuted: React.CSSProperties = { ...tdBase, color: "var(--color-text-muted)" };
   const tdFaint: React.CSSProperties = { ...tdBase, color: "var(--color-text-faint)" };
 
+  // Training meta
+  const trainingMeta = allWorkouts.length === 0
+    ? " · none logged"
+    : ` · ${workouts.length} session${workouts.length === 1 ? "" : "s"}${
+        totalDuration > 0 ? ` · ${fmtDuration(totalDuration)}` : ""
+      }${totalCalories > 0 ? ` · ${Math.round(totalCalories).toLocaleString()} kcal` : ""}`;
+
+  const recoveryMeta = recoveryRows.length === 0
+    ? " · no data"
+    : ` · ${recoveryRows.length} day${recoveryRows.length === 1 ? "" : "s"}${
+        avgReadiness != null ? ` · readiness ${fmtNum(avgReadiness)}` : ""
+      }${avgSleep != null ? ` · sleep ${fmtNum(avgSleep)}` : ""}${
+        avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""
+      }`;
+
   return (
     <div
       className="flex flex-col"
-      style={{ gap: "var(--space-7)" }}
+      style={{ gap: "var(--space-6)" }}
     >
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header>
@@ -342,191 +313,130 @@ export default async function WeeklyPage() {
         </p>
       </header>
 
-      {/* ── Narrative recap (reading column) ────────────────────────── */}
-      <section className="prose-column">
-        <h2 className="db-section-label">Recap</h2>
-        <div
-          className="flex flex-col"
-          style={{
-            gap: "var(--space-3)",
-            fontSize: "var(--t-body)",
-            lineHeight: 1.7,
-            color: "var(--color-text)",
-          }}
+      {/* ── Row 1: Habits + Tasks ───────────────────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2"
+        style={{ gap: "var(--space-6)" }}
+      >
+        <Card
+          title="Habits"
+          meta={
+            habitRegistry.length === 0
+              ? " · none active"
+              : ` · ${totalHits}/${totalPossible} · ${habitPct}%`
+          }
         >
-          <p>{habitNarrative}</p>
-          <p>{taskNarrative}</p>
-          <p>{trainingNarrative}</p>
-          <p>{recoveryNarrative}</p>
-          <p>{bodyNarrative}</p>
-          <p>{journalNarrative}</p>
-        </div>
-      </section>
-
-      {/* ── Habits table ────────────────────────────────────────────── */}
-      {habitRegistry.length > 0 && (
-        <section>
-          <h2 className="db-section-label">
-            Habits
-            <span className="meta">
-              · {totalHits}/{totalPossible} · {habitPct}%
-            </span>
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 520 }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Habit</th>
-                  <th style={{ ...thStyle, textAlign: "center" }}>Mon–Sun</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Hits</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Streak</th>
-                </tr>
-              </thead>
-              <tbody>
-                {habitSummaries.map(({ habit, hits, streak }) => {
-                  const completed = habitCompletedDates.get(habit.id) ?? new Set<string>();
-                  const Icon = getHabitIcon(habit);
-                  return (
-                    <tr key={habit.id}>
-                      <td style={{ ...tdBase, fontWeight: 500 }}>
-                        <span className="inline-flex items-center" style={{ gap: "var(--space-2)" }}>
-                          <Icon
-                            className="w-3.5 h-3.5"
-                            style={{ color: "var(--color-text-faint)" }}
-                            aria-hidden
-                          />
-                          {habit.name}
-                        </span>
-                      </td>
-                      <td style={{ ...tdBase, textAlign: "center" }}>
-                        <span
-                          className="inline-flex"
-                          style={{ gap: 4 }}
-                          aria-label={`${hits} of 7 days completed`}
+          {habitRegistry.length === 0 ? (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              No active habits.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Habit</th>
+                    <th style={{ ...thStyle, textAlign: "center" }}>Mon–Sun</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Hits</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Streak</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {habitSummaries.map(({ habit, hits, streak }) => {
+                    const completed = habitCompletedDates.get(habit.id) ?? new Set<string>();
+                    const Icon = getHabitIcon(habit);
+                    return (
+                      <tr key={habit.id}>
+                        <td style={{ ...tdBase, fontWeight: 500 }}>
+                          <span
+                            className="inline-flex items-center"
+                            style={{ gap: "var(--space-2)" }}
+                          >
+                            <Icon
+                              className="w-3.5 h-3.5"
+                              style={{ color: "var(--color-text-faint)" }}
+                              aria-hidden
+                            />
+                            <span className="truncate">{habit.name}</span>
+                          </span>
+                        </td>
+                        <td style={{ ...tdBase, textAlign: "center" }}>
+                          <span
+                            className="inline-flex"
+                            style={{ gap: 4 }}
+                            aria-label={`${hits} of 7 days completed`}
+                          >
+                            {last7Days.map((d) => {
+                              const hit = completed.has(d);
+                              const isToday = d === today;
+                              return (
+                                <span
+                                  key={d}
+                                  title={`${fmtDate(d)}: ${hit ? "done" : "missed"}`}
+                                  style={{
+                                    width: 14,
+                                    height: 14,
+                                    borderRadius: 3,
+                                    background: hit ? "var(--color-text)" : "var(--rule)",
+                                    opacity: hit ? 0.85 : 1,
+                                    outline: isToday ? "1.5px solid var(--accent)" : "none",
+                                    outlineOffset: isToday ? 2 : 0,
+                                    display: "inline-block",
+                                  }}
+                                />
+                              );
+                            })}
+                          </span>
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
                         >
-                          {last7Days.map((d) => {
-                            const hit = completed.has(d);
-                            const isToday = d === today;
-                            return (
-                              <span
-                                key={d}
-                                title={`${fmtDate(d)}: ${hit ? "done" : "missed"}`}
-                                style={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 3,
-                                  background: hit ? "var(--color-text)" : "var(--rule)",
-                                  opacity: hit ? 0.85 : 1,
-                                  outline: isToday ? "1.5px solid var(--accent)" : "none",
-                                  outlineOffset: isToday ? 2 : 0,
-                                  display: "inline-block",
-                                }}
-                              />
-                            );
-                          })}
-                        </span>
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
-                      >
-                        {hits}/7
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
-                      >
-                        {streak > 0 ? `${streak}d` : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+                          {hits}/7
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
+                        >
+                          {streak > 0 ? `${streak}d` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
 
-      {/* ── Tasks ───────────────────────────────────────────────────── */}
-      {(completedTasks.length > 0 || activeTasks.length > 0) && (
-        <section>
-          <h2 className="db-section-label">
-            Tasks
-            <span className="meta">
-              · {completedTasks.length} done · {activeTasks.length} active
-              {overdueTasks.length > 0 ? ` · ${overdueTasks.length} overdue` : ""}
-            </span>
-          </h2>
-
-          <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
-            {completedTasks.length > 0 && (
-              <div>
-                <p
-                  className="tnum"
-                  style={{
-                    fontSize: "var(--t-micro)",
-                    color: "var(--color-text-faint)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  Closed this week
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {completedTasks.slice(0, 12).map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-baseline"
-                      style={{
-                        gap: "var(--space-3)",
-                        padding: "var(--space-3) 0",
-                        borderTop: "1px solid var(--rule-soft)",
-                        fontSize: "var(--t-micro)",
-                      }}
-                    >
-                      <span style={{ color: "var(--color-positive)", flexShrink: 0 }} aria-hidden>
-                        ✓
-                      </span>
-                      <span className="flex-1" style={{ color: "var(--color-text-muted)" }}>
-                        {t.title}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {completedTasks.length > 12 && (
+        <Card
+          title="Tasks"
+          meta={` · ${completedTasks.length} done · ${activeTasks.length} active${
+            overdueTasks.length > 0 ? ` · ${overdueTasks.length} overdue` : ""
+          }`}
+        >
+          {completedTasks.length === 0 && activeTasks.length === 0 ? (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              Inbox clear.
+            </p>
+          ) : (
+            <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
+              {completedTasks.length > 0 && (
+                <div>
                   <p
-                    className="tnum"
                     style={{
-                      marginTop: "var(--space-2)",
-                      fontSize: "var(--t-micro)",
+                      fontSize: 11,
+                      fontWeight: 600,
                       color: "var(--color-text-faint)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.12em",
+                      marginBottom: "var(--space-2)",
                     }}
                   >
-                    +{completedTasks.length - 12} more
+                    Closed this week
                   </p>
-                )}
-              </div>
-            )}
-
-            {activeTasks.length > 0 && (
-              <div>
-                <p
-                  className="tnum"
-                  style={{
-                    fontSize: "var(--t-micro)",
-                    color: "var(--color-text-faint)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  Still active
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {activeTasks.slice(0, 8).map((t) => {
-                    const overdue = t.due_date != null && t.due_date < today;
-                    return (
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {completedTasks.slice(0, 8).map((t) => (
                       <li
                         key={t.id}
                         className="flex items-baseline"
@@ -538,377 +448,449 @@ export default async function WeeklyPage() {
                         }}
                       >
                         <span
+                          style={{ color: "var(--color-positive)", flexShrink: 0 }}
                           aria-hidden
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: 999,
-                            background: overdue ? "var(--accent)" : "var(--rule)",
-                            flexShrink: 0,
-                            marginTop: 6,
-                          }}
-                        />
-                        <span
-                          className="flex-1"
-                          style={{ color: overdue ? "var(--color-text)" : "var(--color-text-muted)" }}
                         >
+                          ✓
+                        </span>
+                        <span className="flex-1 truncate" style={{ color: "var(--color-text-muted)" }}>
                           {t.title}
                         </span>
-                        {t.due_date && (
-                          <span
-                            className="tnum"
-                            style={{
-                              fontSize: "var(--t-micro)",
-                              color: overdue ? "var(--accent)" : "var(--color-text-faint)",
-                              whiteSpace: "nowrap",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {fmtDate(t.due_date)}
-                            {overdue ? " · overdue" : ""}
-                          </span>
-                        )}
                       </li>
-                    );
-                  })}
-                </ul>
-                {activeTasks.length > 8 && (
+                    ))}
+                  </ul>
+                  {completedTasks.length > 8 && (
+                    <p
+                      className="tnum"
+                      style={{
+                        marginTop: "var(--space-2)",
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-faint)",
+                      }}
+                    >
+                      +{completedTasks.length - 8} more
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {activeTasks.length > 0 && (
+                <div>
                   <p
-                    className="tnum"
                     style={{
-                      marginTop: "var(--space-2)",
-                      fontSize: "var(--t-micro)",
+                      fontSize: 11,
+                      fontWeight: 600,
                       color: "var(--color-text-faint)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.12em",
+                      marginBottom: "var(--space-2)",
                     }}
                   >
-                    +{activeTasks.length - 8} more
+                    Still active
                   </p>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {activeTasks.slice(0, 5).map((t) => {
+                      const overdue = t.due_date != null && t.due_date < today;
+                      return (
+                        <li
+                          key={t.id}
+                          className="flex items-baseline"
+                          style={{
+                            gap: "var(--space-3)",
+                            padding: "var(--space-3) 0",
+                            borderTop: "1px solid var(--rule-soft)",
+                            fontSize: "var(--t-micro)",
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: 999,
+                              background: overdue ? "var(--accent)" : "var(--rule)",
+                              flexShrink: 0,
+                              marginTop: 6,
+                            }}
+                          />
+                          <span
+                            className="flex-1 truncate"
+                            style={{ color: overdue ? "var(--color-text)" : "var(--color-text-muted)" }}
+                          >
+                            {t.title}
+                          </span>
+                          {t.due_date && (
+                            <span
+                              className="tnum"
+                              style={{
+                                fontSize: "var(--t-micro)",
+                                color: overdue ? "var(--accent)" : "var(--color-text-faint)",
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {fmtDate(t.due_date)}
+                              {overdue ? " · overdue" : ""}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {activeTasks.length > 5 && (
+                    <p
+                      className="tnum"
+                      style={{
+                        marginTop: "var(--space-2)",
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-faint)",
+                      }}
+                    >
+                      +{activeTasks.length - 5} more
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
 
-      {/* ── Training ────────────────────────────────────────────────── */}
-      {allWorkouts.length > 0 && (
-        <section>
-          <h2 className="db-section-label">
-            Training
-            <span className="meta">
-              · {workouts.length} session{workouts.length === 1 ? "" : "s"}
-              {totalDuration > 0 ? ` · ${fmtDuration(totalDuration)}` : ""}
-              {totalCalories > 0 ? ` · ${Math.round(totalCalories).toLocaleString()} kcal` : ""}
-            </span>
-          </h2>
+      {/* ── Row 2: Training + Recovery ──────────────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2"
+        style={{ gap: "var(--space-6)" }}
+      >
+        <Card title="Training" meta={trainingMeta}>
+          {allWorkouts.length === 0 ? (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              No sessions logged this week.
+            </p>
+          ) : (
+            <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
+              {workouts.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={thStyle}>Date</th>
+                        <th style={thStyle}>Activity</th>
+                        <th style={{ ...thStyle, textAlign: "right" }}>Duration</th>
+                        <th style={{ ...thStyle, textAlign: "right" }}>Calories</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workouts.map((w, i) => (
+                        <tr key={i}>
+                          <td className="tnum" style={tdMuted}>
+                            {fmtDate(w.date)}
+                          </td>
+                          <td style={{ ...tdBase, textTransform: "capitalize" }}>
+                            <span className="truncate">{w.activity}</span>
+                          </td>
+                          <td
+                            className="tnum"
+                            style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
+                          >
+                            {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                          </td>
+                          <td
+                            className="tnum"
+                            style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
+                          >
+                            {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-          {workouts.length > 0 && (
+              {walkWorkouts.length > 0 && (
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--color-text-faint)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.12em",
+                      marginBottom: "var(--space-2)",
+                    }}
+                  >
+                    Walks · {walkWorkouts.length}
+                    {walkDuration > 0 ? ` · ${fmtDuration(walkDuration)}` : ""}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                      <tbody>
+                        {walkWorkouts.map((w, i) => (
+                          <tr key={i}>
+                            <td className="tnum" style={{ ...tdFaint, width: "6rem" }}>
+                              {fmtDate(w.date)}
+                            </td>
+                            <td style={{ ...tdMuted, textTransform: "capitalize" }}>
+                              <span className="truncate">{w.activity}</span>
+                            </td>
+                            <td
+                              className="tnum"
+                              style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
+                            >
+                              {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        <Card title="Recovery" meta={recoveryMeta}>
+          {recoveryRows.length === 0 ? (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              No recovery data for this week.
+            </p>
+          ) : (
             <div className="overflow-x-auto">
-              <table
-                className="w-full"
-                style={{ borderCollapse: "collapse", minWidth: 520 }}
-              >
+              <table className="w-full" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>Date</th>
-                    <th style={thStyle}>Activity</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Duration</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Calories</th>
+                    <th style={thStyle}>Day</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Readiness</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Sleep</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>HRV</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {workouts.map((w, i) => (
-                    <tr key={i}>
-                      <td className="tnum" style={tdMuted}>
-                        {fmtDate(w.date)}
-                      </td>
-                      <td style={{ ...tdBase, textTransform: "capitalize" }}>
-                        {w.activity}
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
-                      >
-                        {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
-                      >
-                        {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {last7Days.map((d) => {
+                    const r = recoveryByDate.get(d);
+                    const isToday = d === today;
+                    return (
+                      <tr key={d}>
+                        <td
+                          className="tnum"
+                          style={{
+                            ...tdMuted,
+                            color: isToday ? "var(--color-text)" : "var(--color-text-muted)",
+                            fontWeight: isToday ? 500 : 400,
+                          }}
+                        >
+                          {fmtDayShort(d)} {fmtDate(d)}
+                          {isToday && (
+                            <span
+                              className="tnum"
+                              style={{
+                                marginLeft: "var(--space-2)",
+                                fontSize: 10,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                color: "var(--accent)",
+                              }}
+                            >
+                              Today
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{
+                            ...tdBase,
+                            textAlign: "right",
+                            color: r?.readiness != null ? "var(--color-text)" : "var(--color-text-faint)",
+                          }}
+                        >
+                          {r?.readiness != null ? r.readiness : "—"}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{
+                            ...tdBase,
+                            textAlign: "right",
+                            color: r?.sleep_score != null ? "var(--color-text)" : "var(--color-text-faint)",
+                          }}
+                        >
+                          {r?.sleep_score != null ? r.sleep_score : "—"}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{
+                            ...tdBase,
+                            textAlign: "right",
+                            color: r?.avg_hrv != null ? "var(--color-text)" : "var(--color-text-faint)",
+                          }}
+                        >
+                          {r?.avg_hrv != null ? Math.round(r.avg_hrv) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
+        </Card>
+      </div>
 
-          {walkWorkouts.length > 0 && (
-            <div style={{ marginTop: workouts.length > 0 ? "var(--space-6)" : 0 }}>
+      {/* ── Row 3: Body composition + Journal ───────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2"
+        style={{ gap: "var(--space-6)" }}
+      >
+        <Card
+          title="Body composition"
+          meta={fitnessLatest ? ` · ${fmtDate(fitnessLatest.date)}` : " · no data"}
+        >
+          {fitnessLatest == null ? (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              No body composition data.
+            </p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Metric</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Latest</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Prior</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ ...tdBase, fontWeight: 500 }}>Weight</td>
+                      <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
+                        {fmtNum(fitnessLatest.weight_lb, 1)}{" "}
+                        <span style={{ color: "var(--color-text-faint)" }}>lb</span>
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdFaint, textAlign: "right" }}
+                      >
+                        {fitnessWeekAgo?.weight_lb != null
+                          ? `${fmtNum(fitnessWeekAgo.weight_lb, 1)} lb`
+                          : "—"}
+                      </td>
+                      <td
+                        className={`tnum ${deltaClass(
+                          fitnessLatest.weight_lb ?? null,
+                          fitnessWeekAgo?.weight_lb ?? null,
+                          false
+                        )}`}
+                        style={{ ...tdBase, textAlign: "right" }}
+                      >
+                        {deltaText(
+                          fitnessLatest.weight_lb ?? null,
+                          fitnessWeekAgo?.weight_lb ?? null
+                        )}
+                        {weightDiff != null ? " lb" : ""}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ ...tdBase, fontWeight: 500 }}>Body fat</td>
+                      <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
+                        {fmtNum(fitnessLatest.body_fat_pct, 1)}{" "}
+                        <span style={{ color: "var(--color-text-faint)" }}>%</span>
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdFaint, textAlign: "right" }}
+                      >
+                        {fitnessWeekAgo?.body_fat_pct != null
+                          ? `${fmtNum(fitnessWeekAgo.body_fat_pct, 1)}%`
+                          : "—"}
+                      </td>
+                      <td
+                        className={`tnum ${deltaClass(
+                          fitnessLatest.body_fat_pct ?? null,
+                          fitnessWeekAgo?.body_fat_pct ?? null,
+                          false
+                        )}`}
+                        style={{ ...tdBase, textAlign: "right" }}
+                      >
+                        {deltaText(
+                          fitnessLatest.body_fat_pct ?? null,
+                          fitnessWeekAgo?.body_fat_pct ?? null
+                        )}
+                        {bodyFatDiff != null ? "%" : ""}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {fitnessWeekAgo && (
+                <p
+                  className="tnum"
+                  style={{
+                    marginTop: "var(--space-3)",
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                  }}
+                >
+                  Prior measurement · {fmtDate(fitnessWeekAgo.date)}
+                </p>
+              )}
+            </>
+          )}
+        </Card>
+
+        <Card
+          title="Journal"
+          meta={` · ${journalCount} entr${journalCount === 1 ? "y" : "ies"}${
+            journalMissed > 0 ? ` · ${journalMissed} missed` : ""
+          }`}
+        >
+          <div
+            className="flex items-baseline"
+            style={{ gap: "var(--space-4)" }}
+          >
+            <span
+              className="tnum font-heading"
+              style={{
+                fontSize: 52,
+                lineHeight: 1,
+                fontWeight: 600,
+                color: journalCount > 0 ? "var(--color-text)" : "var(--color-text-faint)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {journalCount}
+            </span>
+            <div className="flex flex-col" style={{ gap: "var(--space-1)" }}>
+              <p
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                {journalCount === 7
+                  ? "Full week of entries."
+                  : journalCount >= 5
+                  ? "Strong consistency."
+                  : journalCount >= 3
+                  ? "Halfway there."
+                  : journalCount > 0
+                  ? "Room to build."
+                  : "Nothing logged."}
+              </p>
               <p
                 className="tnum"
                 style={{
                   fontSize: "var(--t-micro)",
                   color: "var(--color-text-faint)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: "var(--space-2)",
                 }}
               >
-                Walks · {walkWorkouts.length}
-                {walkDuration > 0 ? ` · ${fmtDuration(walkDuration)}` : ""}
+                {journalMissed} day{journalMissed !== 1 ? "s" : ""} without a note
               </p>
-              <div className="overflow-x-auto">
-                <table
-                  className="w-full"
-                  style={{ borderCollapse: "collapse", minWidth: 420 }}
-                >
-                  <tbody>
-                    {walkWorkouts.map((w, i) => (
-                      <tr key={i}>
-                        <td className="tnum" style={{ ...tdFaint, width: "6rem" }}>
-                          {fmtDate(w.date)}
-                        </td>
-                        <td
-                          style={{ ...tdMuted, textTransform: "capitalize" }}
-                        >
-                          {w.activity}
-                        </td>
-                        <td
-                          className="tnum"
-                          style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
-                        >
-                          {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Recovery ────────────────────────────────────────────────── */}
-      {recoveryRows.length > 0 && (
-        <section>
-          <h2 className="db-section-label">
-            Recovery
-            <span className="meta">
-              · {recoveryRows.length} day{recoveryRows.length === 1 ? "" : "s"}
-              {avgReadiness != null ? ` · readiness ${fmtNum(avgReadiness)}` : ""}
-              {avgSleep != null ? ` · sleep ${fmtNum(avgSleep)}` : ""}
-              {avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""}
-            </span>
-          </h2>
-          <div className="overflow-x-auto">
-            <table
-              className="w-full"
-              style={{ borderCollapse: "collapse", minWidth: 420 }}
-            >
-              <thead>
-                <tr>
-                  <th style={thStyle}>Day</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Readiness</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Sleep</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>HRV (ms)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {last7Days.map((d) => {
-                  const r = recoveryByDate.get(d);
-                  const isToday = d === today;
-                  return (
-                    <tr key={d}>
-                      <td
-                        className="tnum"
-                        style={{
-                          ...tdMuted,
-                          color: isToday ? "var(--color-text)" : "var(--color-text-muted)",
-                          fontWeight: isToday ? 500 : 400,
-                        }}
-                      >
-                        {fmtDayShort(d)} {fmtDate(d)}
-                        {isToday && (
-                          <span
-                            className="tnum"
-                            style={{
-                              marginLeft: "var(--space-2)",
-                              fontSize: 10,
-                              letterSpacing: "0.08em",
-                              textTransform: "uppercase",
-                              color: "var(--accent)",
-                            }}
-                          >
-                            Today
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{
-                          ...tdBase,
-                          textAlign: "right",
-                          color: r?.readiness != null ? "var(--color-text)" : "var(--color-text-faint)",
-                        }}
-                      >
-                        {r?.readiness != null ? r.readiness : "—"}
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{
-                          ...tdBase,
-                          textAlign: "right",
-                          color: r?.sleep_score != null ? "var(--color-text)" : "var(--color-text-faint)",
-                        }}
-                      >
-                        {r?.sleep_score != null ? r.sleep_score : "—"}
-                      </td>
-                      <td
-                        className="tnum"
-                        style={{
-                          ...tdBase,
-                          textAlign: "right",
-                          color: r?.avg_hrv != null ? "var(--color-text)" : "var(--color-text-faint)",
-                        }}
-                      >
-                        {r?.avg_hrv != null ? Math.round(r.avg_hrv) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
-        </section>
-      )}
-
-      {/* ── Body composition ───────────────────────────────────────── */}
-      {fitnessLatest != null && (
-        <section>
-          <h2 className="db-section-label">
-            Body composition
-            <span className="meta">· {fmtDate(fitnessLatest.date)}</span>
-          </h2>
-          <div className="overflow-x-auto">
-            <table
-              className="w-full"
-              style={{ borderCollapse: "collapse", minWidth: 420 }}
-            >
-              <thead>
-                <tr>
-                  <th style={thStyle}>Metric</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Latest</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Prior</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Δ vs prior</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ ...tdBase, fontWeight: 500 }}>Weight</td>
-                  <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
-                    {fmtNum(fitnessLatest.weight_lb, 1)}{" "}
-                    <span style={{ color: "var(--color-text-faint)" }}>lb</span>
-                  </td>
-                  <td
-                    className="tnum"
-                    style={{ ...tdFaint, textAlign: "right" }}
-                  >
-                    {fitnessWeekAgo?.weight_lb != null
-                      ? `${fmtNum(fitnessWeekAgo.weight_lb, 1)} lb`
-                      : "—"}
-                  </td>
-                  <td
-                    className={`tnum ${deltaClass(
-                      fitnessLatest.weight_lb ?? null,
-                      fitnessWeekAgo?.weight_lb ?? null,
-                      false
-                    )}`}
-                    style={{ ...tdBase, textAlign: "right" }}
-                  >
-                    {deltaText(
-                      fitnessLatest.weight_lb ?? null,
-                      fitnessWeekAgo?.weight_lb ?? null
-                    )}
-                    {weightDiff != null ? " lb" : ""}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ ...tdBase, fontWeight: 500 }}>Body fat</td>
-                  <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
-                    {fmtNum(fitnessLatest.body_fat_pct, 1)}{" "}
-                    <span style={{ color: "var(--color-text-faint)" }}>%</span>
-                  </td>
-                  <td
-                    className="tnum"
-                    style={{ ...tdFaint, textAlign: "right" }}
-                  >
-                    {fitnessWeekAgo?.body_fat_pct != null
-                      ? `${fmtNum(fitnessWeekAgo.body_fat_pct, 1)}%`
-                      : "—"}
-                  </td>
-                  <td
-                    className={`tnum ${deltaClass(
-                      fitnessLatest.body_fat_pct ?? null,
-                      fitnessWeekAgo?.body_fat_pct ?? null,
-                      false
-                    )}`}
-                    style={{ ...tdBase, textAlign: "right" }}
-                  >
-                    {deltaText(
-                      fitnessLatest.body_fat_pct ?? null,
-                      fitnessWeekAgo?.body_fat_pct ?? null
-                    )}
-                    {bodyFatDiff != null ? "%" : ""}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {fitnessWeekAgo && (
-            <p
-              className="tnum"
-              style={{
-                marginTop: "var(--space-3)",
-                fontSize: "var(--t-micro)",
-                color: "var(--color-text-faint)",
-              }}
-            >
-              Prior measurement · {fmtDate(fitnessWeekAgo.date)}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* ── Journal ─────────────────────────────────────────────────── */}
-      <section>
-        <h2 className="db-section-label">
-          Journal
-          <span className="meta">
-            · {journalCount} entr{journalCount === 1 ? "y" : "ies"}
-            {journalMissed > 0 ? ` · ${journalMissed} missed` : ""}
-          </span>
-        </h2>
-        <p
-          style={{
-            fontSize: "var(--t-body)",
-            lineHeight: 1.7,
-            color: journalCount > 0 ? "var(--color-text-muted)" : "var(--color-text-faint)",
-          }}
-        >
-          {journalCount === 7
-            ? "Full week of entries."
-            : journalCount >= 5
-            ? "Strong consistency — five or more entries."
-            : journalCount >= 3
-            ? "Halfway there."
-            : journalCount > 0
-            ? "Room to build the habit."
-            : "Nothing logged this week."}
-        </p>
-      </section>
+        </Card>
+      </div>
     </div>
   );
 }
