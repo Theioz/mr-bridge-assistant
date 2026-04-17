@@ -10,8 +10,8 @@ interface Props {
   dates: string[];            // ordered list of date strings YYYY-MM-DD
 }
 
-const CELL = 14;
-const GAP = 4;
+const CELL = 20;
+const GAP = 5;
 
 function fmtDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
@@ -58,7 +58,9 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
   function cellStyle(date: string): { fill: string; opacity: number } {
     const completed = completionMap.get(date);
     const ratio = completed ? completed.size / totalHabits : 0;
-    if (ratio === 0) return { fill: "var(--rule)", opacity: 1 };
+    // Missed cells use --color-border (darker than --rule) so each square
+    // reads clearly on the watercolor canvas.
+    if (ratio === 0) return { fill: "var(--color-border)", opacity: 1 };
     // Hits scale 0.4 → 0.85 (mockup baseline for fully-hit cell is 0.85).
     return { fill: "var(--color-text)", opacity: 0.4 + ratio * 0.45 };
   }
@@ -145,7 +147,7 @@ export function HabitHeatmap({ habits, registry, logs, dates }: Props) {
       >
         <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>Less</span>
         {[
-          { fill: "var(--rule)", opacity: 1 },
+          { fill: "var(--color-border)", opacity: 1 },
           { fill: "var(--color-text)", opacity: 0.4 },
           { fill: "var(--color-text)", opacity: 0.55 },
           { fill: "var(--color-text)", opacity: 0.7 },

@@ -12,6 +12,10 @@ const PROMPT_LABELS: Record<string, string> = {
   tomorrow_focus: "Tomorrow's focus",
 };
 
+// Preview length threshold — above this, the inline Expand toggle appears so
+// the full preview can be revealed without opening the full structured body.
+const PREVIEW_EXPAND_THRESHOLD = 140;
+
 interface Props {
   entries: JournalEntry[];
   today?: string;
@@ -20,11 +24,22 @@ interface Props {
 
 export default function JournalHistory({ entries, today, onEdit }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [previewExpanded, setPreviewExpanded] = useState<Set<string>>(new Set());
 
   function toggle(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function togglePreview(id: string) {
+    setPreviewExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -41,6 +56,7 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
     <div>
       {entries.map((entry, i) => {
         const isOpen    = expanded.has(entry.id);
+        const isPreviewOpen = previewExpanded.has(entry.id);
         const isToday   = today && entry.date === today;
         const date      = new Date(entry.date + "T00:00:00");
         const dateLabel = date.toLocaleDateString("en-US", {
@@ -59,6 +75,24 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
 
         const filledPrompts = Object.entries(entry.responses).filter(([, v]) => v?.trim());
         const hasFreeWrite  = !!entry.free_write?.trim();
+        const canExpandPreview = preview.length > PREVIEW_EXPAND_THRESHOLD;
+
+        const previewClampStyle: React.CSSProperties = isPreviewOpen
+          ? {
+              fontSize: "var(--t-meta)",
+              color: "var(--color-text-faint)",
+              lineHeight: 1.5,
+              whiteSpace: "pre-wrap",
+            }
+          : {
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              fontSize: "var(--t-meta)",
+              color: "var(--color-text-faint)",
+              lineHeight: 1.5,
+            };
 
         return (
           <article
@@ -67,14 +101,22 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
               borderTop: i > 0 ? "1px solid var(--rule-soft)" : "none",
             }}
           >
-            {/* Entry header — hairline row with tabular timestamp + preview */}
-            <div style={{ display: "flex", alignItems: "stretch" }}>
+            {/* Entry row — chevron+time toggle on the left, preview (clamp +
+                inline expand) in the middle, optional Edit on the right */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "var(--space-3)",
+              }}
+            >
               <button
                 onClick={() => toggle(entry.id)}
                 aria-expanded={isOpen}
+                aria-label={isOpen ? "Collapse entry" : "Expand entry"}
                 className="hover-text-brighten transition-colors"
                 style={{
-                  flex: 1,
+                  flexShrink: 0,
                   minHeight: 44,
                   display: "flex",
                   alignItems: "baseline",
@@ -115,20 +157,44 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
                 >
                   {isToday ? "Today" : dateLabel}
                 </time>
+              </button>
 
-                {!isOpen && (
-                  <span
-                    className="truncate"
-                    style={{
-                      fontSize: "var(--t-meta)",
-                      color: "var(--color-text-faint)",
-                      lineHeight: 1.5,
-                    }}
-                  >
+              {!isOpen && (
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "var(--space-3) 0",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--space-1)",
+                  }}
+                >
+                  <span style={previewClampStyle}>
                     {preview || "No responses"}
                   </span>
-                )}
-              </button>
+                  {canExpandPreview && (
+                    <button
+                      onClick={() => togglePreview(entry.id)}
+                      className="hover-text-brighten transition-colors"
+                      style={{
+                        alignSelf: "flex-start",
+                        fontSize: "var(--t-micro)",
+                        letterSpacing: "0.04em",
+                        color: "var(--color-text-muted)",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        cursor: "pointer",
+                        transitionDuration: "var(--motion-fast)",
+                        transitionTimingFunction: "var(--ease-out-quart)",
+                      }}
+                    >
+                      {isPreviewOpen ? "Show less" : "Expand"}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {onEdit && (
                 <button

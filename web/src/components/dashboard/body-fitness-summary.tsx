@@ -133,7 +133,7 @@ function SummaryCell({
         }}
       >
         <span>
-          <span style={{ color: "var(--color-text-faint)" }}>today</span>{" "}
+          <span style={{ color: "var(--color-text-faint)" }}>yesterday</span>{" "}
           {todayValue !== null ? formatNumber(todayValue, digits) : "—"}
         </span>
         {showDelta && (

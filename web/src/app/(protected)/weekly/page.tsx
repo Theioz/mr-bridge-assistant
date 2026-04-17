@@ -562,42 +562,43 @@ export default async function WeeklyPage() {
           ) : (
             <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
               {workouts.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full" style={{ borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Date</th>
-                        <th style={thStyle}>Activity</th>
-                        <th style={{ ...thStyle, textAlign: "right" }}>Duration</th>
-                        <th style={{ ...thStyle, textAlign: "right" }}>Calories</th>
+                <table
+                  className="w-full"
+                  style={{ borderCollapse: "collapse", tableLayout: "auto" }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={{ ...thStyle, width: "5.5rem" }}>Date</th>
+                      <th style={thStyle}>Activity</th>
+                      <th style={{ ...thStyle, textAlign: "right", width: "3.5rem" }}>Dur</th>
+                      <th style={{ ...thStyle, textAlign: "right", width: "4.5rem" }}>Cal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workouts.map((w, i) => (
+                      <tr key={i}>
+                        <td className="tnum" style={tdMuted}>
+                          {fmtDate(w.date)}
+                        </td>
+                        <td style={{ ...tdBase, textTransform: "capitalize", wordBreak: "break-word" }}>
+                          {w.activity}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{ ...tdMuted, textAlign: "right" }}
+                        >
+                          {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{ ...tdMuted, textAlign: "right" }}
+                        >
+                          {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {workouts.map((w, i) => (
-                        <tr key={i}>
-                          <td className="tnum" style={tdMuted}>
-                            {fmtDate(w.date)}
-                          </td>
-                          <td style={{ ...tdBase, textTransform: "capitalize" }}>
-                            <span className="truncate">{w.activity}</span>
-                          </td>
-                          <td
-                            className="tnum"
-                            style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
-                          >
-                            {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
-                          </td>
-                          <td
-                            className="tnum"
-                            style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
-                          >
-                            {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
 
               {walkWorkouts.length > 0 && (
@@ -615,28 +616,29 @@ export default async function WeeklyPage() {
                     Walks · {walkWorkouts.length}
                     {walkDuration > 0 ? ` · ${fmtDuration(walkDuration)}` : ""}
                   </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full" style={{ borderCollapse: "collapse" }}>
-                      <tbody>
-                        {walkWorkouts.map((w, i) => (
-                          <tr key={i}>
-                            <td className="tnum" style={{ ...tdFaint, width: "6rem" }}>
-                              {fmtDate(w.date)}
-                            </td>
-                            <td style={{ ...tdMuted, textTransform: "capitalize" }}>
-                              <span className="truncate">{w.activity}</span>
-                            </td>
-                            <td
-                              className="tnum"
-                              style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
-                            >
-                              {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <table
+                    className="w-full"
+                    style={{ borderCollapse: "collapse", tableLayout: "auto" }}
+                  >
+                    <tbody>
+                      {walkWorkouts.map((w, i) => (
+                        <tr key={i}>
+                          <td className="tnum" style={{ ...tdFaint, width: "5.5rem" }}>
+                            {fmtDate(w.date)}
+                          </td>
+                          <td style={{ ...tdMuted, textTransform: "capitalize", wordBreak: "break-word" }}>
+                            {w.activity}
+                          </td>
+                          <td
+                            className="tnum"
+                            style={{ ...tdFaint, textAlign: "right", width: "3.5rem" }}
+                          >
+                            {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

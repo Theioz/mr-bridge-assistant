@@ -223,7 +223,8 @@ export default function TaskItem({
             style={{
               width: 18,
               height: 18,
-              border: "1.5px solid var(--rule)",
+              border: "2px solid var(--color-text-faint)",
+              background: "transparent",
             }}
           />
         </button>
@@ -252,8 +253,13 @@ export default function TaskItem({
             />
           ) : (
             <span
-              className="cursor-text truncate"
-              style={{ color: "var(--color-text)", fontSize: "var(--t-body)" }}
+              className="cursor-text"
+              style={{
+                color: "var(--color-text)",
+                fontSize: "var(--t-body)",
+                minWidth: 0,
+                wordBreak: "break-word",
+              }}
               onClick={() => setEditing(true)}
             >
               {task.title}

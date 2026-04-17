@@ -236,8 +236,13 @@ function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
         {meal.meal_type}
       </span>
       <span
-        className="truncate"
-        style={{ flex: 1, minWidth: 0, fontSize: "var(--t-body)", color: "var(--color-text)" }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: "var(--t-body)",
+          color: "var(--color-text)",
+          wordBreak: "break-word",
+        }}
       >
         {meal.recipes?.name ?? meal.notes ?? "—"}
       </span>
