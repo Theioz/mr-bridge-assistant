@@ -93,15 +93,36 @@ function normalizeName(s: string | null | undefined): string {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle = {
-  background: "var(--color-bg)",
-  border: "1px solid var(--color-border)",
+  background: "transparent",
+  border: "1px solid var(--rule)",
   color: "var(--color-text)",
   outline: "none",
   fontSize: 16, // Prevents iOS auto-zoom on focus
-  borderRadius: 8,
-  padding: "10px 12px",
+  borderRadius: "var(--r-2)",
+  padding: "var(--space-2) var(--space-3)",
   width: "100%",
   WebkitAppearance: "none" as const,
+} as const;
+
+const ctaStyle = {
+  background: "var(--accent)",
+  color: "var(--color-text-on-cta)",
+  border: "none",
+  borderRadius: "var(--r-2)",
+  fontSize: "var(--t-meta)",
+  fontWeight: 500,
+  padding: "var(--space-2) var(--space-4)",
+  cursor: "pointer",
+} as const;
+
+const ghostStyle = {
+  background: "transparent",
+  color: "var(--color-text-muted)",
+  border: "1px solid var(--rule)",
+  borderRadius: "var(--r-2)",
+  fontSize: "var(--t-meta)",
+  padding: "var(--space-2) var(--space-4)",
+  cursor: "pointer",
 } as const;
 
 // ─── Macro progress bar ───────────────────────────────────────────────────────
@@ -128,32 +149,212 @@ function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
   const clamped = Math.min(pct, 100);
 
   return (
-    <div className="space-y-1.5">
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-2)",
+        paddingTop: "var(--space-3)",
+        paddingBottom: "var(--space-3)",
+        borderTop: "1px solid var(--rule-soft)",
+      }}
+    >
       <div className="flex items-baseline justify-between">
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>
+        <span style={{ fontSize: "var(--t-meta)", fontWeight: 500, color: "var(--color-text)" }}>
           {label}
         </span>
-        <div className="flex items-baseline gap-1.5">
-          <span style={{ fontSize: 13, color: "var(--color-text)" }}>
+        <div className="flex items-baseline tnum" style={{ gap: "var(--space-2)" }}>
+          <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
             {consumed}
-            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>{unit}</span>
+            <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>{unit}</span>
           </span>
-          <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/</span>
-          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>/</span>
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
             {goal}{unit}
           </span>
-          <span style={{ fontSize: 11, fontWeight: 500, color, minWidth: 52, textAlign: "right" }}>
+          <span style={{ fontSize: "var(--t-micro)", fontWeight: 500, color, minWidth: 64, textAlign: "right" }}>
             {isOver
               ? `+${Math.abs(remaining)}${unit} over`
               : `${remaining}${unit} left`}
           </span>
         </div>
       </div>
-      <div className="rounded-full overflow-hidden" style={{ height: 4, background: "var(--color-border)" }}>
+      <div className="rounded-full overflow-hidden" style={{ height: 3, background: "var(--rule-soft)" }}>
         <div
           className="h-full rounded-full transition-all duration-300"
           style={{ width: `${clamped}%`, background: color }}
         />
+      </div>
+    </div>
+  );
+}
+
+// ─── Meal row (flat, hairline, tabular macros column) ────────────────────────
+
+interface MealRowDisplayProps {
+  meal: MealRow;
+  onClick: () => void;
+  onRelog?: () => void;
+}
+
+function formatMacroCol(m: MealRow): string | null {
+  const hasMacros = m.calories != null || m.protein_g != null;
+  if (!hasMacros) return null;
+  return [
+    m.calories != null ? `${m.calories} cal` : null,
+    m.protein_g != null ? `P ${m.protein_g}` : null,
+    m.carbs_g != null ? `C ${m.carbs_g}` : null,
+    m.fat_g != null ? `F ${m.fat_g}` : null,
+  ].filter(Boolean).join(" · ");
+}
+
+function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
+  const macroStr = formatMacroCol(meal);
+  return (
+    <div
+      className="flex items-center"
+      onClick={onClick}
+      style={{
+        cursor: "pointer",
+        gap: "var(--space-3)",
+        minHeight: 44,
+        paddingTop: "var(--space-2)",
+        paddingBottom: "var(--space-2)",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "var(--t-micro)",
+          fontWeight: 500,
+          color: "var(--color-text-muted)",
+          textTransform: "capitalize",
+          minWidth: 72,
+          flexShrink: 0,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {meal.meal_type}
+      </span>
+      <span
+        className="truncate"
+        style={{ flex: 1, minWidth: 0, fontSize: "var(--t-body)", color: "var(--color-text)" }}
+      >
+        {meal.recipes?.name ?? meal.notes ?? "—"}
+      </span>
+      {macroStr && (
+        <span
+          className="tnum flex-shrink-0 hidden sm:inline"
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            minWidth: 220,
+            textAlign: "right",
+          }}
+        >
+          {macroStr}
+        </span>
+      )}
+      {onRelog && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRelog(); }}
+          aria-label="Log again"
+          title="Log again"
+          className="transition-opacity hover:opacity-70 flex-shrink-0 flex items-center justify-center"
+          style={{
+            width: 32,
+            height: 32,
+            color: "var(--color-text-faint)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <RefreshCw size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MealRowEdit({
+  fields,
+  saving,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  fields: {
+    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
+  };
+  saving: boolean;
+  onChange: (next: typeof fields) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-col"
+      style={{
+        gap: "var(--space-2)",
+        paddingTop: "var(--space-3)",
+        paddingBottom: "var(--space-3)",
+      }}
+    >
+      <div className="flex" style={{ gap: "var(--space-2)" }}>
+        <select
+          value={fields.meal_type}
+          onChange={(e) => onChange({ ...fields, meal_type: e.target.value })}
+          style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
+        >
+          {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+        </select>
+        <input
+          type="text"
+          value={fields.notes}
+          onChange={(e) => onChange({ ...fields, notes: e.target.value })}
+          placeholder="Food name"
+          style={{ ...inputStyle, flex: 1 }}
+        />
+      </div>
+      <div className="flex" style={{ gap: "var(--space-2)" }}>
+        {(["calories", "protein_g", "carbs_g", "fat_g"] as const).map((field) => (
+          <input
+            key={field}
+            type="number"
+            value={fields[field]}
+            onChange={(e) => onChange({ ...fields, [field]: e.target.value })}
+            placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
+            style={{ ...inputStyle, width: 72 }}
+          />
+        ))}
+      </div>
+      <div className="flex" style={{ gap: "var(--space-2)" }}>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          style={{
+            ...ctaStyle,
+            fontSize: "var(--t-micro)",
+            padding: "var(--space-1) var(--space-3)",
+            opacity: saving ? 0.5 : 1,
+          }}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <button
+          onClick={onCancel}
+          style={{
+            fontSize: "var(--t-micro)",
+            padding: "var(--space-1) var(--space-3)",
+            color: "var(--color-text-muted)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
@@ -330,187 +531,66 @@ function TodayTab({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Macro summary */}
-      {hasAnyGoal ? (
-        <div
-          className="rounded-xl p-5"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <p
-            className="text-xs uppercase tracking-widest mb-4"
-            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-          >
-            Today&apos;s Macros
-          </p>
-          <div className="space-y-4">
+    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
+      {/* Macros section */}
+      <section>
+        <h2 className="db-section-label">Today&apos;s Macros</h2>
+        {hasAnyGoal ? (
+          <div>
             <MacroBar label="Calories" unit=" kcal" consumed={macroTotals.calories} goal={macroGoals.calories} />
             <MacroBar label="Protein" unit="g" consumed={macroTotals.protein} goal={macroGoals.protein} />
             <MacroBar label="Carbs" unit="g" consumed={macroTotals.carbs} goal={macroGoals.carbs} />
             <MacroBar label="Fat" unit="g" consumed={macroTotals.fat} goal={macroGoals.fat} />
           </div>
-        </div>
-      ) : (
-        <div
-          className="rounded-xl p-5"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <p style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        ) : (
+          <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-muted)" }}>
             No nutrition goals set.{" "}
             <Link
               href="/settings"
-              style={{ color: "var(--color-primary)", textDecoration: "underline", textUnderlineOffset: 2 }}
+              style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
             >
               Configure goals in Settings
             </Link>{" "}
             to track progress here.
           </p>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Today's logged meals */}
-      <div
-        className="rounded-xl p-5"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <p
-          className="text-xs uppercase tracking-widest mb-4"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          Logged Today
-        </p>
-
+      <section>
+        <h2 className="db-section-label">Logged Today</h2>
         {sortedMeals.length === 0 ? (
-          <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>
+          <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>
             Nothing logged yet today.
           </p>
         ) : (
-          <div className="space-y-2 mb-4">
-            {sortedMeals.map((m) => {
-              const hasMacros = m.calories != null || m.protein_g != null;
-              const macroStr = hasMacros
-                ? [
-                    m.calories != null && `${m.calories} cal`,
-                    m.protein_g != null && `P ${m.protein_g}g`,
-                    m.carbs_g != null && `C ${m.carbs_g}g`,
-                    m.fat_g != null && `F ${m.fat_g}g`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                : null;
-              return (
-                <div key={m.id}>
-                  {editingId === m.id ? (
-                    <div className="space-y-2 py-1">
-                      <div className="flex gap-2">
-                        <select
-                          value={editFields.meal_type}
-                          onChange={(e) => setEditFields((f) => ({ ...f, meal_type: e.target.value }))}
-                          style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
-                        >
-                          {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                        </select>
-                        <input
-                          type="text"
-                          value={editFields.notes}
-                          onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))}
-                          placeholder="Food name"
-                          style={{ ...inputStyle, flex: 1 }}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        {(["calories", "protein_g", "carbs_g", "fat_g"] as const).map((field) => (
-                          <input
-                            key={field}
-                            type="number"
-                            value={editFields[field]}
-                            onChange={(e) => setEditFields((f) => ({ ...f, [field]: e.target.value }))}
-                            placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
-                            style={{ ...inputStyle, width: 68 }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => saveEdit(m.id)}
-                          disabled={editSaving}
-                          style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
-                        >
-                          {editSaving ? "Saving…" : "Save"}
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          style={{ fontSize: 13, padding: "4px 12px", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="flex items-baseline gap-3"
-                      onClick={() => startEdit(m)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 500,
-                          color: "var(--color-text-muted)",
-                          textTransform: "capitalize",
-                          minWidth: 64,
-                        }}
-                      >
-                        {m.meal_type}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                          {m.recipes?.name ?? m.notes ?? "—"}
-                        </span>
-                        {macroStr && (
-                          <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
-                            {macroStr}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); prefillLog(m); }}
-                        aria-label="Log again"
-                        title="Log again"
-                        style={{
-                          padding: 4,
-                          color: "var(--color-text-muted)",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <RefreshCw size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div>
+            {sortedMeals.map((m, i) => (
+              <div
+                key={m.id}
+                style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
+              >
+                {editingId === m.id ? (
+                  <MealRowEdit
+                    fields={editFields}
+                    saving={editSaving}
+                    onChange={setEditFields}
+                    onSave={() => saveEdit(m.id)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <MealRowDisplay meal={m} onClick={() => startEdit(m)} onRelog={() => prefillLog(m)} />
+                )}
+              </div>
+            ))}
           </div>
         )}
+      </section>
 
-        {/* Divider */}
-        <div style={{ borderTop: "1px solid var(--color-border)", marginBottom: 14 }} />
-
-        {/* Quick-log form */}
-        <div ref={quickLogRef}>
-        <p
-          className="text-xs uppercase tracking-widest mb-3"
-          style={{ color: "var(--color-text-faint)", letterSpacing: "0.07em" }}
-        >
-          Quick log
-        </p>
-        <div className="flex gap-2 mb-2">
+      {/* Quick log form */}
+      <section ref={quickLogRef}>
+        <h2 className="db-section-label">Quick log</h2>
+        <div className="flex" style={{ gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
           <select
             value={logMealType}
             onChange={(e) => setLogMealType(e.target.value as MealType)}
@@ -534,33 +614,45 @@ function TodayTab({
             ref={logSaveRef}
             onClick={handleLog}
             disabled={logging || !logDesc.trim()}
-            className="flex items-center justify-center rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
-            style={{
-              background: "var(--color-primary)",
-              color: "var(--color-text-on-cta)",
-              fontSize: 14,
-              padding: "10px 14px",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
+            className="flex items-center justify-center transition-opacity active:opacity-70 disabled:opacity-40"
+            style={{ ...ctaStyle, whiteSpace: "nowrap", flexShrink: 0 }}
           >
             {logging ? <Loader2 size={14} className="animate-spin" /> : "Log"}
           </button>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
+        <div
+          className="flex items-center flex-wrap"
+          style={{ gap: "var(--space-4)" }}
+        >
           <button
             onClick={() => setMacrosOpen((v) => !v)}
-            className="flex items-center gap-1 transition-opacity active:opacity-70"
-            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+            className="flex items-center transition-opacity active:opacity-70"
+            style={{
+              gap: "var(--space-1)",
+              fontSize: "var(--t-micro)",
+              color: "var(--accent)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
           >
             {macrosOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             Add macros
           </button>
           <button
             onClick={() => setIngredientsOpen((v) => !v)}
-            className="flex items-center gap-1 transition-opacity active:opacity-70"
-            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+            className="flex items-center transition-opacity active:opacity-70"
+            style={{
+              gap: "var(--space-1)",
+              fontSize: "var(--t-micro)",
+              color: "var(--accent)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
           >
             {ingredientsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             Ingredients
@@ -569,9 +661,17 @@ function TodayTab({
             type="button"
             onClick={handleReanalyze}
             disabled={(!logIngredients.trim() && !logDesc.trim()) || reanalyzing}
-            className="flex items-center gap-1 transition-opacity active:opacity-70 disabled:opacity-40"
+            className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
             title={logIngredients.trim() ? "Estimate macros from ingredients" : "Estimate macros from dish name"}
-            style={{ fontSize: 12, color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}
+            style={{
+              gap: "var(--space-1)",
+              fontSize: "var(--t-micro)",
+              color: "var(--accent)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
           >
             {reanalyzing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
             Estimate macros
@@ -579,8 +679,8 @@ function TodayTab({
         </div>
 
         {ingredientsOpen && (
-          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--color-border)" }}>
-            <label style={{ display: "block", fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>
+          <div style={{ marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--rule-soft)" }}>
+            <label style={{ display: "block", fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
               Ingredients or modifications (optional)
             </label>
             <textarea
@@ -588,15 +688,20 @@ function TodayTab({
               onChange={(e) => setLogIngredients(e.target.value)}
               placeholder="e.g. &quot;added 4oz chicken&quot; or full list: &quot;6oz salmon, 1 cup rice, 1 tbsp oil&quot;"
               rows={3}
-              style={{ ...inputStyle, fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+              style={{ ...inputStyle, fontSize: "var(--t-meta)", resize: "vertical", fontFamily: "inherit" }}
             />
           </div>
         )}
 
         {macrosOpen && (
           <div
-            className="grid grid-cols-4 gap-2 mt-3 pt-3"
-            style={{ borderTop: "1px solid var(--color-border)" }}
+            className="grid grid-cols-4"
+            style={{
+              gap: "var(--space-2)",
+              marginTop: "var(--space-3)",
+              paddingTop: "var(--space-3)",
+              borderTop: "1px solid var(--rule-soft)",
+            }}
           >
             {[
               { label: "Cal", value: logCal, setter: setLogCal, mode: "numeric" as const },
@@ -605,7 +710,7 @@ function TodayTab({
               { label: "F (g)", value: logFat, setter: setLogFat, mode: "decimal" as const },
             ].map(({ label, value, setter, mode }) => (
               <div key={label}>
-                <label style={{ display: "block", fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
                   {label}
                 </label>
                 <input
@@ -614,104 +719,47 @@ function TodayTab({
                   value={value}
                   onChange={(e) => setter(e.target.value)}
                   placeholder="0"
-                  style={{ ...inputStyle, padding: "7px 8px", fontSize: 13 }}
+                  style={{ ...inputStyle, padding: "var(--space-2)", fontSize: "var(--t-meta)" }}
                 />
               </div>
             ))}
           </div>
         )}
-        </div>
-      </div>
+      </section>
 
       {/* Recent meals (deduped past 7 days) */}
       {recentMeals.length > 0 && (
-        <div
-          className="rounded-xl p-5"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <p
-            className="text-xs uppercase tracking-widest mb-4"
-            style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-          >
-            Recent meals
-          </p>
-          <div className="space-y-2">
-            {recentMeals.map((m) => {
-              const hasMacros = m.calories != null || m.protein_g != null;
-              const macroStr = hasMacros
-                ? [
-                    m.calories != null && `${m.calories} cal`,
-                    m.protein_g != null && `P ${m.protein_g}g`,
-                    m.carbs_g != null && `C ${m.carbs_g}g`,
-                    m.fat_g != null && `F ${m.fat_g}g`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                : null;
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-baseline gap-3"
-                  onClick={() => prefillLog(m)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 500,
-                      color: "var(--color-text-muted)",
-                      textTransform: "capitalize",
-                      minWidth: 64,
-                    }}
-                  >
-                    {m.meal_type}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                      {m.recipes?.name ?? m.notes ?? "—"}
-                    </span>
-                    {macroStr && (
-                      <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
-                        {macroStr}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); prefillLog(m); }}
-                    aria-label="Log again"
-                    title="Log again"
-                    style={{
-                      padding: 4,
-                      color: "var(--color-text-muted)",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <RefreshCw size={14} />
-                  </button>
-                </div>
-              );
-            })}
+        <section>
+          <h2 className="db-section-label">Recent meals</h2>
+          <div>
+            {recentMeals.map((m, i) => (
+              <div
+                key={m.id}
+                style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
+              >
+                <MealRowDisplay meal={m} onClick={() => prefillLog(m)} onRelog={() => prefillLog(m)} />
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Log via chat nudge */}
+      {/* Log via chat nudge — hairline row, no card */}
       <div
-        className="flex items-center gap-3 rounded-xl px-4 py-3"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        className="flex items-center"
+        style={{
+          gap: "var(--space-3)",
+          paddingTop: "var(--space-3)",
+          paddingBottom: "var(--space-3)",
+          borderTop: "1px solid var(--rule-soft)",
+        }}
       >
-        <MessageSquare size={16} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
-        <p style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        <MessageSquare size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
+        <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
           Or ask{" "}
           <Link
             href="/chat"
-            style={{ color: "var(--color-primary)", textDecoration: "underline", textUnderlineOffset: 2 }}
+            style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
           >
             Mr. Bridge
           </Link>{" "}
@@ -769,7 +817,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
       <input
         type="text"
         value={query}
@@ -779,128 +827,139 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
       />
 
       {filtered.length === 0 ? (
-        <div
-          className="rounded-xl p-8 text-center"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        <p
+          style={{
+            fontSize: "var(--t-body)",
+            color: "var(--color-text-faint)",
+            paddingTop: "var(--space-4)",
+          }}
         >
-          <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>
-            {recipes.length === 0 ? "No saved recipes yet." : "No recipes match your search."}
-          </p>
-        </div>
+          {recipes.length === 0 ? "No saved recipes yet." : "No recipes match your search."}
+        </p>
       ) : (
-        filtered.map((r) => {
-          const isExpanded = expandedId === r.id;
-          const isUsing = useRecipeId === r.id;
-          return (
-            <div
-              key={r.id}
-              className="rounded-xl overflow-hidden"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                className="w-full text-left px-4 py-4 flex items-start justify-between gap-3"
-                style={{ background: "none", border: "none", cursor: "pointer" }}
+        <div>
+          {filtered.map((r, i) => {
+            const isExpanded = expandedId === r.id;
+            const isUsing = useRecipeId === r.id;
+            return (
+              <div
+                key={r.id}
+                className="card-lift"
+                style={{
+                  borderTop: i > 0 ? "1px solid var(--rule-soft)" : "none",
+                  borderRadius: "var(--r-1)",
+                  transition: "background var(--motion-fast) var(--ease-out-quart)",
+                }}
               >
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
-                    {r.name}
-                  </p>
-                  {r.cuisine && (
-                    <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
-                      {r.cuisine}
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                  className="w-full text-left flex items-start justify-between"
+                  style={{
+                    gap: "var(--space-3)",
+                    padding: "var(--space-3) 0",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)" }}>
+                      {r.name}
                     </p>
+                    {r.cuisine && (
+                      <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                        {r.cuisine}
+                      </p>
+                    )}
+                    {r.tags && r.tags.length > 0 && (
+                      <div className="flex flex-wrap" style={{ gap: "var(--space-1)", marginTop: "var(--space-2)" }}>
+                        {r.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            style={{
+                              fontSize: "var(--t-micro)",
+                              color: "var(--color-text-muted)",
+                              border: "1px solid var(--rule-soft)",
+                              borderRadius: "var(--r-1)",
+                              padding: "2px var(--space-2)",
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }} />
+                  ) : (
+                    <ChevronDown size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }} />
                   )}
-                  {r.tags && r.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {r.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full px-2 py-0.5"
+                </button>
+
+                {isExpanded && (
+                  <div
+                    style={{
+                      padding: "var(--space-3) 0 var(--space-4)",
+                      borderTop: "1px solid var(--rule-soft)",
+                    }}
+                  >
+                    {r.ingredients && (
+                      <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", lineHeight: 1.6, marginBottom: "var(--space-3)" }}>
+                        {r.ingredients}
+                      </p>
+                    )}
+
+                    {isUsing ? (
+                      <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
+                        <select
+                          value={useRecipeMealType}
+                          onChange={(e) => setUseRecipeMealType(e.target.value as MealType)}
+                          style={{ ...inputStyle, width: "auto", minWidth: 110 }}
+                        >
+                          {MEAL_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                              {t.charAt(0).toUpperCase() + t.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleUseRecipe(r.id)}
+                          disabled={logging}
+                          className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
+                          style={{ ...ctaStyle, gap: "var(--space-1)" }}
+                        >
+                          {logging ? <Loader2 size={14} className="animate-spin" /> : "Log"}
+                        </button>
+                        <button
+                          onClick={() => setUseRecipeId(null)}
                           style={{
-                            fontSize: 11,
-                            background: "var(--color-primary-dim)",
-                            color: "var(--color-primary)",
+                            fontSize: "var(--t-micro)",
+                            color: "var(--color-text-muted)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "var(--space-1) var(--space-2)",
                           }}
                         >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {isExpanded ? (
-                  <ChevronUp size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 2 }} />
-                ) : (
-                  <ChevronDown size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 2 }} />
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setUseRecipeId(r.id)}
+                        className="transition-opacity active:opacity-70"
+                        style={ctaStyle}
+                      >
+                        Use this recipe
+                      </button>
+                    )}
+                  </div>
                 )}
-              </button>
-
-              {isExpanded && (
-                <div
-                  className="px-4 pb-4 pt-1"
-                  style={{ borderTop: "1px solid var(--color-border)" }}
-                >
-                  {r.ingredients && (
-                    <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.6, marginBottom: 12 }}>
-                      {r.ingredients}
-                    </p>
-                  )}
-
-                  {isUsing ? (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={useRecipeMealType}
-                        onChange={(e) => setUseRecipeMealType(e.target.value as MealType)}
-                        style={{ ...inputStyle, width: "auto", minWidth: 110 }}
-                      >
-                        {MEAL_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => handleUseRecipe(r.id)}
-                        disabled={logging}
-                        className="flex items-center gap-1.5 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
-                        style={{
-                          background: "var(--color-primary)",
-                          color: "var(--color-text-on-cta)",
-                          fontSize: 14,
-                          padding: "10px 14px",
-                        }}
-                      >
-                        {logging ? <Loader2 size={14} className="animate-spin" /> : "Log"}
-                      </button>
-                      <button
-                        onClick={() => setUseRecipeId(null)}
-                        style={{ fontSize: 13, color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setUseRecipeId(r.id)}
-                      className="rounded-xl font-medium transition-opacity active:opacity-70"
-                      style={{
-                        background: "var(--color-primary)",
-                        color: "var(--color-text-on-cta)",
-                        fontSize: 14,
-                        padding: "9px 16px",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Use this recipe
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -1001,19 +1060,18 @@ function PlanTab({
     macroGoals.protein != null ? macroGoals.protein - macroTotals.protein : null;
 
   return (
-    <div className="space-y-4">
-      <div
-        className="rounded-xl p-5"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <p
-          className="text-xs uppercase tracking-widest mb-3"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          What do you have on hand?
-        </p>
+    <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
+      <section>
+        <h2 className="db-section-label">What do you have on hand?</h2>
         {(remainingCal != null || remainingProtein != null) && (
-          <p style={{ fontSize: 12, color: "var(--color-text-faint)", marginBottom: 10 }}>
+          <p
+            className="tnum"
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+              marginBottom: "var(--space-2)",
+            }}
+          >
             Remaining today:{" "}
             {remainingCal != null && `${Math.max(0, remainingCal)} kcal`}
             {remainingCal != null && remainingProtein != null && " · "}
@@ -1025,19 +1083,18 @@ function PlanTab({
           onChange={(e) => setIngredients(e.target.value)}
           rows={3}
           placeholder="e.g. chicken breast, broccoli, rice"
-          style={{ ...inputStyle, resize: "none", lineHeight: 1.6, marginBottom: 10 }}
+          style={{ ...inputStyle, resize: "none", lineHeight: 1.6, marginBottom: "var(--space-3)" }}
         />
         <button
           onClick={handleSuggest}
           disabled={loading || !ingredients.trim()}
-          className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
+          className="flex items-center justify-center transition-opacity active:opacity-70 disabled:opacity-40"
           style={{
-            background: "var(--color-primary)",
-            color: "var(--color-text-on-cta)",
-            fontSize: 15,
-            padding: "12px 20px",
+            ...ctaStyle,
+            gap: "var(--space-2)",
+            fontSize: "var(--t-body)",
+            padding: "var(--space-3) var(--space-5)",
             width: "100%",
-            border: "none",
             cursor: loading || !ingredients.trim() ? "default" : "pointer",
           }}
         >
@@ -1054,102 +1111,112 @@ function PlanTab({
           )}
         </button>
         {error && (
-          <p style={{ fontSize: 13, color: "var(--color-danger, #ef4444)", marginTop: 10 }}>
+          <p style={{ fontSize: "var(--t-meta)", color: "var(--color-danger)", marginTop: "var(--space-3)" }}>
             {error}
           </p>
         )}
-      </div>
+      </section>
 
       {suggestions.length > 0 && (
-        <div className="space-y-3">
-          {suggestions.map((s, i) => {
-            const state = getLogState(i);
-            return (
-              <div
-                key={i}
-                className="rounded-xl p-4"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-              >
-                {s.isSaved && (
-                  <span
-                    className="rounded-full px-2 py-0.5 inline-block mb-2"
-                    style={{
-                      fontSize: 11,
-                      background: "var(--color-positive-subtle)",
-                      color: "var(--color-positive)",
-                    }}
-                  >
-                    Saved recipe
-                  </span>
-                )}
-                <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", marginBottom: 4 }}>
-                  {s.name}
-                </p>
-                <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.5, marginBottom: 10 }}>
-                  {s.description}
-                </p>
-                <div className="flex gap-4 mb-3" style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
-                  <span>~{s.calories} cal</span>
-                  <span>P {s.protein_g}g</span>
-                  <span>C {s.carbs_g}g</span>
-                  <span>F {s.fat_g}g</span>
-                </div>
-
-                {state.open ? (
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={state.mealType}
-                      onChange={(e) => setLogState(i, { mealType: e.target.value as MealType })}
-                      style={{ ...inputStyle, width: "auto", minWidth: 110 }}
-                    >
-                      {MEAL_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t.charAt(0).toUpperCase() + t.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => handleLog(i, s)}
-                      disabled={state.logging}
-                      className="flex items-center gap-1.5 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-40"
+        <section>
+          <h2 className="db-section-label">Suggestions</h2>
+          <div>
+            {suggestions.map((s, i) => {
+              const state = getLogState(i);
+              return (
+                <div
+                  key={i}
+                  style={{
+                    borderTop: i > 0 ? "1px solid var(--rule-soft)" : "none",
+                    paddingTop: "var(--space-4)",
+                    paddingBottom: "var(--space-4)",
+                  }}
+                >
+                  {s.isSaved && (
+                    <span
                       style={{
-                        background: "var(--color-primary)",
-                        color: "var(--color-text-on-cta)",
-                        fontSize: 14,
-                        padding: "10px 14px",
-                        border: "none",
-                        cursor: "pointer",
+                        display: "inline-block",
+                        marginBottom: "var(--space-2)",
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-positive)",
+                        border: "1px solid var(--color-positive-subtle-strong)",
+                        borderRadius: "var(--r-1)",
+                        padding: "2px var(--space-2)",
                       }}
                     >
-                      {state.logging ? <Loader2 size={14} className="animate-spin" /> : "Log"}
-                    </button>
-                    <button
-                      onClick={() => setLogState(i, { open: false })}
-                      style={{ fontSize: 13, color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setLogState(i, { open: true })}
-                    className="rounded-xl font-medium transition-opacity active:opacity-70"
+                      Saved recipe
+                    </span>
+                  )}
+                  <p style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                    {s.name}
+                  </p>
+                  <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", lineHeight: 1.5, marginBottom: "var(--space-2)" }}>
+                    {s.description}
+                  </p>
+                  <div
+                    className="flex tnum"
                     style={{
-                      background: "var(--color-primary)",
-                      color: "var(--color-text-on-cta)",
-                      fontSize: 14,
-                      padding: "9px 16px",
-                      border: "none",
-                      cursor: "pointer",
+                      gap: "var(--space-4)",
+                      marginBottom: "var(--space-3)",
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
                     }}
                   >
-                    Log this
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    <span>~{s.calories} cal</span>
+                    <span>P {s.protein_g}g</span>
+                    <span>C {s.carbs_g}g</span>
+                    <span>F {s.fat_g}g</span>
+                  </div>
+
+                  {state.open ? (
+                    <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
+                      <select
+                        value={state.mealType}
+                        onChange={(e) => setLogState(i, { mealType: e.target.value as MealType })}
+                        style={{ ...inputStyle, width: "auto", minWidth: 110 }}
+                      >
+                        {MEAL_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleLog(i, s)}
+                        disabled={state.logging}
+                        className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
+                        style={{ ...ctaStyle, gap: "var(--space-1)" }}
+                      >
+                        {state.logging ? <Loader2 size={14} className="animate-spin" /> : "Log"}
+                      </button>
+                      <button
+                        onClick={() => setLogState(i, { open: false })}
+                        style={{
+                          fontSize: "var(--t-micro)",
+                          color: "var(--color-text-muted)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "var(--space-1) var(--space-2)",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setLogState(i, { open: true })}
+                      className="transition-opacity active:opacity-70"
+                      style={ctaStyle}
+                    >
+                      Log this
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );
@@ -1189,11 +1256,17 @@ export default function MealsClient({
   }
 
   return (
-    <div className="space-y-5">
-      {/* Tab bar — pill style matching GranularityToggle */}
+    <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
+      {/* Tab bar — pill style */}
       <div
-        className="flex items-center gap-0.5 p-0.5 rounded-lg"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        className="flex items-center"
+        style={{
+          gap: 2,
+          padding: 2,
+          borderRadius: "var(--r-2)",
+          border: "1px solid var(--rule)",
+          background: "transparent",
+        }}
       >
         {TABS.map(({ id, label }) => {
           const active = tab === id;
@@ -1201,9 +1274,13 @@ export default function MealsClient({
             <button
               key={id}
               onClick={() => handleTabClick(id)}
-              className="flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150"
+              className="flex-1 transition-all duration-150"
               style={{
-                background: active ? "var(--color-primary)" : "transparent",
+                padding: "var(--space-2) var(--space-3)",
+                borderRadius: "var(--r-1)",
+                fontSize: "var(--t-micro)",
+                fontWeight: 500,
+                background: active ? "var(--accent)" : "transparent",
                 color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: "none",
                 cursor: "pointer",
@@ -1218,11 +1295,14 @@ export default function MealsClient({
       {/* Navigation guard banner */}
       {pendingTab && unsavedScanCount > 0 && (
         <div
-          className="flex items-center gap-3 rounded-lg px-4 py-3"
+          className="flex items-center"
           style={{
-            background: "var(--color-warning, #f59e0b)22",
-            border: "1px solid var(--color-warning, #f59e0b)",
-            fontSize: 13,
+            gap: "var(--space-3)",
+            padding: "var(--space-3) var(--space-4)",
+            borderRadius: "var(--r-2)",
+            background: "var(--warning-subtle)",
+            border: "1px solid var(--color-warning)",
+            fontSize: "var(--t-meta)",
             color: "var(--color-text)",
           }}
         >
@@ -1231,15 +1311,11 @@ export default function MealsClient({
           </span>
           <button
             onClick={cancelLeave}
-            className="rounded-lg transition-opacity active:opacity-70"
+            className="transition-opacity active:opacity-70"
             style={{
-              background: "var(--color-primary)",
-              color: "var(--color-text-on-cta)",
-              fontSize: 12,
-              fontWeight: 500,
-              padding: "5px 10px",
-              border: "none",
-              cursor: "pointer",
+              ...ctaStyle,
+              fontSize: "var(--t-micro)",
+              padding: "var(--space-1) var(--space-3)",
               whiteSpace: "nowrap",
             }}
           >
@@ -1247,14 +1323,11 @@ export default function MealsClient({
           </button>
           <button
             onClick={confirmLeave}
-            className="rounded-lg transition-opacity active:opacity-70"
+            className="transition-opacity active:opacity-70"
             style={{
-              background: "transparent",
-              color: "var(--color-text-muted)",
-              fontSize: 12,
-              padding: "5px 10px",
-              border: "1px solid var(--color-border)",
-              cursor: "pointer",
+              ...ghostStyle,
+              fontSize: "var(--t-micro)",
+              padding: "var(--space-1) var(--space-3)",
               whiteSpace: "nowrap",
             }}
           >
@@ -1346,126 +1419,52 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <p
-        className="text-xs uppercase tracking-widest"
-        style={{ color: "var(--color-text-faint)", letterSpacing: "0.07em" }}
-      >
+    <section style={{ paddingTop: "var(--space-5)", borderTop: "1px solid var(--rule)" }}>
+      <h2 className="db-section-label">
         Past 6 Days
-      </p>
-      {dates.map((date) => {
-        const dayMeals = (byDate.get(date) ?? []).sort(
-          (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9)
-        );
-        return (
-          <div
-            key={date}
-            className="rounded-xl p-5"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <p
-              className="text-xs uppercase tracking-widest mb-3"
-              style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-            >
-              {fmtDate(date)}
-            </p>
-            <div className="space-y-2">
-              {dayMeals.map((m) => {
-                const hasMacros = m.calories != null || m.protein_g != null;
-                const macroStr = hasMacros
-                  ? [
-                      m.calories != null && `${m.calories} cal`,
-                      m.protein_g != null && `P ${m.protein_g}g`,
-                      m.carbs_g != null && `C ${m.carbs_g}g`,
-                      m.fat_g != null && `F ${m.fat_g}g`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")
-                  : null;
-                return (
-                  <div key={m.id}>
+      </h2>
+      <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
+        {dates.map((date) => {
+          const dayMeals = (byDate.get(date) ?? []).sort(
+            (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9)
+          );
+          return (
+            <div key={date}>
+              <p
+                className="tnum"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  letterSpacing: "0.04em",
+                  marginBottom: "var(--space-2)",
+                }}
+              >
+                {fmtDate(date)}
+              </p>
+              <div>
+                {dayMeals.map((m, i) => (
+                  <div
+                    key={m.id}
+                    style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
+                  >
                     {editingId === m.id ? (
-                      <div className="space-y-2 py-1">
-                        <div className="flex gap-2">
-                          <select
-                            value={editFields.meal_type}
-                            onChange={(e) => setEditFields((f) => ({ ...f, meal_type: e.target.value }))}
-                            style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
-                          >
-                            {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                          </select>
-                          <input
-                            type="text"
-                            value={editFields.notes}
-                            onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))}
-                            placeholder="Food name"
-                            style={{ ...inputStyle, flex: 1 }}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          {(["calories", "protein_g", "carbs_g", "fat_g"] as const).map((field) => (
-                            <input
-                              key={field}
-                              type="number"
-                              value={editFields[field]}
-                              onChange={(e) => setEditFields((f) => ({ ...f, [field]: e.target.value }))}
-                              placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
-                              style={{ ...inputStyle, width: 68 }}
-                            />
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => saveEdit(m.id)}
-                            disabled={editSaving}
-                            style={{ fontSize: 13, padding: "4px 12px", background: "var(--color-primary)", color: "var(--color-text-on-cta)", border: "none", borderRadius: 6, cursor: "pointer", opacity: editSaving ? 0.5 : 1 }}
-                          >
-                            {editSaving ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            style={{ fontSize: 13, padding: "4px 12px", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
+                      <MealRowEdit
+                        fields={editFields}
+                        saving={editSaving}
+                        onChange={setEditFields}
+                        onSave={() => saveEdit(m.id)}
+                        onCancel={() => setEditingId(null)}
+                      />
                     ) : (
-                      <div
-                        className="flex items-baseline gap-3"
-                        onClick={() => startEdit(m)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: "var(--color-text-muted)",
-                            textTransform: "capitalize",
-                            minWidth: 64,
-                          }}
-                        >
-                          {m.meal_type}
-                        </span>
-                        <div>
-                          <span style={{ fontSize: 14, color: "var(--color-text)" }}>
-                            {m.recipes?.name ?? m.notes ?? "—"}
-                          </span>
-                          {macroStr && (
-                            <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: 8 }}>
-                              {macroStr}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <MealRowDisplay meal={m} onClick={() => startEdit(m)} />
                     )}
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

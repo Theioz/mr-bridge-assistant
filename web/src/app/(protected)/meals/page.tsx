@@ -68,12 +68,15 @@ export default async function MealsPage() {
   macroTotals.fat = Math.round(macroTotals.fat);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+    <div className="max-w-2xl">
+      <div style={{ marginBottom: "var(--space-5)" }}>
+        <h1 className="font-heading font-semibold" style={{ fontSize: "var(--t-h1)", color: "var(--color-text)" }}>
           Meals
         </h1>
-        <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        <p
+          className="mt-1"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+        >
           Meal Hub
         </p>
       </div>
