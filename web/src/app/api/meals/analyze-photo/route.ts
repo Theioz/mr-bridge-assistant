@@ -19,7 +19,8 @@ const FoodAnalysisSchema = z.object({
   protein_g: z.number().describe("Estimated protein in grams"),
   carbs_g: z.number().describe("Estimated carbohydrates in grams"),
   fat_g: z.number().describe("Estimated fat in grams"),
-  fiber_g: z.number().describe("Estimated dietary fiber in grams"),
+  fiber_g: z.number().nullable().describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
+  sugar_g: z.number().nullable().describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
   sodium_mg: z.number().int().describe("Estimated sodium in milligrams"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the analysis"),
   notes: z

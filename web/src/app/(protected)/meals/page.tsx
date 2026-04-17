@@ -19,7 +19,7 @@ export default async function MealsPage() {
   const [{ data: mealsData }, { data: recipesData }, { data: profileData }] = await Promise.all([
     supabase
       .from("meal_log")
-      .select("id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, recipes(name)")
+      .select("id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, recipes(name)")
       .gte("date", daysAgoString(6))
       .order("date", { ascending: false })
       .order("meal_type", { ascending: true }),
@@ -46,6 +46,8 @@ export default async function MealsPage() {
     protein: profileMap["protein_goal"] ? parseInt(profileMap["protein_goal"], 10) : null,
     carbs: profileMap["carbs_goal"] ? parseInt(profileMap["carbs_goal"], 10) : null,
     fat: profileMap["fat_goal"] ? parseInt(profileMap["fat_goal"], 10) : null,
+    // Fiber defaults to 30g when unset (#304) — common public-health target.
+    fiber: profileMap["fiber_goal"] ? parseInt(profileMap["fiber_goal"], 10) : 30,
   };
 
   // Split meals into today vs past
@@ -53,19 +55,32 @@ export default async function MealsPage() {
   const todayMeals = meals.filter((m) => m.date === today);
   const pastMeals = meals.filter((m) => m.date !== today);
 
-  // Compute today's macro totals (entries with at least some macro data)
+  // Compute today's macro totals (entries with at least some macro data).
+  // fiber/sugar stay null when no meal today reports them — they render as "—" not 0 (#304).
+  let fiberAny = false;
+  let sugarAny = false;
+  let fiberSum = 0;
+  let sugarSum = 0;
   const macroTotals: MacroTotals = todayMeals.reduce(
-    (acc, m) => ({
-      calories: acc.calories + (m.calories ?? 0),
-      protein: acc.protein + (m.protein_g ?? 0),
-      carbs: acc.carbs + (m.carbs_g ?? 0),
-      fat: acc.fat + (m.fat_g ?? 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    (acc, m) => {
+      if (m.fiber_g != null) { fiberSum += m.fiber_g; fiberAny = true; }
+      if (m.sugar_g != null) { sugarSum += m.sugar_g; sugarAny = true; }
+      return {
+        calories: acc.calories + (m.calories ?? 0),
+        protein: acc.protein + (m.protein_g ?? 0),
+        carbs: acc.carbs + (m.carbs_g ?? 0),
+        fat: acc.fat + (m.fat_g ?? 0),
+        fiber: null,
+        sugar: null,
+      };
+    },
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: null as number | null, sugar: null as number | null }
   );
   macroTotals.protein = Math.round(macroTotals.protein);
   macroTotals.carbs = Math.round(macroTotals.carbs);
   macroTotals.fat = Math.round(macroTotals.fat);
+  macroTotals.fiber = fiberAny ? Math.round(fiberSum * 10) / 10 : null;
+  macroTotals.sugar = sugarAny ? Math.round(sugarSum * 10) / 10 : null;
 
   return (
     <div className="max-w-2xl">

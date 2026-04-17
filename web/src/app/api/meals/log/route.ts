@@ -9,7 +9,8 @@ interface MealLogBody {
   protein_g?: number;
   carbs_g?: number;
   fat_g?: number;
-  fiber_g?: number;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
   sodium_mg?: number;
   source?: string;
   count?: number;
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     carbs_g: body.carbs_g ?? null,
     fat_g: body.fat_g ?? null,
     fiber_g: body.fiber_g ?? null,
+    sugar_g: body.sugar_g ?? null,
     sodium_mg: body.sodium_mg ?? null,
     source: body.source ?? "manual",
   };
@@ -82,6 +84,8 @@ interface MealLogPatchBody {
   protein_g?: number | null;
   carbs_g?: number | null;
   fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
 }
 
 export async function PATCH(req: Request) {
@@ -110,6 +114,8 @@ export async function PATCH(req: Request) {
   if (body.protein_g !== undefined) updates.protein_g  = body.protein_g;
   if (body.carbs_g   !== undefined) updates.carbs_g    = body.carbs_g;
   if (body.fat_g     !== undefined) updates.fat_g      = body.fat_g;
+  if (body.fiber_g   !== undefined) updates.fiber_g    = body.fiber_g;
+  if (body.sugar_g   !== undefined) updates.sugar_g    = body.sugar_g;
 
   const { data, error } = await supabase
     .from("meal_log")
