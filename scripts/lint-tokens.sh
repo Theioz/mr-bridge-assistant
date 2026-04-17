@@ -56,6 +56,7 @@ fi
 # ── 4. No raw hex colors outside token definitions ───────────────────────
 # Allowlist: globals.css (token defs), FoodPhotoAnalyzer (own cleanup issue),
 # chart-colors.ts (canvas/SVG needs raw hex), icon.svg (SVG markup),
+# logo.tsx (SVG markup — static fill can't reference CSS vars),
 # MealsClient.tsx (CSS var fallbacks — var(--token, #hex)),
 # layout.tsx (viewport.themeColor must be a static hex — can't reference CSS vars).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
@@ -65,6 +66,7 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'FoodPhoto' \
   | grep -v 'chart-colors' \
   | grep -v 'icon\.svg' \
+  | grep -v 'logo\.tsx' \
   | grep -v 'MealsClient' \
   | grep -v 'layout\.tsx' \
   || true)
