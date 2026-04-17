@@ -446,7 +446,7 @@ mr-bridge-assistant/
 
 ## Demo Account
 
-A shared demo account lets visitors explore the app without touching real data. The demo user ("Alex Chen, software engineer, SF") has 30 days of realistic fitness, habit, recovery, and task data pre-loaded. Data resets nightly.
+A shared demo account lets visitors explore the app without touching real data. The demo user ("Demo User, software engineer, SF") has 30 days of realistic fitness, habit, recovery, meal, chat, and task data pre-loaded. Data resets nightly.
 
 ### Using the demo
 
@@ -513,6 +513,27 @@ python3 scripts/seed_demo.py
 # 7. Add NEXT_PUBLIC_DEMO_EMAIL and NEXT_PUBLIC_DEMO_PASSWORD to .env
 # (these are exposed to the browser to power the "Try demo" button)
 ```
+
+### Refreshing the demo account between releases
+
+The seed script is idempotent and is what you re-run each release to pick up new tables, widgets, or persona changes. Two entry points:
+
+```bash
+# Full wipe + reseed (recommended between releases):
+python3 scripts/reset_demo.py --yes
+
+# Seed-only (safe re-run; upserts where constraints allow, inserts new rows otherwise):
+python3 scripts/seed_demo.py
+```
+
+OAuth-gated integrations are **not** covered by the seed — they require a real auth'd session and have to be re-linked manually from the demo account's Settings page after reset:
+
+- Google Calendar + Gmail (OAuth)
+- Oura Ring token
+- Fitbit token
+- Google Fit token
+
+Before seeding against a fresh Supabase project: apply every migration in `supabase/migrations/` first. The seed script relies on `enable row level security` being active on every multi-tenant table and on the `(user_id, …)` unique constraints from migrations `20260413000002` and `20260417000001` — without them, re-runs will duplicate rows and cross-user collisions become possible.
 
 ### Required env vars
 
