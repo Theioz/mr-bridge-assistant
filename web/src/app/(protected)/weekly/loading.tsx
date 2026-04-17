@@ -1,15 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-function CardSkeleton() {
+function PanelSkeleton() {
   return (
-    <div
-      style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--r-2)",
-        padding: "var(--space-5)",
-      }}
-    >
+    <div className="flex flex-col">
       <Skeleton className="h-3 w-28" style={{ marginBottom: "var(--space-4)" }} />
       <div className="flex flex-col" style={{ gap: "var(--space-3)" }}>
         {[1, 2, 3, 4].map((r) => (
@@ -21,25 +14,34 @@ function CardSkeleton() {
 }
 
 export default function Loading() {
+  const rowStyle = {
+    gap: "var(--space-7)",
+    paddingBottom: "var(--space-7)",
+    borderBottom: "1px solid var(--rule-soft)",
+  } as const;
+  const rowStyleLast = { gap: "var(--space-7)" } as const;
+
   return (
-    <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
+    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
       {/* Header */}
       <div>
         <Skeleton className="h-8 w-44" />
         <Skeleton className="h-3 w-36" style={{ marginTop: "var(--space-2)" }} />
       </div>
 
-      {/* Three rows of two cards */}
-      {[1, 2, 3].map((row) => (
-        <div
-          key={row}
-          className="grid grid-cols-1 lg:grid-cols-2"
-          style={{ gap: "var(--space-6)" }}
-        >
-          <CardSkeleton />
-          <CardSkeleton />
-        </div>
-      ))}
+      {/* Three rows of two flat panels, hairline-separated */}
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
+        <PanelSkeleton />
+        <PanelSkeleton />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
+        <PanelSkeleton />
+        <PanelSkeleton />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyleLast}>
+        <PanelSkeleton />
+        <PanelSkeleton />
+      </div>
     </div>
   );
 }
