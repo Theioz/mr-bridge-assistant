@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { Smile } from "lucide-react";
+import { useState, useTransition } from "react";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
-import type { EmojiClickData } from "emoji-picker-react";
 import { getHabitIcon } from "@/lib/habit-icons";
 import HabitIconPicker from "./habit-icon-picker";
-
-const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 interface Props {
   habit: HabitRegistry;
@@ -34,23 +29,9 @@ export default function HabitToggle({
   const [archivePending, startArchiveTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(habit.name);
-  const [editEmoji, setEditEmoji] = useState(habit.emoji ?? "");
   const [editCategory, setEditCategory] = useState(habit.category ?? "");
   const [editIconKey, setEditIconKey] = useState(habit.icon_key ?? "target");
   const [editPending, startEditTransition] = useTransition();
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showEmojiPicker) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmojiPicker]);
 
   const completed = optimistic ?? false;
   const pending = isPending || archivePending || editPending;
@@ -89,39 +70,6 @@ export default function HabitToggle({
           className="flex flex-wrap items-center"
           style={{ gap: "var(--space-2)", padding: "var(--space-3) 0", gridColumn: "1 / -1" }}
         >
-          <div className="relative" ref={pickerRef}>
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker((v) => !v)}
-              className="flex items-center justify-center cursor-pointer"
-              style={{
-                width: 44,
-                height: 44,
-                fontSize: "var(--t-body)",
-                borderRadius: "var(--r-1)",
-                background: "transparent",
-                color: "var(--color-text)",
-                border: "1px solid var(--rule)",
-              }}
-              title="Pick emoji"
-            >
-              {editEmoji || <Smile className="w-4 h-4" aria-hidden />}
-            </button>
-            {showEmojiPicker && (
-              <div className="absolute left-0 top-12 z-50">
-                <EmojiPicker
-                  onEmojiClick={(data: EmojiClickData) => {
-                    setEditEmoji(data.emoji);
-                    setShowEmojiPicker(false);
-                  }}
-                  width={300}
-                  height={400}
-                  skinTonesDisabled
-                  previewConfig={{ showPreview: false }}
-                />
-              </div>
-            )}
-          </div>
           <input
             type="text"
             value={editName}
@@ -163,7 +111,8 @@ export default function HabitToggle({
             disabled={!editName.trim() || editPending}
             onClick={() => {
               startEditTransition(async () => {
-                await updateAction?.(habit.id, editName, editEmoji, editCategory, editIconKey);
+                // `emoji` arg preserved for server-action compatibility.
+                await updateAction?.(habit.id, editName, "", editCategory, editIconKey);
                 setEditing(false);
               });
             }}
@@ -183,7 +132,6 @@ export default function HabitToggle({
           <button
             onClick={() => {
               setEditName(habit.name);
-              setEditEmoji(habit.emoji ?? "");
               setEditCategory(habit.category ?? "");
               setEditIconKey(habit.icon_key ?? "target");
               setEditing(false);
@@ -211,7 +159,7 @@ export default function HabitToggle({
             className="hover-bg-subtle"
             style={{
               display: "grid",
-              gridTemplateColumns: "auto auto auto 1fr auto",
+              gridTemplateColumns: "auto auto 1fr auto",
               alignItems: "center",
               gap: "var(--space-3)",
               width: "100%",
@@ -262,16 +210,6 @@ export default function HabitToggle({
                 />
               );
             })()}
-            {habit.emoji ? (
-              <span
-                style={{ fontSize: "var(--t-body)", lineHeight: 1, flexShrink: 0 }}
-                aria-hidden="true"
-              >
-                {habit.emoji}
-              </span>
-            ) : (
-              <span />
-            )}
             <span
               style={{
                 fontSize: "var(--t-body)",

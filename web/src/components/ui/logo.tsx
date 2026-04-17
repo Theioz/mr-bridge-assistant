@@ -15,33 +15,13 @@ export default function Logo({ size = 32, className = "" }: LogoProps) {
       aria-label="Mr. Bridge"
       style={{ color: "var(--color-primary)" }}
     >
-      <rect width="32" height="32" rx="7" fill="currentColor" fillOpacity="0.15" />
+      <rect width="32" height="32" rx="7" fill="#261C13" />
       <path
-        d="M6 22V10l5 6 5-6v12"
+        d="M 8 23 V 9 L 16 18 L 24 9 V 23"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <path
-        d="M18 10h5a2.5 2.5 0 0 1 0 5h-5V10z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M18 15h5.5a2.5 2.5 0 0 1 0 5H18V15z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M18 10v12"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
       />
     </svg>
   );

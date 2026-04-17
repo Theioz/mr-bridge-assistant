@@ -1,5 +1,6 @@
 import { Sparkline } from "@/components/charts/sparkline";
 import type { FitnessLog, RecoveryMetrics } from "@/lib/types";
+import { todayString, addDays } from "@/lib/timezone";
 
 type Props = {
   fitnessData: Pick<FitnessLog, "date" | "weight_lb" | "body_fat_pct">[];
@@ -18,6 +19,25 @@ function last7<T extends { date: string }>(rows: T[]): T[] {
   return rows.slice(-7);
 }
 
+/**
+ * Returns the most recent non-null value + its date from a date-sorted array,
+ * or null if none. Used so the "latest" reading on each cell carries its own
+ * date and the label ("today" / "yesterday" / "Apr 15") is time-aware rather
+ * than hardcoded.
+ */
+function lastNonNull<T extends { date: string }>(
+  rows: T[],
+  key: keyof T
+): { value: number; date: string } | null {
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const v = rows[i][key];
+    if (typeof v === "number" && !Number.isNaN(v)) {
+      return { value: v, date: rows[i].date };
+    }
+  }
+  return null;
+}
+
 function deltaClass(direction: Direction, higherIsBetter: boolean): string {
   if (direction === "flat") return "delta-flat";
   const good = higherIsBetter ? direction === "up" : direction === "down";
@@ -28,8 +48,8 @@ function arrow(direction: Direction): string {
   return direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
 }
 
-function direction(today: number, reference: number): Direction {
-  const diff = today - reference;
+function direction(latest: number, reference: number): Direction {
+  const diff = latest - reference;
   if (Math.abs(diff) < 0.0001) return "flat";
   return diff > 0 ? "up" : "down";
 }
@@ -41,34 +61,54 @@ function formatNumber(n: number, digits = 1): string {
   return n.toFixed(digits);
 }
 
+/**
+ * Label the latest reading by how recent it is. "today" / "yesterday" are
+ * literal copy; older dates fall back to a short "Apr 15" style so stale
+ * samples aren't misrepresented as recent.
+ */
+function latestLabel(latestDate: string | null, today: string): string {
+  if (!latestDate) return "";
+  if (latestDate === today) return "today";
+  if (latestDate === addDays(today, -1)) return "yesterday";
+  return new Date(latestDate + "T12:00:00Z").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 type CellProps = {
   label: string;
   unit?: string;
   avgValue: number | null;
-  todayValue: number | null;
+  latestValue: number | null;
+  latestDate: string | null;
   series: number[];
   higherIsBetter: boolean;
   digits?: number;
   ariaLabel: string;
+  today: string;
 };
 
 function SummaryCell({
   label,
   unit,
   avgValue,
-  todayValue,
+  latestValue,
+  latestDate,
   series,
   higherIsBetter,
   digits = 1,
   ariaLabel,
+  today,
 }: CellProps) {
-  const showDelta = avgValue !== null && todayValue !== null;
-  const delta = showDelta ? todayValue - avgValue : 0;
-  const dir = showDelta ? direction(todayValue, avgValue) : "flat";
+  const showDelta = avgValue !== null && latestValue !== null;
+  const delta = showDelta ? latestValue - avgValue : 0;
+  const dir = showDelta ? direction(latestValue, avgValue) : "flat";
   const deltaDigits = Math.abs(delta) >= 1000 ? 0 : digits;
   const deltaText = showDelta
     ? `${arrow(dir)}${formatNumber(Math.abs(delta), deltaDigits)}`
     : "—";
+  const latestLabelText = latestLabel(latestDate, today);
 
   return (
     <div
@@ -133,8 +173,10 @@ function SummaryCell({
         }}
       >
         <span>
-          <span style={{ color: "var(--color-text-faint)" }}>yesterday</span>{" "}
-          {todayValue !== null ? formatNumber(todayValue, digits) : "—"}
+          <span style={{ color: "var(--color-text-faint)" }}>
+            {latestLabelText || "latest"}
+          </span>{" "}
+          {latestValue !== null ? formatNumber(latestValue, digits) : "—"}
         </span>
         {showDelta && (
           <span className={deltaClass(dir, higherIsBetter)}>{deltaText}</span>
@@ -146,6 +188,7 @@ function SummaryCell({
 }
 
 export default function BodyFitnessSummary({ fitnessData, trends }: Props) {
+  const today = todayString();
   const fitness7 = last7(fitnessData);
   const recovery7 = last7(trends);
 
@@ -167,12 +210,10 @@ export default function BodyFitnessSummary({ fitnessData, trends }: Props) {
   const stepsAvg = avg(stepsSeries);
   const activeCalAvg = avg(activeCalSeries);
 
-  const weightToday = weightSeries.length > 0 ? weightSeries[weightSeries.length - 1] : null;
-  const bodyFatToday =
-    bodyFatSeries.length > 0 ? bodyFatSeries[bodyFatSeries.length - 1] : null;
-  const stepsToday = stepsSeries.length > 0 ? stepsSeries[stepsSeries.length - 1] : null;
-  const activeCalToday =
-    activeCalSeries.length > 0 ? activeCalSeries[activeCalSeries.length - 1] : null;
+  const weightLatest = lastNonNull(fitness7, "weight_lb");
+  const bodyFatLatest = lastNonNull(fitness7, "body_fat_pct");
+  const stepsLatest = lastNonNull(recovery7, "steps");
+  const activeCalLatest = lastNonNull(recovery7, "active_cal");
 
   return (
     <section className="db-section">
@@ -191,39 +232,47 @@ export default function BodyFitnessSummary({ fitnessData, trends }: Props) {
           label="Weight"
           unit="lb"
           avgValue={weightAvg}
-          todayValue={weightToday}
+          latestValue={weightLatest?.value ?? null}
+          latestDate={weightLatest?.date ?? null}
           series={weightSeries}
           higherIsBetter={false}
           digits={1}
           ariaLabel="Weight, last 7 days"
+          today={today}
         />
         <SummaryCell
           label="Body fat"
           unit="%"
           avgValue={bodyFatAvg}
-          todayValue={bodyFatToday}
+          latestValue={bodyFatLatest?.value ?? null}
+          latestDate={bodyFatLatest?.date ?? null}
           series={bodyFatSeries}
           higherIsBetter={false}
           digits={1}
           ariaLabel="Body fat percent, last 7 days"
+          today={today}
         />
         <SummaryCell
           label="Steps"
           avgValue={stepsAvg}
-          todayValue={stepsToday}
+          latestValue={stepsLatest?.value ?? null}
+          latestDate={stepsLatest?.date ?? null}
           series={stepsSeries}
           higherIsBetter
           digits={0}
           ariaLabel="Steps, last 7 days"
+          today={today}
         />
         <SummaryCell
           label="Active cal"
           avgValue={activeCalAvg}
-          todayValue={activeCalToday}
+          latestValue={activeCalLatest?.value ?? null}
+          latestDate={activeCalLatest?.date ?? null}
           series={activeCalSeries}
           higherIsBetter
           digits={0}
           ariaLabel="Active calories, last 7 days"
+          today={today}
         />
       </div>
 

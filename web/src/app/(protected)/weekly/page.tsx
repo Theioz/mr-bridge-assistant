@@ -98,6 +98,7 @@ function Panel({
           minHeight: 0,
           overflowY: "auto",
           paddingBottom: "var(--space-4)",
+          paddingRight: "var(--space-2)",
         }}
       >
         {children}

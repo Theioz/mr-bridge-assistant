@@ -184,7 +184,7 @@ export function EndpointLabels({
       className="flex items-baseline justify-between tnum"
       style={{
         fontSize: 11,
-        color: "var(--color-text-faint)",
+        color: "var(--color-text-muted)",
         letterSpacing: "0.02em",
       }}
     >
@@ -489,7 +489,7 @@ export function TrendLine({
                     textAnchor="end"
                     style={{
                       fontSize: 10,
-                      fill: "var(--color-text-faint)",
+                      fill: "var(--color-text-muted)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -699,7 +699,7 @@ export function StackedBars({
                     textAnchor="end"
                     style={{
                       fontSize: 10,
-                      fill: "var(--color-text-faint)",
+                      fill: "var(--color-text-muted)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -906,7 +906,7 @@ export function BarSeries({
                     textAnchor="end"
                     style={{
                       fontSize: 10,
-                      fill: "var(--color-text-faint)",
+                      fill: "var(--color-text-muted)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >

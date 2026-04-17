@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { Smile } from "lucide-react";
+import { useState, useTransition } from "react";
 import HabitToggle from "./habit-toggle";
 import HabitIconPicker from "./habit-icon-picker";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
-import type { EmojiClickData } from "emoji-picker-react";
-
-const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 interface Props {
   habits: HabitRegistry[];
@@ -34,30 +29,17 @@ export default function HabitTodaySection({
   const [manageMode, setManageMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("");
   const [category, setCategory] = useState("");
   const [iconKey, setIconKey] = useState("target");
   const [isPending, startTransition] = useTransition();
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showEmojiPicker) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmojiPicker]);
 
   function handleAdd() {
     if (!name.trim()) return;
     startTransition(async () => {
-      await addAction(name, emoji, category, iconKey);
+      // `emoji` arg preserved for server-action compatibility; always empty
+      // now that the picker is retired in favor of the lucide-only icon set.
+      await addAction(name, "", category, iconKey);
       setName("");
-      setEmoji("");
       setCategory("");
       setIconKey("target");
       setShowAdd(false);
@@ -66,7 +48,6 @@ export default function HabitTodaySection({
 
   function handleCancel() {
     setName("");
-    setEmoji("");
     setCategory("");
     setIconKey("target");
     setShowAdd(false);
@@ -163,40 +144,6 @@ export default function HabitTodaySection({
           }}
           data-disabled={isPending || undefined}
         >
-          <div className="relative" ref={pickerRef}>
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker((v) => !v)}
-              className="flex items-center justify-center cursor-pointer"
-              style={{
-                width: 44,
-                height: 44,
-                fontSize: "var(--t-body)",
-                borderRadius: "var(--r-1)",
-                background: "transparent",
-                color: "var(--color-text)",
-                border: "1px solid var(--rule)",
-              }}
-              title="Pick emoji"
-            >
-              {emoji || <Smile className="w-4 h-4" aria-hidden />}
-            </button>
-            {showEmojiPicker && (
-              <div className="absolute left-0 top-12 z-50">
-                <EmojiPicker
-                  onEmojiClick={(data: EmojiClickData) => {
-                    setEmoji(data.emoji);
-                    setShowEmojiPicker(false);
-                  }}
-                  width={300}
-                  height={400}
-                  searchDisabled={false}
-                  skinTonesDisabled
-                  previewConfig={{ showPreview: false }}
-                />
-              </div>
-            )}
-          </div>
           <input
             type="text"
             placeholder="Habit name"
