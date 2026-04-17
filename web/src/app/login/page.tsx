@@ -53,41 +53,107 @@ function LoginForm() {
   }
 
   const inputStyle: React.CSSProperties = {
-    background: "var(--color-surface)",
-    border: "1px solid var(--color-border)",
+    background: "transparent",
+    border: "1px solid var(--rule)",
+    borderRadius: "var(--r-1)",
     color: "var(--color-text)",
+    fontSize: "var(--t-body)",
+    padding: "0 var(--space-3)",
+    minHeight: 44,
+    width: "100%",
+    transition: "border-color var(--motion-fast) var(--ease-out-quart)",
   };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: "var(--t-micro)",
+    fontWeight: 500,
+    color: "var(--color-text)",
+    letterSpacing: "0.02em",
+    marginBottom: "var(--space-2)",
+  };
+
+  const emailInvalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const pwInvalid = !password.trim();
+  const submitDisabled = state === "loading" || emailInvalid || pwInvalid;
+  const disabledHint = emailInvalid
+    ? "Enter a valid email"
+    : pwInvalid
+      ? "Enter your password"
+      : undefined;
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "var(--color-bg)" }}
+      className="min-h-screen flex items-center justify-center"
+      style={{ padding: "var(--space-5)" }}
     >
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex items-center gap-3">
-          <Logo size={36} />
-          <div>
-            <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>Mr. Bridge</h1>
-            <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>Personal assistant</p>
-          </div>
-        </div>
+      <div
+        className="w-full"
+        style={{
+          maxWidth: 360,
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-7)",
+        }}
+      >
+        <header
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "var(--space-3)",
+            textAlign: "center",
+          }}
+        >
+          <Logo size={40} />
+          <h1
+            className="font-heading"
+            style={{
+              fontSize: "var(--t-h1)",
+              fontWeight: 600,
+              letterSpacing: "-0.02em",
+              color: "var(--color-text)",
+              lineHeight: 1.1,
+              margin: 0,
+            }}
+          >
+            Mr. Bridge
+          </h1>
+          <p
+            style={{
+              fontSize: "var(--t-meta)",
+              color: "var(--color-text-muted)",
+              margin: 0,
+            }}
+          >
+            Personal assistant
+          </p>
+        </header>
 
         {hasAuthError && (
-          <div
-            className="rounded-lg px-4 py-3 text-sm"
+          <p
+            role="status"
             style={{
-              background: "var(--color-danger-subtle)",
-              border: "1px solid var(--color-danger)",
+              fontSize: "var(--t-micro)",
               color: "var(--color-danger)",
+              textAlign: "center",
+              margin: 0,
+              paddingTop: "var(--space-2)",
+              paddingBottom: "var(--space-2)",
+              borderTop: "1px solid var(--color-danger)",
+              borderBottom: "1px solid var(--color-danger)",
             }}
           >
             Session expired. Please sign in again.
-          </div>
+          </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
+        >
           <div>
-            <label htmlFor="email" className="block text-sm mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+            <label htmlFor="email" style={labelStyle}>
               Email
             </label>
             <input
@@ -99,16 +165,16 @@ function LoginForm() {
               placeholder="you@example.com"
               aria-invalid={state === "error"}
               aria-describedby={state === "error" ? "login-error" : undefined}
-              className="w-full rounded-lg px-4 py-2.5 text-sm"
+              className="focus:outline-none input-focus-ring"
               style={inputStyle}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+            <label htmlFor="password" style={labelStyle}>
               Password
             </label>
-            <div className="relative">
+            <div style={{ position: "relative" }}>
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -118,22 +184,31 @@ function LoginForm() {
                 placeholder="••••••••"
                 aria-invalid={state === "error"}
                 aria-describedby={state === "error" ? "login-error" : undefined}
-                className="w-full rounded-lg px-4 py-2.5 text-sm"
-                style={{ ...inputStyle, paddingRight: 40 }}
+                className="focus:outline-none input-focus-ring"
+                style={{ ...inputStyle, paddingRight: 44 }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center justify-center"
+                className="hover-text-brighten"
                 style={{
+                  position: "absolute",
+                  top: "50%",
+                  right: 0,
+                  transform: "translateY(-50%)",
+                  width: 44,
+                  height: 44,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   background: "transparent",
                   border: "none",
-                  color: "var(--color-text-muted)",
+                  color: "var(--color-text-faint)",
                   cursor: "pointer",
-                  padding: 6,
-                  borderRadius: 4,
+                  borderRadius: "var(--r-1)",
+                  transition: "color var(--motion-fast) var(--ease-out-quart)",
                 }}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -142,58 +217,111 @@ function LoginForm() {
           </div>
 
           {state === "error" && (
-            <p id="login-error" role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+            <p
+              id="login-error"
+              role="alert"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-danger)",
+                margin: 0,
+              }}
+            >
               {errorMsg || "Invalid email or password."}
             </p>
           )}
 
-          {(() => {
-            const emailInvalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            const pwInvalid = !password.trim();
-            const isDisabled = state === "loading" || emailInvalid || pwInvalid;
-            const disabledHint = emailInvalid
-              ? "Enter a valid email"
-              : pwInvalid
-                ? "Enter your password"
-                : undefined;
-            return (
           <button
             type="submit"
-            disabled={isDisabled}
-            aria-disabled={isDisabled}
-            title={isDisabled ? disabledHint : undefined}
-            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity duration-150 cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
-            style={{ background: "var(--color-primary)", color: "var(--color-text-on-cta)" }}
+            disabled={submitDisabled}
+            aria-disabled={submitDisabled}
+            title={submitDisabled ? disabledHint : undefined}
+            className="cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              width: "100%",
+              minHeight: 44,
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              border: "1px solid var(--accent)",
+              borderRadius: "var(--r-1)",
+              fontSize: "var(--t-meta)",
+              fontWeight: 500,
+              letterSpacing: "0.02em",
+              marginTop: "var(--space-2)",
+              transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+            }}
           >
-            {state === "loading" ? "Signing in..." : "Sign in"}
+            {state === "loading" ? "Signing in…" : "Sign in"}
           </button>
-            );
-          })()}
         </form>
 
         {DEMO_EMAIL && DEMO_PASSWORD && (
-          <div className="pt-2">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full" style={{ borderTop: "1px solid var(--color-border)" }} />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-3" style={{ background: "var(--color-bg)", color: "var(--color-text-faint)" }}>or</span>
-              </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 1,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  top: "50%",
+                  borderTop: "1px solid var(--rule-soft)",
+                }}
+              />
+              <span
+                style={{
+                  position: "relative",
+                  padding: "0 var(--space-3)",
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  background: "var(--color-bg)",
+                }}
+              >
+                or
+              </span>
             </div>
             <button
               onClick={handleDemoLogin}
               disabled={state === "loading"}
-              className="mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover-border-strong"
               style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
+                width: "100%",
+                minHeight: 44,
                 background: "transparent",
+                color: "var(--color-text)",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                fontSize: "var(--t-meta)",
+                fontWeight: 500,
+                letterSpacing: "0.02em",
+                transition:
+                  "border-color var(--motion-fast) var(--ease-out-quart), opacity var(--motion-fast) var(--ease-out-quart)",
               }}
             >
               Try the demo
             </button>
-            <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-faint)" }}>
+            <p
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                textAlign: "center",
+                margin: 0,
+              }}
+            >
               Fictional persona · read-write · resets nightly
             </p>
           </div>
