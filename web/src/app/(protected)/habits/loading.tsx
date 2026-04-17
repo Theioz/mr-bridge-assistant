@@ -20,8 +20,12 @@ export default function Loading() {
         ))}
       </div>
 
-      {/* Momentum (2/3) + Radial (1/3) */}
+      {/* Radial (1/3) + Momentum (2/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: "var(--space-7)" }}>
+        <div className="flex flex-col items-center" style={{ gap: "var(--space-4)" }}>
+          <Skeleton className="h-3 w-32" style={{ alignSelf: "flex-start" }} />
+          <Skeleton className="rounded-full" style={{ width: 140, height: 140 }} />
+        </div>
         <div className="lg:col-span-2">
           <Skeleton className="h-3 w-32" style={{ marginBottom: "var(--space-4)" }} />
           <Skeleton style={{ height: 160 }} />
@@ -29,10 +33,6 @@ export default function Loading() {
             <Skeleton className="h-3 w-12" />
             <Skeleton className="h-3 w-12" />
           </div>
-        </div>
-        <div className="flex flex-col items-center" style={{ gap: "var(--space-4)" }}>
-          <Skeleton className="h-3 w-32" style={{ alignSelf: "flex-start" }} />
-          <Skeleton className="rounded-full" style={{ width: 140, height: 140 }} />
         </div>
       </div>
 

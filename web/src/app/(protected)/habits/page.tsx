@@ -161,7 +161,7 @@ export default async function HabitsPage() {
 
       {habits.length > 0 && (
         <>
-          {/* Charts: Momentum (2/3) + Radial (1/3) */}
+          {/* Charts: Radial (1/3) + Momentum (2/3) */}
           <section
             className="grid grid-cols-1 lg:grid-cols-3"
             style={{
@@ -171,11 +171,11 @@ export default async function HabitsPage() {
               borderBottom: "1px solid var(--rule-soft)",
             }}
           >
-            <div className="lg:col-span-2">
-              <MomentumLine habits={habits} allCompleted={allCompleted} today={today} />
-            </div>
             <div>
               <RadialCompletion habits={habits} weekLogs={weekLogs} />
+            </div>
+            <div className="lg:col-span-2">
+              <MomentumLine habits={habits} allCompleted={allCompleted} today={today} />
             </div>
           </section>
 
