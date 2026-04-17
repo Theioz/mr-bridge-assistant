@@ -1,10 +1,50 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { AlertTriangle, LineChart as LineChartIcon } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { StocksCache } from "@/lib/types";
+
+function Sparkline({ points }: { points: { close: number }[] }) {
+  if (points.length < 2) return null;
+  const values = points.map((p) => p.close);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const w = 100;
+  const h = 20;
+  const padX = 2;
+  const padY = 2;
+  const innerW = w - padX * 2;
+  const innerH = h - padY * 2;
+  const d = values
+    .map((v, i) => {
+      const x = padX + (innerW * i) / (values.length - 1);
+      const y = padY + innerH - ((v - min) / span) * innerH;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      style={{ display: "block" }}
+      aria-hidden="true"
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke="var(--color-text)"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
 
 interface Props {
   rows: StocksCache[];
@@ -63,20 +103,7 @@ function TickerRow({ row }: { row: StocksCache }) {
         {row.ticker}
       </span>
       <span className="watchlist-spark" style={{ height: 20, minWidth: 60, display: "flex", alignItems: "center" }}>
-        {sparkData.length > 1 && (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={sparkData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-              <Line
-                type="monotone"
-                dataKey="close"
-                stroke="var(--color-text)"
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+        <Sparkline points={sparkData} />
       </span>
       <span className="tnum" style={{ textAlign: "right", minWidth: 110 }}>
         <span style={{ color: "var(--color-text)", marginRight: "var(--space-2)" }}>
