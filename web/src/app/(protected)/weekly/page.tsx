@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Weekly",
   description: "Weekly review — habits, workouts, and recovery trends.",
 };
-import type { HabitRegistry, Task, WorkoutSession, RecoveryMetrics, FitnessLog } from "@/lib/types";
+import type { HabitRegistry, WorkoutSession, RecoveryMetrics, FitnessLog } from "@/lib/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,12 @@ function fmtDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00Z").toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+  });
+}
+
+function fmtDayShort(dateStr: string): string {
+  return new Date(dateStr + "T12:00:00Z").toLocaleDateString("en-US", {
+    weekday: "short",
   });
 }
 
@@ -32,87 +38,31 @@ function fmtNum(n: number | null | undefined, decimals = 0): string {
   return decimals > 0 ? n.toFixed(decimals) : Math.round(n).toString();
 }
 
-function delta(a: number | null, b: number | null, decimals = 1): string {
-  if (a == null || b == null) return "—";
-  const diff = a - b;
+function deltaText(latest: number | null, prior: number | null, decimals = 1): string {
+  if (latest == null || prior == null) return "—";
+  const diff = latest - prior;
   const sign = diff > 0 ? "+" : "";
   return `${sign}${diff.toFixed(decimals)}`;
 }
 
-function deltaColor(diff: number | null, higherIsBetter = false): string {
-  if (diff == null) return "var(--color-text-muted)";
-  if (diff === 0) return "var(--color-text-muted)";
+function deltaClass(
+  latest: number | null,
+  prior: number | null,
+  higherIsBetter: boolean
+): string {
+  if (latest == null || prior == null) return "delta-flat";
+  const diff = latest - prior;
+  if (Math.abs(diff) < 0.0001) return "delta-flat";
   const positive = higherIsBetter ? diff > 0 : diff < 0;
-  return positive ? "var(--color-positive)" : "var(--color-danger)";
+  return positive ? "delta-good" : "delta-bad";
 }
 
-function scoreColor(score: number | null): string {
-  if (score == null) return "var(--color-text-muted)";
-  if (score >= 80) return "var(--color-positive)";
-  if (score >= 60) return "var(--color-warning)";
-  return "var(--color-danger)";
-}
-
-// ── Section card wrapper ──────────────────────────────────────────────────────
-
-function Card({
-  title,
-  accent,
-  children,
-}: {
-  title: string;
-  accent?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="rounded-xl overflow-hidden flex flex-col transition-all duration-200 card-lift"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      {accent && <div style={{ height: 3, background: accent, flexShrink: 0 }} />}
-      <div className="p-5 flex flex-col gap-4 flex-1">
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          {title}
-        </p>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ── Habit pill strip ──────────────────────────────────────────────────────────
-
-function PillStrip({
-  days,
-  completedSet,
-}: {
-  days: string[];
-  completedSet: Set<string>;
-}) {
-  return (
-    <div className="flex gap-1">
-      {days.map((d) => {
-        const hit = completedSet.has(d);
-        return (
-          <div
-            key={d}
-            title={`${fmtDate(d)}: ${hit ? "done" : "missed"}`}
-            style={{
-              width: 24,
-              height: 8,
-              borderRadius: 4,
-              background: hit ? "var(--color-positive)" : "var(--color-surface-raised)",
-              border: `1px solid ${hit ? "var(--color-positive)" : "var(--color-border)"}`,
-              flexShrink: 0,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
+function fmtDuration(mins: number): string {
+  if (mins <= 0) return "—";
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -198,13 +148,27 @@ export default async function WeeklyPage() {
   const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks  = computeStreaks(allCompleted, today);
 
-  // Per-habit: set of completed dates this week
   const habitCompletedDates = new Map<string, Set<string>>();
   for (const { habit_id, date, completed } of weekHabits) {
     if (!completed) continue;
     if (!habitCompletedDates.has(habit_id)) habitCompletedDates.set(habit_id, new Set());
     habitCompletedDates.get(habit_id)!.add(date);
   }
+
+  const habitSummaries = habitRegistry
+    .map((h) => ({
+      habit: h,
+      hits: (habitCompletedDates.get(h.id) ?? new Set()).size,
+      streak: habitStreaks[h.id]?.current ?? 0,
+    }))
+    .sort((a, b) => b.hits - a.hits || a.habit.name.localeCompare(b.habit.name));
+
+  const totalPossible = habitRegistry.length * 7;
+  const totalHits = habitSummaries.reduce((s, x) => s + x.hits, 0);
+  const habitPct = totalPossible > 0 ? Math.round((totalHits / totalPossible) * 100) : 0;
+  const bestHabit = habitSummaries[0] ?? null;
+  const worstHabit =
+    habitSummaries.length > 1 ? habitSummaries[habitSummaries.length - 1] : null;
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
@@ -230,6 +194,7 @@ export default async function WeeklyPage() {
   const avgReadiness  = avg(recoveryRows.map((r) => r.readiness));
   const avgSleep      = avg(recoveryRows.map((r) => r.sleep_score));
   const avgHrv        = avg(recoveryRows.map((r) => r.avg_hrv));
+  const recoveryByDate = new Map(recoveryRows.map((r) => [r.date, r]));
 
   // ── Body composition ──────────────────────────────────────────────────────
 
@@ -245,474 +210,705 @@ export default async function WeeklyPage() {
   // ── Journal ───────────────────────────────────────────────────────────────
 
   const journalCount = (journalCountRes.count ?? 0) as number;
+  const journalMissed = Math.max(0, 7 - journalCount);
 
-  // ── Date range label ──────────────────────────────────────────────────────
+  // ── Range label ──────────────────────────────────────────────────────────
 
   const rangeLabel = `${fmtDate(weekStart)} – ${fmtDate(today)}`;
 
-  return (
-    <div className="space-y-6">
+  // ── Narrative paragraphs ─────────────────────────────────────────────────
 
-      {/* Page header */}
-      <div>
+  const habitNarrative =
+    habitRegistry.length === 0
+      ? "No active habits tracked this week."
+      : bestHabit && bestHabit.hits === 0
+      ? `Logged 0 of ${totalPossible} habit check-ins. Nothing completed across ${habitRegistry.length} active habit${habitRegistry.length === 1 ? "" : "s"}.`
+      : `Logged ${totalHits} of ${totalPossible} habit check-ins (${habitPct}%). ${bestHabit!.habit.name} led at ${bestHabit!.hits}/7${
+          worstHabit && worstHabit.hits !== bestHabit!.hits
+            ? `; ${worstHabit.habit.name} trailed at ${worstHabit.hits}/7.`
+            : "."
+        }`;
+
+  const taskNarrative =
+    completedTasks.length === 0 && activeTasks.length === 0
+      ? "Task inbox is clear."
+      : `Closed ${completedTasks.length} task${completedTasks.length === 1 ? "" : "s"} this week. ${activeTasks.length} still active${
+          overdueTasks.length > 0 ? `, ${overdueTasks.length} overdue.` : "."
+        }`;
+
+  const trainingNarrative =
+    allWorkouts.length === 0
+      ? "No training or walks logged."
+      : (() => {
+          const parts: string[] = [];
+          if (workouts.length > 0) {
+            const bits = [`${workouts.length} session${workouts.length === 1 ? "" : "s"}`];
+            if (totalDuration > 0) bits.push(fmtDuration(totalDuration));
+            if (totalCalories > 0) bits.push(`${Math.round(totalCalories).toLocaleString()} kcal`);
+            parts.push(`Trained ${bits.join(" · ")}.`);
+          } else {
+            parts.push("No structured sessions.");
+          }
+          if (walkWorkouts.length > 0) {
+            parts.push(
+              `Added ${walkWorkouts.length} walk${walkWorkouts.length === 1 ? "" : "s"}${
+                walkDuration > 0 ? ` at ${fmtDuration(walkDuration)}` : ""
+              }.`
+            );
+          }
+          return parts.join(" ");
+        })();
+
+  const recoveryNarrative =
+    recoveryRows.length === 0
+      ? "No recovery data captured this week."
+      : `Averaged readiness ${fmtNum(avgReadiness)}, sleep ${fmtNum(avgSleep)}, HRV ${fmtNum(avgHrv)} ms across ${recoveryRows.length} day${recoveryRows.length === 1 ? "" : "s"}.`;
+
+  const bodyNarrative =
+    fitnessLatest == null
+      ? "No body composition measurements on file."
+      : (() => {
+          const bits: string[] = [];
+          bits.push(
+            `Latest weigh-in ${fmtNum(fitnessLatest.weight_lb, 1)} lb at ${fmtNum(fitnessLatest.body_fat_pct, 1)}% body fat (${fmtDate(fitnessLatest.date)}).`
+          );
+          if (fitnessWeekAgo && (weightDiff != null || bodyFatDiff != null)) {
+            const deltaBits: string[] = [];
+            if (weightDiff != null) deltaBits.push(`weight ${deltaText(fitnessLatest.weight_lb, fitnessWeekAgo.weight_lb)} lb`);
+            if (bodyFatDiff != null) deltaBits.push(`body fat ${deltaText(fitnessLatest.body_fat_pct, fitnessWeekAgo.body_fat_pct)}%`);
+            bits.push(`Vs ${fmtDate(fitnessWeekAgo.date)}: ${deltaBits.join(", ")}.`);
+          }
+          return bits.join(" ");
+        })();
+
+  const journalNarrative =
+    journalCount === 0
+      ? "Nothing journaled this week."
+      : journalCount >= 7
+      ? "Journaled every day."
+      : `${journalCount} journal entr${journalCount === 1 ? "y" : "ies"} — ${journalMissed} day${journalMissed === 1 ? "" : "s"} without a note.`;
+
+  // ── Shared table tokens ──────────────────────────────────────────────────
+
+  const thStyle: React.CSSProperties = {
+    textAlign: "left",
+    paddingBottom: "var(--space-3)",
+    fontSize: 11,
+    fontWeight: 600,
+    color: "var(--color-text-faint)",
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  };
+  const tdBase: React.CSSProperties = {
+    paddingTop: "var(--space-3)",
+    paddingBottom: "var(--space-3)",
+    borderTop: "1px solid var(--rule-soft)",
+    fontSize: "var(--t-micro)",
+    color: "var(--color-text)",
+    verticalAlign: "baseline",
+  };
+  const tdMuted: React.CSSProperties = { ...tdBase, color: "var(--color-text-muted)" };
+  const tdFaint: React.CSSProperties = { ...tdBase, color: "var(--color-text-faint)" };
+
+  return (
+    <div
+      className="flex flex-col"
+      style={{ gap: "var(--space-7)" }}
+    >
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <header>
         <h1
-          className="font-heading font-semibold text-2xl"
-          style={{ color: "var(--color-text)" }}
+          className="font-heading"
+          style={{
+            fontSize: "var(--t-h1)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.02em",
+          }}
         >
           Weekly Review
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
+        <p
+          className="tnum"
+          style={{
+            marginTop: "var(--space-1)",
+            fontSize: "var(--t-micro)",
+            letterSpacing: "0.04em",
+            color: "var(--color-text-muted)",
+          }}
+        >
           {rangeLabel}
         </p>
-      </div>
+      </header>
 
-      {/* ── Row 1: Habits + Tasks ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── Narrative recap (reading column) ────────────────────────── */}
+      <section className="prose-column">
+        <h2 className="db-section-label">Recap</h2>
+        <div
+          className="flex flex-col"
+          style={{
+            gap: "var(--space-3)",
+            fontSize: "var(--t-body)",
+            lineHeight: 1.7,
+            color: "var(--color-text)",
+          }}
+        >
+          <p>{habitNarrative}</p>
+          <p>{taskNarrative}</p>
+          <p>{trainingNarrative}</p>
+          <p>{recoveryNarrative}</p>
+          <p>{bodyNarrative}</p>
+          <p>{journalNarrative}</p>
+        </div>
+      </section>
 
-        {/* Habits */}
-        <Card title="Habit Completion" accent="var(--color-primary)">
-          {habitRegistry.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No active habits.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {habitRegistry.map((habit) => {
-                const completedSet = habitCompletedDates.get(habit.id) ?? new Set<string>();
-                const hitCount = completedSet.size;
-                const streak = habitStreaks[habit.id]?.current ?? 0;
-                const Icon = getHabitIcon(habit);
-                return (
-                  <div key={habit.id} className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium inline-flex items-center gap-1.5" style={{ color: "var(--color-text)" }}>
-                        <Icon className="w-3.5 h-3.5" style={{ color: "var(--color-text-muted)" }} aria-hidden />
-                        {habit.name}
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className="text-xs font-semibold tabular-nums"
-                          style={{ color: hitCount >= 6 ? "var(--color-positive)" : hitCount >= 4 ? "var(--color-warning)" : "var(--color-danger)" }}
-                        >
-                          {hitCount}/7
+      {/* ── Habits table ────────────────────────────────────────────── */}
+      {habitRegistry.length > 0 && (
+        <section>
+          <h2 className="db-section-label">
+            Habits
+            <span className="meta">
+              · {totalHits}/{totalPossible} · {habitPct}%
+            </span>
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 520 }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Habit</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>Mon–Sun</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Hits</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Streak</th>
+                </tr>
+              </thead>
+              <tbody>
+                {habitSummaries.map(({ habit, hits, streak }) => {
+                  const completed = habitCompletedDates.get(habit.id) ?? new Set<string>();
+                  const Icon = getHabitIcon(habit);
+                  return (
+                    <tr key={habit.id}>
+                      <td style={{ ...tdBase, fontWeight: 500 }}>
+                        <span className="inline-flex items-center" style={{ gap: "var(--space-2)" }}>
+                          <Icon
+                            className="w-3.5 h-3.5"
+                            style={{ color: "var(--color-text-faint)" }}
+                            aria-hidden
+                          />
+                          {habit.name}
                         </span>
-                        {streak > 0 && (
-                          <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                            {streak}d streak
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <PillStrip days={last7Days} completedSet={completedSet} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+                      </td>
+                      <td style={{ ...tdBase, textAlign: "center" }}>
+                        <span
+                          className="inline-flex"
+                          style={{ gap: 4 }}
+                          aria-label={`${hits} of 7 days completed`}
+                        >
+                          {last7Days.map((d) => {
+                            const hit = completed.has(d);
+                            const isToday = d === today;
+                            return (
+                              <span
+                                key={d}
+                                title={`${fmtDate(d)}: ${hit ? "done" : "missed"}`}
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 3,
+                                  background: hit ? "var(--color-text)" : "var(--rule)",
+                                  opacity: hit ? 0.85 : 1,
+                                  outline: isToday ? "1.5px solid var(--accent)" : "none",
+                                  outlineOffset: isToday ? 2 : 0,
+                                  display: "inline-block",
+                                }}
+                              />
+                            );
+                          })}
+                        </span>
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
+                      >
+                        {hits}/7
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
+                      >
+                        {streak > 0 ? `${streak}d` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
-        {/* Tasks */}
-        <Card title="Tasks" accent="var(--color-warning)">
-          <div className="flex flex-col gap-4">
+      {/* ── Tasks ───────────────────────────────────────────────────── */}
+      {(completedTasks.length > 0 || activeTasks.length > 0) && (
+        <section>
+          <h2 className="db-section-label">
+            Tasks
+            <span className="meta">
+              · {completedTasks.length} done · {activeTasks.length} active
+              {overdueTasks.length > 0 ? ` · ${overdueTasks.length} overdue` : ""}
+            </span>
+          </h2>
 
-            {/* Completed this week */}
-            <div>
-              <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-                Completed — {completedTasks.length}
-              </p>
-              {completedTasks.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>None this week.</p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {completedTasks.slice(0, 8).map((t) => (
-                    <div key={t.id} className="flex items-center gap-2">
-                      <span style={{ color: "var(--color-positive)", fontSize: 12, flexShrink: 0 }}>✓</span>
-                      <span className="text-sm truncate" style={{ color: "var(--color-text-muted)" }}>{t.title}</span>
-                    </div>
+          <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
+            {completedTasks.length > 0 && (
+              <div>
+                <p
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: "var(--space-2)",
+                  }}
+                >
+                  Closed this week
+                </p>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {completedTasks.slice(0, 12).map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex items-baseline"
+                      style={{
+                        gap: "var(--space-3)",
+                        padding: "var(--space-3) 0",
+                        borderTop: "1px solid var(--rule-soft)",
+                        fontSize: "var(--t-micro)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-positive)", flexShrink: 0 }} aria-hidden>
+                        ✓
+                      </span>
+                      <span className="flex-1" style={{ color: "var(--color-text-muted)" }}>
+                        {t.title}
+                      </span>
+                    </li>
                   ))}
-                  {completedTasks.length > 8 && (
-                    <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                      +{completedTasks.length - 8} more
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+                </ul>
+                {completedTasks.length > 12 && (
+                  <p
+                    className="tnum"
+                    style={{
+                      marginTop: "var(--space-2)",
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                    }}
+                  >
+                    +{completedTasks.length - 12} more
+                  </p>
+                )}
+              </div>
+            )}
 
-            {/* Active tasks */}
-            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
-              <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-                Still Active — {activeTasks.length}
-              </p>
-              {activeTasks.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>Inbox clear.</p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {activeTasks.slice(0, 5).map((t) => {
+            {activeTasks.length > 0 && (
+              <div>
+                <p
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: "var(--space-2)",
+                  }}
+                >
+                  Still active
+                </p>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {activeTasks.slice(0, 8).map((t) => {
                     const overdue = t.due_date != null && t.due_date < today;
                     return (
-                      <div key={t.id} className="flex items-center gap-2">
-                        {overdue && (
-                          <span style={{ color: "var(--color-danger)", fontSize: 10, flexShrink: 0 }}>!</span>
-                        )}
+                      <li
+                        key={t.id}
+                        className="flex items-baseline"
+                        style={{
+                          gap: "var(--space-3)",
+                          padding: "var(--space-3) 0",
+                          borderTop: "1px solid var(--rule-soft)",
+                          fontSize: "var(--t-micro)",
+                        }}
+                      >
                         <span
-                          className="text-sm truncate"
-                          style={{ color: overdue ? "var(--color-danger)" : "var(--color-text)" }}
+                          aria-hidden
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 999,
+                            background: overdue ? "var(--accent)" : "var(--rule)",
+                            flexShrink: 0,
+                            marginTop: 6,
+                          }}
+                        />
+                        <span
+                          className="flex-1"
+                          style={{ color: overdue ? "var(--color-text)" : "var(--color-text-muted)" }}
                         >
                           {t.title}
                         </span>
                         {t.due_date && (
-                          <span className="text-xs shrink-0 ml-auto" style={{ color: overdue ? "var(--color-danger)" : "var(--color-text-muted)" }}>
+                          <span
+                            className="tnum"
+                            style={{
+                              fontSize: "var(--t-micro)",
+                              color: overdue ? "var(--accent)" : "var(--color-text-faint)",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
                             {fmtDate(t.due_date)}
+                            {overdue ? " · overdue" : ""}
                           </span>
                         )}
-                      </div>
+                      </li>
                     );
                   })}
-                  {activeTasks.length > 5 && (
-                    <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                      +{activeTasks.length - 5} more
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Overdue callout */}
-            {overdueTasks.length > 0 && (
-              <div
-                className="rounded-lg px-3 py-2"
-                style={{ background: "var(--color-danger-subtle)", border: "1px solid var(--color-danger)" }}
-              >
-                <p className="text-xs font-medium" style={{ color: "var(--color-danger)" }}>
-                  {overdueTasks.length} overdue task{overdueTasks.length > 1 ? "s" : ""}
-                </p>
+                </ul>
+                {activeTasks.length > 8 && (
+                  <p
+                    className="tnum"
+                    style={{
+                      marginTop: "var(--space-2)",
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                    }}
+                  >
+                    +{activeTasks.length - 8} more
+                  </p>
+                )}
               </div>
             )}
           </div>
-        </Card>
-      </div>
+        </section>
+      )}
 
-      {/* ── Row 2: Workouts + Recovery ────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── Training ────────────────────────────────────────────────── */}
+      {allWorkouts.length > 0 && (
+        <section>
+          <h2 className="db-section-label">
+            Training
+            <span className="meta">
+              · {workouts.length} session{workouts.length === 1 ? "" : "s"}
+              {totalDuration > 0 ? ` · ${fmtDuration(totalDuration)}` : ""}
+              {totalCalories > 0 ? ` · ${Math.round(totalCalories).toLocaleString()} kcal` : ""}
+            </span>
+          </h2>
 
-        {/* Workouts */}
-        <Card title="Workouts" accent="var(--color-info)">
-          {allWorkouts.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No sessions logged this week.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {/* Summary row — excludes walks */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Sessions", value: workouts.length.toString() },
-                  { label: "Total Time", value: totalDuration > 0 ? `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m` : "—" },
-                  { label: "Calories", value: totalCalories > 0 ? `${Math.round(totalCalories).toLocaleString()} kcal` : "—" },
-                ].map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="rounded-lg p-3 text-center"
-                    style={{ background: "var(--color-surface-raised)" }}
-                  >
-                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{label}</p>
-                    <p className="font-heading font-semibold text-lg mt-0.5" style={{ color: "var(--color-text)" }}>
-                      {value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Session list — excludes walks */}
-              {workouts.length > 0 && (
-                <div className="flex flex-col gap-1">
+          {workouts.length > 0 && (
+            <div className="overflow-x-auto">
+              <table
+                className="w-full"
+                style={{ borderCollapse: "collapse", minWidth: 520 }}
+              >
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Date</th>
+                    <th style={thStyle}>Activity</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Duration</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Calories</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {workouts.map((w, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span style={{ color: "var(--color-text-muted)", width: "3.5rem", flexShrink: 0, fontSize: 11 }}>
+                    <tr key={i}>
+                      <td className="tnum" style={tdMuted}>
                         {fmtDate(w.date)}
-                      </span>
-                      <span className="flex-1 truncate" style={{ color: "var(--color-text)" }}>{w.activity}</span>
-                      {w.duration_mins != null && (
-                        <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                          {w.duration_mins}m
-                        </span>
-                      )}
-                      {w.calories != null && (
-                        <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                          {Math.round(w.calories)} kcal
-                        </span>
-                      )}
-                    </div>
+                      </td>
+                      <td style={{ ...tdBase, textTransform: "capitalize" }}>
+                        {w.activity}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
+                      >
+                        {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ ...tdMuted, textAlign: "right", whiteSpace: "nowrap" }}
+                      >
+                        {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-              {/* Walks — secondary row */}
-              {walkWorkouts.length > 0 && (
-                <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-                      Walks
-                    </p>
-                    <span className="text-xs tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
-                      {walkWorkouts.length}
-                    </span>
-                    {walkDuration > 0 && (
-                      <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                        {walkDuration >= 60 ? `${Math.floor(walkDuration / 60)}h ${walkDuration % 60}m` : `${walkDuration}m`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
+          {walkWorkouts.length > 0 && (
+            <div style={{ marginTop: workouts.length > 0 ? "var(--space-6)" : 0 }}>
+              <p
+                className="tnum"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: "var(--space-2)",
+                }}
+              >
+                Walks · {walkWorkouts.length}
+                {walkDuration > 0 ? ` · ${fmtDuration(walkDuration)}` : ""}
+              </p>
+              <div className="overflow-x-auto">
+                <table
+                  className="w-full"
+                  style={{ borderCollapse: "collapse", minWidth: 420 }}
+                >
+                  <tbody>
                     {walkWorkouts.map((w, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <span style={{ color: "var(--color-text-muted)", width: "3.5rem", flexShrink: 0, fontSize: 11 }}>
+                      <tr key={i}>
+                        <td className="tnum" style={{ ...tdFaint, width: "6rem" }}>
                           {fmtDate(w.date)}
-                        </span>
-                        <span className="flex-1 truncate" style={{ color: "var(--color-text-muted)" }}>{w.activity}</span>
-                        {w.duration_mins != null && (
-                          <span className="tabular-nums shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                            {w.duration_mins}m
+                        </td>
+                        <td
+                          style={{ ...tdMuted, textTransform: "capitalize" }}
+                        >
+                          {w.activity}
+                        </td>
+                        <td
+                          className="tnum"
+                          style={{ ...tdFaint, textAlign: "right", whiteSpace: "nowrap" }}
+                        >
+                          {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Recovery ────────────────────────────────────────────────── */}
+      {recoveryRows.length > 0 && (
+        <section>
+          <h2 className="db-section-label">
+            Recovery
+            <span className="meta">
+              · {recoveryRows.length} day{recoveryRows.length === 1 ? "" : "s"}
+              {avgReadiness != null ? ` · readiness ${fmtNum(avgReadiness)}` : ""}
+              {avgSleep != null ? ` · sleep ${fmtNum(avgSleep)}` : ""}
+              {avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""}
+            </span>
+          </h2>
+          <div className="overflow-x-auto">
+            <table
+              className="w-full"
+              style={{ borderCollapse: "collapse", minWidth: 420 }}
+            >
+              <thead>
+                <tr>
+                  <th style={thStyle}>Day</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Readiness</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Sleep</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>HRV (ms)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {last7Days.map((d) => {
+                  const r = recoveryByDate.get(d);
+                  const isToday = d === today;
+                  return (
+                    <tr key={d}>
+                      <td
+                        className="tnum"
+                        style={{
+                          ...tdMuted,
+                          color: isToday ? "var(--color-text)" : "var(--color-text-muted)",
+                          fontWeight: isToday ? 500 : 400,
+                        }}
+                      >
+                        {fmtDayShort(d)} {fmtDate(d)}
+                        {isToday && (
+                          <span
+                            className="tnum"
+                            style={{
+                              marginLeft: "var(--space-2)",
+                              fontSize: 10,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "var(--accent)",
+                            }}
+                          >
+                            Today
                           </span>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* Recovery */}
-        <Card title="Sleep & Recovery" accent={scoreColor(avgReadiness)}>
-          {recoveryRows.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No recovery data for this week.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {/* Big scores */}
-              <div className="flex items-end gap-6 flex-wrap">
-                <div>
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
-                    Avg Readiness
-                  </p>
-                  <span
-                    className="font-heading font-bold leading-none"
-                    style={{ fontSize: 48, color: scoreColor(avgReadiness) }}
-                  >
-                    {fmtNum(avgReadiness)}
-                  </span>
-                </div>
-                <div className="pb-1">
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
-                    Avg Sleep
-                  </p>
-                  <span
-                    className="font-heading font-bold leading-none"
-                    style={{ fontSize: 36, color: scoreColor(avgSleep) }}
-                  >
-                    {fmtNum(avgSleep)}
-                  </span>
-                </div>
-                <div className="pb-1">
-                  <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--color-text-muted)", letterSpacing: "0.06em" }}>
-                    Avg HRV
-                  </p>
-                  <span
-                    className="font-heading font-bold leading-none"
-                    style={{ fontSize: 36, color: "var(--color-info)" }}
-                  >
-                    {fmtNum(avgHrv)}
-                    {avgHrv != null && <span className="text-sm font-normal ml-1" style={{ color: "var(--color-text-muted)" }}>ms</span>}
-                  </span>
-                </div>
-                <div className="ml-auto pb-1 text-right">
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {recoveryRows.length} day{recoveryRows.length !== 1 ? "s" : ""} of data
-                  </p>
-                </div>
-              </div>
-
-              {/* Per-day readiness pills */}
-              <div>
-                <p className="text-xs mb-2" style={{ color: "var(--color-text-muted)" }}>Readiness by day</p>
-                <div className="flex gap-2 flex-wrap">
-                  {last7Days.map((d) => {
-                    const row = recoveryRows.find((r) => r.date === d);
-                    return (
-                      <div
-                        key={d}
-                        title={`${fmtDate(d)}: ${row?.readiness != null ? `Readiness ${row.readiness}` : "no data"}`}
-                        className="flex flex-col items-center gap-0.5"
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{
+                          ...tdBase,
+                          textAlign: "right",
+                          color: r?.readiness != null ? "var(--color-text)" : "var(--color-text-faint)",
+                        }}
                       >
-                        <span
-                          className="tabular-nums text-xs font-medium"
-                          style={{ color: row?.readiness != null ? scoreColor(row.readiness) : "var(--color-text-faint)" }}
-                        >
-                          {row?.readiness != null ? row.readiness : "—"}
-                        </span>
-                        <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
-                          {fmtDate(d).replace(/[A-Za-z]+ /, "")}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Per-day sleep pills */}
-              <div>
-                <p className="text-xs mb-2" style={{ color: "var(--color-text-muted)" }}>Sleep by day</p>
-                <div className="flex gap-2 flex-wrap">
-                  {last7Days.map((d) => {
-                    const row = recoveryRows.find((r) => r.date === d);
-                    return (
-                      <div
-                        key={d}
-                        title={`${fmtDate(d)}: ${row?.sleep_score != null ? `Sleep ${row.sleep_score}` : "no data"}`}
-                        className="flex flex-col items-center gap-0.5"
+                        {r?.readiness != null ? r.readiness : "—"}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{
+                          ...tdBase,
+                          textAlign: "right",
+                          color: r?.sleep_score != null ? "var(--color-text)" : "var(--color-text-faint)",
+                        }}
                       >
-                        <span
-                          className="tabular-nums text-xs font-medium"
-                          style={{ color: row?.sleep_score != null ? scoreColor(row.sleep_score) : "var(--color-text-faint)" }}
-                        >
-                          {row?.sleep_score != null ? row.sleep_score : "—"}
-                        </span>
-                        <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
-                          {fmtDate(d).replace(/[A-Za-z]+ /, "")}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Per-day HRV pills */}
-              <div>
-                <p className="text-xs mb-2" style={{ color: "var(--color-text-muted)" }}>HRV by day (ms)</p>
-                <div className="flex gap-2 flex-wrap">
-                  {last7Days.map((d) => {
-                    const row = recoveryRows.find((r) => r.date === d);
-                    return (
-                      <div
-                        key={d}
-                        title={`${fmtDate(d)}: ${row?.avg_hrv != null ? `HRV ${Math.round(row.avg_hrv)}ms` : "no data"}`}
-                        className="flex flex-col items-center gap-0.5"
+                        {r?.sleep_score != null ? r.sleep_score : "—"}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{
+                          ...tdBase,
+                          textAlign: "right",
+                          color: r?.avg_hrv != null ? "var(--color-text)" : "var(--color-text-faint)",
+                        }}
                       >
-                        <span
-                          className="tabular-nums text-xs font-medium"
-                          style={{ color: row?.avg_hrv != null ? "var(--color-info)" : "var(--color-text-faint)" }}
-                        >
-                          {row?.avg_hrv != null ? Math.round(row.avg_hrv) : "—"}
-                        </span>
-                        <span style={{ fontSize: 9, color: "var(--color-text-faint)" }}>
-                          {fmtDate(d).replace(/[A-Za-z]+ /, "")}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* ── Row 3: Body Composition + Journal ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Body Composition */}
-        <Card title="Body Composition" accent="var(--color-positive)">
-          {fitnessLatest == null ? (
-            <p className="text-sm" style={{ color: "var(--color-text-faint)" }}>No body composition data.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Weight */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ background: "var(--color-surface-raised)" }}
-                >
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Weight</p>
-                  <p className="font-heading font-bold text-2xl mt-1" style={{ color: "var(--color-text)" }}>
-                    {fmtNum(fitnessLatest.weight_lb, 1)}
-                    <span className="text-sm font-normal ml-1" style={{ color: "var(--color-text-muted)" }}>lb</span>
-                  </p>
-                  {weightDiff != null && (
-                    <p
-                      className="text-xs mt-1"
-                      style={{ color: deltaColor(weightDiff, false) }}
-                    >
-                      {delta(fitnessLatest.weight_lb, fitnessWeekAgo?.weight_lb ?? null)} lb vs {fmtDate(fitnessWeekAgo!.date)}
-                    </p>
-                  )}
-                </div>
-
-                {/* Body Fat */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ background: "var(--color-surface-raised)" }}
-                >
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Body Fat</p>
-                  <p className="font-heading font-bold text-2xl mt-1" style={{ color: "var(--color-text)" }}>
-                    {fmtNum(fitnessLatest.body_fat_pct, 1)}
-                    <span className="text-sm font-normal ml-1" style={{ color: "var(--color-text-muted)" }}>%</span>
-                  </p>
-                  {bodyFatDiff != null && (
-                    <p
-                      className="text-xs mt-1"
-                      style={{ color: deltaColor(bodyFatDiff, false) }}
-                    >
-                      {delta(fitnessLatest.body_fat_pct, fitnessWeekAgo?.body_fat_pct ?? null)}% vs {fmtDate(fitnessWeekAgo!.date)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-xs" style={{ color: "var(--color-text-faint)" }}>
-                Last measurement: {fmtDate(fitnessLatest.date)}
-              </p>
-            </div>
-          )}
-        </Card>
-
-        {/* Journal */}
-        <Card title="Journal" accent="var(--color-primary)">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="rounded-xl p-5 text-center flex-1"
-                style={{ background: "var(--color-surface-raised)" }}
-              >
-                <p
-                  className="font-heading font-bold leading-none"
-                  style={{ fontSize: 52, color: journalCount > 0 ? "var(--color-primary)" : "var(--color-text-faint)" }}
-                >
-                  {journalCount}
-                </p>
-                <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
-                  entr{journalCount === 1 ? "y" : "ies"} this week
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-1 text-sm">
-                <p style={{ color: "var(--color-text)" }}>
-                  {journalCount === 7
-                    ? "Perfect week."
-                    : journalCount >= 5
-                    ? "Strong consistency."
-                    : journalCount >= 3
-                    ? "Halfway there."
-                    : journalCount > 0
-                    ? "Room to build."
-                    : "Nothing logged."}
-                </p>
-                <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                  {7 - journalCount} day{7 - journalCount !== 1 ? "s" : ""} missed
-                </p>
-              </div>
-            </div>
+                        {r?.avg_hrv != null ? Math.round(r.avg_hrv) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </Card>
-      </div>
+        </section>
+      )}
 
+      {/* ── Body composition ───────────────────────────────────────── */}
+      {fitnessLatest != null && (
+        <section>
+          <h2 className="db-section-label">
+            Body composition
+            <span className="meta">· {fmtDate(fitnessLatest.date)}</span>
+          </h2>
+          <div className="overflow-x-auto">
+            <table
+              className="w-full"
+              style={{ borderCollapse: "collapse", minWidth: 420 }}
+            >
+              <thead>
+                <tr>
+                  <th style={thStyle}>Metric</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Latest</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Prior</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Δ vs prior</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ ...tdBase, fontWeight: 500 }}>Weight</td>
+                  <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
+                    {fmtNum(fitnessLatest.weight_lb, 1)}{" "}
+                    <span style={{ color: "var(--color-text-faint)" }}>lb</span>
+                  </td>
+                  <td
+                    className="tnum"
+                    style={{ ...tdFaint, textAlign: "right" }}
+                  >
+                    {fitnessWeekAgo?.weight_lb != null
+                      ? `${fmtNum(fitnessWeekAgo.weight_lb, 1)} lb`
+                      : "—"}
+                  </td>
+                  <td
+                    className={`tnum ${deltaClass(
+                      fitnessLatest.weight_lb ?? null,
+                      fitnessWeekAgo?.weight_lb ?? null,
+                      false
+                    )}`}
+                    style={{ ...tdBase, textAlign: "right" }}
+                  >
+                    {deltaText(
+                      fitnessLatest.weight_lb ?? null,
+                      fitnessWeekAgo?.weight_lb ?? null
+                    )}
+                    {weightDiff != null ? " lb" : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ ...tdBase, fontWeight: 500 }}>Body fat</td>
+                  <td className="tnum" style={{ ...tdBase, textAlign: "right" }}>
+                    {fmtNum(fitnessLatest.body_fat_pct, 1)}{" "}
+                    <span style={{ color: "var(--color-text-faint)" }}>%</span>
+                  </td>
+                  <td
+                    className="tnum"
+                    style={{ ...tdFaint, textAlign: "right" }}
+                  >
+                    {fitnessWeekAgo?.body_fat_pct != null
+                      ? `${fmtNum(fitnessWeekAgo.body_fat_pct, 1)}%`
+                      : "—"}
+                  </td>
+                  <td
+                    className={`tnum ${deltaClass(
+                      fitnessLatest.body_fat_pct ?? null,
+                      fitnessWeekAgo?.body_fat_pct ?? null,
+                      false
+                    )}`}
+                    style={{ ...tdBase, textAlign: "right" }}
+                  >
+                    {deltaText(
+                      fitnessLatest.body_fat_pct ?? null,
+                      fitnessWeekAgo?.body_fat_pct ?? null
+                    )}
+                    {bodyFatDiff != null ? "%" : ""}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {fitnessWeekAgo && (
+            <p
+              className="tnum"
+              style={{
+                marginTop: "var(--space-3)",
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+              }}
+            >
+              Prior measurement · {fmtDate(fitnessWeekAgo.date)}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── Journal ─────────────────────────────────────────────────── */}
+      <section>
+        <h2 className="db-section-label">
+          Journal
+          <span className="meta">
+            · {journalCount} entr{journalCount === 1 ? "y" : "ies"}
+            {journalMissed > 0 ? ` · ${journalMissed} missed` : ""}
+          </span>
+        </h2>
+        <p
+          style={{
+            fontSize: "var(--t-body)",
+            lineHeight: 1.7,
+            color: journalCount > 0 ? "var(--color-text-muted)" : "var(--color-text-faint)",
+          }}
+        >
+          {journalCount === 7
+            ? "Full week of entries."
+            : journalCount >= 5
+            ? "Strong consistency — five or more entries."
+            : journalCount >= 3
+            ? "Halfway there."
+            : journalCount > 0
+            ? "Room to build the habit."
+            : "Nothing logged this week."}
+        </p>
+      </section>
     </div>
   );
 }
