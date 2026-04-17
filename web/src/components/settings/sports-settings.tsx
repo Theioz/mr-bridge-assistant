@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Search, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, Plus } from "lucide-react";
 import type { SportsFavorite } from "@/lib/sync/sports";
 import type { Team } from "@/lib/sync/sports/provider";
 
@@ -77,24 +77,30 @@ export function SportsSettings({ favorites, saveAction }: Props) {
   }
 
   return (
-    <div
+    <section
       id="sports"
-      className="rounded-xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      style={{
+        paddingTop: "var(--space-6)",
+        paddingBottom: "var(--space-6)",
+        borderBottom: "1px solid var(--rule-soft)",
+      }}
     >
-      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          Favorite Teams
-        </p>
-      </div>
+      <h2 className="db-section-label">Favorite Teams</h2>
 
-      {/* Search */}
-      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <div className="flex gap-2 items-center">
-          <Search size={14} style={{ color: "var(--color-text-faint)" }} />
+      {/* Search — inline, hairline bottom rule */}
+      <div
+        style={{
+          borderBottom: "1px solid var(--rule)",
+          paddingTop: "var(--space-2)",
+          paddingBottom: "var(--space-3)",
+        }}
+      >
+        <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+          <Search
+            size={16}
+            style={{ color: "var(--color-text-faint)", flexShrink: 0 }}
+            aria-hidden
+          />
           <input
             value={query}
             onChange={(e) => { setQuery(e.target.value); setError(null); }}
@@ -105,74 +111,196 @@ export function SportsSettings({ favorites, saveAction }: Props) {
               }
             }}
             placeholder="Search teams (e.g. Warriors, 49ers, Arsenal)"
-            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
+            className="flex-1 bg-transparent focus:outline-none min-w-0"
             style={{
-              background: "var(--color-surface-raised)",
-              border: `1px solid ${error ? "var(--color-danger)" : "var(--color-border)"}`,
               color: "var(--color-text)",
+              fontSize: "var(--t-body)",
+              caretColor: "var(--accent)",
+              minHeight: 44,
+              border: "none",
             }}
           />
-          {searching && <Loader2 size={14} className="animate-spin" style={{ color: "var(--color-text-faint)" }} />}
+          {searching && (
+            <Loader2
+              size={14}
+              className="animate-spin"
+              style={{ color: "var(--color-text-faint)", flexShrink: 0 }}
+            />
+          )}
         </div>
         {error && (
-          <p className="mt-1.5" style={{ fontSize: 12, color: "var(--color-danger)" }}>{error}</p>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-danger)",
+              marginTop: "var(--space-2)",
+            }}
+          >
+            {error}
+          </p>
         )}
         {results.length > 0 && (
-          <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-border)" }}>
-            {results.slice(0, 8).map((t) => (
+          <div
+            style={{
+              marginTop: "var(--space-3)",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              overflow: "hidden",
+            }}
+          >
+            {results.slice(0, 8).map((t, i) => (
               <button
                 key={`${t.league}-${t.team_id}`}
                 type="button"
                 onClick={() => handleAdd(t)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer transition-colors hover-bg-subtle"
-                style={{ background: "var(--color-surface-raised)", borderBottom: "1px solid var(--color-border)" }}
+                className="w-full flex items-center text-left cursor-pointer hover-bg-subtle"
+                style={{
+                  gap: "var(--space-3)",
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "transparent",
+                  borderTop: i === 0 ? "none" : "1px solid var(--rule-soft)",
+                  minHeight: 44,
+                  transition: "background var(--motion-fast) var(--ease-out-quart)",
+                }}
               >
+                <Plus size={14} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden />
                 {t.badge ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.badge} alt="" width={20} height={20} style={{ borderRadius: 3, objectFit: "contain" }} />
+                  <img
+                    src={t.badge}
+                    alt=""
+                    width={20}
+                    height={20}
+                    style={{ borderRadius: 3, objectFit: "contain", flexShrink: 0 }}
+                  />
                 ) : (
-                  <div style={{ width: 20, height: 20, borderRadius: 3, background: "var(--color-surface)" }} />
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 3,
+                      background: "var(--color-surface-raised)",
+                      flexShrink: 0,
+                    }}
+                  />
                 )}
-                <span style={{ fontSize: 13, color: "var(--color-text)" }}>{t.name}</span>
-                <span style={{ fontSize: 11, color: "var(--color-text-faint)", marginLeft: "auto" }}>{t.league}</span>
+                <span
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text)",
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {t.league}
+                </span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Favorites list */}
+      {/* Favorites list — hairline-separated rows */}
       {list.length === 0 ? (
-        <div className="px-5 py-4" style={{ fontSize: 13, color: "var(--color-text-faint)" }}>
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            paddingTop: "var(--space-4)",
+          }}
+        >
           No teams added yet.
-        </div>
+        </p>
       ) : (
-        list.map((fav) => (
-          <div
-            key={`${fav.league}-${fav.team_id}`}
-            className="flex items-center gap-3 px-5 py-3"
-            style={{ borderBottom: "1px solid var(--color-border)" }}
-          >
-            {fav.badge ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={fav.badge} alt="" width={20} height={20} style={{ borderRadius: 3, objectFit: "contain" }} />
-            ) : (
-              <div style={{ width: 20, height: 20, borderRadius: 3, background: "var(--color-surface-raised)" }} />
-            )}
-            <span style={{ fontSize: 13, color: "var(--color-text)", flex: 1 }}>{fav.name}</span>
-            <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>{fav.league}</span>
-            <button
-              onClick={() => handleRemove(fav.team_id, fav.league)}
-              disabled={isPending}
-              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-danger"
-              style={{ color: "var(--color-text-faint)" }}
-              title={`Remove ${fav.name}`}
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {list.map((fav, i) => (
+            <li
+              key={`${fav.league}-${fav.team_id}`}
+              className="flex items-center"
+              style={{
+                gap: "var(--space-3)",
+                paddingTop: "var(--space-3)",
+                paddingBottom: "var(--space-3)",
+                borderTop: i === 0 ? "none" : "1px solid var(--rule-soft)",
+                minHeight: 44,
+              }}
             >
-              <X size={13} />
-            </button>
-          </div>
-        ))
+              {fav.badge ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fav.badge}
+                  alt=""
+                  width={20}
+                  height={20}
+                  style={{ borderRadius: 3, objectFit: "contain", flexShrink: 0 }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 3,
+                    background: "var(--color-surface-raised)",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text)",
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {fav.name}
+              </span>
+              <span
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  flexShrink: 0,
+                }}
+              >
+                {fav.league}
+              </span>
+              <button
+                onClick={() => handleRemove(fav.team_id, fav.league)}
+                disabled={isPending}
+                className="flex items-center justify-center cursor-pointer disabled:opacity-40 hover-text-danger"
+                style={{
+                  width: 44,
+                  height: 44,
+                  color: "var(--color-text-faint)",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: "var(--r-1)",
+                  flexShrink: 0,
+                  transition: "color var(--motion-fast) var(--ease-out-quart)",
+                }}
+                title={`Remove ${fav.name}`}
+              >
+                <X size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

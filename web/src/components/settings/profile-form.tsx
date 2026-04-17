@@ -133,30 +133,81 @@ function suggestMacros(
 ): SuggestedMacros {
   const calories = Math.round(weightGoal * calMultiplier);
   const protein  = Math.round(weightGoal * proteinPerLb);
-  // Fat: 25% of calories — hormonal baseline
   const fat      = Math.round((calories * 0.25) / 9);
-  // Carbs: fill remaining calories
   const carbs    = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
-  // Fiber: mid-range of 25–35 g/day
   const fiber    = 30;
   return { calories, protein, carbs, fat, fiber };
 }
 
-function SuggestedNutritionCard({
+function PillGroup<T extends string | number>({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div
+      className="flex items-center p-0.5"
+      role="radiogroup"
+      aria-label={ariaLabel}
+      style={{
+        background: "transparent",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-1)",
+        gap: 2,
+      }}
+    >
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={String(o.value)}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.value)}
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              letterSpacing: "0.02em",
+              padding: "0 var(--space-3)",
+              minHeight: 36,
+              minWidth: 44,
+              background: active ? "var(--accent)" : "transparent",
+              color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+              border: "none",
+              borderRadius: "var(--r-1)",
+              cursor: "pointer",
+              transition:
+                "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SuggestedNutritionCallout({
   values,
   updateAction,
-  deleteAction,
 }: {
   values: Record<string, string>;
   updateAction: (key: string, value: string) => Promise<void>;
-  deleteAction: (key: string) => Promise<void>;
 }) {
   const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
 
-  const [mode, setMode]               = useState<GoalMode>("lose");
+  const [mode, setMode]                 = useState<GoalMode>("lose");
   const [proteinPerLb, setProteinPerLb] = useState(1.0);
-  const [applied, setApplied]         = useState(false);
-  const [isPending, startTransition]  = useTransition();
+  const [applied, setApplied]           = useState(false);
+  const [isPending, startTransition]    = useTransition();
   const [isDismissPending, startDismissTransition] = useTransition();
 
   if (!weightGoal || isNaN(weightGoal)) return null;
@@ -189,80 +240,119 @@ function SuggestedNutritionCard({
 
   return (
     <div
-      className="relative mx-5 my-3 rounded-lg px-4 py-4 flex flex-col gap-3"
-      style={{ background: "var(--color-primary-dim)", border: "1px solid var(--color-primary-dim)" }}
+      className="relative flex flex-col"
+      style={{
+        background: "var(--color-primary-dim)",
+        border: "1px solid var(--accent-soft)",
+        borderRadius: "var(--r-1)",
+        padding: "var(--space-4)",
+        marginTop: "var(--space-3)",
+        marginBottom: "var(--space-3)",
+        gap: "var(--space-3)",
+      }}
     >
       <button
         onClick={dismiss}
         disabled={isDismissPending}
         title="Dismiss"
-        className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-muted"
-        style={{ color: "var(--color-text-faint)" }}
+        className="absolute flex items-center justify-center rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-muted"
+        style={{
+          top: 8,
+          right: 8,
+          width: 24,
+          height: 24,
+          color: "var(--color-text-faint)",
+          background: "transparent",
+          border: "none",
+        }}
       >
         <X size={13} />
       </button>
-      {/* Mode + protein controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-medium shrink-0" style={{ color: "var(--color-primary)" }}>
+
+      <div className="flex flex-wrap items-center" style={{ gap: "var(--space-3)" }}>
+        <span
+          style={{
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            color: "var(--color-primary)",
+            flexShrink: 0,
+          }}
+        >
           Goal
         </span>
-        <div className="flex items-center gap-1">
-          {GOAL_MODES.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => { setMode(m.key); setApplied(false); }}
-              className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                background: mode === m.key ? "var(--color-primary)" : "var(--color-surface-raised)",
-                color:      mode === m.key ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-              }}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <PillGroup
+          options={GOAL_MODES.map((m) => ({ value: m.key, label: m.label }))}
+          value={mode}
+          onChange={(v) => { setMode(v); setApplied(false); }}
+          ariaLabel="Goal mode"
+        />
 
-        <span className="text-xs font-medium shrink-0 ml-2" style={{ color: "var(--color-primary)" }}>
+        <span
+          style={{
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            color: "var(--color-primary)",
+            flexShrink: 0,
+            marginLeft: "var(--space-2)",
+          }}
+        >
           Protein
         </span>
-        <div className="flex items-center gap-1">
-          {PROTEIN_OPTIONS.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => { setProteinPerLb(o.value); setApplied(false); }}
-              className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                background: proteinPerLb === o.value ? "var(--color-primary)" : "var(--color-surface-raised)",
-                color:      proteinPerLb === o.value ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+        <PillGroup
+          options={PROTEIN_OPTIONS}
+          value={proteinPerLb}
+          onChange={(v) => { setProteinPerLb(v); setApplied(false); }}
+          ariaLabel="Protein per pound"
+        />
       </div>
 
-      {/* Computed targets + Apply */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between" style={{ gap: "var(--space-4)" }}>
         <div className="flex-1 min-w-0">
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <p
+            className="tnum"
+            style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+          >
             {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs · {suggested.fat} g fat · {suggested.fiber} g fiber
           </p>
-          <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)" }}>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+              marginTop: "var(--space-1)",
+            }}
+          >
             {activeMode.description} · protein {proteinPerLb} g/lb · fat 25% of calories · carbs fill remainder
           </p>
-          <p className="text-xs mt-1" style={{ color: "var(--color-text-faint)", opacity: 0.65 }}>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+              opacity: 0.65,
+              marginTop: "var(--space-1)",
+            }}
+          >
             Rough estimate based on goal weight only — ask in Chat for a more personalized result.
           </p>
         </div>
         <button
           onClick={applyAll}
           disabled={isPending}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer disabled:opacity-40"
+          className="flex items-center cursor-pointer disabled:opacity-40"
           style={{
-            background: applied ? "var(--color-positive-subtle)" : "var(--color-primary)",
-            color:      applied ? "var(--color-positive)" : "var(--color-text-on-cta)",
-            border:     applied ? "1px solid var(--color-positive-subtle-strong)" : "1px solid var(--color-primary)",
+            flexShrink: 0,
+            gap: "var(--space-1)",
+            padding: "0 var(--space-3)",
+            minHeight: 44,
+            minWidth: 72,
+            background: applied ? "transparent" : "var(--accent)",
+            color: applied ? "var(--color-positive)" : "var(--color-text-on-cta)",
+            border: applied ? "1px solid var(--color-positive)" : "1px solid var(--accent)",
+            borderRadius: "var(--r-1)",
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
+            transition:
+              "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
           }}
         >
           {isPending ? (
@@ -284,12 +374,14 @@ function FieldRow({
   updateAction,
   deleteAction,
   onDirtyChange,
+  isFirst,
 }: {
   field: Field;
   initialValue: string;
   updateAction: (key: string, value: string) => Promise<void>;
   deleteAction: (key: string) => Promise<void>;
   onDirtyChange?: (key: string, dirty: boolean) => void;
+  isFirst?: boolean;
 }) {
   const [value, setValue] = useState(initialValue);
   const [baseline, setBaseline] = useState(initialValue);
@@ -319,37 +411,82 @@ function FieldRow({
   }
 
   return (
-    <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <div className="flex items-start justify-between gap-3 mb-1.5">
-        <label style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>
+    <div
+      style={{
+        paddingTop: "var(--space-3)",
+        paddingBottom: "var(--space-3)",
+        borderTop: isFirst ? "none" : "1px solid var(--rule-soft)",
+      }}
+    >
+      <div
+        className="flex items-start justify-between"
+        style={{ gap: "var(--space-3)", marginBottom: "var(--space-2)" }}
+      >
+        <label
+          htmlFor={`field-${field.key}`}
+          style={{
+            fontSize: "var(--t-meta)",
+            fontWeight: 500,
+            color: "var(--color-text)",
+          }}
+        >
           {field.label}
         </label>
         {field.hint && (
-          <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>{field.hint}</span>
+          <span
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+              textAlign: "right",
+            }}
+          >
+            {field.hint}
+          </span>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex" style={{ gap: "var(--space-2)" }}>
         <input
+          id={`field-${field.key}`}
           value={value}
           onChange={(e) => { setValue(e.target.value); setSaved(false); }}
           placeholder={field.placeholder}
-          className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
+          className="flex-1 focus:outline-none input-focus-ring"
           style={{
-            background: "var(--color-surface-raised)",
-            border: "1px solid var(--color-border)",
+            background: "transparent",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--r-1)",
             color: "var(--color-text)",
+            fontSize: "var(--t-meta)",
+            padding: "0 var(--space-3)",
+            minHeight: 44,
+            transition: "border-color var(--motion-fast) var(--ease-out-quart)",
           }}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
         />
         <button
           onClick={handleSave}
           disabled={!isDirty || isPending}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          className="flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-default"
           style={{
-            background: saved ? "var(--color-positive-subtle)" : isDirty ? "var(--color-primary)" : "var(--color-surface-raised)",
-            color: saved ? "var(--color-positive)" : isDirty ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-            border: `1px solid ${saved ? "var(--color-positive-subtle-strong)" : isDirty ? "var(--color-primary)" : "var(--color-border)"}`,
+            gap: "var(--space-1)",
+            padding: "0 var(--space-3)",
+            minHeight: 44,
             minWidth: 72,
+            background: saved ? "transparent" : isDirty ? "var(--accent)" : "transparent",
+            color: saved
+              ? "var(--color-positive)"
+              : isDirty
+                ? "var(--color-text-on-cta)"
+                : "var(--color-text-muted)",
+            border: `1px solid ${
+              saved ? "var(--color-positive)" : isDirty ? "var(--accent)" : "var(--rule)"
+            }`,
+            borderRadius: "var(--r-1)",
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
+            transition:
+              "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
           }}
         >
           {isPending ? (
@@ -371,11 +508,48 @@ function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Prom
     <button
       onClick={() => startTransition(async () => { await deleteAction("nutrition_suggestion_dismissed"); })}
       disabled={isPending}
-      className="text-xs cursor-pointer disabled:opacity-40"
-      style={{ color: "var(--color-primary)" }}
+      className="cursor-pointer disabled:opacity-40"
+      style={{
+        fontSize: "var(--t-micro)",
+        color: "var(--color-primary)",
+        background: "transparent",
+        border: "none",
+        padding: 0,
+      }}
     >
       {isPending ? <Loader2 size={11} className="animate-spin inline" /> : "Recalculate suggested macros"}
     </button>
+  );
+}
+
+function SettingsSection({
+  label,
+  meta,
+  children,
+}: {
+  label: string;
+  meta?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      style={{
+        paddingTop: "var(--space-6)",
+        paddingBottom: "var(--space-6)",
+        borderBottom: "1px solid var(--rule-soft)",
+      }}
+    >
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "var(--space-3)", marginBottom: "var(--space-2)" }}
+      >
+        <h2 className="db-section-label" style={{ margin: 0 }}>
+          {label}
+        </h2>
+        {meta}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -394,17 +568,9 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
   useUnsavedChangesWarning(dirtyKeys.size > 0);
 
   return (
-    <div className="space-y-6">
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-            Profile
-          </p>
-        </div>
-        {EDITABLE_FIELDS.map((field) => (
+    <>
+      <SettingsSection label="Profile">
+        {EDITABLE_FIELDS.map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}
@@ -412,20 +578,13 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             updateAction={updateAction}
             deleteAction={deleteAction}
             onDirtyChange={handleDirtyChange}
+            isFirst={i === 0}
           />
         ))}
-      </div>
+      </SettingsSection>
 
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-            Fitness Goals
-          </p>
-        </div>
-        {FITNESS_GOAL_FIELDS.map((field) => (
+      <SettingsSection label="Fitness Goals">
+        {FITNESS_GOAL_FIELDS.map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}
@@ -433,24 +592,21 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             updateAction={updateAction}
             deleteAction={deleteAction}
             onDirtyChange={handleDirtyChange}
+            isFirst={i === 0}
           />
         ))}
-      </div>
+      </SettingsSection>
 
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-      >
-        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}>
-            Nutrition Goals
-          </p>
-          {values["nutrition_suggestion_dismissed"] === "true" && (
+      <SettingsSection
+        label="Nutrition Goals"
+        meta={
+          values["nutrition_suggestion_dismissed"] === "true" ? (
             <RecalculateLink deleteAction={deleteAction} />
-          )}
-        </div>
-        <SuggestedNutritionCard values={values} updateAction={updateAction} deleteAction={deleteAction} />
-        {NUTRITION_GOAL_FIELDS.map((field) => (
+          ) : undefined
+        }
+      >
+        <SuggestedNutritionCallout values={values} updateAction={updateAction} />
+        {NUTRITION_GOAL_FIELDS.map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}
@@ -458,9 +614,10 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             updateAction={updateAction}
             deleteAction={deleteAction}
             onDirtyChange={handleDirtyChange}
+            isFirst={i === 0}
           />
         ))}
-      </div>
-    </div>
+      </SettingsSection>
+    </>
   );
 }

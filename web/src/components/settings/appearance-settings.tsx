@@ -6,9 +6,9 @@ import { setThemePreference } from "@/lib/theme-actions";
 import type { ThemePreference } from "@/lib/theme";
 
 const OPTIONS: { value: ThemePreference; label: string; desc: string }[] = [
-  { value: "system", label: "System", desc: "Match your device setting" },
-  { value: "light",  label: "Light",  desc: "Light mode always" },
-  { value: "dark",   label: "Dark",   desc: "Dark mode always" },
+  { value: "system", label: "Auto",  desc: "Match your device setting" },
+  { value: "light",  label: "Light", desc: "Light mode always" },
+  { value: "dark",   label: "Dark",  desc: "Dark mode always" },
 ];
 
 export function AppearanceSettings() {
@@ -19,6 +19,7 @@ export function AppearanceSettings() {
   useEffect(() => setMounted(true), []);
 
   const current = (theme as ThemePreference | undefined) ?? "system";
+  const active = OPTIONS.find((o) => o.value === current) ?? OPTIONS[0];
 
   function handleChange(value: ThemePreference) {
     setTheme(value);
@@ -28,48 +29,75 @@ export function AppearanceSettings() {
   }
 
   return (
-    <div
-      className="rounded-xl p-5"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    <section
+      aria-labelledby="appearance-heading"
+      style={{
+        paddingTop: "var(--space-6)",
+        paddingBottom: "var(--space-6)",
+        borderBottom: "1px solid var(--rule-soft)",
+      }}
     >
-      <p
-        className="text-xs uppercase tracking-widest mb-4"
-        style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-      >
+      <h2 id="appearance-heading" className="db-section-label">
         Appearance
-      </p>
-      <fieldset className="space-y-2" aria-label="Theme preference">
-        {OPTIONS.map((opt) => {
-          const selected = mounted && current === opt.value;
-          return (
-            <label
-              key={opt.value}
-              className="flex items-start gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
-              style={{
-                background: selected ? "var(--color-primary-dim)" : "transparent",
-                border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
-              }}
-            >
-              <input
-                type="radio"
-                name="theme_preference"
-                value={opt.value}
-                checked={selected}
-                onChange={() => handleChange(opt.value)}
-                style={{ marginTop: 3, accentColor: "var(--color-primary)" }}
-              />
-              <span className="flex-1">
-                <span className="block text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                  {opt.label}
-                </span>
-                <span className="block text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                  {opt.desc}
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </fieldset>
-    </div>
+      </h2>
+
+      <div
+        className="flex flex-wrap items-center"
+        style={{ gap: "var(--space-4)" }}
+        role="radiogroup"
+        aria-label="Theme preference"
+      >
+        <div
+          className="flex items-center p-0.5"
+          style={{
+            background: "transparent",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--r-1)",
+            gap: 2,
+          }}
+        >
+          {OPTIONS.map((opt) => {
+            const selected = mounted && current === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => handleChange(opt.value)}
+                style={{
+                  fontFamily: "var(--font-body), system-ui, sans-serif",
+                  fontSize: "var(--t-micro)",
+                  fontWeight: 500,
+                  letterSpacing: "0.02em",
+                  padding: "0 var(--space-3)",
+                  minHeight: 44,
+                  minWidth: 64,
+                  background: selected ? "var(--accent)" : "transparent",
+                  color: selected ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+                  border: "none",
+                  borderRadius: "var(--r-1)",
+                  cursor: "pointer",
+                  transition:
+                    "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <span
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+          }}
+          aria-live="polite"
+        >
+          {mounted ? active.desc : "\u00A0"}
+        </span>
+      </div>
+    </section>
   );
 }
