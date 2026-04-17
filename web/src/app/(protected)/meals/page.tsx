@@ -46,7 +46,7 @@ export default async function MealsPage() {
     protein: profileMap["protein_goal"] ? parseInt(profileMap["protein_goal"], 10) : null,
     carbs: profileMap["carbs_goal"] ? parseInt(profileMap["carbs_goal"], 10) : null,
     fat: profileMap["fat_goal"] ? parseInt(profileMap["fat_goal"], 10) : null,
-    // Fiber defaults to 30g when unset (#304) — common public-health target.
+    // Fiber defaults to 30g when unset — common public-health target.
     fiber: profileMap["fiber_goal"] ? parseInt(profileMap["fiber_goal"], 10) : 30,
   };
 
@@ -56,7 +56,7 @@ export default async function MealsPage() {
   const pastMeals = meals.filter((m) => m.date !== today);
 
   // Compute today's macro totals (entries with at least some macro data).
-  // fiber/sugar stay null when no meal today reports them — they render as "—" not 0 (#304).
+  // fiber/sugar stay null when no meal today reports them — they render as em-dash, not 0.
   let fiberAny = false;
   let sugarAny = false;
   let fiberSum = 0;
