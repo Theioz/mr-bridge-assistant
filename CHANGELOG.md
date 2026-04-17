@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-04-17
+
+First minor release after v1.0.0. Headliners: the #319 verified-success contract across every mutating chat tool (Bridge no longer claims an action succeeded when the underlying tool returned an error or the Lambda died mid-stream); the Phase B Impeccable UI revamp landing Weekly, Meals, Notifications, Settings, and Login on the dashboard-panel pattern; macro editing with fiber + sugar tracking and Bridge chat-logging of food-photo scans (#302/#303/#304); habits momentum line and longest-chain badges (#317); and the refreshed demo account (#251). Pre-release audit (#252) closed the cut with no critical or high findings — see [docs/audits/2026-04-17-pre-release.md](docs/audits/2026-04-17-pre-release.md).
+
 ### Fixed (pre-release audit trivial fixes, issue #252)
 - **`.env.example` Supabase variable names corrected.** The file was documenting `SUPABASE_URL` / `SUPABASE_ANON_KEY`, but every call site in [web/src/lib/supabase/client.ts](web/src/lib/supabase/client.ts), [web/src/lib/supabase/server.ts](web/src/lib/supabase/server.ts), [web/src/lib/supabase/service.ts](web/src/lib/supabase/service.ts), [web/src/middleware.ts](web/src/middleware.ts), and [web/src/app/auth/callback/route.ts](web/src/app/auth/callback/route.ts) reads `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`. A fresh clone using the documented names would fail to boot. Primary keys are now prefixed; the unprefixed `SUPABASE_URL` is retained with a comment explaining it's for the Python scripts under `scripts/`, which don't read `NEXT_PUBLIC_*`.
 - **`.env.example` now documents nine previously-missing env vars** referenced in code but absent from the template: `POLYGON_API_KEY` (stocks widget), `SPORTSDB_API_KEY` / `SPORTS_PROVIDER` (sports widget), `GROQ_API_KEY` (chat "fast" model path), `USER_TIMEZONE` (date-window helpers), `CRON_SECRET` + `OWNER_USER_ID` (Vercel cron endpoints under `/api/cron/*`), and `GOOGLE_FIT_CLIENT_ID` / `GOOGLE_FIT_CLIENT_SECRET` (optional Fit-specific OAuth credentials when separate from Calendar/Gmail).
