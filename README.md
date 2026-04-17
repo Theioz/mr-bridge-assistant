@@ -12,7 +12,7 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
 - **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 22 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, workout history, stock quotes, session history); conflict detection and deduplication pre-flight before every calendar create; slash command autocomplete
-- **Habits** — Daily toggle check-in with streaks, 90-day heatmap, streak bar chart, weekly radial completion chart
+- **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
@@ -354,7 +354,7 @@ mr-bridge-assistant/
 │   │   │   │   └── sheet.tsx              # Radix-Dialog-backed bottom sheet (focus trap, Escape, role=dialog)
 │   │   │   ├── chat/                      # Chat UI with markdown rendering + session history
 │   │   │   ├── tasks/                     # Task CRUD components
-│   │   │   ├── habits/                    # Habit toggle, add/archive UI, heatmap, streak charts
+│   │   │   ├── habits/                    # Habit toggle, add/archive UI, momentum line, streak rows, radial
 │   │   │   ├── fitness/                   # Body comp, workout freq, active cal, goal charts (Recharts)
 │   │   │   │   └── weekly-workout-plan.tsx  # Mon–Sun workout plan cards with phases + Calendar sync
 │   │   │   ├── journal/                   # Guided journal flow + history list

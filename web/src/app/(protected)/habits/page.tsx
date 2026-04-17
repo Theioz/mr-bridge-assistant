@@ -3,13 +3,13 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { HabitHeatmap } from "@/components/habits/heatmap";
 
 export const metadata: Metadata = {
   title: "Habits",
-  description: "Daily habit check-ins, streaks, and heatmap.",
+  description: "Daily habit check-ins, momentum, and streaks.",
 };
-import { StreakChart } from "@/components/habits/streak-chart";
+import { MomentumLine } from "@/components/habits/momentum-line";
+import { LongestChainBadges } from "@/components/habits/longest-chain-badges";
 import { RadialCompletion } from "@/components/habits/radial-completion";
 import HabitHistory from "@/components/habits/habit-history";
 import HabitTodaySection from "@/components/habits/habit-today-section";
@@ -88,10 +88,9 @@ export default async function HabitsPage() {
   const historyDays = Math.min(days, 90);
   const historyDates = getLastNDays(historyDays);
 
-  const [registryResult, allRegistryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
+  const [registryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
     await Promise.all([
       supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
-      supabase.from("habit_registry").select("*"),
       supabase.from("habits").select("*").eq("date", today),
       supabase
         .from("habits")
@@ -111,7 +110,6 @@ export default async function HabitsPage() {
     ]);
 
   const habits = (registryResult.data ?? []) as HabitRegistry[];
-  const allRegistry = (allRegistryResult.data ?? []) as HabitRegistry[];
   const todayLogs = (todayLogsResult.data ?? []) as HabitLog[];
   const historyLogs = (historyLogsResult.data ?? []) as HabitLog[];
   const allCompleted = (allCompletedResult.data ?? []) as { habit_id: string; date: string }[];
@@ -119,9 +117,6 @@ export default async function HabitsPage() {
 
   const streaks = computeStreaks(allCompleted, today);
   const completed = todayLogs.filter((l) => l.completed).length;
-
-  const heatmapDays = Math.min(days, 365);
-  const heatmapDates = getLastNDays(heatmapDays);
 
   return (
     <div>
@@ -166,7 +161,7 @@ export default async function HabitsPage() {
 
       {habits.length > 0 && (
         <>
-          {/* Charts: Heatmap (2/3) + Radial (1/3) */}
+          {/* Charts: Momentum (2/3) + Radial (1/3) */}
           <section
             className="grid grid-cols-1 lg:grid-cols-3"
             style={{
@@ -177,14 +172,14 @@ export default async function HabitsPage() {
             }}
           >
             <div className="lg:col-span-2">
-              <HabitHeatmap habits={habits} registry={allRegistry} logs={historyLogs} dates={heatmapDates} />
+              <MomentumLine habits={habits} allCompleted={allCompleted} today={today} />
             </div>
             <div>
               <RadialCompletion habits={habits} weekLogs={weekLogs} />
             </div>
           </section>
 
-          {/* Streak chart */}
+          {/* Streaks — current + personal best per habit */}
           <section
             style={{
               paddingTop: "var(--space-6)",
@@ -192,7 +187,7 @@ export default async function HabitsPage() {
               borderBottom: "1px solid var(--rule-soft)",
             }}
           >
-            <StreakChart habits={habits} streaks={streaks} />
+            <LongestChainBadges habits={habits} streaks={streaks} />
           </section>
 
           {/* History grid */}
