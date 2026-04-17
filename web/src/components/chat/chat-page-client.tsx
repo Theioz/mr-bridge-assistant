@@ -263,9 +263,39 @@ function ChatPageClientInner({
     }
   }, [activeSessionId, oldestPosition, loadingMore]);
 
-  const handleMessageSent = useCallback(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+  // After every assistant turn (issue 319): refresh sidebar previews AND, if the
+  // server-emitted turn-complete frame was missing (Lambda killed mid-stream),
+  // reconcile the active session from server. Server-side onFinish always
+  // persists a fallback row — DB is the source of truth even when the stream
+  // was cut. The persisted message itself is the user-facing signal of the
+  // failure (e.g. "I tried to update the event but it didn't go through").
+  const handleMessageSent = useCallback(
+    async (info?: { turnComplete: boolean; hadFailures: boolean; deadlineExceeded: boolean }) => {
+      fetchSessions();
+      if (!info || info.turnComplete) return;
+      try {
+        const sid = activeSessionIdRef.current;
+        const res = await fetch(`/api/chat/sessions/${sid}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const msgs: Message[] = (
+          data.messages as { id: string; role: string; content: string; created_at: string }[]
+        ).map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          createdAt: new Date(m.created_at),
+        }));
+        setActiveMessages(msgs);
+        setHasMore(data.hasMore ?? false);
+        setOldestPosition(data.oldestPosition ?? null);
+        setRefreshKey((k) => k + 1);
+      } catch {
+        // non-fatal
+      }
+    },
+    [fetchSessions]
+  );
 
   const handleArchiveSession = useCallback(
     async (sessionId: string) => {
