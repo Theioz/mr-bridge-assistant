@@ -65,7 +65,13 @@ function fmtDuration(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// ── Card wrapper ──────────────────────────────────────────────────────────────
+// ── Panel wrapper ─────────────────────────────────────────────────────────────
+
+// Every panel on the page is clamped to this height so the 2-column grid reads
+// as a uniform set of cells. Overflowing content scrolls inside the panel with
+// a bottom fade mask so tall sections (Tasks, Training) don't push the page
+// height past short sections (Body composition, Journal).
+const PANEL_HEIGHT = 440;
 
 function Panel({
   title,
@@ -77,12 +83,25 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col" style={{ minWidth: 0 }}>
-      <h2 className="db-section-label">
+    <section
+      className="flex flex-col"
+      style={{ minWidth: 0, height: PANEL_HEIGHT }}
+    >
+      <h2 className="db-section-label" style={{ flexShrink: 0 }}>
         {title}
         {meta && <span className="meta">{meta}</span>}
       </h2>
-      {children}
+      <div
+        className="scroll-fade-mask"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          paddingBottom: "var(--space-4)",
+        }}
+      >
+        {children}
+      </div>
     </section>
   );
 }
@@ -434,7 +453,7 @@ export default async function WeeklyPage() {
                     Closed this week
                   </p>
                   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                    {completedTasks.slice(0, 8).map((t) => (
+                    {completedTasks.map((t) => (
                       <li
                         key={t.id}
                         className="flex items-baseline"
@@ -457,18 +476,6 @@ export default async function WeeklyPage() {
                       </li>
                     ))}
                   </ul>
-                  {completedTasks.length > 8 && (
-                    <p
-                      className="tnum"
-                      style={{
-                        marginTop: "var(--space-2)",
-                        fontSize: "var(--t-micro)",
-                        color: "var(--color-text-faint)",
-                      }}
-                    >
-                      +{completedTasks.length - 8} more
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -487,7 +494,7 @@ export default async function WeeklyPage() {
                     Still active
                   </p>
                   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                    {activeTasks.slice(0, 5).map((t) => {
+                    {activeTasks.map((t) => {
                       const overdue = t.due_date != null && t.due_date < today;
                       return (
                         <li
@@ -535,18 +542,6 @@ export default async function WeeklyPage() {
                       );
                     })}
                   </ul>
-                  {activeTasks.length > 5 && (
-                    <p
-                      className="tnum"
-                      style={{
-                        marginTop: "var(--space-2)",
-                        fontSize: "var(--t-micro)",
-                        color: "var(--color-text-faint)",
-                      }}
-                    >
-                      +{activeTasks.length - 5} more
-                    </p>
-                  )}
                 </div>
               )}
             </div>
