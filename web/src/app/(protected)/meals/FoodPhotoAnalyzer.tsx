@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Camera,
@@ -16,11 +16,11 @@ import {
 } from "lucide-react";
 import InlineMealChat from "./InlineMealChat";
 
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 type ScanPhase = "idle" | "loading" | "error" | "manual";
 type AnalyzerMode = "food" | "label";
 
-interface ScanItem {
+export interface ScanItem {
   id: string;
   mode: AnalyzerMode;
   label: string;
@@ -28,9 +28,35 @@ interface ScanItem {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  fiber_g?: number;
+  // Nutrient columns — null means "not estimated", rendered as "—" not "0" (#304).
+  fiber_g: number | null;
+  sugar_g: number | null;
   sodium_mg?: number;
   ingredients?: string;
+  // Per-field manual-edit flags — re-estimate must not clobber user edits (#302).
+  labelManuallyEdited?: boolean;
+  caloriesManuallyEdited?: boolean;
+  proteinManuallyEdited?: boolean;
+  carbsManuallyEdited?: boolean;
+  fatManuallyEdited?: boolean;
+  fiberManuallyEdited?: boolean;
+  sugarManuallyEdited?: boolean;
+}
+
+function roundOrDash(v: number | null, digits = 0): string {
+  if (v === null) return "—";
+  const m = 10 ** digits;
+  return String(Math.round(v * m) / m);
+}
+
+function sumNullable(items: ScanItem[], field: "fiber_g" | "sugar_g"): number | null {
+  let sum = 0;
+  let any = false;
+  for (const it of items) {
+    const v = it[field];
+    if (v !== null && v !== undefined) { sum += v; any = true; }
+  }
+  return any ? sum : null;
 }
 
 const inputStyle = {
@@ -76,11 +102,80 @@ const pillBtnBase = {
   transition: "all var(--motion-fast) var(--ease-out-quart)",
 } as const;
 
-function MacroLine({ item }: { item: Pick<ScanItem, "calories" | "protein_g" | "carbs_g" | "fat_g"> }) {
+function MacroLine({ item }: { item: ScanItem }) {
+  const showNutrients = item.fiber_g !== null || item.sugar_g !== null;
   return (
-    <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-      {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P · {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
-    </span>
+    <div className="flex flex-col" style={{ gap: 2 }}>
+      <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
+        {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P · {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
+      </span>
+      {showNutrients && (
+        <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+          Fiber {roundOrDash(item.fiber_g, 1)}g · Sugar {roundOrDash(item.sugar_g, 1)}g
+        </span>
+      )}
+    </div>
+  );
+}
+
+interface MacroInputProps {
+  label: string;
+  value: number | null;
+  nullable?: boolean;
+  integer?: boolean;
+  onChange: (v: number | null) => void;
+}
+
+// Editable macro input — local text state keeps decimals and empty state
+// from fighting the controlled value on external re-estimate updates (#302).
+function MacroInput({ label, value, nullable, integer, onChange }: MacroInputProps) {
+  const [text, setText] = useState<string>(value === null ? "" : String(value));
+  const lastExternal = useRef<number | null>(value);
+
+  useEffect(() => {
+    if (value !== lastExternal.current) {
+      lastExternal.current = value;
+      setText(value === null ? "" : String(value));
+    }
+  }, [value]);
+
+  function commit(t: string) {
+    setText(t);
+    if (t === "") {
+      const next = nullable ? null : 0;
+      lastExternal.current = next;
+      onChange(next);
+      return;
+    }
+    const pattern = integer ? /^-?\d*$/ : /^-?\d*\.?\d*$/;
+    if (!pattern.test(t)) return;
+    const n = integer ? parseInt(t, 10) : parseFloat(t);
+    if (!Number.isFinite(n)) return;
+    lastExternal.current = n;
+    onChange(n);
+  }
+
+  return (
+    <div>
+      <label
+        style={{
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          display: "block",
+          marginBottom: "var(--space-1)",
+        }}
+      >
+        {label}
+      </label>
+      <input
+        type="text"
+        inputMode={integer ? "numeric" : "decimal"}
+        value={text}
+        onChange={(e) => commit(e.target.value)}
+        placeholder={nullable ? "—" : "0"}
+        style={inputStyle}
+      />
+    </div>
   );
 }
 
@@ -133,6 +228,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     }),
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   );
+  // Nutrient totals are null when no item reports a value, so we render "—" instead of "0".
+  const combinedFiber = sumNullable(items, "fiber_g");
+  const combinedSugar = sumNullable(items, "sugar_g");
 
   function notifyUnsaved(newItems: ScanItem[]) {
     onUnsavedItems?.(newItems.length);
@@ -153,6 +251,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       return next;
     });
     if (expandedItemId === id) setExpandedItemId(null);
+  }
+
+  function updateItem(id: string, patch: Partial<ScanItem>) {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
 
   function clearAll() {
@@ -252,7 +354,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             protein_g: data.protein_g ?? 0,
             carbs_g: data.carbs_g ?? 0,
             fat_g: data.fat_g ?? 0,
-            fiber_g: data.fiber_g ?? undefined,
+            fiber_g: data.fiber_g ?? null,
+            sugar_g: data.sugar_g ?? null,
             sodium_mg: data.sodium_mg ?? undefined,
           });
         } else {
@@ -264,7 +367,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             protein_g: data.protein_g ?? 0,
             carbs_g: data.carbs_g ?? 0,
             fat_g: data.fat_g ?? 0,
-            fiber_g: data.fiber_g ?? undefined,
+            fiber_g: data.fiber_g ?? null,
+            sugar_g: data.sugar_g ?? null,
             sodium_mg: data.sodium_mg ?? undefined,
             ingredients: data.ingredients ?? undefined,
           });
@@ -294,20 +398,21 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Re-estimation failed");
+      // Respect per-field manual-edit flags — don't clobber anything the user typed (#302).
       setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                label: data.food_name ?? item.label,
-                calories: data.calories ?? item.calories,
-                protein_g: data.protein_g ?? item.protein_g,
-                carbs_g: data.carbs_g ?? item.carbs_g,
-                fat_g: data.fat_g ?? item.fat_g,
-                fiber_g: data.fiber_g ?? item.fiber_g,
-              }
-            : item
-        )
+        prev.map((item) => {
+          if (item.id !== id) return item;
+          return {
+            ...item,
+            label:     item.labelManuallyEdited    ? item.label     : (data.food_name ?? item.label),
+            calories:  item.caloriesManuallyEdited ? item.calories  : (data.calories  ?? item.calories),
+            protein_g: item.proteinManuallyEdited  ? item.protein_g : (data.protein_g ?? item.protein_g),
+            carbs_g:   item.carbsManuallyEdited    ? item.carbs_g   : (data.carbs_g   ?? item.carbs_g),
+            fat_g:     item.fatManuallyEdited      ? item.fat_g     : (data.fat_g     ?? item.fat_g),
+            fiber_g:   item.fiberManuallyEdited    ? item.fiber_g   : (data.fiber_g ?? null),
+            sugar_g:   item.sugarManuallyEdited    ? item.sugar_g   : (data.sugar_g ?? null),
+          };
+        })
       );
     } catch {
       // non-fatal — keep existing values
@@ -327,6 +432,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       protein_g: parseFloat(manualProtein) || 0,
       carbs_g: parseFloat(manualCarbs) || 0,
       fat_g: parseFloat(manualFat) || 0,
+      fiber_g: null,
+      sugar_g: null,
     });
     setManualLabel("");
     setManualCal("");
@@ -351,6 +458,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           protein_g: Math.round(combined.protein_g * s * 10) / 10,
           carbs_g: Math.round(combined.carbs_g * s * 10) / 10,
           fat_g: Math.round(combined.fat_g * s * 10) / 10,
+          fiber_g: combinedFiber === null ? null : Math.round(combinedFiber * s * 10) / 10,
+          sugar_g: combinedSugar === null ? null : Math.round(combinedSugar * s * 10) / 10,
           source: "scanner",
         }),
       });
@@ -374,6 +483,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       protein_g: Math.round((combined.protein_g / n) * 10) / 10,
       carbs_g: Math.round((combined.carbs_g / n) * 10) / 10,
       fat_g: Math.round((combined.fat_g / n) * 10) / 10,
+      fiber_g: combinedFiber === null ? null : Math.round((combinedFiber / n) * 10) / 10,
+      sugar_g: combinedSugar === null ? null : Math.round((combinedSugar / n) * 10) / 10,
     };
     setPrepping(true);
     try {
@@ -404,9 +515,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Inline chat context ───────────────────────────────────────────────────
   function buildNutritionContext(): string {
     const lines = items
-      .map((i) => `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g protein, ${Math.round(i.carbs_g)}g carbs, ${Math.round(i.fat_g)}g fat`)
+      .map((i) => {
+        const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
+        const extras: string[] = [];
+        if (i.fiber_g !== null) extras.push(`${roundOrDash(i.fiber_g, 1)}g fiber`);
+        if (i.sugar_g !== null) extras.push(`${roundOrDash(i.sugar_g, 1)}g sugar`);
+        return extras.length ? `${base}, ${extras.join(", ")}` : base;
+      })
       .join("\n");
-    return `--- Scanned nutrition data ---\n${lines}\nCombined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g protein, ${Math.round(combined.carbs_g)}g carbs, ${Math.round(combined.fat_g)}g fat`;
+    const combinedLine = `Combined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g P, ${Math.round(combined.carbs_g)}g C, ${Math.round(combined.fat_g)}g fat` +
+      (combinedFiber !== null ? `, ${roundOrDash(combinedFiber, 1)}g fiber` : "") +
+      (combinedSugar !== null ? `, ${roundOrDash(combinedSugar, 1)}g sugar` : "");
+    return `--- Scanned nutrition data ---\n${lines}\n${combinedLine}`;
   }
 
   // ── Mode toggle ───────────────────────────────────────────────────────────
@@ -669,25 +789,23 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     <MacroLine item={item} />
                   </div>
                   <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }}>
-                    {item.mode === "food" && item.ingredients && (
-                      <button
-                        onClick={() => setExpandedItemId(expanded ? null : item.id)}
-                        className="flex items-center transition-opacity active:opacity-70"
-                        style={{
-                          gap: "var(--space-1)",
-                          fontSize: "var(--t-micro)",
-                          color: "var(--color-text-muted)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: "var(--space-1) var(--space-2)",
-                        }}
-                        title="Edit / Re-estimate"
-                      >
-                        {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        Edit
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setExpandedItemId(expanded ? null : item.id)}
+                      className="flex items-center transition-opacity active:opacity-70"
+                      style={{
+                        gap: "var(--space-1)",
+                        fontSize: "var(--t-micro)",
+                        color: "var(--color-text-muted)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "var(--space-1) var(--space-2)",
+                      }}
+                      title="Edit macros / re-estimate"
+                    >
+                      {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      Edit
+                    </button>
                     <button
                       onClick={() => removeItem(item.id)}
                       className="transition-opacity active:opacity-70 flex items-center justify-center"
@@ -706,62 +824,133 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   </div>
                 </div>
 
-                {/* Expand: dish name + ingredients + re-estimate */}
-                {expanded && item.mode === "food" && (
-                  <div className="flex flex-col" style={{ marginTop: "var(--space-3)", gap: "var(--space-2)" }}>
-                    <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
-                      Dish name
-                    </label>
-                    <input
-                      type="text"
-                      value={item.label}
-                      onChange={(e) =>
-                        setItems((prev) =>
-                          prev.map((i) => i.id === item.id ? { ...i, label: e.target.value } : i)
-                        )
-                      }
-                      style={{ ...inputStyle, fontWeight: 600, fontSize: "var(--t-body)" }}
-                    />
-                    <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
-                      Ingredients
-                    </label>
-                    <textarea
-                      value={item.ingredients ?? ""}
-                      rows={3}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      onChange={(e) =>
-                        setItems((prev) =>
-                          prev.map((i) => i.id === item.id ? { ...i, ingredients: e.target.value } : i)
-                        )
-                      }
-                      style={{
-                        ...inputStyle,
-                        resize: "none",
-                        lineHeight: 1.6,
-                        fontSize: "var(--t-meta)",
-                      }}
-                    />
-                    <button
-                      onClick={() => handleReestimateItem(item.id, item.ingredients ?? "")}
-                      disabled={reestimatingId === item.id || !item.ingredients?.trim()}
-                      className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
-                      style={{
-                        gap: "var(--space-1)",
-                        fontSize: "var(--t-meta)",
-                        color: "var(--accent)",
-                        padding: "var(--space-1) 0",
-                        background: "none",
-                        border: "none",
-                        cursor: (reestimatingId === item.id || !item.ingredients?.trim()) ? "default" : "pointer",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      {reestimatingId === item.id
-                        ? <Loader2 size={13} className="animate-spin" />
-                        : <RefreshCw size={13} />}
-                      Re-estimate macros
-                    </button>
+                {/* Expand: editable macros + fiber/sugar + optional ingredients + re-estimate */}
+                {expanded && (
+                  <div className="flex flex-col" style={{ marginTop: "var(--space-3)", gap: "var(--space-3)" }}>
+                    {/* Dish name */}
+                    <div>
+                      <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block", marginBottom: "var(--space-1)" }}>
+                        Dish name
+                      </label>
+                      <input
+                        type="text"
+                        value={item.label}
+                        onChange={(e) =>
+                          updateItem(item.id, { label: e.target.value, labelManuallyEdited: true })
+                        }
+                        style={{ ...inputStyle, fontWeight: 600, fontSize: "var(--t-body)" }}
+                      />
+                    </div>
+
+                    {/* Macros grid: calories, protein, carbs, fat */}
+                    <div className="grid grid-cols-2" style={{ gap: "var(--space-2)" }}>
+                      <MacroInput
+                        label="Calories"
+                        value={item.calories}
+                        integer
+                        onChange={(v) => updateItem(item.id, { calories: v ?? 0, caloriesManuallyEdited: true })}
+                      />
+                      <MacroInput
+                        label="Protein (g)"
+                        value={item.protein_g}
+                        onChange={(v) => updateItem(item.id, { protein_g: v ?? 0, proteinManuallyEdited: true })}
+                      />
+                      <MacroInput
+                        label="Carbs (g)"
+                        value={item.carbs_g}
+                        onChange={(v) => updateItem(item.id, { carbs_g: v ?? 0, carbsManuallyEdited: true })}
+                      />
+                      <MacroInput
+                        label="Fat (g)"
+                        value={item.fat_g}
+                        onChange={(v) => updateItem(item.id, { fat_g: v ?? 0, fatManuallyEdited: true })}
+                      />
+                      <MacroInput
+                        label="Fiber (g)"
+                        value={item.fiber_g}
+                        nullable
+                        onChange={(v) => updateItem(item.id, { fiber_g: v, fiberManuallyEdited: true })}
+                      />
+                      <MacroInput
+                        label="Sugar (g)"
+                        value={item.sugar_g}
+                        nullable
+                        onChange={(v) => updateItem(item.id, { sugar_g: v, sugarManuallyEdited: true })}
+                      />
+                    </div>
+
+                    {/* Soft warning pill — calories diverge >10% from macro-derived total */}
+                    {(() => {
+                      const derived = item.protein_g * 4 + item.carbs_g * 4 + item.fat_g * 9;
+                      if (derived <= 0) return null;
+                      const drift = Math.abs(item.calories - derived) / derived;
+                      if (drift <= 0.10) return null;
+                      return (
+                        <div
+                          className="flex items-start"
+                          style={{
+                            gap: "var(--space-2)",
+                            padding: "var(--space-2) var(--space-3)",
+                            borderRadius: "var(--r-2)",
+                            background: "var(--color-danger-subtle)",
+                            fontSize: "var(--t-micro)",
+                            color: "var(--color-text)",
+                          }}
+                          role="status"
+                        >
+                          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1, color: "var(--color-danger)" }} />
+                          <span>
+                            Calories don&apos;t match macros — derived {Math.round(derived)} kcal from{" "}
+                            P{Math.round(item.protein_g)} · C{Math.round(item.carbs_g)} · F{Math.round(item.fat_g)}.
+                            You can log anyway.
+                          </span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Ingredients / re-estimate — food-photo mode only */}
+                    {item.mode === "food" && (
+                      <div className="flex flex-col" style={{ gap: "var(--space-2)" }}>
+                        <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
+                          Ingredients
+                        </label>
+                        <textarea
+                          value={item.ingredients ?? ""}
+                          rows={3}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          onChange={(e) =>
+                            updateItem(item.id, { ingredients: e.target.value })
+                          }
+                          style={{
+                            ...inputStyle,
+                            resize: "none",
+                            lineHeight: 1.6,
+                            fontSize: "var(--t-meta)",
+                          }}
+                        />
+                        <button
+                          onClick={() => handleReestimateItem(item.id, item.ingredients ?? "")}
+                          disabled={reestimatingId === item.id || !item.ingredients?.trim()}
+                          className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
+                          style={{
+                            gap: "var(--space-1)",
+                            fontSize: "var(--t-meta)",
+                            color: "var(--accent)",
+                            padding: "var(--space-1) 0",
+                            background: "none",
+                            border: "none",
+                            cursor: (reestimatingId === item.id || !item.ingredients?.trim()) ? "default" : "pointer",
+                            alignSelf: "flex-start",
+                          }}
+                        >
+                          {reestimatingId === item.id
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <RefreshCw size={13} />}
+                          Re-estimate macros
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -823,6 +1012,11 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             <span className="tnum" style={{ color: "var(--color-text)", fontWeight: 600 }}>
               {Math.round(combined.calories)} cal · {Math.round(combined.protein_g)}g P · {Math.round(combined.carbs_g)}g C · {Math.round(combined.fat_g)}g F
             </span>
+            {(combinedFiber !== null || combinedSugar !== null) && (
+              <div className="tnum" style={{ marginTop: 2, fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+                Fiber {roundOrDash(combinedFiber, 1)}g · Sugar {roundOrDash(combinedSugar, 1)}g
+              </div>
+            )}
           </div>
 
           {/* Ask Mr. Bridge */}
@@ -843,6 +1037,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           ) : (
             <InlineMealChat
               initialContext={buildNutritionContext()}
+              scanItems={items}
+              defaultMealType={logMealType}
+              onLoggedViaChat={() => {
+                clearAll();
+                router.refresh();
+              }}
               onClose={() => setShowInlineChat(false)}
             />
           )}

@@ -23,6 +23,8 @@ export interface MealRow {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g: number | null;
+  sugar_g: number | null;
 }
 
 export interface RecipeRow {
@@ -38,6 +40,7 @@ export interface MacroGoals {
   protein: number | null;
   carbs: number | null;
   fat: number | null;
+  fiber: number | null;
 }
 
 export interface MacroTotals {
@@ -45,6 +48,9 @@ export interface MacroTotals {
   protein: number;
   carbs: number;
   fat: number;
+  // null when no meal today reports fiber/sugar — renders as "—" not 0 (#304).
+  fiber: number | null;
+  sugar: number | null;
 }
 
 interface Suggestion {
@@ -140,6 +146,28 @@ interface MacroBarProps {
   goal: number | null;
 }
 
+// Sugar has no goal — we show a running total for awareness (#304).
+function SugarTotalRow({ sugar }: { sugar: number | null }) {
+  return (
+    <div
+      className="flex items-baseline justify-between"
+      style={{
+        paddingTop: "var(--space-3)",
+        paddingBottom: "var(--space-3)",
+        borderTop: "1px solid var(--rule-soft)",
+      }}
+    >
+      <span style={{ fontSize: "var(--t-meta)", fontWeight: 500, color: "var(--color-text)" }}>
+        Sugar
+      </span>
+      <span className="tnum" style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
+        {sugar === null ? "—" : sugar}
+        <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>g</span>
+      </span>
+    </div>
+  );
+}
+
 function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
   if (goal === null) return null;
   const pct = goal > 0 ? (consumed / goal) * 100 : 0;
@@ -208,8 +236,19 @@ function formatMacroCol(m: MealRow): string | null {
   ].filter(Boolean).join(" · ");
 }
 
+// Second line shown under macros in the expanded-row display; legacy rows with
+// null fiber/sugar render as "—" (not 0) so users can tell "not tracked" apart
+// from "zero" (#304).
+function formatNutrientCol(m: MealRow): string | null {
+  const hasFiber = m.fiber_g != null;
+  const hasSugar = m.sugar_g != null;
+  if (!hasFiber && !hasSugar) return null;
+  return `Fiber ${hasFiber ? m.fiber_g : "—"}g · Sugar ${hasSugar ? m.sugar_g : "—"}g`;
+}
+
 function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
   const macroStr = formatMacroCol(meal);
+  const nutrientStr = formatNutrientCol(meal);
   return (
     <div
       className="flex items-center"
@@ -247,17 +286,32 @@ function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
         {meal.recipes?.name ?? meal.notes ?? "—"}
       </span>
       {macroStr && (
-        <span
-          className="tnum flex-shrink-0 hidden sm:inline"
-          style={{
-            fontSize: "var(--t-micro)",
-            color: "var(--color-text-faint)",
-            minWidth: 220,
-            textAlign: "right",
-          }}
+        <div
+          className="flex-shrink-0 hidden sm:flex"
+          style={{ flexDirection: "column", minWidth: 220, alignItems: "flex-end" }}
         >
-          {macroStr}
-        </span>
+          <span
+            className="tnum"
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-faint)",
+            }}
+          >
+            {macroStr}
+          </span>
+          {nutrientStr && (
+            <span
+              className="tnum"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                opacity: 0.75,
+              }}
+            >
+              {nutrientStr}
+            </span>
+          )}
+        </div>
       )}
       {onRelog && (
         <button
@@ -282,6 +336,17 @@ function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
   );
 }
 
+interface MealRowEditFields {
+  notes: string;
+  meal_type: string;
+  calories: string;
+  protein_g: string;
+  carbs_g: string;
+  fat_g: string;
+  fiber_g: string;
+  sugar_g: string;
+}
+
 function MealRowEdit({
   fields,
   saving,
@@ -289,11 +354,9 @@ function MealRowEdit({
   onSave,
   onCancel,
 }: {
-  fields: {
-    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
-  };
+  fields: MealRowEditFields;
   saving: boolean;
-  onChange: (next: typeof fields) => void;
+  onChange: (next: MealRowEditFields) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -333,6 +396,22 @@ function MealRowEdit({
             style={{ ...inputStyle, width: 72 }}
           />
         ))}
+      </div>
+      <div className="flex" style={{ gap: "var(--space-2)" }}>
+        <input
+          type="number"
+          value={fields.fiber_g}
+          onChange={(e) => onChange({ ...fields, fiber_g: e.target.value })}
+          placeholder="Fiber(g)"
+          style={{ ...inputStyle, width: 96 }}
+        />
+        <input
+          type="number"
+          value={fields.sugar_g}
+          onChange={(e) => onChange({ ...fields, sugar_g: e.target.value })}
+          placeholder="Sugar(g)"
+          style={{ ...inputStyle, width: 96 }}
+        />
       </div>
       <div className="flex" style={{ gap: "var(--space-2)" }}>
         <button
@@ -454,9 +533,9 @@ function TodayTab({
   }, [pastMeals]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<{
-    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
-  }>({ notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
+  const [editFields, setEditFields] = useState<MealRowEditFields>({
+    notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "", fiber_g: "", sugar_g: "",
+  });
   const [editSaving, setEditSaving] = useState(false);
 
   function startEdit(m: MealRow) {
@@ -468,6 +547,8 @@ function TodayTab({
       protein_g: m.protein_g != null ? String(m.protein_g) : "",
       carbs_g: m.carbs_g != null ? String(m.carbs_g) : "",
       fat_g: m.fat_g != null ? String(m.fat_g) : "",
+      fiber_g: m.fiber_g != null ? String(m.fiber_g) : "",
+      sugar_g: m.sugar_g != null ? String(m.sugar_g) : "",
     });
   }
 
@@ -484,6 +565,8 @@ function TodayTab({
         protein_g: editFields.protein_g ? Number(editFields.protein_g) : null,
         carbs_g: editFields.carbs_g ? Number(editFields.carbs_g) : null,
         fat_g: editFields.fat_g ? Number(editFields.fat_g) : null,
+        fiber_g: editFields.fiber_g ? Number(editFields.fiber_g) : null,
+        sugar_g: editFields.sugar_g ? Number(editFields.sugar_g) : null,
       }),
     });
     setEditSaving(false);
@@ -546,6 +629,13 @@ function TodayTab({
             <MacroBar label="Protein" unit="g" consumed={macroTotals.protein} goal={macroGoals.protein} />
             <MacroBar label="Carbs" unit="g" consumed={macroTotals.carbs} goal={macroGoals.carbs} />
             <MacroBar label="Fat" unit="g" consumed={macroTotals.fat} goal={macroGoals.fat} />
+            <MacroBar
+              label="Fiber"
+              unit="g"
+              consumed={macroTotals.fiber ?? 0}
+              goal={macroGoals.fiber}
+            />
+            <SugarTotalRow sugar={macroTotals.sugar} />
           </div>
         ) : (
           <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-muted)" }}>
@@ -1386,9 +1476,9 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
   const dates = Array.from(byDate.keys());
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<{
-    notes: string; meal_type: string; calories: string; protein_g: string; carbs_g: string; fat_g: string;
-  }>({ notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
+  const [editFields, setEditFields] = useState<MealRowEditFields>({
+    notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "", fiber_g: "", sugar_g: "",
+  });
   const [editSaving, setEditSaving] = useState(false);
 
   function startEdit(m: MealRow) {
@@ -1400,6 +1490,8 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
       protein_g: m.protein_g != null ? String(m.protein_g) : "",
       carbs_g: m.carbs_g != null ? String(m.carbs_g) : "",
       fat_g: m.fat_g != null ? String(m.fat_g) : "",
+      fiber_g: m.fiber_g != null ? String(m.fiber_g) : "",
+      sugar_g: m.sugar_g != null ? String(m.sugar_g) : "",
     });
   }
 
@@ -1416,6 +1508,8 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
         protein_g: editFields.protein_g ? Number(editFields.protein_g) : null,
         carbs_g: editFields.carbs_g ? Number(editFields.carbs_g) : null,
         fat_g: editFields.fat_g ? Number(editFields.fat_g) : null,
+        fiber_g: editFields.fiber_g ? Number(editFields.fiber_g) : null,
+        sugar_g: editFields.sugar_g ? Number(editFields.sugar_g) : null,
       }),
     });
     setEditSaving(false);
