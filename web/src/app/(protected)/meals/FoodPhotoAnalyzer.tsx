@@ -30,34 +30,55 @@ interface ScanItem {
   fat_g: number;
   fiber_g?: number;
   sodium_mg?: number;
-  ingredients?: string; // food mode only — used for re-estimation
+  ingredients?: string;
 }
 
 const inputStyle = {
-  background: "var(--color-bg)",
-  border: "1px solid var(--color-border)",
+  background: "transparent",
+  border: "1px solid var(--rule)",
   color: "var(--color-text)",
   outline: "none",
   fontSize: 16,
-  borderRadius: 8,
-  padding: "10px 12px",
+  borderRadius: "var(--r-2)",
+  padding: "var(--space-2) var(--space-3)",
   width: "100%",
   WebkitAppearance: "none" as const,
 } as const;
 
+const ctaStyle = {
+  background: "var(--accent)",
+  color: "var(--color-text-on-cta)",
+  border: "none",
+  borderRadius: "var(--r-2)",
+  fontSize: "var(--t-meta)",
+  fontWeight: 500,
+  padding: "var(--space-2) var(--space-4)",
+  cursor: "pointer",
+} as const;
+
+const ghostStyle = {
+  background: "transparent",
+  color: "var(--color-text-muted)",
+  border: "1px solid var(--rule)",
+  borderRadius: "var(--r-2)",
+  fontSize: "var(--t-meta)",
+  padding: "var(--space-2) var(--space-4)",
+  cursor: "pointer",
+} as const;
+
 const pillBtnBase = {
   borderRadius: 20,
-  fontSize: 13,
+  fontSize: "var(--t-micro)",
   fontWeight: 500,
-  padding: "6px 14px",
+  padding: "var(--space-1) var(--space-3)",
   cursor: "pointer",
-  border: "1px solid var(--color-border)",
-  transition: "all 0.15s",
+  border: "1px solid var(--rule)",
+  transition: "all var(--motion-fast) var(--ease-out-quart)",
 } as const;
 
 function MacroLine({ item }: { item: Pick<ScanItem, "calories" | "protein_g" | "carbs_g" | "fat_g"> }) {
   return (
-    <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+    <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
       {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P · {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
     </span>
   );
@@ -185,7 +206,6 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reset so the same file can be scanned again
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (libraryInputRef.current) libraryInputRef.current.value = "";
 
@@ -392,10 +412,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Mode toggle ───────────────────────────────────────────────────────────
   const ModeToggle = (
     <div
-      className="flex items-center gap-0.5 p-0.5 rounded-lg self-start"
+      className="flex items-center self-start"
       style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
+        gap: 2,
+        padding: 2,
+        borderRadius: "var(--r-2)",
+        border: "1px solid var(--rule)",
+        background: "transparent",
       }}
     >
       {(["label", "food"] as AnalyzerMode[]).map((opt) => {
@@ -404,10 +427,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           <button
             key={opt}
             onClick={() => setAnalyzerMode(opt)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150"
+            className="transition-all duration-150"
             style={{
-              background: active ? "var(--color-primary)" : "transparent",
+              padding: "var(--space-1) var(--space-3)",
+              borderRadius: "var(--r-1)",
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              background: active ? "var(--accent)" : "transparent",
               color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+              border: "none",
               cursor: "pointer",
               whiteSpace: "nowrap",
             }}
@@ -423,10 +451,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const n = parseInt(containers) || 1;
 
   return (
-    <div
-      className="rounded-xl p-5 flex flex-col gap-4"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
+    <div className="flex flex-col" style={{ gap: "var(--space-4)" }}>
       {/* Mode toggle — always visible */}
       {ModeToggle}
 
@@ -437,15 +462,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       {/* ── LOADING overlay ─────────────────────────────────────────────── */}
       {scanPhase === "loading" && (
         <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2"
+          className="flex items-center"
           style={{
-            background: "var(--color-bg)",
-            border: "1px solid var(--color-border)",
+            gap: "var(--space-2)",
+            padding: "var(--space-2) var(--space-3)",
+            borderRadius: "var(--r-2)",
+            background: "transparent",
+            border: "1px solid var(--rule)",
             color: "var(--color-text-muted)",
-            fontSize: 14,
+            fontSize: "var(--t-meta)",
           }}
         >
-          <Loader2 size={15} className="animate-spin" style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+          <Loader2 size={15} className="animate-spin" style={{ color: "var(--accent)", flexShrink: 0 }} />
           Analyzing…
         </div>
       )}
@@ -453,30 +481,31 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       {/* ── ERROR / recovery panel ───────────────────────────────────────── */}
       {scanPhase === "error" && (
         <div
-          className="rounded-lg p-3 flex flex-col gap-3"
-          style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+          className="flex flex-col"
+          style={{
+            gap: "var(--space-3)",
+            padding: "var(--space-3)",
+            borderRadius: "var(--r-2)",
+            border: "1px solid var(--color-danger-subtle)",
+            background: "transparent",
+          }}
         >
-          <div className="flex items-start gap-2" style={{ color: "var(--color-danger)", fontSize: 14 }}>
+          <div
+            className="flex items-start"
+            style={{ gap: "var(--space-2)", color: "var(--color-danger)", fontSize: "var(--t-meta)" }}
+          >
             <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{errorMsg}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap" style={{ gap: "var(--space-2)" }}>
             <button
               onClick={() => {
                 setScanPhase("idle");
                 setErrorMsg("");
                 cameraInputRef.current?.click();
               }}
-              className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
-              style={{
-                background: "var(--color-primary)",
-                color: "var(--color-text-on-cta)",
-                fontSize: 13,
-                fontWeight: 500,
-                padding: "8px 14px",
-                border: "none",
-                cursor: "pointer",
-              }}
+              className="flex items-center transition-opacity active:opacity-70"
+              style={{ ...ctaStyle, gap: "var(--space-1)", fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
             >
               <Camera size={13} />
               Camera
@@ -487,15 +516,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 setErrorMsg("");
                 libraryInputRef.current?.click();
               }}
-              className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 13,
-                padding: "8px 14px",
-                background: "transparent",
-                cursor: "pointer",
-              }}
+              className="flex items-center transition-opacity active:opacity-70"
+              style={{ ...ghostStyle, gap: "var(--space-1)", fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
             >
               <ImageIcon size={13} />
               From Library
@@ -505,15 +527,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 setErrorMsg("");
                 setScanPhase("manual");
               }}
-              className="rounded-lg transition-opacity active:opacity-70"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 13,
-                padding: "8px 14px",
-                background: "transparent",
-                cursor: "pointer",
-              }}
+              className="transition-opacity active:opacity-70"
+              style={{ ...ghostStyle, fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
             >
               Enter manually
             </button>
@@ -524,10 +539,16 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       {/* ── MANUAL ENTRY form ────────────────────────────────────────────── */}
       {scanPhase === "manual" && (
         <div
-          className="rounded-lg p-4 flex flex-col gap-3"
-          style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+          className="flex flex-col"
+          style={{
+            gap: "var(--space-3)",
+            paddingTop: "var(--space-3)",
+            paddingBottom: "var(--space-3)",
+            borderTop: "1px solid var(--rule-soft)",
+            borderBottom: "1px solid var(--rule-soft)",
+          }}
         >
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Enter nutrition manually</p>
+          <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Enter nutrition manually</p>
           <input
             type="text"
             placeholder="Name (e.g. Greek Yogurt)"
@@ -535,7 +556,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             onChange={(e) => setManualLabel(e.target.value)}
             style={inputStyle}
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2" style={{ gap: "var(--space-2)" }}>
             {[
               { label: "Calories", value: manualCal, set: setManualCal },
               { label: "Protein (g)", value: manualProtein, set: setManualProtein },
@@ -543,7 +564,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               { label: "Fat (g)", value: manualFat, set: setManualFat },
             ].map(({ label, value, set }) => (
               <div key={label}>
-                <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>
+                <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block", marginBottom: "var(--space-1)" }}>
                   {label}
                 </label>
                 <input
@@ -556,35 +577,23 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex" style={{ gap: "var(--space-2)" }}>
             <button
               onClick={handleAddManual}
               disabled={!manualLabel.trim()}
-              className="rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
+              className="transition-opacity active:opacity-70 disabled:opacity-40"
               style={{
-                background: "var(--color-primary)",
-                color: "var(--color-text-on-cta)",
-                fontSize: 14,
-                fontWeight: 500,
-                padding: "10px 16px",
-                border: "none",
-                cursor: manualLabel.trim() ? "pointer" : "default",
+                ...ctaStyle,
                 flex: 1,
+                cursor: manualLabel.trim() ? "pointer" : "default",
               }}
             >
               Add to session
             </button>
             <button
               onClick={() => setScanPhase("idle")}
-              className="rounded-lg transition-opacity active:opacity-70"
-              style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 14,
-                padding: "10px 16px",
-                background: "transparent",
-                cursor: "pointer",
-              }}
+              className="transition-opacity active:opacity-70"
+              style={ghostStyle}
             >
               Cancel
             </button>
@@ -592,24 +601,30 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         </div>
       )}
 
-      {/* ── ITEM LIST or empty state ─────────────────────────────────────── */}
+      {/* ── EMPTY STATE — dashed upload zone ─────────────────────────────── */}
       {items.length === 0 && scanPhase === "idle" && (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <p style={{ fontSize: 14, color: "var(--color-text-muted)", textAlign: "center" }}>
+        <div
+          className="flex flex-col items-center"
+          style={{
+            gap: "var(--space-3)",
+            padding: "var(--space-7) var(--space-4)",
+            border: "1px dashed var(--rule)",
+            borderRadius: "var(--r-2)",
+          }}
+        >
+          <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-muted)", textAlign: "center" }}>
             Scan a nutrition label or food photo to get started.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center" style={{ gap: "var(--space-2)" }}>
             <button
               onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+              className="flex items-center justify-center transition-opacity active:opacity-70"
               style={{
-                background: "var(--color-primary)",
-                color: "var(--color-text-on-cta)",
-                fontSize: 15,
-                padding: "13px 24px",
+                ...ctaStyle,
+                gap: "var(--space-2)",
+                fontSize: "var(--t-body)",
+                padding: "var(--space-3) var(--space-5)",
                 minHeight: 48,
-                border: "none",
-                cursor: "pointer",
               }}
             >
               <Camera size={17} />
@@ -617,15 +632,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             </button>
             <button
               onClick={() => libraryInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70"
+              className="flex items-center justify-center transition-opacity active:opacity-70"
               style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 15,
-                padding: "13px 24px",
+                ...ghostStyle,
+                gap: "var(--space-2)",
+                fontSize: "var(--t-body)",
+                padding: "var(--space-3) var(--space-5)",
                 minHeight: 48,
-                background: "transparent",
-                cursor: "pointer",
               }}
             >
               <ImageIcon size={17} />
@@ -635,29 +648,40 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         </div>
       )}
 
+      {/* ── ITEM LIST ────────────────────────────────────────────────────── */}
       {items.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {items.map((item) => {
+        <div className="flex flex-col">
+          {items.map((item, idx) => {
             const expanded = expandedItemId === item.id;
             return (
               <div
                 key={item.id}
-                className="rounded-lg p-3"
-                style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+                style={{
+                  borderTop: idx > 0 ? "1px solid var(--rule-soft)" : "none",
+                  padding: "var(--space-3) 0",
+                }}
               >
-                <div className="flex items-start gap-2">
-                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
+                <div className="flex items-start" style={{ gap: "var(--space-2)" }}>
+                  <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
+                    <span style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)" }}>
                       {item.label}
                     </span>
                     <MacroLine item={item} />
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }}>
                     {item.mode === "food" && item.ingredients && (
                       <button
                         onClick={() => setExpandedItemId(expanded ? null : item.id)}
-                        className="flex items-center gap-1 rounded transition-opacity active:opacity-70"
-                        style={{ fontSize: 11, color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer", padding: "4px 6px" }}
+                        className="flex items-center transition-opacity active:opacity-70"
+                        style={{
+                          gap: "var(--space-1)",
+                          fontSize: "var(--t-micro)",
+                          color: "var(--color-text-muted)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "var(--space-1) var(--space-2)",
+                        }}
                         title="Edit / Re-estimate"
                       >
                         {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -666,8 +690,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     )}
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="rounded transition-opacity active:opacity-70"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "4px" }}
+                      className="transition-opacity active:opacity-70 flex items-center justify-center"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--color-text-muted)",
+                        width: 32,
+                        height: 32,
+                      }}
                       title="Remove"
                     >
                       <X size={14} />
@@ -677,8 +708,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
                 {/* Expand: dish name + ingredients + re-estimate */}
                 {expanded && item.mode === "food" && (
-                  <div className="mt-3 flex flex-col gap-2">
-                    <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 2 }}>
+                  <div className="flex flex-col" style={{ marginTop: "var(--space-3)", gap: "var(--space-2)" }}>
+                    <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
                       Dish name
                     </label>
                     <input
@@ -689,9 +720,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                           prev.map((i) => i.id === item.id ? { ...i, label: e.target.value } : i)
                         )
                       }
-                      style={{ ...inputStyle, fontWeight: 600, fontSize: 14 }}
+                      style={{ ...inputStyle, fontWeight: 600, fontSize: "var(--t-body)" }}
                     />
-                    <label style={{ fontSize: 11, color: "var(--color-text-muted)", display: "block", marginBottom: 2 }}>
+                    <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
                       Ingredients
                     </label>
                     <textarea
@@ -708,17 +739,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                         ...inputStyle,
                         resize: "none",
                         lineHeight: 1.6,
-                        fontSize: 13,
+                        fontSize: "var(--t-meta)",
                       }}
                     />
                     <button
                       onClick={() => handleReestimateItem(item.id, item.ingredients ?? "")}
                       disabled={reestimatingId === item.id || !item.ingredients?.trim()}
-                      className="flex items-center gap-1.5 rounded-lg transition-opacity active:opacity-70 disabled:opacity-40"
+                      className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
                       style={{
-                        fontSize: 13,
-                        color: "var(--color-primary)",
-                        padding: "6px 0",
+                        gap: "var(--space-1)",
+                        fontSize: "var(--t-meta)",
+                        color: "var(--accent)",
+                        padding: "var(--space-1) 0",
                         background: "none",
                         border: "none",
                         cursor: (reestimatingId === item.id || !item.ingredients?.trim()) ? "default" : "pointer",
@@ -738,18 +770,16 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
           {/* Add another scan */}
           {scanPhase === "idle" && (
-            <div className="flex gap-2">
+            <div className="flex" style={{ gap: "var(--space-2)", paddingTop: "var(--space-3)" }}>
               <button
                 onClick={() => cameraInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+                className="flex items-center justify-center transition-opacity active:opacity-70"
                 style={{
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text-muted)",
-                  fontSize: 13,
-                  padding: "9px 14px",
+                  ...ghostStyle,
+                  gap: "var(--space-2)",
+                  fontSize: "var(--t-micro)",
+                  padding: "var(--space-2) var(--space-3)",
                   minHeight: 40,
-                  background: "transparent",
-                  cursor: "pointer",
                   flex: 1,
                 }}
               >
@@ -758,15 +788,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               </button>
               <button
                 onClick={() => libraryInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 rounded-xl transition-opacity active:opacity-70"
+                className="flex items-center justify-center transition-opacity active:opacity-70"
                 style={{
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text-muted)",
-                  fontSize: 13,
-                  padding: "9px 14px",
+                  ...ghostStyle,
+                  gap: "var(--space-2)",
+                  fontSize: "var(--t-micro)",
+                  padding: "var(--space-2) var(--space-3)",
                   minHeight: 40,
-                  background: "transparent",
-                  cursor: "pointer",
                   flex: 1,
                 }}
               >
@@ -780,18 +808,19 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
       {/* ── COMBINED TOTAL + ACTIONS (only when items exist) ────────────── */}
       {items.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {/* Combined total */}
+        <div className="flex flex-col" style={{ gap: "var(--space-3)" }}>
+          {/* Combined total — hairline row, no card */}
           <div
-            className="rounded-lg px-3 py-2"
             style={{
-              background: "var(--color-bg)",
-              border: "1px solid var(--color-border)",
-              fontSize: 13,
+              paddingTop: "var(--space-3)",
+              paddingBottom: "var(--space-3)",
+              borderTop: "1px solid var(--rule)",
+              borderBottom: "1px solid var(--rule)",
+              fontSize: "var(--t-meta)",
             }}
           >
             <span style={{ color: "var(--color-text-muted)" }}>Combined: </span>
-            <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+            <span className="tnum" style={{ color: "var(--color-text)", fontWeight: 600 }}>
               {Math.round(combined.calories)} cal · {Math.round(combined.protein_g)}g P · {Math.round(combined.carbs_g)}g C · {Math.round(combined.fat_g)}g F
             </span>
           </div>
@@ -800,14 +829,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           {!showInlineChat ? (
             <button
               onClick={() => setShowInlineChat(true)}
-              className="flex items-center gap-2 rounded-xl transition-opacity active:opacity-70"
+              className="flex items-center transition-opacity active:opacity-70"
               style={{
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-muted)",
-                fontSize: 14,
-                padding: "10px 16px",
-                background: "transparent",
-                cursor: "pointer",
+                ...ghostStyle,
+                gap: "var(--space-2)",
+                fontSize: "var(--t-meta)",
+                padding: "var(--space-3) var(--space-4)",
               }}
             >
               <MessageSquare size={14} />
@@ -822,7 +849,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
           {/* Sheet error */}
           {errorMsg && scanPhase === "idle" && (
-            <div className="flex items-center gap-2" style={{ color: "var(--color-danger)", fontSize: 13 }}>
+            <div
+              className="flex items-center"
+              style={{ gap: "var(--space-2)", color: "var(--color-danger)", fontSize: "var(--t-meta)" }}
+            >
               <AlertCircle size={14} />
               {errorMsg}
               <button
@@ -835,16 +865,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           )}
 
           {/* Action row */}
-          <div className="flex gap-2">
+          <div className="flex" style={{ gap: "var(--space-2)" }}>
             <button
               onClick={() => setActiveSheet(activeSheet === "log" ? null : "log")}
-              className="rounded-xl font-medium transition-opacity active:opacity-70"
+              className="transition-opacity active:opacity-70"
               style={{
-                background: activeSheet === "log" ? "var(--color-primary)" : "var(--color-bg)",
+                background: activeSheet === "log" ? "var(--accent)" : "transparent",
                 color: activeSheet === "log" ? "var(--color-text-on-cta)" : "var(--color-text)",
-                border: "1px solid var(--color-border)",
-                fontSize: 14,
-                padding: "10px 14px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-2)",
+                fontSize: "var(--t-meta)",
+                fontWeight: 500,
+                padding: "var(--space-2) var(--space-4)",
                 cursor: "pointer",
                 flex: 1,
               }}
@@ -853,13 +885,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             </button>
             <button
               onClick={() => setActiveSheet(activeSheet === "mealprep" ? null : "mealprep")}
-              className="rounded-xl font-medium transition-opacity active:opacity-70"
+              className="transition-opacity active:opacity-70"
               style={{
-                background: activeSheet === "mealprep" ? "var(--color-primary)" : "var(--color-bg)",
+                background: activeSheet === "mealprep" ? "var(--accent)" : "transparent",
                 color: activeSheet === "mealprep" ? "var(--color-text-on-cta)" : "var(--color-text)",
-                border: "1px solid var(--color-border)",
-                fontSize: 14,
-                padding: "10px 14px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-2)",
+                fontSize: "var(--t-meta)",
+                fontWeight: 500,
+                padding: "var(--space-2) var(--space-4)",
                 cursor: "pointer",
                 flex: 1,
               }}
@@ -868,11 +902,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             </button>
             <button
               onClick={clearAll}
-              className="flex items-center justify-center rounded-xl transition-opacity active:opacity-70"
+              className="flex items-center justify-center transition-opacity active:opacity-70"
               style={{
-                border: "1px solid var(--color-border)",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-2)",
                 color: "var(--color-text-muted)",
-                padding: "10px 12px",
+                padding: "var(--space-2) var(--space-3)",
                 background: "transparent",
                 cursor: "pointer",
               }}
@@ -885,23 +920,26 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           {/* ── LOG SHEET ──────────────────────────────────────────────── */}
           {activeSheet === "log" && (
             <div
-              className="rounded-xl p-4 flex flex-col gap-3"
-              style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+              className="flex flex-col"
+              style={{
+                gap: "var(--space-3)",
+                paddingTop: "var(--space-3)",
+                borderTop: "1px solid var(--rule-soft)",
+              }}
             >
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Log as meal</p>
+              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Log as meal</p>
 
               {/* Meal type */}
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap" style={{ gap: "var(--space-1)" }}>
                 {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setLogMealType(t)}
-                    className="rounded-full transition-all duration-150"
                     style={{
                       ...pillBtnBase,
-                      background: logMealType === t ? "var(--color-primary)" : "transparent",
+                      background: logMealType === t ? "var(--accent)" : "transparent",
                       color: logMealType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-                      borderColor: logMealType === t ? "var(--color-primary)" : "var(--color-border)",
+                      borderColor: logMealType === t ? "var(--accent)" : "var(--rule)",
                     }}
                   >
                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -910,8 +948,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               </div>
 
               {/* Servings */}
-              <div className="flex items-center gap-3">
-                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+              <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
                   Servings
                 </label>
                 <input
@@ -924,7 +962,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               </div>
 
               {/* Preview */}
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div className="tnum" style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                 <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
                   {Math.round(combined.calories * s)} cal · {Math.round(combined.protein_g * s * 10) / 10}g P · {Math.round(combined.carbs_g * s * 10) / 10}g C · {Math.round(combined.fat_g * s * 10) / 10}g F
                 </span>
@@ -933,14 +971,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               <button
                 onClick={handleLogMeal}
                 disabled={logging}
-                className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
+                className="flex items-center justify-center transition-opacity active:opacity-70 disabled:opacity-50"
                 style={{
-                  background: "var(--color-primary)",
-                  color: "var(--color-text-on-cta)",
-                  fontSize: 15,
-                  padding: "13px 20px",
+                  ...ctaStyle,
+                  gap: "var(--space-2)",
+                  fontSize: "var(--t-body)",
+                  padding: "var(--space-3) var(--space-5)",
                   minHeight: 48,
-                  border: "none",
                   cursor: logging ? "default" : "pointer",
                 }}
               >
@@ -953,13 +990,17 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           {/* ── MEAL PREP SHEET ────────────────────────────────────────── */}
           {activeSheet === "mealprep" && (
             <div
-              className="rounded-xl p-4 flex flex-col gap-3"
-              style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+              className="flex flex-col"
+              style={{
+                gap: "var(--space-3)",
+                paddingTop: "var(--space-3)",
+                borderTop: "1px solid var(--rule-soft)",
+              }}
             >
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Meal prep</p>
+              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Meal prep</p>
 
-              <div className="flex items-center gap-3">
-                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+              <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
                   Total batch makes
                 </label>
                 <input
@@ -967,13 +1008,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   inputMode="decimal"
                   value={batchServings}
                   onChange={(e) => setBatchServings(e.target.value)}
-                  style={{ ...inputStyle, width: 70 }}
+                  style={{ ...inputStyle, width: 72 }}
                 />
-                <span style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>servings</span>
+                <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>servings</span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <label style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+              <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
                   Splitting into
                 </label>
                 <input
@@ -981,31 +1022,30 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   inputMode="numeric"
                   value={containers}
                   onChange={(e) => setContainers(e.target.value)}
-                  style={{ ...inputStyle, width: 70 }}
+                  style={{ ...inputStyle, width: 72 }}
                 />
-                <span style={{ fontSize: 13, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>containers</span>
+                <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>containers</span>
               </div>
 
               {/* Per-container preview */}
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                 Per container:{" "}
-                <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+                <span className="tnum" style={{ color: "var(--color-text)", fontWeight: 600 }}>
                   {Math.round(combined.calories / n)} cal · {Math.round((combined.protein_g / n) * 10) / 10}g P · {Math.round((combined.carbs_g / n) * 10) / 10}g C · {Math.round((combined.fat_g / n) * 10) / 10}g F
                 </span>
               </div>
 
               {/* Meal type */}
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap" style={{ gap: "var(--space-1)" }}>
                 {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setMealPrepType(t)}
-                    className="rounded-full transition-all duration-150"
                     style={{
                       ...pillBtnBase,
-                      background: mealPrepType === t ? "var(--color-primary)" : "transparent",
+                      background: mealPrepType === t ? "var(--accent)" : "transparent",
                       color: mealPrepType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-                      borderColor: mealPrepType === t ? "var(--color-primary)" : "var(--color-border)",
+                      borderColor: mealPrepType === t ? "var(--accent)" : "var(--rule)",
                     }}
                   >
                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -1016,14 +1056,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               <button
                 onClick={handleMealPrep}
                 disabled={prepping}
-                className="flex items-center justify-center gap-2 rounded-xl font-medium transition-opacity active:opacity-70 disabled:opacity-50"
+                className="flex items-center justify-center transition-opacity active:opacity-70 disabled:opacity-50"
                 style={{
-                  background: "var(--color-primary)",
-                  color: "var(--color-text-on-cta)",
-                  fontSize: 15,
-                  padding: "13px 20px",
+                  ...ctaStyle,
+                  gap: "var(--space-2)",
+                  fontSize: "var(--t-body)",
+                  padding: "var(--space-3) var(--space-5)",
                   minHeight: 48,
-                  border: "none",
                   cursor: prepping ? "default" : "pointer",
                 }}
               >
