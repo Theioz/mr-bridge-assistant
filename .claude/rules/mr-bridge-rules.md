@@ -173,9 +173,6 @@ EOF
 
 Confirm: "Weather location reset. Using Identity/Location ([value]) as default."
 
-### Web UI hook (future)
-When the web interface is built (issue #10), expose a Location field in Settings that reads/writes `location_city`. Clearing the field should delete the key (not set it to empty string) so the fallback chain kicks in.
-
 ## Memory Update Rules
 - Data is stored in Supabase — do not write to local markdown files for live data
 - Habit logging: run `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`

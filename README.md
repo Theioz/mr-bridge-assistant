@@ -67,7 +67,7 @@ supabase link --project-ref <your-project-ref>   # ref is the part of the URL af
 supabase db push
 ```
 
-This creates all 20 tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, etc.).
+This creates all tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, sports_cache, etc.).
 
 ### Step 3 — Get your Anthropic API key
 
