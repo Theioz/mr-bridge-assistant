@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed (Weekly — uniform panel heights with internal scroll)
+- **All six panels clamped to 440px height** in [web/src/app/(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx). In #310 the two-column grid inherited each panel's natural content height, so Tasks / Training towered over Body composition / Journal and the grid read as uneven. Each panel is now a fixed-height flex column (`height: 440px`), giving the grid a uniform set of cells.
+- **Overflow scrolls inside each panel** via a `scroll-fade-mask` body with `flex: 1; min-height: 0; overflow-y: auto`. The Phase B label stays pinned at top; content scrolls underneath with the existing 16px bottom fade so the scrollbar doesn't read as a hard edge.
+- **Task truncation dropped.** The `.slice(0, 8)` / `.slice(0, 5)` caps on completed + active tasks are gone along with the `+N more` tails — the user can scroll through the full week now, which is what the scroll container is for.
+- **Loading skeleton** updated to match (six hairline-separated `PanelSkeleton`s at the same 440px height).
+- **No UX changes.** All ten parallel Supabase queries and every computed value preserved byte-identical.
+
 ### Fixed (Weekly — switch to dashboard panel pattern, two columns)
 - **Card shells dropped, panels use the dashboard pattern** in [web/src/app/(protected)/weekly/page.tsx](web/src/app/(protected)/weekly/page.tsx). The `--color-surface` + `--color-border` + `--r-2` + `card-lift` wrappers shipped in #309 were replaced with flat `<section>` panels that match the live dashboard's vocabulary — `db-section-label` headers, no fill, no border, no rounded corners, no hover lift. The local `Card` helper is renamed `Panel` and simplified.
 - **Two-column layout preserved.** Panels remain arranged as three rows of two (`grid-cols-1 lg:grid-cols-2`) so each domain sits side-by-side with its pair (Habits | Tasks, Training | Recovery, Body composition | Journal). Row-to-row separation comes from a `border-bottom: 1px solid var(--rule-soft)` + `padding-bottom: var(--space-7)` treatment (the `.db-section` feel applied to a grid row), with the final row omitting the trailing rule.
