@@ -14,6 +14,7 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [validating, setValidating] = useState(false);
 
   async function handleAdd() {
     const symbol = input.trim().toUpperCase();
@@ -24,8 +25,8 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
     }
 
     setError(null);
+    setValidating(true);
 
-    // Validate via proxy route (keeps POLYGON_API_KEY server-side)
     let valid = true;
     try {
       const res = await fetch(`/api/stocks/validate?ticker=${encodeURIComponent(symbol)}`);
@@ -33,6 +34,8 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
       valid = json.valid;
     } catch {
       // Network error — allow add
+    } finally {
+      setValidating(false);
     }
 
     if (!valid) {
@@ -56,50 +59,55 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
     });
   }
 
-  return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      {/* Header */}
-      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <p
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-text-muted)", letterSpacing: "0.07em" }}
-        >
-          Stock Watchlist
-        </p>
-      </div>
+  const addBusy = validating || isPending;
 
-      {/* No-key warning */}
+  return (
+    <section
+      style={{
+        paddingTop: "var(--space-6)",
+        paddingBottom: "var(--space-6)",
+        borderBottom: "1px solid var(--rule-soft)",
+      }}
+    >
+      <h2 className="db-section-label">Stock Watchlist</h2>
+
       {!hasApiKey && (
-        <div
-          className="px-5 py-2.5"
+        <p
           style={{
-            fontSize: 12,
+            fontSize: "var(--t-micro)",
             color: "var(--color-text-muted)",
-            background: "var(--warning-subtle)",
-            borderBottom: "1px solid var(--warning-subtle-strong)",
+            marginBottom: "var(--space-3)",
           }}
         >
           <code
             style={{
-              fontSize: 11,
-              color: "var(--color-warning)",
-              background: "var(--warning-subtle)",
+              fontSize: "var(--t-micro)",
+              color: "var(--accent)",
+              background: "var(--accent-soft)",
               padding: "1px 5px",
-              borderRadius: 4,
+              borderRadius: "var(--r-1)",
             }}
           >
             POLYGON_API_KEY
           </code>{" "}
           not configured — tickers will be saved but data won&apos;t load until the key is set.
-        </div>
+        </p>
       )}
 
-      {/* Add input */}
-      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <div className="flex gap-2">
+      {/* Add input — inline, hairline bottom rule, amber + button */}
+      <div
+        style={{
+          borderBottom: "1px solid var(--rule)",
+          paddingTop: "var(--space-2)",
+          paddingBottom: "var(--space-3)",
+        }}
+      >
+        <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+          <Plus
+            size={16}
+            style={{ color: "var(--accent)", flexShrink: 0 }}
+            aria-hidden
+          />
           <input
             value={input}
             onChange={(e) => {
@@ -107,77 +115,115 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
               setError(null);
             }}
             onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-            placeholder="e.g. AAPL"
+            placeholder="Add a ticker (e.g. AAPL)"
             maxLength={12}
-            className="flex-1 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus:outline-none input-focus-ring"
+            className="flex-1 bg-transparent focus:outline-none min-w-0"
             style={{
-              background: "var(--color-surface-raised)",
-              border: `1px solid ${error ? "var(--color-danger)" : "var(--color-border)"}`,
               color: "var(--color-text)",
+              fontSize: "var(--t-body)",
               fontFamily: "monospace",
               letterSpacing: "0.05em",
+              caretColor: "var(--accent)",
+              minHeight: 44,
+              border: "none",
             }}
           />
           <button
             onClick={handleAdd}
-            disabled={isPending || !input.trim()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+            disabled={addBusy || !input.trim()}
+            className="flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-default"
             style={{
-              background: "var(--color-primary)",
-              color: "var(--color-text-on-cta)",
-              border: "1px solid var(--color-primary)",
+              gap: "var(--space-1)",
+              padding: "0 var(--space-3)",
+              minHeight: 44,
               minWidth: 72,
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              border: "1px solid var(--accent)",
+              borderRadius: "var(--r-1)",
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              letterSpacing: "0.02em",
+              transition: "opacity var(--motion-fast) var(--ease-out-quart)",
             }}
           >
-            {isPending ? (
+            {addBusy ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
-              <><Plus size={14} /> Add</>
+              "Add"
             )}
           </button>
         </div>
         {error && (
-          <p className="mt-1.5" style={{ fontSize: 12, color: "var(--color-danger)" }}>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-danger)",
+              marginTop: "var(--space-2)",
+            }}
+          >
             {error}
           </p>
         )}
       </div>
 
-      {/* Ticker list */}
+      {/* Ticker list — hairline-separated rows */}
       {tickers.length === 0 ? (
-        <div className="px-5 py-4" style={{ fontSize: 13, color: "var(--color-text-faint)" }}>
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            paddingTop: "var(--space-4)",
+          }}
+        >
           No tickers added yet.
-        </div>
+        </p>
       ) : (
-        tickers.map((ticker) => (
-          <div
-            key={ticker}
-            className="flex items-center justify-between px-5 py-3"
-            style={{ borderBottom: "1px solid var(--color-border)" }}
-          >
-            <span
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {tickers.map((ticker, i) => (
+            <li
+              key={ticker}
+              className="flex items-center justify-between"
               style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--color-text)",
-                fontFamily: "monospace",
-                letterSpacing: "0.04em",
+                paddingTop: "var(--space-3)",
+                paddingBottom: "var(--space-3)",
+                gap: "var(--space-3)",
+                borderTop: i === 0 ? "none" : "1px solid var(--rule-soft)",
+                minHeight: 44,
               }}
             >
-              {ticker}
-            </span>
-            <button
-              onClick={() => handleRemove(ticker)}
-              disabled={isPending}
-              className="flex items-center justify-center w-6 h-6 rounded transition-colors cursor-pointer disabled:opacity-40 hover-text-danger"
-              style={{ color: "var(--color-text-faint)" }}
-              title={`Remove ${ticker}`}
-            >
-              <X size={13} />
-            </button>
-          </div>
-        ))
+              <span
+                style={{
+                  fontSize: "var(--t-meta)",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {ticker}
+              </span>
+              <button
+                onClick={() => handleRemove(ticker)}
+                disabled={isPending}
+                className="flex items-center justify-center cursor-pointer disabled:opacity-40 hover-text-danger"
+                style={{
+                  width: 44,
+                  height: 44,
+                  color: "var(--color-text-faint)",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: "var(--r-1)",
+                  transition: "color var(--motion-fast) var(--ease-out-quart)",
+                }}
+                title={`Remove ${ticker}`}
+              >
+                <X size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

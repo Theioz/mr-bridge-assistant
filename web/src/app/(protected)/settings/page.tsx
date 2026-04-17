@@ -90,15 +90,26 @@ export default async function SettingsPage() {
   const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+    <div className="max-w-2xl">
+      <header style={{ marginBottom: "var(--space-2)" }}>
+        <h1
+          className="font-heading"
+          style={{
+            fontSize: "var(--t-h1)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.02em",
+          }}
+        >
           Settings
         </h1>
-        <p className="mt-1" style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+        <p
+          className="mt-1"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+        >
           Edit and save changes inline. Press Enter or click Save on any field.
         </p>
-      </div>
+      </header>
 
       <AppearanceSettings />
 
