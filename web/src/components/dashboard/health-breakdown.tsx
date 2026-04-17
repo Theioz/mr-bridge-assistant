@@ -83,7 +83,7 @@ function Metric({ label, value, unit }: MetricProps) {
         className="tnum"
         style={{
           fontSize: "var(--t-micro)",
-          color: "var(--color-text-faint)",
+          color: "var(--color-text-muted)",
           letterSpacing: "0.04em",
           textTransform: "uppercase",
           flexShrink: 0,
@@ -659,7 +659,7 @@ export default function HealthBreakdown({
                 style={{
                   textTransform: "uppercase",
                   letterSpacing: "0.12em",
-                  color: "var(--color-text-faint)",
+                  color: "var(--color-text-muted)",
                   fontWeight: 500,
                 }}
               >

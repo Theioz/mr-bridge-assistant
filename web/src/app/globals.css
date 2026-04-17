@@ -56,9 +56,11 @@
   --color-border-subtle:  oklch(24% 0.013 var(--hue));
 
   --color-text:           oklch(95% 0.006 var(--hue));
-  --color-text-muted:     oklch(72% 0.012 var(--hue));
-  /* Lifted from the previous 56%L so 13px passes WCAG AA on raised surfaces. */
-  --color-text-faint:     oklch(65% 0.014 var(--hue));
+  /* Muted + faint tiers lifted one more step so text reads cleanly on the
+     watercolor canvas (dashboard "yesterday" prefix, weekly closed-task
+     titles, history previews, etc.). */
+  --color-text-muted:     oklch(78% 0.012 var(--hue));
+  --color-text-faint:     oklch(72% 0.014 var(--hue));
 
   /* Single accent — muted amber. Focus rings, today markers,
      attention-required items. Primary/secondary/CTA alias to it: the
@@ -113,11 +115,11 @@
 
   /* Three-tier ink. Darkened across the board so light-mode text reads
      as decisively as dark-mode does — 22/45/52%L felt washed on
-     paper-toned 98.5%L canvas. New levels keep the same 4-step rhythm
-     between tiers but anchor the deepest ink near print-like density. */
+     paper-toned 98.5%L canvas. Muted + faint deepened one more step so
+     text reads cleanly on the watercolor canvas. */
   --color-text:           oklch(16% 0.020 var(--hue));
-  --color-text-muted:     oklch(36% 0.017 var(--hue));
-  --color-text-faint:     oklch(44% 0.014 var(--hue));
+  --color-text-muted:     oklch(30% 0.017 var(--hue));
+  --color-text-faint:     oklch(38% 0.014 var(--hue));
 
   --accent:               oklch(62% 0.13 65);
   --accent-soft:          oklch(94% 0.04 65);
@@ -215,7 +217,7 @@ body {
   height: 100vh;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.38;
   mix-blend-mode: screen;
 }
 
@@ -225,7 +227,7 @@ body {
 }
 :root[data-theme="light"] .ambient-watercolor {
   mix-blend-mode: multiply;
-  opacity: 0.85;
+  opacity: 0.58;
 }
 
 /* ─── Focus visible (global) ──────────────────────────────────────────── */
@@ -294,13 +296,13 @@ body {
 }
 
 /* ─── Journal prose field ────────────────────────────────────────────── */
-/* Flat textarea — no chrome at rest; a hairline bottom rule appears on
+/* Flat textarea with a quiet hairline boundary at rest; rule darkens on
    focus so the field feels like a paper ruling rather than a form input. */
 .journal-field {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid var(--rule-soft);
   border-radius: 0;
   padding: var(--space-2) 0;
   color: var(--color-text);
@@ -314,10 +316,10 @@ body {
 .journal-field:focus,
 .journal-field:focus-visible {
   outline: none;
-  border-bottom-color: var(--rule-soft);
+  border-bottom-color: var(--rule);
 }
 .journal-field::placeholder {
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
 }
 
 /* Card hover lift — MASTER.md spec. */

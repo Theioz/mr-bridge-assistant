@@ -123,9 +123,7 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
                   i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined
                 }
               >
-                <td style={nameCellStyle}>
-                  {h.emoji ? `${h.emoji} ${h.name}` : h.name}
-                </td>
+                <td style={nameCellStyle}>{h.name}</td>
                 {weeks.map((w) => {
                   const count = w.dates.filter((d) => getCompleted(h.id, d) === true).length;
                   const total = w.dates.length;

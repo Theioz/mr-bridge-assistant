@@ -14,7 +14,6 @@ import { getWindow } from "@/lib/window";
 import DashboardMasthead from "@/components/dashboard/dashboard-masthead";
 import DashboardGreeting from "@/components/dashboard/dashboard-greeting";
 import DashboardBriefing from "@/components/dashboard/dashboard-briefing";
-import DashboardFooter from "@/components/dashboard/dashboard-footer";
 import BodyFitnessSummary from "@/components/dashboard/body-fitness-summary";
 import HealthBreakdown from "@/components/dashboard/health-breakdown";
 import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
@@ -241,9 +240,14 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 print:flex print:flex-col">
 
-      {/* ── Masthead: brand + date + window selector (desktop) ──────── */}
+      {/* ── Masthead: brand + date + window selector + refresh (desktop) ── */}
       <div className="print:order-1" data-reveal data-stagger="0">
-        <DashboardMasthead dateStr={dateStr} windowKey={windowKey} />
+        <DashboardMasthead
+          dateStr={dateStr}
+          windowKey={windowKey}
+          refreshStocks={refreshStocks}
+          refreshSports={refreshSports}
+        />
       </div>
 
       {/* ── Greeting ─────────────────────────────────────────────────── */}
@@ -256,15 +260,19 @@ export default async function DashboardPage() {
         <DashboardBriefing />
       </div>
 
-      {/* Mobile-only sticky time-range selector */}
+      {/* Mobile-only sticky time-range selector — transparent so the watercolor
+          canvas reads through; backdrop-filter keeps the pills legible when
+          long content scrolls behind. */}
       <div
         className="lg:hidden print:hidden"
         style={{
           position: "sticky",
           top: 0,
           zIndex: 10,
-          background: "var(--color-bg)",
-          borderBottom: "1px solid var(--rule)",
+          background: "transparent",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          borderBottom: "1px solid var(--rule-soft)",
           marginLeft: "-20px",
           marginRight: "-20px",
           padding: "8px 20px",
@@ -358,10 +366,6 @@ export default async function DashboardPage() {
           refreshAction={refreshSports}
         />
       </div>
-
-      {/* ── Footer: consolidated refresh (syncs Oura, Fitbit, Google Fit,
-             stocks, and sports in parallel) ─────────────────────────── */}
-      <DashboardFooter refreshStocks={refreshStocks} refreshSports={refreshSports} />
 
     </div>
   );

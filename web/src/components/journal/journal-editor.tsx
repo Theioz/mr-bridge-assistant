@@ -212,7 +212,7 @@ export default function JournalEditor({
               style={{
                 marginLeft: "var(--space-2)",
                 fontSize: "var(--t-micro)",
-                color: "var(--color-text-faint)",
+                color: "var(--color-text-muted)",
               }}
             >
               {filledCount} / {PROMPTS.length}
@@ -231,7 +231,11 @@ export default function JournalEditor({
               <label
                 htmlFor={`journal-${p.slug}`}
                 className="db-section-label"
-                style={{ display: "block", margin: "0 0 var(--space-2)" }}
+                style={{
+                  display: "block",
+                  margin: "0 0 var(--space-2)",
+                  color: "var(--color-text-muted)",
+                }}
               >
                 {p.question}
               </label>
@@ -265,7 +269,7 @@ export default function JournalEditor({
               marginTop: "var(--space-2)",
               textAlign: "right",
               fontSize: "var(--t-micro)",
-              color: "var(--color-text-faint)",
+              color: "var(--color-text-muted)",
             }}
           >
             {wordCount} {wordCount === 1 ? "word" : "words"}
