@@ -29,7 +29,7 @@ Have these accounts and tools ready before you start. You do not need to install
 
 | What | Where | Notes |
 |------|-------|-------|
-| **Claude Code CLI** | `npm install -g @anthropic-ai/claude-code` | Requires Node 18+ |
+| **Claude Code CLI** | `npm install -g @anthropic-ai/claude-code` | Requires Node 20.9+ (Next.js 16 minimum) |
 | **Anthropic API key** | [console.anthropic.com](https://console.anthropic.com) → API Keys | Billing must be enabled (Settings → Billing) |
 | **Supabase account** | [supabase.com](https://supabase.com) | Free tier is fine |
 | **Vercel account** | [vercel.com](https://vercel.com) | Free tier is fine |
