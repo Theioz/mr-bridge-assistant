@@ -56,7 +56,25 @@ export function buildHabitsTools({ supabase, userId }: ToolContext) {
         if (userId) habQ = habQ.eq("user_id", userId);
         const { data: habits, error: lookupError } = await habQ;
         if (lookupError) return err(lookupError.message);
-        if (!habits || habits.length === 0) return err(`No active habit matching "${name}" found.`);
+        if (!habits || habits.length === 0) {
+          // Include the user's actual active habits in the error payload (#346).
+          // Without this the model fabricates plausible-sounding alternatives
+          // instead of citing real ones — a #319-mirror: tool failed honestly
+          // but the recovery-suggestion path hallucinated.
+          let allQ = supabase
+            .from("habit_registry")
+            .select("name")
+            .eq("active", true)
+            .order("name");
+          if (userId) allQ = allQ.eq("user_id", userId);
+          const { data: active } = await allQ;
+          const activeNames = (active ?? []).map((h: { name: string }) => h.name);
+          return err(
+            `No active habit matching "${name}" found. ` +
+            `User's actual active habits: ${activeNames.length ? activeNames.join(", ") : "(none)"}. ` +
+            `Suggest one of these, or propose creating a new habit — do not invent names.`
+          );
+        }
         const habit = habits[0];
         const { data, error: upsertError } = await supabase
           .from("habits")
