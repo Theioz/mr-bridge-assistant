@@ -29,6 +29,7 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
         "Always tell the user what you are about to write before calling this tool, then confirm each key that was saved.",
       inputSchema: jsonSchema<{ updates: { key: string; value: string }[] }>({
         type: "object",
+        additionalProperties: false,
         required: ["updates"],
         properties: {
           updates: {
@@ -36,6 +37,7 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
             description: "Key/value pairs to upsert into the profile table.",
             items: {
               type: "object",
+              additionalProperties: false,
               required: ["key", "value"],
               properties: {
                 key: { type: "string", description: "Profile key." },

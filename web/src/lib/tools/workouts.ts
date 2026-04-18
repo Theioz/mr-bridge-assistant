@@ -83,13 +83,59 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         update_calendar?: boolean;
       }>({
         type: "object",
+        additionalProperties: false,
         required: ["date", "warmup", "workout", "cooldown"],
         properties: {
           date: { type: "string", description: "Date in YYYY-MM-DD format." },
           name: { type: "string", description: "Workout name shown on the fitness page card, e.g. 'Push Day', 'Pull Day', 'Legs'." },
-          warmup: { type: "array", items: { type: "object" }, description: "Warm-up exercises." },
-          workout: { type: "array", items: { type: "object" }, description: "Main workout exercises." },
-          cooldown: { type: "array", items: { type: "object" }, description: "Cool-down exercises." },
+          warmup: {
+            type: "array",
+            description: "Warm-up exercises.",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["exercise"],
+              properties: {
+                exercise: { type: "string", description: "Exercise name." },
+                sets: { type: "number", description: "Number of sets." },
+                reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
+                weight_lbs: { type: "number", description: "Working weight in lbs." },
+                notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+              },
+            },
+          },
+          workout: {
+            type: "array",
+            description: "Main workout exercises.",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["exercise"],
+              properties: {
+                exercise: { type: "string", description: "Exercise name." },
+                sets: { type: "number", description: "Number of sets." },
+                reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
+                weight_lbs: { type: "number", description: "Working weight in lbs." },
+                notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+              },
+            },
+          },
+          cooldown: {
+            type: "array",
+            description: "Cool-down exercises.",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["exercise"],
+              properties: {
+                exercise: { type: "string", description: "Exercise name." },
+                sets: { type: "number", description: "Number of sets." },
+                reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
+                weight_lbs: { type: "number", description: "Working weight in lbs." },
+                notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+              },
+            },
+          },
           notes: { type: "string", description: "Optional plan notes." },
           start_time: { type: "string", description: "Workout start time in HH:MM (24h) format." },
           end_time: { type: "string", description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour." },
@@ -187,6 +233,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         updates: { exercise?: string; sets?: number; reps?: string; weight_lbs?: number; notes?: string };
       }>({
         type: "object",
+        additionalProperties: false,
         required: ["date", "phase", "exercise_name", "updates"],
         properties: {
           date: { type: "string", description: "YYYY-MM-DD date of the plan to edit." },
@@ -194,6 +241,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           exercise_name: { type: "string", description: "Existing exercise name to match (case-insensitive)." },
           updates: {
             type: "object",
+            additionalProperties: false,
             description: "Fields to merge into the matched exercise object. Use `exercise` to rename/swap.",
             properties: {
               exercise: { type: "string", description: "New exercise name (for swaps/renames)." },

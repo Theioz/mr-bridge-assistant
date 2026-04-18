@@ -109,6 +109,7 @@ export function buildCalendarTools({ isDemo }: ToolContext) {
         all_day?: boolean;
       }>({
         type: "object",
+        additionalProperties: false,
         required: ["title", "date"],
         properties: {
           title: { type: "string", description: "Event title/summary." },
@@ -268,6 +269,7 @@ export function buildCalendarTools({ isDemo }: ToolContext) {
         description?: string;
       }>({
         type: "object",
+        additionalProperties: false,
         required: ["eventId"],
         properties: {
           eventId: { type: "string", description: "The eventId from list_calendar_events." },
