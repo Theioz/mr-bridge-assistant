@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useSyncExternalStore, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { setThemePreference } from "@/lib/theme-actions";
 import type { ThemePreference } from "@/lib/theme";
@@ -11,12 +11,22 @@ const OPTIONS: { value: ThemePreference; label: string; desc: string }[] = [
   { value: "dark",   label: "Dark",  desc: "Dark mode always" },
 ];
 
+// Hydration flag via an external-store read: getServerSnapshot returns false
+// for SSR and the first client render, then the post-hydration snapshot is
+// true. This is the react-hooks@7-compatible replacement for the classic
+// `useState(false) + useEffect(() => setMounted(true))` pattern.
+const subscribeMounted = () => () => {};
+const getMountedSnapshot = () => true;
+const getMountedServerSnapshot = () => false;
+
 export function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeMounted,
+    getMountedSnapshot,
+    getMountedServerSnapshot,
+  );
   const [, startTransition] = useTransition();
-
-  useEffect(() => setMounted(true), []);
 
   const current = (theme as ThemePreference | undefined) ?? "system";
   const active = OPTIONS.find((o) => o.value === current) ?? OPTIONS[0];

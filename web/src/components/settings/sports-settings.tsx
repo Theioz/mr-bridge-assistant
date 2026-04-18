@@ -21,11 +21,7 @@ export function SportsSettings({ favorites, saveAction }: Props) {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!query.trim()) {
-      setResults([]);
-      setError(null);
-      return;
-    }
+    if (!query.trim()) return;
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       setError(null);
@@ -103,7 +99,12 @@ export function SportsSettings({ favorites, saveAction }: Props) {
           />
           <input
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setError(null); }}
+            onChange={(e) => {
+              const val = e.target.value;
+              setQuery(val);
+              setError(null);
+              if (!val.trim()) setResults([]);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && results.length > 0) {
                 e.preventDefault();
