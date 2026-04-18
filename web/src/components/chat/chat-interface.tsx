@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Loader2, Send, ChevronDown } from "lucide-react";
+import { Loader2, Send, Square, ChevronDown } from "lucide-react";
 import { Fragment } from "react";
 import MessageBubble from "./message-bubble";
 import ToolStatusBar from "./tool-status-bar";
@@ -128,7 +128,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
     []
   );
 
-  const { messages, sendMessage, regenerate, status, error } = useChat({
+  const { messages, sendMessage, regenerate, status, stop, error } = useChat({
     transport,
     messages: initialMessages,
     onFinish: ({ message }) => {
@@ -229,9 +229,15 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           }
           break;
         case "Escape":
-          if (menuCommands.length === 0) return;
-          e.preventDefault();
-          setMenuCommands([]);
+          if (menuCommands.length > 0) {
+            e.preventDefault();
+            setMenuCommands([]);
+            return;
+          }
+          if (status === "streaming" || status === "submitted") {
+            e.preventDefault();
+            stop();
+          }
           break;
         case "Tab":
           if (menuCommands.length === 0) return;
@@ -240,8 +246,23 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           break;
       }
     },
-    [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit]
+    [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit, status, stop]
   );
+
+  // Esc cancels a turn in flight. The textarea is disabled while streaming
+  // so the per-textarea keydown won't fire; attach to document only while
+  // active to avoid hijacking Esc when idle (modal-close muscle memory).
+  useEffect(() => {
+    if (status !== "streaming" && status !== "submitted") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        stop();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [status, stop]);
 
   // ── Scroll to bottom ─────────────────────────────────────────────────
   const hasInitialScrolled = useRef(false);
@@ -539,8 +560,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         </div>
 
         <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
+          type={isLoading ? "button" : "submit"}
+          onClick={isLoading ? () => stop() : undefined}
+          disabled={!isLoading && !input.trim()}
+          aria-label={isLoading ? "Stop generating" : "Send"}
           className="cursor-pointer hover-text-brighten disabled:opacity-30 disabled:cursor-default"
           style={{
             padding: "0 var(--space-4)",
@@ -557,7 +580,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             transition: `color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart), opacity var(--motion-fast) var(--ease-out-quart)`,
           }}
         >
-          <Send size={16} />
+          {isLoading ? <Square size={14} fill="currentColor" /> : <Send size={16} />}
         </button>
       </form>
     </div>
