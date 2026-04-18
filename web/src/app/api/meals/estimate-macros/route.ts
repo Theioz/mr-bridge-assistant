@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,13 +10,13 @@ const MacroEstimateSchema = z.object({
   meal_type_guess: z
     .enum(["breakfast", "lunch", "dinner", "snack"])
     .describe("Best guess for meal type based on the food"),
-  calories: z.number().int().describe("Estimated total calories for the described portion"),
+  calories: z.number().describe("Estimated total calories for the described portion (integer)"),
   protein_g: z.number().describe("Estimated protein in grams"),
   carbs_g: z.number().describe("Estimated carbohydrates in grams"),
   fat_g: z.number().describe("Estimated fat in grams"),
   fiber_g: z.number().nullable().describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
   sugar_g: z.number().nullable().describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
-  sodium_mg: z.number().int().describe("Estimated sodium in milligrams"),
+  sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the estimate"),
   notes: z.string().describe("Brief caveats, e.g. 'portion size assumed standard serving'"),
 });
@@ -80,13 +80,13 @@ Instructions:
 - Include any key assumptions in notes`;
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-haiku-4-5-20251001"),
-      schema: MacroEstimateSchema,
+      output: Output.object({ schema: MacroEstimateSchema }),
       messages: [{ role: "user", content: prompt }],
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     console.error("[estimate-macros] Claude error:", err);
     return Response.json(

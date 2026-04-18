@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,13 +15,13 @@ const FoodAnalysisSchema = z.object({
   meal_type_guess: z
     .enum(["breakfast", "lunch", "dinner", "snack"])
     .describe("Best guess for meal type based on the food"),
-  calories: z.number().int().describe("Estimated total calories for the visible portion"),
+  calories: z.number().describe("Estimated total calories for the visible portion (integer)"),
   protein_g: z.number().describe("Estimated protein in grams"),
   carbs_g: z.number().describe("Estimated carbohydrates in grams"),
   fat_g: z.number().describe("Estimated fat in grams"),
   fiber_g: z.number().nullable().describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
   sugar_g: z.number().nullable().describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
-  sodium_mg: z.number().int().describe("Estimated sodium in milligrams"),
+  sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the analysis"),
   notes: z
     .string()
@@ -34,7 +34,7 @@ const NutritionLabelSchema = z.object({
   product_name: z.string().describe("Product or food name if visible on the label"),
   serving_size: z.string().describe("Serving size as printed, e.g. '1 cup (240ml)' or '28g'"),
   servings_per_container: z.number().nullable().describe("Servings per container if printed"),
-  calories: z.number().int().describe("Calories per serving as printed"),
+  calories: z.number().describe("Calories per serving as printed (integer)"),
   protein_g: z.number().describe("Protein in grams per serving"),
   carbs_g: z.number().describe("Total carbohydrates in grams per serving"),
   fat_g: z.number().describe("Total fat in grams per serving"),
@@ -99,9 +99,9 @@ export async function POST(req: Request) {
 
   try {
     if (mode === "label") {
-      const { object } = await generateObject({
+      const { output } = await generateText({
         model: anthropic("claude-sonnet-4-6"),
-        schema: NutritionLabelSchema,
+        output: Output.object({ schema: NutritionLabelSchema }),
         messages: [
           {
             role: "user",
@@ -120,12 +120,12 @@ export async function POST(req: Request) {
         ],
       });
 
-      return Response.json({ mode: "label", ...object });
+      return Response.json({ mode: "label", ...output });
     }
 
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-sonnet-4-6"),
-      schema: FoodAnalysisSchema,
+      output: Output.object({ schema: FoodAnalysisSchema }),
       messages: [
         {
           role: "user",
@@ -155,7 +155,7 @@ Instructions:
       ],
     });
 
-    return Response.json({ mode: "food", ...object });
+    return Response.json({ mode: "food", ...output });
   } catch (err) {
     console.error("[analyze-photo] Claude error:", err);
     return Response.json(

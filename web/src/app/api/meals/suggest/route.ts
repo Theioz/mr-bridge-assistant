@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -14,7 +14,7 @@ const SuggestionsSchema = z.object({
         description: z
           .string()
           .describe("1–2 sentence description of the dish, cooking method, and why it fits"),
-        calories: z.number().int().describe("Estimated total calories"),
+        calories: z.number().describe("Estimated total calories (integer)"),
         protein_g: z.number().describe("Estimated protein in grams"),
         carbs_g: z.number().describe("Estimated carbohydrates in grams"),
         fat_g: z.number().describe("Estimated fat in grams"),
@@ -27,9 +27,7 @@ const SuggestionsSchema = z.object({
           .describe("UUID of the matching saved recipe, if isSaved is true"),
       })
     )
-    .min(1)
-    .max(3)
-    .describe("2–3 meal suggestions"),
+    .describe("2–3 meal suggestions (return between 1 and 3 items)"),
 });
 
 interface PostBody {
@@ -151,9 +149,9 @@ INSTRUCTIONS:
 - Keep descriptions concise: cooking method + why it fits the macros`;
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-sonnet-4-6"),
-      schema: SuggestionsSchema,
+      output: Output.object({ schema: SuggestionsSchema }),
       messages: [
         {
           role: "user",
@@ -162,7 +160,7 @@ INSTRUCTIONS:
       ],
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     console.error("[meals/suggest] Claude error:", err);
     return Response.json(
