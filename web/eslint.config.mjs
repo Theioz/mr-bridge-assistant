@@ -10,14 +10,6 @@ const eslintConfig = [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      // eslint-plugin-react-hooks@7 introduced these rules as errors; we're
-      // surfacing them as warnings in this upgrade PR and will address the
-      // violations in a follow-up (tracked separately) to keep the Next 15→16
-      // bisect surface minimal.
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/refs": "warn",
     },
   },
   {

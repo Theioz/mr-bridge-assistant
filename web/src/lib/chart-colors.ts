@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useSyncExternalStore } from "react";
 
 export type ChartColors = {
   primary: string;
@@ -63,24 +62,48 @@ const FALLBACK_DARK: ChartColors = {
   tooltipBorder: "#1F2937",
 };
 
+const COLOR_KEYS = Object.keys(KEYS) as (keyof ChartColors)[];
+
 function readColors(): ChartColors {
   if (typeof window === "undefined") return FALLBACK_DARK;
   const styles = getComputedStyle(document.documentElement);
   const out = {} as ChartColors;
-  (Object.keys(KEYS) as (keyof ChartColors)[]).forEach((k) => {
+  for (const k of COLOR_KEYS) {
     const v = styles.getPropertyValue(KEYS[k]).trim();
     out[k] = v || FALLBACK_DARK[k];
-  });
+  }
   return out;
 }
 
+// Cached snapshot so useSyncExternalStore sees a referentially stable value
+// when the underlying CSS variables haven't changed.
+let cachedSnapshot: ChartColors = FALLBACK_DARK;
+let cachedSignature = "";
+
+function getSnapshot(): ChartColors {
+  const next = readColors();
+  const signature = COLOR_KEYS.map((k) => next[k]).join("|");
+  if (signature !== cachedSignature) {
+    cachedSignature = signature;
+    cachedSnapshot = next;
+  }
+  return cachedSnapshot;
+}
+
+function getServerSnapshot(): ChartColors {
+  return FALLBACK_DARK;
+}
+
+function subscribe(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const observer = new MutationObserver(onStoreChange);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme", "style"],
+  });
+  return () => observer.disconnect();
+}
+
 export function useChartColors(): ChartColors {
-  const { resolvedTheme } = useTheme();
-  const [colors, setColors] = useState<ChartColors>(FALLBACK_DARK);
-
-  useEffect(() => {
-    setColors(readColors());
-  }, [resolvedTheme]);
-
-  return colors;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

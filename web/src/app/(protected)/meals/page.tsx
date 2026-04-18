@@ -57,30 +57,25 @@ export default async function MealsPage() {
 
   // Compute today's macro totals (entries with at least some macro data).
   // fiber/sugar stay null when no meal today reports them — they render as em-dash, not 0.
-  let fiberAny = false;
-  let sugarAny = false;
-  let fiberSum = 0;
-  let sugarSum = 0;
-  const macroTotals: MacroTotals = todayMeals.reduce(
-    (acc, m) => {
-      if (m.fiber_g != null) { fiberSum += m.fiber_g; fiberAny = true; }
-      if (m.sugar_g != null) { sugarSum += m.sugar_g; sugarAny = true; }
-      return {
-        calories: acc.calories + (m.calories ?? 0),
-        protein: acc.protein + (m.protein_g ?? 0),
-        carbs: acc.carbs + (m.carbs_g ?? 0),
-        fat: acc.fat + (m.fat_g ?? 0),
-        fiber: null,
-        sugar: null,
-      };
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: null as number | null, sugar: null as number | null }
+  const macroSums = todayMeals.reduce<MacroTotals>(
+    (acc, m) => ({
+      calories: acc.calories + (m.calories ?? 0),
+      protein: acc.protein + (m.protein_g ?? 0),
+      carbs: acc.carbs + (m.carbs_g ?? 0),
+      fat: acc.fat + (m.fat_g ?? 0),
+      fiber: m.fiber_g != null ? (acc.fiber ?? 0) + m.fiber_g : acc.fiber,
+      sugar: m.sugar_g != null ? (acc.sugar ?? 0) + m.sugar_g : acc.sugar,
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: null, sugar: null },
   );
-  macroTotals.protein = Math.round(macroTotals.protein);
-  macroTotals.carbs = Math.round(macroTotals.carbs);
-  macroTotals.fat = Math.round(macroTotals.fat);
-  macroTotals.fiber = fiberAny ? Math.round(fiberSum * 10) / 10 : null;
-  macroTotals.sugar = sugarAny ? Math.round(sugarSum * 10) / 10 : null;
+  const macroTotals: MacroTotals = {
+    calories: macroSums.calories,
+    protein: Math.round(macroSums.protein),
+    carbs: Math.round(macroSums.carbs),
+    fat: Math.round(macroSums.fat),
+    fiber: macroSums.fiber != null ? Math.round(macroSums.fiber * 10) / 10 : null,
+    sugar: macroSums.sugar != null ? Math.round(macroSums.sugar * 10) / 10 : null,
+  };
 
   return (
     <div className="max-w-2xl">

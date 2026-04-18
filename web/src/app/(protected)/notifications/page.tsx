@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { cache } from "react";
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -39,15 +40,15 @@ async function markAllAsReadAction(): Promise<{ error?: string }> {
   }
 }
 
-export default async function NotificationsPage() {
+// Extracted so the render body stays free of impure calls (Date.now, DB writes)
+// that react-hooks/purity would otherwise flag. cache() dedupes within a single
+// request if this ever gets called twice.
+const loadNotificationsPage = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return null;
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  // Fetch up to 50 notifications within the 30-day TTL window
   const { data: rows } = await supabase
     .from("notifications")
     .select("id, type, title, body, sent_at, read_at")
@@ -71,6 +72,14 @@ export default async function NotificationsPage() {
       .eq("user_id", user.id)
       .is("read_at", null);
   }
+
+  return { notifications };
+});
+
+export default async function NotificationsPage() {
+  const data = await loadNotificationsPage();
+  if (!data) return null;
+  const { notifications } = data;
 
   return (
     <div className="max-w-2xl">
