@@ -33,10 +33,11 @@ export default function ScheduleToday() {
         setEvents(d.events ?? []);
       })
       .catch(() => setError(true))
-      .finally(() => setLoading(false));
-
-    const now = new Date();
-    setNowMinutes(now.getHours() * 60 + now.getMinutes());
+      .finally(() => {
+        setLoading(false);
+        const now = new Date();
+        setNowMinutes(now.getHours() * 60 + now.getMinutes());
+      });
   }, []);
 
   return (
