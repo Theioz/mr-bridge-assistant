@@ -80,7 +80,13 @@ export function buildHabitsTools({ supabase, userId }: ToolContext) {
           .from("habits")
           .upsert(
             { user_id: userId, habit_id: habit.id, date: targetDate, completed: true, notes: notes ?? null },
-            { onConflict: "habit_id,date" }
+            // Migration 20260417000001 rekeyed the unique constraint from
+            // (habit_id, date) to (user_id, habit_id, date). The other two
+            // call sites were updated (seed_demo.py, cron/reset-demo) — this
+            // one was missed, so every chat log_habit has been failing with
+            // "no unique or exclusion constraint matching..." since that
+            // migration landed.
+            { onConflict: "user_id,habit_id,date" }
           )
           .select("habit_id, date, completed, notes")
           .single();
