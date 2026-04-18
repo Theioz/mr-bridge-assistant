@@ -1,7 +1,8 @@
 "use client";
 
-import { useChat } from "ai/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Send, ChevronDown } from "lucide-react";
 import { Fragment } from "react";
 import MessageBubble from "./message-bubble";
@@ -9,11 +10,11 @@ import ToolStatusBar from "./tool-status-bar";
 import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-command-menu";
 import { formatDaySeparator, isSameDay } from "@/lib/relative-time";
 import { useKeyboardOpen } from "@/lib/use-keyboard-open";
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 
 interface Props {
   sessionId: string;
-  initialMessages: Message[];
+  initialMessages: UIMessage[];
   onMessageSent?: (info?: { turnComplete: boolean; hadFailures: boolean; deadlineExceeded: boolean }) => void;
   hasMore?: boolean;
   loadingMore?: boolean;
@@ -21,15 +22,33 @@ interface Props {
   initialInput?: string;
 }
 
-// Side-channel sentinel emitted by /api/chat onFinish (issue 319). Absence
-// of this after a turn ends means the Lambda was killed mid-stream and the
+// Turn-complete sentinel stamped as message metadata by /api/chat (issue 319).
+// Absence after a turn ends means the Lambda was killed mid-stream and the
 // client should refresh from server rather than trust local stream state.
-type TurnCompleteFrame = {
-  type: "turn-complete";
-  synthesized: boolean;
-  hadFailures: boolean;
-  deadlineExceeded: boolean;
+// v5 moved this from a side-channel StreamData to per-message metadata.
+type TurnCompleteMeta = {
+  turnComplete?: {
+    synthesized: boolean;
+    hadFailures: boolean;
+    deadlineExceeded: boolean;
+  };
+  createdAt?: string | Date;
 };
+
+/** Extract concatenated text from a UIMessage's parts array (v5 shape). */
+function getMessageText(m: UIMessage): string {
+  return m.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
+
+/** Read createdAt from metadata — server stamps it, SSR hydrates it. */
+function getCreatedAt(m: UIMessage): Date | null {
+  const meta = m.metadata as TurnCompleteMeta | undefined;
+  if (!meta?.createdAt) return null;
+  return meta.createdAt instanceof Date ? meta.createdAt : new Date(meta.createdAt);
+}
 
 // Returns the slash token the cursor is currently inside, or null.
 // A valid token is "/" at position 0 or preceded by whitespace, with no
@@ -63,34 +82,66 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   const [modelOverride, setModelOverride] = useState<ModelOverride>("auto");
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
+  // Local input state — v5 removed useChat's managed input/handleInputChange.
+  const [input, setInput] = useState(initialInput ?? "");
+
   // Track the turn-complete sentinel from the server (issue 319). When the
-  // stream ends, we inspect `data` to confirm it arrived; if not, the Lambda
-  // was killed mid-stream and we tell the parent so it can refresh from server.
+  // stream ends, we inspect the assistant message's metadata to confirm it
+  // arrived; if not, the Lambda was killed mid-stream and we tell the parent
+  // so it can refresh from server.
   const turnCompleteRef = useRef(false);
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload, setInput, data } = useChat({
-    api: "/api/chat",
-    body: { sessionId, model: modelOverride },
-    initialMessages,
-    onFinish: () => {
-      // `data` is set by the time onFinish fires — read latest sentinel.
-      const latest = (data ?? []).slice().reverse().find(
-        (d) => d && typeof d === "object" && (d as { type?: string }).type === "turn-complete"
-      ) as TurnCompleteFrame | undefined;
-      const turnComplete = !!latest;
+
+  // Transport memoized so useChat doesn't churn it per render. The server
+  // expects { role, content: string }[] — we flatten UIMessage.parts to that
+  // shape in prepareSendMessagesRequest rather than rewriting the API route.
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ messages, body }) => ({
+          body: {
+            ...(body as Record<string, unknown> | undefined),
+            messages: messages.map((m) => ({
+              role: m.role,
+              content: getMessageText(m),
+            })),
+          },
+        }),
+      }),
+    []
+  );
+
+  const { messages, sendMessage, regenerate, status, error } = useChat({
+    transport,
+    messages: initialMessages,
+    onFinish: ({ message }) => {
+      const meta = (message as UIMessage | undefined)?.metadata as TurnCompleteMeta | undefined;
+      const tc = meta?.turnComplete;
+      const turnComplete = !!tc;
       turnCompleteRef.current = turnComplete;
       onMessageSent?.({
         turnComplete,
-        hadFailures: latest?.hadFailures ?? false,
-        deadlineExceeded: latest?.deadlineExceeded ?? false,
+        hadFailures: tc?.hadFailures ?? false,
+        deadlineExceeded: tc?.deadlineExceeded ?? false,
       });
     },
   });
 
-  // Seed input from navigation handoff (e.g. Scanner → Chat prefill)
-  useEffect(() => {
-    if (initialInput) setInput(initialInput);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const isLoading = status === "streaming" || status === "submitted";
+
+  const handleSubmit = useCallback(
+    (e?: { preventDefault?: () => void }) => {
+      e?.preventDefault?.();
+      const text = input.trim();
+      if (!text || isLoading) return;
+      sendMessage(
+        { text },
+        { body: { sessionId, model: modelOverride } }
+      );
+      setInput("");
+    },
+    [input, isLoading, sendMessage, sessionId, modelOverride]
+  );
 
   // ── Slash-command menu state ──────────────────────────────────────────
   const [menuCommands, setMenuCommands] = useState<SlashCommand[]>([]);
@@ -111,10 +162,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      handleInputChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
+      setInput(e.target.value);
       updateMenu(e.target.value, e.target.selectionStart ?? e.target.value.length);
     },
-    [handleInputChange, updateMenu]
+    [updateMenu]
   );
 
   const applyCommand = useCallback(
@@ -261,9 +312,9 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           </p>
         )}
         {messages.map((m, i) => {
-          const current = m.createdAt ?? new Date();
+          const current = getCreatedAt(m) ?? new Date();
           const prev = messages[i - 1];
-          const prevDate = prev?.createdAt ?? null;
+          const prevDate = prev ? getCreatedAt(prev) : null;
           const showSeparator = !prevDate || !isSameDay(prevDate, current);
           return (
             <Fragment key={m.id}>
@@ -338,7 +389,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 {error.message?.includes("overloaded") ? "API overloaded — try again." : "Error — try again."}
               </span>
               <button
-                onClick={() => reload()}
+                onClick={() => regenerate()}
                 className="cursor-pointer hover-text-brighten"
                 style={{
                   fontSize: "var(--t-micro)",

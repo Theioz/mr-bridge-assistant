@@ -1,8 +1,8 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString, daysAgoString, startOfDayRFC3339, endOfDayRFC3339, addDays } from "@/lib/timezone";
-import { streamText, tool, jsonSchema, wrapLanguageModel, StreamData } from "ai";
-import type { LanguageModelV1Middleware } from "ai";
+import { streamText, tool, jsonSchema, wrapLanguageModel, stepCountIs } from "ai";
+import type { LanguageModelMiddleware } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { syncSports } from "@/lib/sync/sports";
@@ -69,7 +69,7 @@ const DEMO_CALENDAR_EVENTS = [
   { title: "Gym — push day", start: `${todayString()}T18:00:00`, end: `${todayString()}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
 ];
 
-const retryOnOverload: LanguageModelV1Middleware = {
+const retryOnOverload: LanguageModelMiddleware = {
   wrapStream: async ({ doStream }) => {
     for (let attempt = 0; attempt <= 2; attempt++) {
       if (attempt > 0) {
@@ -484,7 +484,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   const tools = {
     get_tasks: tool({
       description: "Fetch tasks from the tasks table. Defaults to active tasks.",
-      parameters: jsonSchema<{ status?: "active" | "completed" | "archived" }>({
+      inputSchema: jsonSchema<{ status?: "active" | "completed" | "archived" }>({
         type: "object",
         properties: {
           status: {
@@ -509,7 +509,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     add_task: tool({
       description: "Add a new task or subtask to the tasks table. To add an item to a list (e.g. shopping list, grocery list), first call get_tasks to find the parent task ID, then call add_task with parent_id set.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         title: string;
         priority?: "high" | "medium" | "low";
         category?: string;
@@ -575,7 +575,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     complete_task: tool({
       description: "Mark a task as completed by its ID.",
-      parameters: jsonSchema<{ id: string }>({
+      inputSchema: jsonSchema<{ id: string }>({
         type: "object",
         required: ["id"],
         properties: {
@@ -597,7 +597,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_habits_today: tool({
       description: "Get all active habits and their completion status for today (or a specified date).",
-      parameters: jsonSchema<{ date?: string }>({
+      inputSchema: jsonSchema<{ date?: string }>({
         type: "object",
         properties: {
           date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
@@ -626,7 +626,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     log_habit: tool({
       description: "Log a habit as completed. Looks up the habit by name from the registry.",
-      parameters: jsonSchema<{ name: string; date?: string; notes?: string }>({
+      inputSchema: jsonSchema<{ name: string; date?: string; notes?: string }>({
         type: "object",
         required: ["name"],
         properties: {
@@ -664,7 +664,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_fitness_summary: tool({
       description: "Get recent body composition, workouts, and recovery metrics.",
-      parameters: jsonSchema<{ days?: number }>({
+      inputSchema: jsonSchema<{ days?: number }>({
         type: "object",
         properties: {
           days: {
@@ -706,7 +706,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_profile: tool({
       description: "Get all profile key/value entries.",
-      parameters: jsonSchema<Record<string, never>>({
+      inputSchema: jsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
       }),
@@ -726,7 +726,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         "weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal) so they surface in the web UI. " +
         "For other goals use dot-notation (sleep.goal.hrs, study.goal.mins_per_day, etc.). " +
         "Always tell the user what you are about to write before calling this tool, then confirm each key that was saved.",
-      parameters: jsonSchema<{ updates: { key: string; value: string }[] }>({
+      inputSchema: jsonSchema<{ updates: { key: string; value: string }[] }>({
         type: "object",
         required: ["updates"],
         properties: {
@@ -761,7 +761,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     search_gmail: tool({
       description:
         "Search Gmail using any Gmail query string (e.g. 'from:regal tickets', 'subject:invoice is:unread'). Returns message ID, sender, subject, and date. Use get_email_body to read the full content of a specific message.",
-      parameters: jsonSchema<{ query: string; max_results?: number }>({
+      inputSchema: jsonSchema<{ query: string; max_results?: number }>({
         type: "object",
         required: ["query"],
         properties: {
@@ -830,7 +830,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     get_email_body: tool({
       description:
         "Fetch the full text body of a Gmail message by its ID. Use this after search_gmail to read email content. Returns decoded plain text.",
-      parameters: jsonSchema<{ message_id: string }>({
+      inputSchema: jsonSchema<{ message_id: string }>({
         type: "object",
         required: ["message_id"],
         properties: {
@@ -916,7 +916,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     list_calendar_events: tool({
       description:
         "List events across all Google Calendars for a given date range. Defaults to today only. Use this whenever the user asks what's on their calendar, schedule, or agenda. Each event in the result includes an eventId field — preserve and use it when calling delete_calendar_event or update_calendar_event.",
-      parameters: jsonSchema<{ date?: string; days?: number }>({
+      inputSchema: jsonSchema<{ date?: string; days?: number }>({
         type: "object",
         properties: {
           date: {
@@ -998,7 +998,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     create_calendar_event: tool({
       description:
         "Create a new event on the primary Google Calendar. For timed events, provide date + start_time. For all-day events, set all_day: true and provide only date.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         title: string;
         date: string;
         start_time?: string;
@@ -1112,7 +1112,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     delete_calendar_event: tool({
       description:
         "Delete a Google Calendar event by eventId. IMPORTANT: before calling this tool, always state the event title, date, and time to the user and require explicit confirmation. Never delete without confirmed user intent.",
-      parameters: jsonSchema<{ eventId: string }>({
+      inputSchema: jsonSchema<{ eventId: string }>({
         type: "object",
         required: ["eventId"],
         properties: {
@@ -1157,7 +1157,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     update_calendar_event: tool({
       description:
         "Update an existing Google Calendar event by eventId. Accepts any subset of: summary (title), start (RFC3339 dateTime or date), end (RFC3339 dateTime or date), location, description. IMPORTANT: before calling, state the before/after changes and require explicit user confirmation.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         eventId: string;
         summary?: string;
         start?: string;
@@ -1253,7 +1253,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_recipes: tool({
       description: "Search saved recipes by ingredient, name, or tag. Omit query to return all recipes.",
-      parameters: jsonSchema<{ query?: string }>({
+      inputSchema: jsonSchema<{ query?: string }>({
         type: "object",
         properties: {
           query: { type: "string", description: "Ingredient, recipe name, or tag to search for." },
@@ -1275,7 +1275,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_today_meals: tool({
       description: "Get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.",
-      parameters: jsonSchema<Record<string, never>>({
+      inputSchema: jsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
       }),
@@ -1293,7 +1293,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_session_history: tool({
       description: "Fetch earlier messages from this chat session. Use when the user references something said earlier that isn't in the current context window. Always ask the user before calling: \"Should I pull earlier messages from this session for more context?\"",
-      parameters: jsonSchema<{ limit?: number }>({
+      inputSchema: jsonSchema<{ limit?: number }>({
         type: "object",
         properties: {
           limit: { type: "number", description: "How many messages to fetch (max 40). Defaults to 20." },
@@ -1314,7 +1314,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_workout_plan: tool({
       description: "Fetch the workout plan for the current Mon–Sun week. No parameters. Call this before making any adjustment or suggestion to the user's workout program.",
-      parameters: jsonSchema<Record<string, never>>({
+      inputSchema: jsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
       }),
@@ -1339,7 +1339,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     assign_workout: tool({
       description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         date: string;
         name?: string;
         warmup: WorkoutExercise[];
@@ -1447,7 +1447,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     update_workout_exercise: tool({
       description: "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description. Supports renaming/swapping the exercise via updates.exercise.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         date: string;
         phase: "warmup" | "workout" | "cooldown";
         exercise_name: string;
@@ -1550,7 +1550,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_workout_history: tool({
       description: "Fetch logged strength-session performance (actual sets/reps/weights/RPE/notes) for progression analysis. Returns recent sessions scoped to the user, with per-set detail. Use this before suggesting progression for any exercise. Weights are returned in kg canonically — call get_profile for the user's weight_unit preference before reporting numbers.",
-      parameters: jsonSchema<{ exercise_name?: string; days?: number }>({
+      inputSchema: jsonSchema<{ exercise_name?: string; days?: number }>({
         type: "object",
         properties: {
           exercise_name: {
@@ -1634,7 +1634,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_stock_quote: tool({
       description: "Get current price and daily change for a stock ticker. Checks stocks_cache first; falls back to a live Polygon.io fetch if the cache is stale (>6h) or the ticker is not cached. Use when the user asks about a stock price or market move.",
-      parameters: jsonSchema<{ ticker: string }>({
+      inputSchema: jsonSchema<{ ticker: string }>({
         type: "object",
         required: ["ticker"],
         properties: {
@@ -1695,7 +1695,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
     get_sports_data: tool({
       description: "Get next game, last result, or standings for one of the user's favorite sports teams. Reads sports_cache first; falls back to a live TheSportsDB fetch when the cache is older than 12h or when the requested game is within 24h of now. Use when the user asks about a team's schedule, recent result, or standings.",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         team_name?: string;
         team_id?: string;
         query_type: "next_game" | "last_result" | "standings";
@@ -1825,10 +1825,11 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     turnAbort.abort();
   }, TURN_DEADLINE_MS);
 
-  // Side-channel data stream (#319) — emit a "turn-complete" sentinel from
-  // onFinish so the client can distinguish a clean stream end from a Lambda
-  // kill mid-stream and refresh from the server in the latter case.
-  const streamData = new StreamData();
+  // Turn-complete sentinel state (#319) — hoisted so toUIMessageStreamResponse's
+  // messageMetadata callback can emit them as metadata on the assistant message.
+  // v5 replaced StreamData's side-channel with per-message metadata.
+  let synthesized = false;
+  let hadFailures = false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
@@ -1836,13 +1837,13 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     system: systemValue,
     messages: [...contextMessages, ...cleanMessages],
     tools,
-    maxSteps: MAX_STEPS,
+    stopWhen: stepCountIs(MAX_STEPS),
     abortSignal: turnAbort.signal,
     onError: ({ error }) => {
       console.error("[chat] streamText error:", JSON.stringify(error));
     },
     onStepFinish: ({ usage }) => {
-      const stepTotal = (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0);
+      const stepTotal = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0);
       cumulativeTokens += stepTotal;
       if (cumulativeTokens > TOKEN_BUDGET && !budgetExceeded) {
         budgetExceeded = true;
@@ -1866,7 +1867,8 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       const resultByCallId = new Map<string, unknown>();
       for (const r of allResults) {
         const callId = (r as { toolCallId?: string }).toolCallId;
-        if (callId) resultByCallId.set(callId, (r as { result?: unknown }).result);
+        // v5 renamed tool result payload: .result → .output
+        if (callId) resultByCallId.set(callId, (r as { output?: unknown }).output);
       }
       for (const call of allCalls) {
         const result = resultByCallId.get(call.toolCallId);
@@ -1877,7 +1879,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         completedSteps.push({ toolName: call.toolName, ok: stepOk, error: stepError });
       }
       const failedToolCount = completedSteps.filter((s) => !s.ok).length;
-      const hadFailures = failedToolCount > 0;
+      hadFailures = failedToolCount > 0;
 
       // Determine what to persist. Three cases:
       //   1. Model produced text → persist as-is (normal path).
@@ -1885,7 +1887,6 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       //   3. Empty text + nothing ran → persist a visible error so the user
       //      isn't left in silence.
       let contentToPersist = text.trim();
-      let synthesized = false;
       if (!contentToPersist) {
         contentToPersist = synthesizeFallbackSummary(completedSteps, {
           hitStepCap,
@@ -1932,20 +1933,21 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           console.error("[chat] onFinish persist error:", persistErr);
         }
       }
-
-      // Emit the turn-complete sentinel so the client knows the turn ended
-      // cleanly (vs the Lambda being killed mid-stream).
-      streamData.append({
-        type: "turn-complete",
-        synthesized,
-        hadFailures,
-        deadlineExceeded,
-      });
-      await streamData.close();
     },
   };
 
   const result = streamText(streamOptions);
 
-  return result.toDataStreamResponse({ data: streamData });
+  // v5: emit the turn-complete sentinel (#319) as message metadata stamped on
+  // the finish part. Client reads message.metadata.turnComplete to distinguish
+  // a clean turn end from a Lambda kill mid-stream.
+  return result.toUIMessageStreamResponse({
+    messageMetadata: ({ part }) => {
+      if (part.type === "finish") {
+        return {
+          turnComplete: { synthesized, hadFailures, deadlineExceeded },
+        };
+      }
+    },
+  });
 }

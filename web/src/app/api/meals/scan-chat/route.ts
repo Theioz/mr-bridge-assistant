@@ -5,7 +5,7 @@
 // register this tool, so Bridge can only log meals from inside a scan.
 
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, tool, jsonSchema } from "ai";
+import { streamText, tool, jsonSchema, stepCountIs } from "ai";
 import { todayString } from "@/lib/timezone";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,7 +71,7 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
     log_meal_from_scan: tool({
       description:
         "Propose a meal-log action card for the user to confirm. Returns a structured proposal — the DB write happens client-side only after the user taps Log on the card. Call this when the user expresses intent to log the current scan (optionally with adjustments to the macros or item list based on conversation).",
-      parameters: jsonSchema<{
+      inputSchema: jsonSchema<{
         items: {
           label: string;
           calories: number;
@@ -152,8 +152,8 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
     system: systemPrompt,
     messages,
     tools,
-    maxSteps: 5,
+    stopWhen: stepCountIs(5),
   });
 
-  return result.toDataStreamResponse();
+  return result.toUIMessageStreamResponse();
 }

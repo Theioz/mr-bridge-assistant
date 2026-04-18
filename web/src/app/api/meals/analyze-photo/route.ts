@@ -109,7 +109,7 @@ export async function POST(req: Request) {
               {
                 type: "image",
                 image: base64,
-                mimeType,
+                mediaType: mimeType,
               },
               {
                 type: "text",
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
             {
               type: "image",
               image: base64,
-              mimeType,
+              mediaType: mimeType,
             },
             {
               type: "text",

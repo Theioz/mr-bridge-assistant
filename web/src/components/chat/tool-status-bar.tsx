@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 
 const TOOL_LABELS: Record<string, string> = {
   get_tasks: "Fetching tasks",
@@ -23,33 +23,26 @@ function toolLabel(toolName: string): string {
   return TOOL_LABELS[toolName] ?? toolName.replace(/_/g, " ");
 }
 
-interface ToolInvocation {
+// v5 tool UI part shape: type is `tool-${toolName}`, state is one of
+// 'input-streaming' | 'input-available' | 'output-available' | 'output-error'.
+// Each part carries a toolCallId.
+type ToolUIPart = {
+  type: `tool-${string}`;
   toolCallId: string;
-  toolName: string;
-  state: "partial-call" | "call" | "result";
+  state: "input-streaming" | "input-available" | "output-available" | "output-error";
+};
+
+function isToolPart(part: { type: string }): part is ToolUIPart {
+  return typeof part.type === "string" && part.type.startsWith("tool-");
 }
 
-type MessagePart =
-  | { type: "text"; text: string }
-  | { type: "tool-invocation"; toolInvocation: ToolInvocation }
-  | { type: string };
+function toolNameFromType(type: string): string {
+  return type.slice("tool-".length);
+}
 
 interface Props {
-  messages: Message[];
+  messages: UIMessage[];
   isLoading: boolean;
-}
-
-/** Extract tool invocations from a message, checking parts first then toolInvocations. */
-function getInvocations(msg: Message): ToolInvocation[] {
-  const parts = (msg as unknown as { parts?: MessagePart[] }).parts;
-  if (parts?.length) {
-    return parts
-      .filter((p): p is { type: "tool-invocation"; toolInvocation: ToolInvocation } =>
-        p.type === "tool-invocation"
-      )
-      .map((p) => p.toolInvocation);
-  }
-  return (msg.toolInvocations as ToolInvocation[] | undefined) ?? [];
 }
 
 const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props) {
@@ -61,10 +54,12 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
   const assistantMessages = messages.slice(lastUserIdx + 1).filter((m) => m.role === "assistant");
   if (assistantMessages.length === 0) return null;
 
-  const seen = new Map<string, ToolInvocation>();
+  const seen = new Map<string, ToolUIPart>();
   for (const msg of assistantMessages) {
-    for (const inv of getInvocations(msg)) {
-      seen.set(inv.toolCallId, inv);
+    for (const part of msg.parts) {
+      if (isToolPart(part)) {
+        seen.set(part.toolCallId, part);
+      }
     }
   }
 
@@ -81,11 +76,12 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
           padding: "var(--space-1) 0",
         }}
       >
-        {chips.map((inv) => {
-          const isDone = inv.state === "result";
+        {chips.map((part) => {
+          const toolName = toolNameFromType(part.type);
+          const isDone = part.state === "output-available" || part.state === "output-error";
           return (
             <span
-              key={inv.toolCallId}
+              key={part.toolCallId}
               className="inline-flex items-center rounded-full tnum"
               style={{
                 gap: "var(--space-1)",
@@ -119,7 +115,7 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
                   }}
                 />
               )}
-              {toolLabel(inv.toolName)}{isDone ? "" : "…"}
+              {toolLabel(toolName)}{isDone ? "" : "…"}
             </span>
           );
         })}

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import ChatPageClient from "@/components/chat/chat-page-client";
 import type { ChatMessage, ChatSession } from "@/lib/types";
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -24,7 +24,7 @@ export default async function ChatPage() {
     .limit(1)
     .maybeSingle();
 
-  let initialMessages: Message[] = [];
+  let initialMessages: UIMessage[] = [];
   let initialHasMore = false;
   let initialOldestPosition: number | null = null;
   if (session?.id) {
@@ -42,8 +42,8 @@ export default async function ChatPage() {
       initialMessages = ordered.map((m) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: new Date(m.created_at),
+        parts: [{ type: "text" as const, text: m.content }],
+        metadata: { createdAt: m.created_at },
       }));
       initialHasMore = msgs.length === LIMIT;
       initialOldestPosition = ordered[0]?.position ?? null;
