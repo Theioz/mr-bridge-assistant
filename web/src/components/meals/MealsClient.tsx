@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, RefreshCw, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { UndoToastProvider, useUndoToast } from "@/components/ui/undo-toast";
 
 const FoodPhotoAnalyzer = dynamic(
   () => import("@/app/(protected)/meals/FoodPhotoAnalyzer"),
@@ -230,6 +231,7 @@ interface MealRowDisplayProps {
   meal: MealRow;
   onClick: () => void;
   onRelog?: () => void;
+  onDelete?: () => void;
 }
 
 function formatMacroCol(m: MealRow): string | null {
@@ -253,7 +255,7 @@ function formatNutrientCol(m: MealRow): string | null {
   return `Fiber ${hasFiber ? m.fiber_g : "—"}g · Sugar ${hasSugar ? m.sugar_g : "—"}g`;
 }
 
-function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
+function MealRowDisplay({ meal, onClick, onRelog, onDelete }: MealRowDisplayProps) {
   const macroStr = formatMacroCol(meal);
   const nutrientStr = formatNutrientCol(meal);
   return (
@@ -337,6 +339,25 @@ function MealRowDisplay({ meal, onClick, onRelog }: MealRowDisplayProps) {
           }}
         >
           <RefreshCw size={14} />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          aria-label="Delete meal"
+          title="Delete meal"
+          className="hover-text-danger transition-opacity flex-shrink-0 flex items-center justify-center"
+          style={{
+            width: 32,
+            height: 32,
+            color: "var(--color-text-faint)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <Trash2 size={14} />
         </button>
       )}
     </div>
@@ -458,11 +479,13 @@ function TodayTab({
   pastMeals,
   macroGoals,
   macroTotals,
+  onDelete,
 }: {
   todayMeals: MealRow[];
   pastMeals: MealRow[];
   macroGoals: MacroGoals;
   macroTotals: MacroTotals;
+  onDelete: (id: string) => void;
 }) {
   const router = useRouter();
   const [logMealType, setLogMealType] = useState<MealType>("breakfast");
@@ -681,7 +704,12 @@ function TodayTab({
                     onCancel={() => setEditingId(null)}
                   />
                 ) : (
-                  <MealRowDisplay meal={m} onClick={() => startEdit(m)} onRelog={() => prefillLog(m)} />
+                  <MealRowDisplay
+                    meal={m}
+                    onClick={() => startEdit(m)}
+                    onRelog={() => prefillLog(m)}
+                    onDelete={() => onDelete(m.id)}
+                  />
                 )}
               </div>
             ))}
@@ -1324,18 +1352,159 @@ function PlanTab({
   );
 }
 
+// ─── Macro totals derivation ──────────────────────────────────────────────────
+
+// Mirrors the SSR computation in app/(protected)/meals/page.tsx so the displayed
+// totals stay in sync as rows are optimistically removed from the client.
+function computeMacroTotals(meals: MealRow[]): MacroTotals {
+  let calories = 0, protein = 0, carbs = 0, fat = 0;
+  let fiberSum = 0, sugarSum = 0, fiberAny = false, sugarAny = false;
+  for (const m of meals) {
+    calories += m.calories ?? 0;
+    protein  += m.protein_g ?? 0;
+    carbs    += m.carbs_g ?? 0;
+    fat      += m.fat_g ?? 0;
+    if (m.fiber_g != null) { fiberSum += m.fiber_g; fiberAny = true; }
+    if (m.sugar_g != null) { sugarSum += m.sugar_g; sugarAny = true; }
+  }
+  return {
+    calories,
+    protein: Math.round(protein),
+    carbs:   Math.round(carbs),
+    fat:     Math.round(fat),
+    fiber:   fiberAny ? Math.round(fiberSum * 10) / 10 : null,
+    sugar:   sugarAny ? Math.round(sugarSum * 10) / 10 : null,
+  };
+}
+
 // ─── Root component ───────────────────────────────────────────────────────────
 
-export default function MealsClient({
+export default function MealsClient(props: Props) {
+  return (
+    <UndoToastProvider>
+      <MealsClientInner {...props} />
+    </UndoToastProvider>
+  );
+}
+
+function MealsClientInner({
   todayMeals,
   pastMeals,
   recipes,
   macroGoals,
   macroTotals,
 }: Props) {
+  const router = useRouter();
+  const toast = useUndoToast();
   const [tab, setTab] = useState<Tab>("today");
   const [unsavedScanCount, setUnsavedScanCount] = useState(0);
   const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+
+  // IDs of meals the user has tapped delete on but whose DELETE has not yet
+  // been committed to the server (still inside the 5s undo window). Filtered
+  // out of every rendered list and excluded from totals.
+  const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(() => new Set());
+  const pendingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const visibleTodayMeals = useMemo(
+    () => todayMeals.filter((m) => !pendingDeletes.has(m.id)),
+    [todayMeals, pendingDeletes]
+  );
+  const visiblePastMeals = useMemo(
+    () => pastMeals.filter((m) => !pendingDeletes.has(m.id)),
+    [pastMeals, pendingDeletes]
+  );
+  // SSR-computed `macroTotals` is the initial paint; once any row is pending
+  // delete, recompute from the visible set so the UI updates immediately.
+  const displayedMacroTotals = useMemo<MacroTotals>(
+    () => (pendingDeletes.size === 0 ? macroTotals : computeMacroTotals(visibleTodayMeals)),
+    [pendingDeletes.size, macroTotals, visibleTodayMeals]
+  );
+
+  const removeFromPending = useCallback((id: string) => {
+    setPendingDeletes((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const commitDelete = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch("/api/meals/log", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (res.ok) {
+          // router.refresh() will replace todayMeals/pastMeals from the server,
+          // and the now-deleted row will be gone — clear the pending entry so
+          // displayedMacroTotals falls back to the SSR-computed value.
+          removeFromPending(id);
+          router.refresh();
+        } else {
+          // Server kept the row — restore it to the visible list.
+          removeFromPending(id);
+        }
+      } catch {
+        removeFromPending(id);
+      }
+    },
+    [router, removeFromPending]
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      setPendingDeletes((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+
+      const timer = setTimeout(() => {
+        pendingTimers.current.delete(id);
+        commitDelete(id);
+      }, 5000);
+      pendingTimers.current.set(id, timer);
+
+      toast.show(
+        "Meal deleted",
+        () => {
+          const t = pendingTimers.current.get(id);
+          if (t) {
+            clearTimeout(t);
+            pendingTimers.current.delete(id);
+          }
+          removeFromPending(id);
+        },
+        5000
+      );
+    },
+    [toast, commitDelete, removeFromPending]
+  );
+
+  // On unmount (route change / tab close), flush any still-pending deletes so
+  // the user doesn't have to babysit the toast for the delete to take effect.
+  useEffect(() => {
+    const timers = pendingTimers.current;
+    return () => {
+      for (const [id, timer] of timers) {
+        clearTimeout(timer);
+        // Fire-and-forget — the request leaves the browser even if the page
+        // tears down before the response lands. Acceptable per #330.
+        fetch("/api/meals/log", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+      timers.clear();
+    };
+  }, []);
 
   function handleTabClick(id: Tab) {
     if (id !== "scanner" && tab === "scanner" && unsavedScanCount > 0) {
@@ -1442,10 +1611,11 @@ export default function MealsClient({
       {/* Tab panels */}
       {tab === "today" && (
         <TodayTab
-          todayMeals={todayMeals}
-          pastMeals={pastMeals}
+          todayMeals={visibleTodayMeals}
+          pastMeals={visiblePastMeals}
           macroGoals={macroGoals}
-          macroTotals={macroTotals}
+          macroTotals={displayedMacroTotals}
+          onDelete={handleDelete}
         />
       )}
       {tab === "recipes" && <RecipesTab recipes={recipes} />}
@@ -1453,12 +1623,12 @@ export default function MealsClient({
         <FoodPhotoAnalyzer onUnsavedItems={(count) => setUnsavedScanCount(count)} />
       )}
       {tab === "plan" && (
-        <PlanTab macroTotals={macroTotals} macroGoals={macroGoals} />
+        <PlanTab macroTotals={displayedMacroTotals} macroGoals={macroGoals} />
       )}
 
       {/* Past meals — always visible below the tabs */}
-      {pastMeals.length > 0 && (
-        <PastMeals pastMeals={pastMeals} />
+      {visiblePastMeals.length > 0 && (
+        <PastMeals pastMeals={visiblePastMeals} onDelete={handleDelete} />
       )}
     </div>
   );
@@ -1474,7 +1644,7 @@ function fmtDate(d: string) {
   });
 }
 
-function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
+function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (id: string) => void }) {
   const router = useRouter();
   const byDate = new Map<string, MealRow[]>();
   for (const meal of pastMeals) {
@@ -1563,7 +1733,7 @@ function PastMeals({ pastMeals }: { pastMeals: MealRow[] }) {
                         onCancel={() => setEditingId(null)}
                       />
                     ) : (
-                      <MealRowDisplay meal={m} onClick={() => startEdit(m)} />
+                      <MealRowDisplay meal={m} onClick={() => startEdit(m)} onDelete={() => onDelete(m.id)} />
                     )}
                   </div>
                 ))}

@@ -128,3 +128,34 @@ export async function PATCH(req: Request) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json(data);
 }
+
+interface MealLogDeleteBody {
+  id: string;
+}
+
+export async function DELETE(req: Request) {
+  let body: MealLogDeleteBody;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (!body.id) return Response.json({ error: "id is required" }, { status: 400 });
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data, error } = await supabase
+    .from("meal_log")
+    .delete()
+    .eq("id", body.id)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (!data)  return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json({ ok: true });
+}
