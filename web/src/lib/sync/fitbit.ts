@@ -284,7 +284,6 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
       await db.from("workout_sessions").delete().in("id", toDelete);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const newWorkouts = toInsert.map(({ _key, ...rest }) => ({ ...rest, user_id: userId }));
     if (newWorkouts.length) {
       const { error } = await db.from("workout_sessions").insert(newWorkouts);

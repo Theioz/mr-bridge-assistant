@@ -335,7 +335,7 @@ function ChatPageClientInner({
         10000
       );
     },
-    [allSessions, activeSessionId, loadSession, handleNewChat, toast, fetchSessions]
+    [allSessions, activeSessionId, loadSession, handleNewChat, toast]
   );
 
   const handleRestoreSession = useCallback(

@@ -27,7 +27,7 @@ import { SportsCard } from "@/components/dashboard/sports-card";
 import { WindowSelector } from "@/components/ui/window-selector";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
-import type { HabitLog, HabitRegistry, FitnessLog, RecoveryMetrics, Task, StocksCache, SportsCache } from "@/lib/types";
+import type { HabitLog, HabitRegistry, RecoveryMetrics, Task, StocksCache, SportsCache } from "@/lib/types";
 
 async function refreshStocks(): Promise<{ rateLimited: boolean }> {
   "use server";
@@ -97,7 +97,6 @@ export default async function DashboardPage() {
   const { key: windowKey, days } = await getWindow();
 
   const [
-    fitnessLatestRes,
     fitnessTrendRes,
     recoveryLatestRes,
     todayRecoveryRes,
@@ -111,13 +110,6 @@ export default async function DashboardPage() {
     sportsRes,
     sportsFavoritesRes,
   ] = await Promise.all([
-    // Latest 2 rows with body fat (for delta calculations)
-    supabase
-      .from("fitness_log")
-      .select("date,weight_lb,body_fat_pct")
-      .not("body_fat_pct", "is", null)
-      .order("date", { ascending: false })
-      .limit(2),
     // Windowed weight + body fat trend
     supabase
       .from("fitness_log")
@@ -182,8 +174,6 @@ export default async function DashboardPage() {
   ]);
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
-  const fitnessRows = (fitnessLatestRes.data ?? []) as Pick<FitnessLog, "date" | "weight_lb" | "body_fat_pct">[];
-
   const latestRecovery = ((recoveryLatestRes.data ?? [])[0] ?? null) as RecoveryMetrics | null;
   const todayRecoveryRow = (todayRecoveryRes.data ?? [])[0] ?? null;
   // Hide the strip when today's row IS the latest card (avoid duplicate display)
