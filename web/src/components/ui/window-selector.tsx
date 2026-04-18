@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { setWindowPreference } from "@/lib/window-actions";
 import type { WindowKey } from "@/lib/window";
 
 const WINDOWS: { key: WindowKey; label: string }[] = [
@@ -16,11 +17,12 @@ interface Props {
 }
 
 export function WindowSelector({ current }: Props) {
-  const router = useRouter();
+  const [, startTransition] = useTransition();
 
   function select(key: WindowKey) {
-    document.cookie = `mb-window=${key}; path=/; max-age=31536000; SameSite=Lax`;
-    router.refresh();
+    startTransition(() => {
+      setWindowPreference(key);
+    });
   }
 
   return (
