@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { WorkoutSession, RecoveryMetrics } from "@/lib/types";
 import { addDays, todayString } from "@/lib/timezone";
@@ -45,12 +45,8 @@ export function ActivityTrends({
 }: Props) {
   const weekCount = Math.ceil(days / 7);
   const forceWeekly = days > 90;
-  const [granularity, setGranularity] = useState<Granularity>(
-    forceWeekly ? "weekly" : "daily"
-  );
-  useEffect(() => {
-    if (forceWeekly) setGranularity("weekly");
-  }, [forceWeekly]);
+  const [userGranularity, setUserGranularity] = useState<Granularity>("daily");
+  const granularity: Granularity = forceWeekly ? "weekly" : userGranularity;
 
   const today = todayString();
 
@@ -167,7 +163,7 @@ export function ActivityTrends({
         return (
           <button
             key={opt}
-            onClick={() => !forceWeekly && setGranularity(opt)}
+            onClick={() => !forceWeekly && setUserGranularity(opt)}
             disabled={forceWeekly}
             className="text-xs font-medium flex items-center justify-center cursor-pointer"
             style={{
