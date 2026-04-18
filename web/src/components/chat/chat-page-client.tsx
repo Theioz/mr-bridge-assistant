@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { History, Plus } from "lucide-react";
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 import ChatInterface from "./chat-interface";
 import SessionSidebar from "./session-sidebar";
 import SessionSheet from "./session-sheet";
@@ -12,7 +12,7 @@ import type { SessionPreview } from "@/app/api/chat/sessions/route";
 
 interface Props {
   initialSessionId: string | null;
-  initialMessages: Message[];
+  initialMessages: UIMessage[];
   initialHasMore?: boolean;
   initialOldestPosition?: number | null;
 }
@@ -38,7 +38,7 @@ function ChatPageClientInner({
   const [activeSessionId, setActiveSessionId] = useState<string>(
     initialSessionId ?? newSessionId()
   );
-  const [activeMessages, setActiveMessages] = useState<Message[]>(initialMessages);
+  const [activeMessages, setActiveMessages] = useState<UIMessage[]>(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [oldestPosition, setOldestPosition] = useState<number | null>(initialOldestPosition);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -123,13 +123,13 @@ function ChatPageClientInner({
             const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
             if (msgRes.ok) {
               const msgData = await msgRes.json();
-              const msgs: Message[] = (
+              const msgs: UIMessage[] = (
                 msgData.messages as { id: string; role: string; content: string; created_at: string }[]
               ).map((m) => ({
                 id: m.id,
                 role: m.role as "user" | "assistant",
-                content: m.content,
-                createdAt: new Date(m.created_at),
+                parts: [{ type: "text" as const, text: m.content }],
+                metadata: { createdAt: m.created_at },
               }));
               setActiveSessionId(mostRecent.id);
               setActiveMessages(msgs);
@@ -173,13 +173,13 @@ function ChatPageClientInner({
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) return;
         const data = await res.json();
-        const msgs: Message[] = (
+        const msgs: UIMessage[] = (
           data.messages as { id: string; role: string; content: string; created_at: string }[]
         ).map((m) => ({
           id: m.id,
           role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: new Date(m.created_at),
+          parts: [{ type: "text" as const, text: m.content }],
+          metadata: { createdAt: m.created_at },
         }));
         setActiveMessages(msgs);
         setHasMore(data.hasMore ?? false);
@@ -214,13 +214,13 @@ function ChatPageClientInner({
       const res = await fetch(`/api/chat/sessions/${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const msgs: Message[] = (
+      const msgs: UIMessage[] = (
         data.messages as { id: string; role: string; content: string; created_at: string }[]
       ).map((m) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: new Date(m.created_at),
+        parts: [{ type: "text" as const, text: m.content }],
+        metadata: { createdAt: m.created_at },
       }));
       setActiveSessionId(sessionId);
       setActiveMessages(msgs);
@@ -245,13 +245,13 @@ function ChatPageClientInner({
         `/api/chat/sessions/${activeSessionId}?before=${oldestPosition}&limit=20`
       );
       const data = await res.json();
-      const older: Message[] = (
+      const older: UIMessage[] = (
         data.messages as { id: string; role: string; content: string; created_at: string }[]
       ).map((m) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: new Date(m.created_at),
+        parts: [{ type: "text" as const, text: m.content }],
+        metadata: { createdAt: m.created_at },
       }));
       setActiveMessages((prev) => [...older, ...prev]);
       setHasMore(data.hasMore ?? false);
@@ -278,13 +278,13 @@ function ChatPageClientInner({
         const res = await fetch(`/api/chat/sessions/${sid}`);
         if (!res.ok) return;
         const data = await res.json();
-        const msgs: Message[] = (
+        const msgs: UIMessage[] = (
           data.messages as { id: string; role: string; content: string; created_at: string }[]
         ).map((m) => ({
           id: m.id,
           role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: new Date(m.created_at),
+          parts: [{ type: "text" as const, text: m.content }],
+          metadata: { createdAt: m.created_at },
         }));
         setActiveMessages(msgs);
         setHasMore(data.hasMore ?? false);

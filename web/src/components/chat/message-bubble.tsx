@@ -1,9 +1,27 @@
 "use client";
 
 import { memo, useRef, useState } from "react";
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+/**
+ * Extract concatenated text from a UIMessage's parts array.
+ * v5 replaced `message.content: string` with `message.parts: Part[]`.
+ */
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
+
+/** Read createdAt from our metadata shape (server stamps this, SSR hydrates it). */
+function getCreatedAt(message: UIMessage): Date | null {
+  const meta = message.metadata as { createdAt?: string | Date } | undefined;
+  if (!meta?.createdAt) return null;
+  return meta.createdAt instanceof Date ? meta.createdAt : new Date(meta.createdAt);
+}
 
 function formatExactTime(d: Date): string {
   return d.toLocaleTimeString("en-US", {
@@ -23,7 +41,7 @@ function formatExactDateTime(d: Date): string {
 }
 
 interface Props {
-  message: Message;
+  message: UIMessage;
 }
 
 const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = {
@@ -150,7 +168,9 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
     }, 500);
   };
 
-  const showTime = message.createdAt && (revealed || pinned);
+  const text = getMessageText(message);
+  const createdAt = getCreatedAt(message);
+  const showTime = createdAt && (revealed || pinned);
 
   // Role distinction is carried by layout (alignment + subtle surface tint on
   // the user side) rather than a color block. Spec: "user/assistant
@@ -180,17 +200,17 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
         }}
       >
         {isUser ? (
-          message.content
+          text
         ) : (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
-            {message.content}
+            {text}
           </ReactMarkdown>
         )}
       </div>
-      {message.createdAt && (
+      {createdAt && (
         <span
           aria-hidden={!showTime}
-          title={formatExactDateTime(message.createdAt)}
+          title={formatExactDateTime(createdAt)}
           className="tnum"
           style={{
             fontSize: "var(--t-micro)",
@@ -202,7 +222,7 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
             letterSpacing: "0.01em",
           }}
         >
-          {formatExactTime(message.createdAt)}
+          {formatExactTime(createdAt)}
         </span>
       )}
     </div>
