@@ -2,7 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString, daysAgoString, startOfDayRFC3339, endOfDayRFC3339, addDays } from "@/lib/timezone";
 import { streamText, tool, jsonSchema, wrapLanguageModel, stepCountIs } from "ai";
-import type { LanguageModelMiddleware } from "ai";
+import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { syncSports } from "@/lib/sync/sports";
@@ -69,7 +69,8 @@ const DEMO_CALENDAR_EVENTS = [
   { title: "Gym — push day", start: `${todayString()}T18:00:00`, end: `${todayString()}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
 ];
 
-const retryOnOverload: LanguageModelMiddleware = {
+const retryOnOverload: LanguageModelV3Middleware = {
+  specificationVersion: "v3",
   wrapStream: async ({ doStream }) => {
     for (let attempt = 0; attempt <= 2; attempt++) {
       if (attempt > 0) {
