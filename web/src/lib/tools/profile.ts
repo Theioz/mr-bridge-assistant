@@ -1,5 +1,6 @@
 import { tool, jsonSchema } from "ai";
 import { ok, err } from "./_contract";
+import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
 
 export function buildProfileTools({ supabase, userId }: ToolContext) {
@@ -44,6 +45,7 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
           },
         },
       }),
+      strict: STRICT_TOOLS.update_profile,
       execute: async ({ updates }) => {
         const rows = updates.map(({ key, value }) => ({ key, value, ...(userId ? { user_id: userId } : {}) }));
         const { data, error: upsertError } = await supabase

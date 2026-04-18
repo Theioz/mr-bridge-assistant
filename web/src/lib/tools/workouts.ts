@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
 import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import { ok, err } from "./_contract";
+import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
 
 interface WorkoutExercise {
@@ -95,6 +96,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
         },
       }),
+      strict: STRICT_TOOLS.assign_workout,
       execute: async ({ date, name, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
         if (!userId) return err("Not authenticated");
         if (isDemo) return ok({ demo: true, note: "Demo mode — plan not saved." });
@@ -203,6 +205,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           },
         },
       }),
+      strict: STRICT_TOOLS.update_workout_exercise,
       execute: async ({ date, phase, exercise_name, updates }) => {
         if (!userId) return err("Not authenticated");
         if (isDemo) return ok({ demo: true, note: "Demo mode — not saved." });
@@ -218,7 +221,14 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
 
         const arr: WorkoutExercise[] = [...(row[phase] as WorkoutExercise[])];
         const idx = arr.findIndex((e) => e.exercise.toLowerCase() === exercise_name.toLowerCase());
-        if (idx === -1) return err(`Exercise "${exercise_name}" not found in ${phase}.`);
+        if (idx === -1) {
+          const existingNames = arr.map((e) => e.exercise);
+          return err(
+            `Exercise "${exercise_name}" not found in ${phase}. ` +
+            `Current ${phase} exercises: ${existingNames.length ? existingNames.join(", ") : "(empty)"}. ` +
+            `Suggest one of these, or propose adding a new exercise — do not invent names.`
+          );
+        }
         if (!updates || Object.keys(updates).length === 0) {
           return err("No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes.");
         }

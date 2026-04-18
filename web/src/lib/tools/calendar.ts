@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
 import { todayString, addDays, startOfDayRFC3339, endOfDayRFC3339 } from "@/lib/timezone";
 import { ok, err } from "./_contract";
+import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
 
 const DEMO_CALENDAR_EVENTS = [
@@ -128,6 +129,7 @@ export function buildCalendarTools({ isDemo }: ToolContext) {
           },
         },
       }),
+      strict: STRICT_TOOLS.create_calendar_event,
       execute: async ({ title, date, start_time, end_time, location, description, all_day = false }) => {
         if (isDemo) {
           return ok({
@@ -276,6 +278,7 @@ export function buildCalendarTools({ isDemo }: ToolContext) {
           description: { type: "string", description: "New description/notes." },
         },
       }),
+      strict: STRICT_TOOLS.update_calendar_event,
       execute: async ({ eventId, summary, start, end, location, description }) => {
         if (isDemo) {
           return ok({ eventId, note: "Demo mode — event not updated in real calendar." });
