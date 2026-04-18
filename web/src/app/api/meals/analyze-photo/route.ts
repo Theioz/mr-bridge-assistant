@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -99,9 +99,9 @@ export async function POST(req: Request) {
 
   try {
     if (mode === "label") {
-      const { object } = await generateObject({
+      const { output } = await generateText({
         model: anthropic("claude-sonnet-4-6"),
-        schema: NutritionLabelSchema,
+        output: Output.object({ schema: NutritionLabelSchema }),
         messages: [
           {
             role: "user",
@@ -120,12 +120,12 @@ export async function POST(req: Request) {
         ],
       });
 
-      return Response.json({ mode: "label", ...object });
+      return Response.json({ mode: "label", ...output });
     }
 
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-sonnet-4-6"),
-      schema: FoodAnalysisSchema,
+      output: Output.object({ schema: FoodAnalysisSchema }),
       messages: [
         {
           role: "user",
@@ -155,7 +155,7 @@ Instructions:
       ],
     });
 
-    return Response.json({ mode: "food", ...object });
+    return Response.json({ mode: "food", ...output });
   } catch (err) {
     console.error("[analyze-photo] Claude error:", err);
     return Response.json(

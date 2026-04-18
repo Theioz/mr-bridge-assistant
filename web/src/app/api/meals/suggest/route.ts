@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -151,9 +151,9 @@ INSTRUCTIONS:
 - Keep descriptions concise: cooking method + why it fits the macros`;
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-sonnet-4-6"),
-      schema: SuggestionsSchema,
+      output: Output.object({ schema: SuggestionsSchema }),
       messages: [
         {
           role: "user",
@@ -162,7 +162,7 @@ INSTRUCTIONS:
       ],
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     console.error("[meals/suggest] Claude error:", err);
     return Response.json(

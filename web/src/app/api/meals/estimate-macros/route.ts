@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -80,13 +80,13 @@ Instructions:
 - Include any key assumptions in notes`;
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: anthropic("claude-haiku-4-5-20251001"),
-      schema: MacroEstimateSchema,
+      output: Output.object({ schema: MacroEstimateSchema }),
       messages: [{ role: "user", content: prompt }],
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     console.error("[estimate-macros] Claude error:", err);
     return Response.json(
