@@ -1,4 +1,5 @@
 export const USER_TZ: string = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
+const __probe: any = 1; void __probe;
 
 /** Returns today's date as YYYY-MM-DD in the user's timezone. */
 export function todayString(tz = USER_TZ): string {
