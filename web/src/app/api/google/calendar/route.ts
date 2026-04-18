@@ -71,7 +71,7 @@ export async function GET() {
           .map((e) => {
             const title = e.summary ?? "(No title)";
             const isBirthday =
-              /'s birthday$/i.test(title) ||
+              /'s birthday\b/i.test(title) ||
               calName.toLowerCase().includes("birthday");
             return {
               time: formatTime(e.start?.dateTime, e.start?.date),

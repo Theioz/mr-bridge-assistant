@@ -23,11 +23,11 @@ function tzOffsetString(tz: string): string {
 }
 
 function isBirthdayEvent(title: string, calName: string): boolean {
-  return /'s birthday$/i.test(title) || calName.toLowerCase().includes("birthday");
+  return /'s birthday\b/i.test(title) || calName.toLowerCase().includes("birthday");
 }
 
 function personName(title: string): string {
-  return title.replace(/'s birthday$/i, "").trim();
+  return title.replace(/'s birthday.*$/i, "").trim();
 }
 
 /** Parse YYYY-MM-DD or ISO dateTime, return just the date portion as YYYY-MM-DD. */
@@ -42,6 +42,13 @@ export async function GET() {
   const { data: { user } } = await serverClient.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (user.id === process.env.DEMO_USER_ID) {
+    const future = new Date(Date.now() + 12 * 86_400_000);
+    const date = new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(future);
+    return NextResponse.json({
+      birthday: { name: "Priya", date, daysUntil: 12 } satisfies UpcomingBirthday,
+    });
   }
 
   try {
