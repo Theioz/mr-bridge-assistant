@@ -255,6 +255,12 @@ function synthesizeFallbackSummary(
 // Stop the tool loop when cumulative token usage across steps exceeds `budget`.
 // v6 `stopWhen` accepts an array of predicates composed with OR, so this pairs
 // with `stepCountIs` to replace the v4-era hand-rolled cumulativeTokens tally.
+//
+// Note on prompt caching (#340): usage.inputTokens is the grand total of input
+// tokens processed by the model, including cache reads and writes. The budget
+// ceiling intentionally protects against runaway context growth, not cost —
+// cached reads still count here even though they're billed at ~10%. Do not
+// subtract cacheReadTokens from this tally.
 const tokenBudgetExceeds =
   (budget: number): StopCondition<ToolSet> =>
   ({ steps }) => {
@@ -264,6 +270,32 @@ const tokenBudgetExceeds =
     }
     return total > budget;
   };
+
+// Attach an Anthropic ephemeral cache breakpoint to the last entry in a tools
+// object. Anthropic caps requests at 4 cache breakpoints total — anchoring one
+// marker on the trailing tool caches every tool above it and leaves headroom
+// for the system-prompt marker (#340). Non-Anthropic providers ignore the
+// provider-scoped `anthropic` key so this is safe to pass through; callers
+// should still skip the wrap on the demo path for clarity.
+function withTrailingCacheBreakpoint<T extends Record<string, unknown>>(tools: T): T {
+  const keys = Object.keys(tools);
+  if (keys.length === 0) return tools;
+  const lastKey = keys[keys.length - 1];
+  const last = tools[lastKey] as {
+    providerOptions?: { anthropic?: Record<string, unknown> } & Record<string, unknown>;
+  } & Record<string, unknown>;
+  const nextLast = {
+    ...last,
+    providerOptions: {
+      ...(last.providerOptions ?? {}),
+      anthropic: {
+        ...(last.providerOptions?.anthropic ?? {}),
+        cacheControl: { type: "ephemeral" as const },
+      },
+    },
+  };
+  return { ...tools, [lastKey]: nextLast } as T;
+}
 
 export async function POST(req: Request) {
   const { messages, sessionId, model: modelOverride } = await req.json() as {
@@ -410,7 +442,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     .filter((m: { role: "user" | "assistant"; content: string }) => m.content.trim() !== "");
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
-  const tools = {
+  const baseTools = {
     ...buildTasksTools(toolContext),
     ...buildHabitsTools(toolContext),
     ...buildFitnessTools(toolContext),
@@ -423,6 +455,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     ...buildStocksTools(toolContext),
     ...buildSportsTools(toolContext),
   };
+  // #340: Anthropic ephemeral cache breakpoint on the trailing tool (caches
+  // all 23 tool schemas above it). Skip on the demo path — Groq doesn't
+  // support prompt caching.
+  const tools = isDemo ? baseTools : withTrailingCacheBreakpoint(baseTools);
 
   // Select model: demo → Groq Llama (free tier); real user → Anthropic tier selection
   let selectedModel;
@@ -439,10 +475,28 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     });
   }
 
-  // Build system prompt string. AI SDK v4 requires system to be a plain string.
-  const systemValue = isDemo
+  // System prompt shape (#340). Demo path stays a plain string for Groq.
+  // Real-user path splits into two system messages: the static prefix carries
+  // an Anthropic ephemeral cacheControl marker so its ~1.4k tokens + tool
+  // schemas above it are cached (~5 min TTL); the dynamic block (date + name)
+  // follows uncached so cache hits don't invalidate each turn.
+  const systemValue: string | Array<{
+    role: "system";
+    content: string;
+    providerOptions?: { anthropic?: { cacheControl: { type: "ephemeral" } } };
+  }> = isDemo
     ? demoSystemPrompt
-    : `${STATIC_SYSTEM_PROMPT}\n\n${dynamicPromptBlock}`;
+    : [
+        {
+          role: "system",
+          content: STATIC_SYSTEM_PROMPT,
+          providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+        },
+        {
+          role: "system",
+          content: dynamicPromptBlock,
+        },
+      ];
 
   // Per-turn safeguards (issues #223 + #319): raise step cap from 12→20 so
   // multi-step calendar/task flows can finish their summary, bound cost with a
@@ -476,7 +530,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     onError: ({ error }) => {
       console.error("[chat] streamText error:", JSON.stringify(error));
     },
-    onFinish: async ({ text, steps, finishReason }) => {
+    onFinish: async ({ text, steps, finishReason, totalUsage, warnings }) => {
       clearTimeout(deadlineTimer);
 
       const stepCount = steps?.length ?? 0;
@@ -487,6 +541,21 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       );
       const budgetExceeded = cumulativeTokens > TOKEN_BUDGET;
       const durationMs = Date.now() - turnStartedAt;
+
+      // #340 prompt-cache accounting. Sum across steps because totalUsage
+      // aggregation of inputTokenDetails is provider-dependent; stepping
+      // manually matches what the SDK's telemetry does and is robust to
+      // null-filled detail objects on non-Anthropic providers (Groq).
+      let cacheReadTokens = 0;
+      let cacheWriteTokens = 0;
+      let noCacheTokens = 0;
+      for (const s of steps ?? []) {
+        cacheReadTokens += s.usage?.inputTokenDetails?.cacheReadTokens ?? 0;
+        cacheWriteTokens += s.usage?.inputTokenDetails?.cacheWriteTokens ?? 0;
+        noCacheTokens += s.usage?.inputTokenDetails?.noCacheTokens ?? 0;
+      }
+      const stepWarnings = (steps ?? []).flatMap((s) => s.warnings ?? []);
+      const allWarnings = [...(warnings ?? []), ...stepWarnings];
 
       // Pair up tool calls with their results so the synthesizer can tell
       // "tool ran and succeeded" from "tool ran and failed" — the bug #319
@@ -531,6 +600,16 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
         `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} deadlineExceeded=${deadlineExceeded} ` +
         `synthesized=${synthesized} toolFailures=${failedToolCount}/${completedSteps.length}`
+      );
+
+      // #340: structured per-turn cache-usage log. `isDemo` on Groq reports no
+      // cache details; warnings surface any Anthropic wire-limit issue (e.g.
+      // "cacheControl breakpoint limit") so silent degradation doesn't hide.
+      console.log(
+        `[chat] cache session=${sessionId} isDemo=${isDemo} ` +
+        `inputTokens=${totalUsage?.inputTokens ?? 0} outputTokens=${totalUsage?.outputTokens ?? 0} ` +
+        `cacheRead=${cacheReadTokens} cacheWrite=${cacheWriteTokens} noCache=${noCacheTokens} ` +
+        `warnings=${allWarnings.length === 0 ? "[]" : JSON.stringify(allWarnings)}`
       );
 
       if (sessionId && userId) {
