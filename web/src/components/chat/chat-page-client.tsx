@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { History, Plus } from "lucide-react";
 import type { UIMessage } from "ai";
 import ChatInterface from "./chat-interface";
@@ -19,6 +19,67 @@ interface Props {
 
 function newSessionId(): string {
   return crypto.randomUUID();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Storage-backed external stores
+//
+// useSyncExternalStore lets us read localStorage/sessionStorage without a
+// setState-in-effect cascade. Each store has a subscribe that listens for
+// cross-tab "storage" events plus a same-tab custom event dispatched when we
+// write. getServerSnapshot returns the pre-hydration default, so SSR and the
+// initial client render match; React swaps in the real storage value after
+// hydration completes.
+
+const HISTORY_OPEN_KEY = "chatHistoryOpen";
+const HISTORY_OPEN_EVENT = "chat-history-open-changed";
+
+function subscribeHistoryOpen(onChange: () => void): () => void {
+  window.addEventListener(HISTORY_OPEN_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(HISTORY_OPEN_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function getHistoryOpenSnapshot(): boolean {
+  const stored = localStorage.getItem(HISTORY_OPEN_KEY);
+  return stored === null ? true : stored === "true";
+}
+
+function getHistoryOpenServerSnapshot(): boolean {
+  return true;
+}
+
+function writeHistoryOpen(value: boolean): void {
+  localStorage.setItem(HISTORY_OPEN_KEY, String(value));
+  window.dispatchEvent(new Event(HISTORY_OPEN_EVENT));
+}
+
+const CHAT_PREFILL_KEY = "chatPrefill";
+const CHAT_PREFILL_EVENT = "chat-prefill-changed";
+
+function subscribeChatPrefill(onChange: () => void): () => void {
+  window.addEventListener(CHAT_PREFILL_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CHAT_PREFILL_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function getChatPrefillSnapshot(): string | null {
+  return sessionStorage.getItem(CHAT_PREFILL_KEY);
+}
+
+function getChatPrefillServerSnapshot(): string | null {
+  return null;
+}
+
+function clearChatPrefill(): void {
+  sessionStorage.removeItem(CHAT_PREFILL_KEY);
+  window.dispatchEvent(new Event(CHAT_PREFILL_EVENT));
 }
 
 export default function ChatPageClient(props: Props) {
@@ -45,13 +106,21 @@ function ChatPageClientInner({
   const [refreshKey, setRefreshKey] = useState(0);
   const [timeTick, setTimeTick] = useState(0);
 
-  const [historyOpen, setHistoryOpen] = useState(true);
+  const historyOpen = useSyncExternalStore(
+    subscribeHistoryOpen,
+    getHistoryOpenSnapshot,
+    getHistoryOpenServerSnapshot,
+  );
   const [showSheet, setShowSheet] = useState(false);
   const { isKeyboardOpen } = useKeyboardOpen();
 
   const [allSessions, setAllSessions] = useState<SessionPreview[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
-  const [chatPrefill, setChatPrefill] = useState<string | null>(null);
+  const chatPrefill = useSyncExternalStore(
+    subscribeChatPrefill,
+    getChatPrefillSnapshot,
+    getChatPrefillServerSnapshot,
+  );
 
   const toast = useUndoToast();
 
@@ -66,29 +135,8 @@ function ChatPageClientInner({
   }, [allSessions]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("chatHistoryOpen");
-    if (stored !== null) setHistoryOpen(stored === "true");
-  }, []);
-
-  useEffect(() => {
-    const prefill = sessionStorage.getItem("chatPrefill");
-    if (prefill) {
-      sessionStorage.removeItem("chatPrefill");
-      setChatPrefill(prefill);
-    }
-  }, []);
-
-  useEffect(() => {
     sessionStorage.setItem("chatActiveSessionId", activeSessionId);
   }, [activeSessionId]);
-
-  useEffect(() => {
-    if (!initialSessionId) {
-      const stored = sessionStorage.getItem("chatActiveSessionId");
-      if (stored) setActiveSessionId(stored);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -195,10 +243,12 @@ function ChatPageClientInner({
   }, [initialSessionId]);
 
   const toggleDesktopHistory = () => {
-    const next = !historyOpen;
-    setHistoryOpen(next);
-    localStorage.setItem("chatHistoryOpen", String(next));
+    writeHistoryOpen(!historyOpen);
   };
+
+  useEffect(() => {
+    if (chatPrefill !== null) clearChatPrefill();
+  }, [chatPrefill]);
 
   const handleNewChat = useCallback(() => {
     setActiveSessionId(newSessionId());
