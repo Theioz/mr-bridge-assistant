@@ -1,7 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString } from "@/lib/timezone";
-import { streamText, wrapLanguageModel, stepCountIs } from "ai";
+import { ToolLoopAgent, wrapLanguageModel, stepCountIs } from "ai";
 import type { StopCondition, ToolSet } from "ai";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -261,8 +261,12 @@ function synthesizeFallbackSummary(
 // ceiling intentionally protects against runaway context growth, not cost —
 // cached reads still count here even though they're billed at ~10%. Do not
 // subtract cacheReadTokens from this tally.
+// Generic over TOOLS so the predicate composes with a concrete, typed tools
+// object in ToolLoopAgent's `stopWhen` (which uses `NoInfer<TOOLS>`). The
+// SDK's own helpers (e.g. `stepCountIs`) return `StopCondition<any>` for the
+// same reason; we parametrize instead to keep `--no-explicit-any` clean.
 const tokenBudgetExceeds =
-  (budget: number): StopCondition<ToolSet> =>
+  <T extends ToolSet>(budget: number): StopCondition<T> =>
   ({ steps }) => {
     let total = 0;
     for (const s of steps) {
@@ -520,16 +524,17 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   let synthesized = false;
   let hadFailures = false;
 
-  const streamOptions: Parameters<typeof streamText>[0] = {
+  const agent = new ToolLoopAgent({
     model: selectedModel,
-    system: systemValue,
-    messages: [...contextMessages, ...cleanMessages],
+    instructions: systemValue,
     tools,
     stopWhen: [stepCountIs(MAX_STEPS), tokenBudgetExceeds(TOKEN_BUDGET)],
-    abortSignal: turnAbort.signal,
-    onError: ({ error }) => {
-      console.error("[chat] streamText error:", JSON.stringify(error));
-    },
+    // Per-request tool factories already close over { supabase, userId,
+    // isDemo, sessionId } via `toolContext` above; prepareCall runs per
+    // invoke so future callers could swap tools at call time without
+    // reconstructing the agent. Passthrough today satisfies #350's contract
+    // that tools wire through prepareCall.
+    prepareCall: async (args) => args,
     onFinish: async ({ text, steps, finishReason, totalUsage, warnings }) => {
       clearTimeout(deadlineTimer);
 
@@ -643,9 +648,12 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         }
       }
     },
-  };
+  });
 
-  const result = streamText(streamOptions);
+  const result = await agent.stream({
+    messages: [...contextMessages, ...cleanMessages],
+    abortSignal: turnAbort.signal,
+  });
 
   // v5: emit the turn-complete sentinel (#319) as message metadata stamped on
   // the finish part. Client reads message.metadata.turnComplete to distinguish
@@ -657,6 +665,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           turnComplete: { synthesized, hadFailures, deadlineExceeded },
         };
       }
+    },
+    onError: (error) => {
+      console.error("[chat] stream error:", JSON.stringify(error));
+      return "An error occurred.";
     },
   });
 }
