@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Loader2, Send, ChevronDown } from "lucide-react";
 import { Fragment } from "react";
 import MessageBubble from "./message-bubble";
@@ -63,15 +63,32 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
 
 const composerTransition = `border-color var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)`;
 
+const TOUCH_QUERY = "(pointer: coarse)";
+
+function subscribeTouch(onChange: () => void): () => void {
+  const mq = window.matchMedia(TOUCH_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+function getTouchSnapshot(): boolean {
+  return window.matchMedia(TOUCH_QUERY).matches;
+}
+
+function getTouchServerSnapshot(): boolean {
+  return false;
+}
+
 export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore, initialInput }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  useEffect(() => {
-    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
+  const isTouchDevice = useSyncExternalStore(
+    subscribeTouch,
+    getTouchSnapshot,
+    getTouchServerSnapshot,
+  );
 
   const { isKeyboardOpen, viewportHeight } = useKeyboardOpen();
   const composerMaxHeight = isKeyboardOpen
