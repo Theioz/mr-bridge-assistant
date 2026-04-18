@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import { History, Plus } from "lucide-react";
 import type { UIMessage } from "ai";
 import ChatInterface from "./chat-interface";
@@ -161,9 +161,11 @@ function ChatPageClientInner({
         const active = list.filter((s) => !s.deleted_at);
         const mostRecent = active[0];
         // SSR already loaded messages for initialSessionId; skip the refetch when it matches.
+        // activeSessionId here is the mount-time value — acceptable because this init effect
+        // runs once and any user-driven session switch during the in-flight fetch is rare.
         if (
           mostRecent &&
-          mostRecent.id !== activeSessionIdRef.current &&
+          mostRecent.id !== activeSessionId &&
           mostRecent.id !== initialSessionId
         ) {
           setLoadingSession(true);
@@ -197,17 +199,19 @@ function ChatPageClientInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const activeSessionIdRef = useRef(activeSessionId);
-  activeSessionIdRef.current = activeSessionId;
-
+  // Visibility handler re-registers on activeSessionId change (cheap listener
+  // swap) rather than using a latest-ref pattern, which react-hooks/refs forbids
+  // in React 19. The guard on empty initial state only matters pre-first-message,
+  // so rebinding per-message after that is acceptable.
+  const hasAnyMessages = activeMessages.length > 0;
   useEffect(() => {
     const handleVisibility = async () => {
       if (document.visibilityState !== "visible") return;
       setTimeTick((t) => t + 1);
-      if (!initialSessionId && activeMessages.length === 0) return;
+      if (!initialSessionId && !hasAnyMessages) return;
       try {
         const listRes = await fetch("/api/chat/sessions");
-        let sessionId = activeSessionIdRef.current;
+        let sessionId = activeSessionId;
         if (listRes.ok) {
           const listData = await listRes.json();
           const list: SessionPreview[] = listData.sessions ?? [];
@@ -239,8 +243,7 @@ function ChatPageClientInner({
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSessionId]);
+  }, [activeSessionId, hasAnyMessages, initialSessionId]);
 
   const toggleDesktopHistory = () => {
     writeHistoryOpen(!historyOpen);
@@ -324,8 +327,7 @@ function ChatPageClientInner({
       fetchSessions();
       if (!info || info.turnComplete) return;
       try {
-        const sid = activeSessionIdRef.current;
-        const res = await fetch(`/api/chat/sessions/${sid}`);
+        const res = await fetch(`/api/chat/sessions/${activeSessionId}`);
         if (!res.ok) return;
         const data = await res.json();
         const msgs: UIMessage[] = (
@@ -344,7 +346,7 @@ function ChatPageClientInner({
         // non-fatal
       }
     },
-    [fetchSessions]
+    [fetchSessions, activeSessionId]
   );
 
   const handleArchiveSession = useCallback(
