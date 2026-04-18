@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString } from "@/lib/timezone";
 import { streamText, wrapLanguageModel, stepCountIs } from "ai";
+import type { StopCondition } from "ai";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
@@ -166,15 +167,15 @@ When asked what to cook or for recipe ideas:
 5. Call get_profile to check for dietary preferences and cuisine preferences (ignore any pantry-related profile keys).
 6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
 
-// Lambda runtime ceiling. We trigger our own onStepFinish-driven abort at
-// TURN_DEADLINE_MS so onFinish always runs and persists a fallback assistant
-// message before Vercel's hard kill — the silent-stall path #319 hit when
-// the previous 60s ceiling let the Lambda die mid-stream.
+// Lambda runtime ceiling. A wall-clock timer trips turnAbort at TURN_DEADLINE_MS
+// so onFinish always runs and persists a fallback assistant message before
+// Vercel's hard kill — the silent-stall path #319 hit when the previous 60s
+// ceiling let the Lambda die mid-stream.
 export const maxDuration = 90;
 const TURN_DEADLINE_MS = 80_000;
 
 // Issue #223 + #319: when the agent loop ends without an assistant text
-// message (step-cap exhaustion, token-budget abort, Vercel-timeout abort, or
+// message (step-cap stopWhen, token-budget stopWhen, Vercel-timeout abort, or
 // a quiet model), build a short human-readable summary from the tool calls
 // that did execute so the user sees acknowledgement instead of silence — and
 // CRUCIALLY, distinguish ok-true from ok-false tool results so we never
@@ -250,6 +251,20 @@ function synthesizeFallbackSummary(
         : "";
   return body + reason;
 }
+
+// Stop the tool loop when cumulative token usage across steps exceeds `budget`.
+// v6 `stopWhen` accepts an array of predicates composed with OR, so this pairs
+// with `stepCountIs` to replace the v4-era hand-rolled cumulativeTokens tally.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tokenBudgetExceeds =
+  (budget: number): StopCondition<any> =>
+  ({ steps }) => {
+    let total = 0;
+    for (const s of steps) {
+      total += (s.usage?.inputTokens ?? 0) + (s.usage?.outputTokens ?? 0);
+    }
+    return total > budget;
+  };
 
 export async function POST(req: Request) {
   const { messages, sessionId, model: modelOverride } = await req.json() as {
@@ -438,8 +453,6 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   const MAX_STEPS = 20;
   const TOKEN_BUDGET = 150_000;
   const turnStartedAt = Date.now();
-  let cumulativeTokens = 0;
-  let budgetExceeded = false;
   let deadlineExceeded = false;
   const turnAbort = new AbortController();
   const deadlineTimer = setTimeout(() => {
@@ -460,25 +473,21 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     system: systemValue,
     messages: [...contextMessages, ...cleanMessages],
     tools,
-    stopWhen: stepCountIs(MAX_STEPS),
+    stopWhen: [stepCountIs(MAX_STEPS), tokenBudgetExceeds(TOKEN_BUDGET)],
     abortSignal: turnAbort.signal,
     onError: ({ error }) => {
       console.error("[chat] streamText error:", JSON.stringify(error));
-    },
-    onStepFinish: ({ usage }) => {
-      const stepTotal = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0);
-      cumulativeTokens += stepTotal;
-      if (cumulativeTokens > TOKEN_BUDGET && !budgetExceeded) {
-        budgetExceeded = true;
-        console.warn(`[chat] token budget exceeded session=${sessionId} tokens=${cumulativeTokens} budget=${TOKEN_BUDGET} — aborting turn`);
-        turnAbort.abort();
-      }
     },
     onFinish: async ({ text, steps, finishReason }) => {
       clearTimeout(deadlineTimer);
 
       const stepCount = steps?.length ?? 0;
       const hitStepCap = stepCount >= MAX_STEPS;
+      const cumulativeTokens = (steps ?? []).reduce(
+        (acc, s) => acc + (s.usage?.inputTokens ?? 0) + (s.usage?.outputTokens ?? 0),
+        0,
+      );
+      const budgetExceeded = cumulativeTokens > TOKEN_BUDGET;
       const durationMs = Date.now() - turnStartedAt;
 
       // Pair up tool calls with their results so the synthesizer can tell
