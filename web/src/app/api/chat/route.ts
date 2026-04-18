@@ -2,7 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString } from "@/lib/timezone";
 import { streamText, wrapLanguageModel, stepCountIs } from "ai";
-import type { StopCondition } from "ai";
+import type { StopCondition, ToolSet } from "ai";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
@@ -255,9 +255,8 @@ function synthesizeFallbackSummary(
 // Stop the tool loop when cumulative token usage across steps exceeds `budget`.
 // v6 `stopWhen` accepts an array of predicates composed with OR, so this pairs
 // with `stepCountIs` to replace the v4-era hand-rolled cumulativeTokens tally.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tokenBudgetExceeds =
-  (budget: number): StopCondition<any> =>
+  (budget: number): StopCondition<ToolSet> =>
   ({ steps }) => {
     let total = 0;
     for (const s of steps) {
@@ -467,9 +466,8 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   let synthesized = false;
   let hadFailures = false;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamOptions: Parameters<typeof streamText>[0] = {
-    model: selectedModel as any,
+    model: selectedModel,
     system: systemValue,
     messages: [...contextMessages, ...cleanMessages],
     tools,

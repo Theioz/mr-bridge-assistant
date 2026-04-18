@@ -439,7 +439,6 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             disabled={isLoading}
             autoComplete="off"
             aria-autocomplete="list"
-            aria-expanded={menuCommands.length > 0}
             className="w-full focus:outline-none"
             style={{
               resize: "none",
