@@ -66,7 +66,7 @@ def main() -> None:
             .select("id, title, due_date")
             .eq("user_id", user_id)
             .eq("status", "active")
-            .not_("due_date", "is", None)
+            .filter("due_date", "not.is", "null")
             .lte("due_date", today_str)
             .order("due_date", desc=False)
             .execute()

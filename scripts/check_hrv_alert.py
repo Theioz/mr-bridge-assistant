@@ -72,7 +72,7 @@ def main() -> None:
         client.table("recovery_metrics")
         .select("date, avg_hrv")
         .eq("user_id", owner_user_id)
-        .not_("avg_hrv", "is", None)
+        .filter("avg_hrv", "not.is", "null")
         .gte("date", cutoff)
         .order("date", desc=True)
         .limit(8)

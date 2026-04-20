@@ -23,8 +23,10 @@ if [[ -z "$MESSAGE" ]]; then
   exit 1
 fi
 
-# macOS notification
-osascript -e "display notification \"$MESSAGE\" with title \"$TITLE\" sound name \"default\""
+# macOS notification — escape double-quotes so message content doesn't break AppleScript
+_MAC_MSG="${MESSAGE//\"/\\\"}"
+_MAC_TITLE="${TITLE//\"/\\\"}"
+osascript -e "display notification \"$_MAC_MSG\" with title \"$_MAC_TITLE\" sound name \"default\""
 
 # Android push via ntfy.sh
 if [[ -f "$ENV_FILE" ]]; then
