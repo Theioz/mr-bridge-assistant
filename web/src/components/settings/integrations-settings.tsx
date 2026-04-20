@@ -69,7 +69,7 @@ export function IntegrationsSettings({
           role="alert"
           style={{
             fontSize: "var(--t-micro)",
-            color: "var(--color-danger, #c0392b)",
+            color: "var(--color-danger)",
             marginBottom: "var(--space-4)",
           }}
         >
@@ -115,7 +115,7 @@ export function IntegrationsSettings({
                 style={{
                   fontSize: "var(--t-micro)",
                   fontWeight: 500,
-                  color: "var(--color-success, #27ae60)",
+                  color: "var(--color-positive)",
                   padding: "2px var(--space-2)",
                   border: "1px solid currentColor",
                   borderRadius: "var(--r-full, 9999px)",
