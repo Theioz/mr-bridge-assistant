@@ -173,9 +173,42 @@ The MCP and the committed `smoke/` suite are independent:
 
 ## CI
 
-Not yet configured. Tracked as a follow-up issue alongside the axe a11y spec
-and Lighthouse perf runner. When it lands, expect `smoke:chat` to run on
-every PR and the full suite nightly.
+[`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) runs two
+jobs:
+
+- **`smoke-pr`** — on every PR that touches `web/**`, the smoke docs,
+  `.mcp.json`, or the workflow itself. Runs `smoke:chat` + `smoke:a11y`
+  against Playwright-managed `next dev`. Cancels stale runs on new
+  pushes to the same branch. Target < 3 min after warm cache.
+- **`smoke-release`** — nightly at 09:00 UTC plus `workflow_dispatch`
+  for manual triggers. Runs chat + a11y against dev, stops it, then
+  `next build` + `next start` and runs `smoke:perf` against the prod
+  bundle. Target < 20 min.
+
+Playwright browsers are cached with key
+`playwright-<runner>-<hash(package-lock.json)>`; the `--with-deps
+chromium` install only runs on cache miss. On failure both jobs
+upload `smoke/test-results/`, `smoke/playwright-report/`, and (for
+release) `smoke/perf-report/` as GitHub artifacts with 14-day
+retention.
+
+### Secrets
+
+Add these under repo Settings → Secrets and variables → Actions:
+
+- `SMOKE_TEST_EMAIL`
+- `SMOKE_TEST_PASSWORD`
+- `SMOKE_SUPABASE_SERVICE_KEY` — service-role key; the workflow aliases
+  it to `SUPABASE_SERVICE_ROLE_KEY` at runtime so server tools find it
+  under their expected name.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the Next middleware + auth flow
+  use this on every request; without it the dev server crashes before
+  Playwright ever signs in.
+- `ANTHROPIC_API_KEY` — chat smoke hits the real Anthropic API.
+
+**Never scope these to production.** Always point at the smoke test
+account's Supabase project.
 
 ## Troubleshooting
 
