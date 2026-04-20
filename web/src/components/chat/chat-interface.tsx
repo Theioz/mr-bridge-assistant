@@ -100,9 +100,9 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   // so it can refresh from server.
   const turnCompleteRef = useRef(false);
 
-  // #342: transport sends UIMessage[] (with structured tool / file / text
-  // parts) directly. The server route accepts UIMessage[] and converts it
-  // to ModelMessage[] via convertToModelMessages — see web/src/app/api/chat/route.ts.
+  // Transport sends UIMessage[] (with structured tool / file / text parts)
+  // directly. The server route converts to ModelMessage[] via
+  // convertToModelMessages — see web/src/app/api/chat/route.ts.
   const transport = useMemo(
     () => new DefaultChatTransport({ api: "/api/chat" }),
     []

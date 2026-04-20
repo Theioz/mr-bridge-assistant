@@ -21,7 +21,6 @@ function newSessionId(): string {
   return crypto.randomUUID();
 }
 
-// #342: shape of one row returned by /api/chat/sessions/[id].
 type SessionMessageRow = {
   id: string;
   role: string;
@@ -30,9 +29,8 @@ type SessionMessageRow = {
   created_at: string;
 };
 
-// #342: hydrate one DB row into a UIMessage. Prefers the structured `parts`
-// column; falls back to a synthetic text part for any row missing it (e.g. a
-// pre-migration row that somehow escaped backfill).
+// Prefer the structured `parts` column; fall back to a synthetic text part
+// for any row missing it (e.g. a pre-migration row that escaped backfill).
 function hydrateMessage(m: SessionMessageRow): UIMessage {
   return {
     id: m.id,

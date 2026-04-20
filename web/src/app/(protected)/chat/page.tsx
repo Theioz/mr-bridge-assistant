@@ -42,9 +42,9 @@ export default async function ChatPage() {
       initialMessages = ordered.map((m) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
-        // #342: hydrate from structured `parts` (tool calls, tool results,
-        // file attachments round-trip). Fallback to a synthetic text part
-        // protects against rows the migration somehow missed.
+        // Hydrate from structured `parts` (tool calls, tool results, file
+        // attachments round-trip). Fallback to a synthetic text part protects
+        // against rows the migration somehow missed.
         parts: (m.parts as UIMessage["parts"] | null) ?? [
           { type: "text" as const, text: m.content },
         ],
