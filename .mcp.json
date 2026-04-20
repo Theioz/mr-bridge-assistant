@@ -3,6 +3,10 @@
     "deepwiki": {
       "command": "npx",
       "args": ["-y", "deepwiki-mcp"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
