@@ -1,0 +1,37 @@
+# Build output
+node_modules/
+.next/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Lock files (huge, regenerable)
+package-lock.json
+*.lock
+
+# Logs
+*.log
+
+# Secrets (already in .gitignore, double-locked here)
+.env
+.env.local
+.env.*.local
+credentials.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Vercel
+.vercel/
+
+# macOS
+.DS_Store
+
+# Large generated/historical files
+# CHANGELOG.md is 312KB / 1400+ lines — read it explicitly when needed
+CHANGELOG.md
+
+# Personal data exports
+renpho_export.csv

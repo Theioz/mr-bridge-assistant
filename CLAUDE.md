@@ -1,3 +1,3 @@
 # Mr. Bridge
 
-@.claude/rules/mr-bridge-rules.md
+@.claude/rules/core.md
