@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { startOfTodayRFC3339, endOfTodayRFC3339, USER_TZ } from "@/lib/timezone";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { createClient } from "@/lib/supabase/server";
 
 export interface CalendarEvent {
@@ -52,7 +53,10 @@ export async function GET() {
 
     // List all calendars so events from shared/secondary accounts are included
     const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
-    const calendars = calListRes.data.items ?? [];
+    const excluded = await getExcludedCalendarIds(serverClient, user.id);
+    const calendars = (calListRes.data.items ?? []).filter(
+      (c) => !excluded.has(c.id ?? ""),
+    );
 
     const allEventArrays = await Promise.all(
       calendars.map(async (cal) => {
