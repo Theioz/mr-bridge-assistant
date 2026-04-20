@@ -18,6 +18,16 @@ smoke) and the multi-hour #323 pre-release verification.
   Playwright annotations in the HTML report without blocking. The
   `color-contrast` rule is temporarily disabled pending the design-token
   sweep in #381. Whole run: ~21s on a warm dev server.
+- `smoke/perf/lighthouse.mts` — Lighthouse Core Web Vitals sweep across
+  the same 11 routes, mobile + desktop presets, median of 3 runs per
+  (route × preset). Thresholds from #323 Gate B: **CLS < 0.1**,
+  **LCP < 2.5s**, **TBT < 200ms** as the INP proxy (INP is a field metric
+  and can't be measured in a lab run — TBT is the published surrogate —
+  see https://web.dev/articles/inp). Writes per-route HTML reports +
+  `summary.json` under `web/smoke/perf-report/` (gitignored); exits
+  non-zero on any breach. Expensive (~7 min for 66 Lighthouse runs
+  against a prod build) — intended for nightly / manual dispatch, not
+  per-PR.
 
 ## What's still manual
 
@@ -89,6 +99,29 @@ npm run smoke:chat     # just the chat smoke
 npm run smoke:a11y     # axe sweep across the 11 routes
 npm run smoke           # the full suite (chat + a11y)
 ```
+
+`smoke:perf` is the exception — Lighthouse runs expect a Next server on
+`localhost:3000` that they drive via CDP, and mobile preset throttling
+makes dev-mode numbers meaningless (4× CPU throttle + slow-3G on top of
+unminified, source-mapped bundles = guaranteed 6–10s LCP regardless of
+real perf). Always run against a production build:
+
+```
+npm run build
+npm run start          # in one terminal
+npm run smoke:perf     # in another
+```
+
+`web/smoke/perf-report/<route>-<preset>.html` is the full Lighthouse
+UI; `web/smoke/perf-report/summary.json` is the structured breakdown.
+
+Per-route baselines live in
+[web/smoke/perf/baselines.json](../web/smoke/perf/baselines.json) —
+the gate is `value <= max(threshold, baseline)`, so current known-bad
+routes don't block the pipeline but regressions past the current
+floor still fail. Ratchet baselines down as perf improves; delete the
+file once every route passes the hard thresholds. Tracked in
+[#384](https://github.com/Theioz/mr-bridge-assistant/issues/384).
 
 On failure, Playwright writes a trace + screenshot to
 `web/smoke/test-results/` and an HTML report to

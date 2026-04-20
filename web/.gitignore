@@ -8,3 +8,4 @@ out/
 # Playwright smoke suite artifacts (traces, screenshots, HTML report)
 smoke/test-results/
 smoke/playwright-report/
+smoke/perf-report/
