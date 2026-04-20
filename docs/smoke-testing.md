@@ -11,6 +11,13 @@ smoke) and the multi-hour #323 pre-release verification.
   the /api/chat stream to close → asserts the assistant bubble is visible with
   a "4" or "four" → verifies `chat_messages` persisted user + assistant rows →
   asserts zero console errors during the turn.
+- `smoke/specs/a11y.spec.ts` — runs axe-core across all 11 routes
+  (`/dashboard`, `/chat`, `/fitness`, `/habits`, `/tasks`, `/weekly`,
+  `/journal`, `/meals`, `/notifications`, `/settings`, `/login`). Fails on
+  any Critical or Serious violation; Moderate / Minor findings surface as
+  Playwright annotations in the HTML report without blocking. The
+  `color-contrast` rule is temporarily disabled pending the design-token
+  sweep in #381. Whole run: ~21s on a warm dev server.
 
 ## What's still manual
 
@@ -79,7 +86,8 @@ you already have one running). From `web/`:
 
 ```
 npm run smoke:chat     # just the chat smoke
-npm run smoke           # the full suite (same as :chat today)
+npm run smoke:a11y     # axe sweep across the 11 routes
+npm run smoke           # the full suite (chat + a11y)
 ```
 
 On failure, Playwright writes a trace + screenshot to

@@ -399,6 +399,7 @@ function MealRowEdit({
     >
       <div className="flex" style={{ gap: "var(--space-2)" }}>
         <select
+          aria-label="Meal type"
           value={fields.meal_type}
           onChange={(e) => onChange({ ...fields, meal_type: e.target.value })}
           style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
@@ -722,6 +723,7 @@ function TodayTab({
         <h2 className="db-section-label">Quick log</h2>
         <div className="flex" style={{ gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
           <select
+            aria-label="Meal type"
             value={logMealType}
             onChange={(e) => setLogMealType(e.target.value as MealType)}
             style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
@@ -1043,6 +1045,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                     {isUsing ? (
                       <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
                         <select
+                          aria-label="Meal type"
                           value={useRecipeMealType}
                           onChange={(e) => setUseRecipeMealType(e.target.value as MealType)}
                           style={{ ...inputStyle, width: "auto", minWidth: 110 }}
@@ -1301,6 +1304,7 @@ function PlanTab({
                   {state.open ? (
                     <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
                       <select
+                        aria-label="Meal type"
                         value={state.mealType}
                         onChange={(e) => setLogState(i, { mealType: e.target.value as MealType })}
                         style={{ ...inputStyle, width: "auto", minWidth: 110 }}

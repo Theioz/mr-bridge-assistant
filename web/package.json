@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "smoke": "playwright test",
     "smoke:chat": "playwright test smoke/specs/chat.spec.ts",
+    "smoke:a11y": "playwright test smoke/specs/a11y.spec.ts",
     "smoke:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
     "@next/bundle-analyzer": "^16.2.4",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.1.5",
