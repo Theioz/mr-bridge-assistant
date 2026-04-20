@@ -69,9 +69,9 @@ export async function GET() {
       location = profile.location_city ?? `${lat.toFixed(4)},${lon.toFixed(4)}`;
     } else {
       const city = profile.location_city ?? profile["Identity/Location"];
-      if (!city) return NextResponse.json({ error: "No location configured" }, { status: 400 });
+      if (!city) return NextResponse.json({ error: "No location configured" }, { status: 200 });
       const geo = await geocode(city);
-      if (!geo) return NextResponse.json({ error: `Could not geocode: ${city}` }, { status: 400 });
+      if (!geo) return NextResponse.json({ error: `Could not geocode: ${city}` }, { status: 200 });
       lat = geo.lat;
       lon = geo.lon;
       location = geo.label;
