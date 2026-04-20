@@ -35,14 +35,6 @@ type TurnCompleteMeta = {
   createdAt?: string | Date;
 };
 
-/** Extract concatenated text from a UIMessage's parts array (v5 shape). */
-function getMessageText(m: UIMessage): string {
-  return m.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("");
-}
-
 /** Read createdAt from metadata — server stamps it, SSR hydrates it. */
 function getCreatedAt(m: UIMessage): Date | null {
   const meta = m.metadata as TurnCompleteMeta | undefined;
@@ -108,23 +100,11 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   // so it can refresh from server.
   const turnCompleteRef = useRef(false);
 
-  // Transport memoized so useChat doesn't churn it per render. The server
-  // expects { role, content: string }[] — we flatten UIMessage.parts to that
-  // shape in prepareSendMessagesRequest rather than rewriting the API route.
+  // #342: transport sends UIMessage[] (with structured tool / file / text
+  // parts) directly. The server route accepts UIMessage[] and converts it
+  // to ModelMessage[] via convertToModelMessages — see web/src/app/api/chat/route.ts.
   const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        prepareSendMessagesRequest: ({ messages, body }) => ({
-          body: {
-            ...(body as Record<string, unknown> | undefined),
-            messages: messages.map((m) => ({
-              role: m.role,
-              content: getMessageText(m),
-            })),
-          },
-        }),
-      }),
+    () => new DefaultChatTransport({ api: "/api/chat" }),
     []
   );
 
