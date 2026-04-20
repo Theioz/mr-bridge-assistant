@@ -1,8 +1,8 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString } from "@/lib/timezone";
-import { ToolLoopAgent, wrapLanguageModel, stepCountIs } from "ai";
-import type { StopCondition, ToolSet } from "ai";
+import { ToolLoopAgent, wrapLanguageModel, stepCountIs, convertToModelMessages } from "ai";
+import type { StopCondition, ToolSet, UIMessage, ModelMessage } from "ai";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
@@ -42,13 +42,23 @@ const retryOnOverload: LanguageModelV3Middleware = {
   },
 };
 
-function selectModel(messages: { role: string; content: unknown }[], modelOverride?: "haiku" | "sonnet" | "auto"): "haiku" | "sonnet" {
+/** Concatenate all text parts of a UIMessage into a single string.
+ * Used for the denormalized `content` snapshot the sidebar preview reads,
+ * for the dedup guard, for selectModel's heuristics, and for logging. */
+function extractTextFromParts(message: UIMessage): string {
+  return message.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
+
+function selectModel(messages: UIMessage[], modelOverride?: "haiku" | "sonnet" | "auto"): "haiku" | "sonnet" {
   if (modelOverride === "haiku") return "haiku";
   if (modelOverride === "sonnet") return "sonnet";
 
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  if (!lastUser || typeof lastUser.content !== "string") return "sonnet";
-  const msg = lastUser.content.toLowerCase().trim();
+  if (!lastUser) return "sonnet";
+  const msg = extractTextFromParts(lastUser).toLowerCase().trim();
   if (!msg) return "sonnet";
 
   // Gate 1: length
@@ -303,7 +313,7 @@ function withTrailingCacheBreakpoint<T extends Record<string, unknown>>(tools: T
 
 export async function POST(req: Request) {
   const { messages, sessionId, model: modelOverride } = await req.json() as {
-    messages: { role: "user" | "assistant"; content: string }[];
+    messages: UIMessage[];
     sessionId?: string;
     model?: "haiku" | "sonnet" | "auto";
   };
@@ -336,7 +346,10 @@ export async function POST(req: Request) {
   // Load the last 10 messages from this session as context (#319: was loading
   // the FIRST 10 by ordering ascending then limiting — for any session past 10
   // turns the model lost recent context, including its own prior tool results).
-  let contextMessages: { role: "user" | "assistant"; content: string }[] = [];
+  // Historical context stays text-only — the model needs flat strings from
+  // history, and `content` is authoritative for that. Promoting historical
+  // tool-result round-trips into the model is a separate follow-up.
+  let contextModelMessages: ModelMessage[] = [];
   if (sessionId) {
     const { data } = await supabase
       .from("chat_messages")
@@ -348,18 +361,17 @@ export async function POST(req: Request) {
     if (data) {
       // Filter out empty-content messages — they cause Anthropic 400 errors —
       // then reverse so messages flow oldest→newest into the model.
-      contextMessages = (data as { role: "user" | "assistant"; content: string }[])
+      contextModelMessages = (data as { role: "user" | "assistant"; content: string }[])
         .filter((m) => m.content.trim() !== "")
-        .reverse();
+        .reverse()
+        .map((m) => ({ role: m.role, content: m.content })) as ModelMessage[];
     }
   }
 
   // Persist the session and user message immediately — before streaming starts.
   // This ensures messages survive stream errors, timeouts, or aborts (fix for issue #132).
   const lastUserMessage = messages[messages.length - 1];
-  const userMessageContent = typeof lastUserMessage?.content === "string"
-    ? lastUserMessage.content
-    : JSON.stringify(lastUserMessage?.content ?? "");
+  const userMessageContent = lastUserMessage ? extractTextFromParts(lastUserMessage) : "";
 
   if (sessionId && userId && userMessageContent.trim()) {
     try {
@@ -398,6 +410,7 @@ export async function POST(req: Request) {
           user_id: userId,
           role: "user",
           content: userMessageContent,
+          parts: lastUserMessage?.parts ?? [{ type: "text", text: userMessageContent }],
           position: nextPos,
         });
       }
@@ -436,14 +449,10 @@ Tools available:
 Today's date is ${todayString()}.
 ${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : "If you learn the user's name during the conversation, use it naturally going forward."}`;
 
-  // Strip extra fields (parts, id, etc.) that useChat adds — Anthropic only wants role + content
-  // Also filter empty-content messages to prevent Anthropic 400 errors
-  const cleanMessages = messages
-    .map((m: { role: "user" | "assistant"; content: string }) => ({
-      role: m.role,
-      content: m.content,
-    }))
-    .filter((m: { role: "user" | "assistant"; content: string }) => m.content.trim() !== "");
+  // #342: convert structured UIMessage[] (with tool-call / tool-result / file
+  // parts) into ModelMessage[] for the agent. The SDK already drops empty
+  // text parts, so the legacy empty-content filter is no longer needed.
+  const incomingModelMessages = await convertToModelMessages(messages);
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
   const baseTools = {
@@ -473,7 +482,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     console.log(`[chat] model=groq/llama-3.3-70b-versatile (demo) session=${sessionId}`);
   } else {
     modelTier = selectModel(messages, modelOverride);
-    console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
+    const lastMsg = messages[messages.length - 1];
+    const lastMsgPreview = lastMsg ? extractTextFromParts(lastMsg).slice(0, 80) : "";
+    console.log(`[chat] model=${modelTier} session=${sessionId} msg="${lastMsgPreview}"`);
     selectedModel = wrapLanguageModel({
       model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
       middleware: retryOnOverload,
@@ -538,6 +549,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   // v5 replaced StreamData's side-channel with per-message metadata.
   let synthesized = false;
   let hadFailures = false;
+  // #342: stash the canonical text-to-persist (from agent.onFinish) so the
+  // outer toUIMessageStreamResponse.onFinish can write it alongside the
+  // structured `parts` it receives from the SDK as `responseMessage.parts`.
+  let contentToPersist = "";
 
   const agent = new ToolLoopAgent({
     model: selectedModel,
@@ -621,7 +636,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       //   2. Empty text + tool calls ran → synthesize from steps + results.
       //   3. Empty text + nothing ran → persist a visible error so the user
       //      isn't left in silence.
-      let contentToPersist = text.trim();
+      // #342: assigns the closure-level `contentToPersist` so the outer
+      // toUIMessageStreamResponse.onFinish (which holds responseMessage.parts)
+      // writes both columns in one insert.
+      contentToPersist = text.trim();
       if (!contentToPersist) {
         contentToPersist = synthesizeFallbackSummary(completedSteps, {
           hitStepCap,
@@ -649,41 +667,15 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         `warnings=${allWarnings.length === 0 ? "[]" : JSON.stringify(allWarnings)}`
       );
 
-      if (sessionId && userId) {
-        try {
-          // Update session last_active_at to reflect completed turn.
-          await supabase.from("chat_sessions").upsert(
-            { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
-            { onConflict: "id" }
-          );
-
-          // Derive next position so the assistant message sorts after the user message.
-          const { data: posRow } = await supabase
-            .from("chat_messages")
-            .select("position")
-            .eq("session_id", sessionId)
-            .order("position", { ascending: false, nullsFirst: false })
-            .limit(1)
-            .maybeSingle();
-          const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
-
-          const { error: insertError } = await supabase.from("chat_messages").insert({
-            session_id: sessionId,
-            user_id: userId,
-            role: "assistant",
-            content: contentToPersist,
-            position: nextPos,
-          });
-          if (insertError) throw insertError;
-        } catch (persistErr) {
-          console.error("[chat] onFinish persist error:", persistErr);
-        }
-      }
+      // #342: assistant-message persistence moved to
+      // toUIMessageStreamResponse.onFinish so we can write both `content`
+      // (preview snapshot — this string) and `parts` (structured assistant
+      // message from the SDK).
     },
   });
 
   const result = await agent.stream({
-    messages: [...contextMessages, ...cleanMessages],
+    messages: [...contextModelMessages, ...incomingModelMessages],
     abortSignal: turnAbort.signal,
   });
 
@@ -691,6 +683,11 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   // the finish part. Client reads message.metadata.turnComplete to distinguish
   // a clean turn end from a Lambda kill mid-stream.
   return result.toUIMessageStreamResponse({
+    // #342: pass the incoming UIMessages so the SDK runs in persistence mode
+    // and stamps a stable id on the response message; `responseMessage.parts`
+    // arriving in onFinish below is the canonical structured assistant
+    // message we persist.
+    originalMessages: messages,
     // #339: backend-only — even if thinking is enabled, reasoning parts must
     // not cross the wire. Defaults to true otherwise.
     sendReasoning: false,
@@ -699,6 +696,47 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         return {
           turnComplete: { synthesized, hadFailures, deadlineExceeded },
         };
+      }
+    },
+    onFinish: async ({ responseMessage }) => {
+      if (!sessionId || !userId) return;
+      try {
+        // Update session last_active_at to reflect completed turn.
+        await supabase.from("chat_sessions").upsert(
+          { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
+          { onConflict: "id" }
+        );
+
+        // Derive next position so the assistant message sorts after the user message.
+        const { data: posRow } = await supabase
+          .from("chat_messages")
+          .select("position")
+          .eq("session_id", sessionId)
+          .order("position", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
+
+        // #342: dual-write — `content` is the preview snapshot (text or #319
+        // synthesized fallback); `parts` is the structured assistant message
+        // for round-trip rendering. Reasoning parts are stripped — #339 owns
+        // reasoning persistence; this PR keeps it ephemeral, matching the
+        // sendReasoning:false posture above.
+        const partsToPersist = responseMessage.parts.filter(
+          (p) => p.type !== "reasoning"
+        );
+
+        const { error: insertError } = await supabase.from("chat_messages").insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: "assistant",
+          content: contentToPersist,
+          parts: partsToPersist,
+          position: nextPos,
+        });
+        if (insertError) throw insertError;
+      } catch (persistErr) {
+        console.error("[chat] onFinish persist error:", persistErr);
       }
     },
     onError: (error) => {
