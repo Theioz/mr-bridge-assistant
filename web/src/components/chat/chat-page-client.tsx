@@ -21,6 +21,25 @@ function newSessionId(): string {
   return crypto.randomUUID();
 }
 
+type SessionMessageRow = {
+  id: string;
+  role: string;
+  content: string;
+  parts: UIMessage["parts"] | null;
+  created_at: string;
+};
+
+// Prefer the structured `parts` column; fall back to a synthetic text part
+// for any row missing it (e.g. a pre-migration row that escaped backfill).
+function hydrateMessage(m: SessionMessageRow): UIMessage {
+  return {
+    id: m.id,
+    role: m.role as "user" | "assistant",
+    parts: m.parts ?? [{ type: "text" as const, text: m.content }],
+    metadata: { createdAt: m.created_at },
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Storage-backed external stores
 //
@@ -173,14 +192,7 @@ function ChatPageClientInner({
             const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
             if (msgRes.ok) {
               const msgData = await msgRes.json();
-              const msgs: UIMessage[] = (
-                msgData.messages as { id: string; role: string; content: string; created_at: string }[]
-              ).map((m) => ({
-                id: m.id,
-                role: m.role as "user" | "assistant",
-                parts: [{ type: "text" as const, text: m.content }],
-                metadata: { createdAt: m.created_at },
-              }));
+              const msgs: UIMessage[] = (msgData.messages as SessionMessageRow[]).map(hydrateMessage);
               setActiveSessionId(mostRecent.id);
               setActiveMessages(msgs);
               setHasMore(msgData.hasMore ?? false);
@@ -225,14 +237,7 @@ function ChatPageClientInner({
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) return;
         const data = await res.json();
-        const msgs: UIMessage[] = (
-          data.messages as { id: string; role: string; content: string; created_at: string }[]
-        ).map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          parts: [{ type: "text" as const, text: m.content }],
-          metadata: { createdAt: m.created_at },
-        }));
+        const msgs: UIMessage[] = (data.messages as SessionMessageRow[]).map(hydrateMessage);
         setActiveMessages(msgs);
         setHasMore(data.hasMore ?? false);
         setOldestPosition(data.oldestPosition ?? null);
@@ -267,14 +272,7 @@ function ChatPageClientInner({
       const res = await fetch(`/api/chat/sessions/${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const msgs: UIMessage[] = (
-        data.messages as { id: string; role: string; content: string; created_at: string }[]
-      ).map((m) => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        parts: [{ type: "text" as const, text: m.content }],
-        metadata: { createdAt: m.created_at },
-      }));
+      const msgs: UIMessage[] = (data.messages as SessionMessageRow[]).map(hydrateMessage);
       setActiveSessionId(sessionId);
       setActiveMessages(msgs);
       setHasMore(data.hasMore ?? false);
@@ -298,14 +296,7 @@ function ChatPageClientInner({
         `/api/chat/sessions/${activeSessionId}?before=${oldestPosition}&limit=20`
       );
       const data = await res.json();
-      const older: UIMessage[] = (
-        data.messages as { id: string; role: string; content: string; created_at: string }[]
-      ).map((m) => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        parts: [{ type: "text" as const, text: m.content }],
-        metadata: { createdAt: m.created_at },
-      }));
+      const older: UIMessage[] = (data.messages as SessionMessageRow[]).map(hydrateMessage);
       setActiveMessages((prev) => [...older, ...prev]);
       setHasMore(data.hasMore ?? false);
       setOldestPosition(data.oldestPosition ?? null);
@@ -330,14 +321,7 @@ function ChatPageClientInner({
         const res = await fetch(`/api/chat/sessions/${activeSessionId}`);
         if (!res.ok) return;
         const data = await res.json();
-        const msgs: UIMessage[] = (
-          data.messages as { id: string; role: string; content: string; created_at: string }[]
-        ).map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          parts: [{ type: "text" as const, text: m.content }],
-          metadata: { createdAt: m.created_at },
-        }));
+        const msgs: UIMessage[] = (data.messages as SessionMessageRow[]).map(hydrateMessage);
         setActiveMessages(msgs);
         setHasMore(data.hasMore ?? false);
         setOldestPosition(data.oldestPosition ?? null);
