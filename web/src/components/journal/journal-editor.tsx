@@ -116,9 +116,8 @@ export default function JournalEditor({
     <div data-print-flat="">
       {/* Inner tab bar — hairline rule with amber underline on active; save status on the right */}
       <div
-        className="print:hidden"
+        className="flex print:hidden"
         style={{
-          display: "flex",
           alignItems: "flex-end",
           justifyContent: "space-between",
           borderBottom: "1px solid var(--rule-soft)",
@@ -188,8 +187,8 @@ export default function JournalEditor({
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
           {/* Progress row — accent dots + tabular count */}
           <div
-            className="print:hidden"
-            style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+            className="flex print:hidden"
+            style={{ alignItems: "center", gap: "var(--space-2)" }}
           >
             {PROMPTS.map((p) => (
               <span

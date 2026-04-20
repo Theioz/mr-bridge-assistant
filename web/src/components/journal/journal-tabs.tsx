@@ -50,9 +50,8 @@ export default function JournalTabs({
       <div
         role="tablist"
         aria-label="Journal view"
-        className="print:hidden"
+        className="flex print:hidden"
         style={{
-          display: "flex",
           gap: "var(--space-5)",
           borderBottom: "1px solid var(--rule-soft)",
         }}
