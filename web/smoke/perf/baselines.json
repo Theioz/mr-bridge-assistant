@@ -1,0 +1,61 @@
+{
+  "_comment": "Per-route baselines for metrics above the hard thresholds — ratchet down as perf improves. See #384. Values = median-of-3 from the prod build on commit 7b5e9462 (origin/main), + 10% tolerance for cold-run variance.",
+  "routes": {
+    "/dashboard": {
+      "mobile": {
+        "lcp": 4076
+      }
+    },
+    "/chat": {
+      "mobile": {
+        "lcp": 4632
+      }
+    },
+    "/fitness": {
+      "mobile": {
+        "lcp": 3539
+      }
+    },
+    "/habits": {
+      "mobile": {
+        "lcp": 3478
+      }
+    },
+    "/tasks": {
+      "mobile": {
+        "lcp": 3477
+      }
+    },
+    "/weekly": {
+      "mobile": {
+        "lcp": 3318
+      }
+    },
+    "/journal": {
+      "mobile": {
+        "lcp": 3478
+      }
+    },
+    "/meals": {
+      "mobile": {
+        "lcp": 3900
+      }
+    },
+    "/notifications": {
+      "mobile": {
+        "lcp": 3892
+      }
+    },
+    "/settings": {
+      "mobile": {
+        "cls": 0.179,
+        "lcp": 3478
+      }
+    },
+    "/login": {
+      "mobile": {
+        "lcp": 3310
+      }
+    }
+  }
+}
