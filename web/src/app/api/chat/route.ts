@@ -466,18 +466,33 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
   // Select model: demo → Groq Llama (free tier); real user → Anthropic tier selection
   let selectedModel;
+  let modelTier: "haiku" | "sonnet" | null = null;
   if (isDemo) {
     const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
     selectedModel = groq("llama-3.3-70b-versatile");
     console.log(`[chat] model=groq/llama-3.3-70b-versatile (demo) session=${sessionId}`);
   } else {
-    const modelTier = selectModel(messages, modelOverride);
+    modelTier = selectModel(messages, modelOverride);
     console.log(`[chat] model=${modelTier} session=${sessionId} msg="${messages[messages.length - 1]?.content?.toString().slice(0, 80)}"`);
     selectedModel = wrapLanguageModel({
       model: anthropic(modelTier === "haiku" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6"),
       middleware: retryOnOverload,
     });
   }
+
+  // #339: Anthropic extended thinking on the Sonnet path, behind ENABLE_THINKING
+  // for an A/B measurement run (see PR description). Adaptive mode per the
+  // @ai-sdk/anthropic docs: "For newer models (claude-sonnet-4-6, claude-opus-4-6,
+  // and later), use adaptive thinking" — the model decides per-turn whether
+  // reasoning is warranted. Reasoning is session-only — sendReasoning:false on
+  // the stream response keeps reasoning bytes off the wire, and the #319
+  // synthesizer only consumes `text`+steps. Anthropic counts reasoning as output
+  // tokens, so TOKEN_BUDGET enforcement covers them automatically; the SDK does
+  // NOT break out reasoning into outputTokens.reasoning (always undefined for
+  // the Anthropic provider — see convert-anthropic-messages-usage.ts), so we
+  // measure thinking impact via outputTokens + durationMs deltas.
+  const thinkingEnabled =
+    modelTier === "sonnet" && process.env.ENABLE_THINKING === "1";
 
   // System prompt shape (#340). Demo path stays a plain string for Groq.
   // Real-user path splits into two system messages: the static prefix carries
@@ -528,6 +543,11 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     model: selectedModel,
     instructions: systemValue,
     tools,
+    ...(thinkingEnabled && {
+      providerOptions: {
+        anthropic: { thinking: { type: "adaptive" } },
+      },
+    }),
     stopWhen: [stepCountIs(MAX_STEPS), tokenBudgetExceeds(TOKEN_BUDGET)],
     // Per-request tool factories already close over { supabase, userId,
     // isDemo, sessionId } via `toolContext` above; prepareCall runs per
@@ -554,10 +574,21 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       let cacheReadTokens = 0;
       let cacheWriteTokens = 0;
       let noCacheTokens = 0;
+      // #339: count reasoning blocks + total reasoning text length per turn.
+      // The Anthropic SDK does NOT populate outputTokens.reasoning (always
+      // undefined — see convert-anthropic-messages-usage.ts), so usage-based
+      // accounting can't tell us whether thinking fired. StepResult.reasoning
+      // and StepResult.reasoningText DO carry the actual reasoning content,
+      // which is the only definitive signal. Chars are a proxy for token
+      // volume since reasoning gets bundled into outputTokens at billing time.
+      let reasoningParts = 0;
+      let reasoningChars = 0;
       for (const s of steps ?? []) {
         cacheReadTokens += s.usage?.inputTokenDetails?.cacheReadTokens ?? 0;
         cacheWriteTokens += s.usage?.inputTokenDetails?.cacheWriteTokens ?? 0;
         noCacheTokens += s.usage?.inputTokenDetails?.noCacheTokens ?? 0;
+        reasoningParts += s.reasoning?.length ?? 0;
+        reasoningChars += s.reasoningText?.length ?? 0;
       }
       const stepWarnings = (steps ?? []).flatMap((s) => s.warnings ?? []);
       const allWarnings = [...(warnings ?? []), ...stepWarnings];
@@ -614,6 +645,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         `[chat] cache session=${sessionId} isDemo=${isDemo} ` +
         `inputTokens=${totalUsage?.inputTokens ?? 0} outputTokens=${totalUsage?.outputTokens ?? 0} ` +
         `cacheRead=${cacheReadTokens} cacheWrite=${cacheWriteTokens} noCache=${noCacheTokens} ` +
+        `reasoningParts=${reasoningParts} reasoningChars=${reasoningChars} thinkingEnabled=${thinkingEnabled} ` +
         `warnings=${allWarnings.length === 0 ? "[]" : JSON.stringify(allWarnings)}`
       );
 
@@ -659,6 +691,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   // the finish part. Client reads message.metadata.turnComplete to distinguish
   // a clean turn end from a Lambda kill mid-stream.
   return result.toUIMessageStreamResponse({
+    // #339: backend-only — even if thinking is enabled, reasoning parts must
+    // not cross the wire. Defaults to true otherwise.
+    sendReasoning: false,
     messageMetadata: ({ part }) => {
       if (part.type === "finish") {
         return {
