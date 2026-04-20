@@ -1,6 +1,7 @@
 import { tool, jsonSchema } from "ai";
 import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { todayString, addDays, startOfDayRFC3339, endOfDayRFC3339 } from "@/lib/timezone";
 import { ok, err } from "./_contract";
 import { STRICT_TOOLS } from "./_strict";
@@ -13,7 +14,7 @@ const DEMO_CALENDAR_EVENTS = [
   { title: "Gym — push day", start: `${todayString()}T18:00:00`, end: `${todayString()}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
 ];
 
-export function buildCalendarTools({ isDemo }: ToolContext) {
+export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
   return {
     list_calendar_events: tool({
       description:
@@ -43,7 +44,10 @@ export function buildCalendarTools({ isDemo }: ToolContext) {
           const calendar = google.calendar({ version: "v3", auth });
 
           const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
-          const calendars = calListRes.data.items ?? [];
+          const excluded = await getExcludedCalendarIds(supabase, userId);
+          const calendars = (calListRes.data.items ?? []).filter(
+            (c) => !excluded.has(c.id ?? ""),
+          );
 
           const allEventArrays = await Promise.all(
             calendars.map(async (cal) => {

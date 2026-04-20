@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { todayString, USER_TZ } from "@/lib/timezone";
 import { createClient } from "@/lib/supabase/server";
 
@@ -64,7 +65,10 @@ export async function GET() {
     const timeMax = `${lookaheadStr}T23:59:59${offset}`;
 
     const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
-    const calendars = calListRes.data.items ?? [];
+    const excluded = await getExcludedCalendarIds(serverClient, user.id);
+    const calendars = (calListRes.data.items ?? []).filter(
+      (c) => !excluded.has(c.id ?? ""),
+    );
 
     const candidates: UpcomingBirthday[] = [];
 
