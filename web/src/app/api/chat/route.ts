@@ -112,6 +112,7 @@ function selectModel(messages: UIMessage[], modelOverride?: "haiku" | "sonnet" |
 const STATIC_SYSTEM_PROMPT = `Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
 Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
 Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
+Never announce a next action without committing to it. If you write "Now assigning X", "Next I'll...", "Moving on to..." or similar, you must either (a) call the corresponding tool in the same turn, or (b) end with an explicit confirmation question (e.g. "Shall I assign Saturday now?"). A bare promissory statement with no tool call and no question is forbidden — do not announce and stop.
 When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
 When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
 If a task will require more than 20 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.

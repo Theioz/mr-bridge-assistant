@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Fixed
+- **Bridge no longer stalls mid-turn after announcing a next action (#369).** Added a system-prompt rule requiring Bridge to either call the corresponding tool in the same turn or end with an explicit confirmation question when it writes a promissory statement ("Now assigning X", "Next I'll...", "Moving on to..."). Root cause was the per-step confirmation cadence (calendar pre-flight, delete/update guards) being over-generalised to every tool call in a bulk-approved batch. Prompt-only fix; no agent-loop or TypeScript changes.
 - **Past-day habit cells now persist on click (#386).** `toggleHabit` was using `onConflict: "habit_id,date"` which no longer matched the actual unique constraint `(user_id, habit_id, date)` introduced in migration `20260417000001` — upserts on existing rows silently did nothing. Fixed the conflict target to `"user_id,habit_id,date"`. Also added error checking on both the upsert and delete paths (`{ error }` was previously discarded), so failures now throw and the client's existing optimistic-rollback in `handleCellClick` correctly fires. Delete filter extended with `.eq("user_id", user.id)` to match the upsert scope.
 
 ### Added
