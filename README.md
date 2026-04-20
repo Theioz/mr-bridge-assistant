@@ -195,8 +195,9 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
 | `GOOGLE_CLIENT_ID` | Google Cloud → Credentials |
 | `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials |
-| `GOOGLE_REFRESH_TOKEN` | Output of `scripts/setup-web-oauth.py` |
-| `GOOGLE_FIT_REFRESH_TOKEN` | Output of `scripts/sync-googlefit.py --setup` *(optional)* |
+| `GOOGLE_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/google/callback` (dev) / `https://your-app.vercel.app/api/auth/google/callback` (prod) — must match Google Cloud Console |
+| `ENCRYPTION_KEY` | 32-byte hex key for `pgp_sym_encrypt` — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `GOOGLE_REFRESH_TOKEN` | Migration fallback for the owner until `scripts/seed-owner-google-integration.ts` is run. Users connect via `/settings → Integrations`. |
 | `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
 | `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
 | `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
@@ -579,6 +580,8 @@ Before seeding against a fresh Supabase project: apply every migration in `supab
 | `NEXT_PUBLIC_DEMO_EMAIL` | Same as `DEMO_EMAIL` (exposes "Try demo" button) |
 | `NEXT_PUBLIC_DEMO_PASSWORD` | Same as `DEMO_PASSWORD` (powers auto-fill) |
 | `CRON_SECRET` | Secret for protecting cron endpoints |
+| `ENCRYPTION_KEY` | 32-byte hex key for encrypting refresh tokens in `user_integrations` |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Callback URL registered in Google Cloud Console |
 
 ---
 

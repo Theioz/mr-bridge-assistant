@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { syncGoogleFit } from "@/lib/sync/googlefit";
+import { loadIntegration } from "@/lib/integrations/tokens";
 
 export async function POST() {
   const supabase = await createClient();
@@ -10,17 +11,17 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const hasGoogleFitConfig =
-    !!(process.env.GOOGLE_FIT_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID) &&
-    !!(process.env.GOOGLE_FIT_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET) &&
-    !!(process.env.GOOGLE_FIT_REFRESH_TOKEN ?? process.env.GOOGLE_REFRESH_TOKEN);
+  const db = createServiceClient();
 
-  if (!hasGoogleFitConfig) {
-    return NextResponse.json({ skipped: true, reason: "Google Fit not configured" });
+  // Check DB first; fall back to env for owner before seed script is run
+  const integration = await loadIntegration(db, user.id, "google").catch(() => null);
+  const ownerEnvFallback =
+    user.id === process.env.OWNER_USER_ID && !!process.env.GOOGLE_REFRESH_TOKEN;
+  if (!integration && !ownerEnvFallback) {
+    return NextResponse.json({ skipped: true, reason: "Google account not connected" });
   }
 
   try {
-    const db = createServiceClient();
     const result = await syncGoogleFit(db, user.id);
     return NextResponse.json({ success: true, ...result });
   } catch (err) {

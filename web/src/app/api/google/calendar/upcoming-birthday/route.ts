@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
-import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getGoogleAuthClient, GoogleNotConnectedError } from "@/lib/google-auth";
 import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { todayString, USER_TZ } from "@/lib/timezone";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +53,7 @@ export async function GET() {
   }
 
   try {
-    const auth = getGoogleAuthClient();
+    const auth = await getGoogleAuthClient({ db: serverClient, userId: user.id });
     const calendar = google.calendar({ version: "v3", auth });
 
     const today = todayString();
@@ -109,6 +109,9 @@ export async function GET() {
     candidates.sort((a, b) => a.daysUntil - b.daysUntil);
     return NextResponse.json({ birthday: candidates[0] });
   } catch (err) {
+    if (err instanceof GoogleNotConnectedError) {
+      return NextResponse.json({ birthday: null, not_connected: true }, { status: 403 });
+    }
     console.error("[upcoming-birthday] error:", err);
     return NextResponse.json({ birthday: null, error: "Failed to fetch birthday" });
   }

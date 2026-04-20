@@ -40,7 +40,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           const startDate = date ?? todayString();
           const endDate = addDays(startDate, Math.max(1, days) - 1);
 
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
 
           const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
@@ -153,7 +153,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             return err("start_time is required for timed events. Use all_day: true for all-day events.");
           }
 
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
           const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
 
@@ -231,7 +231,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           return ok({ eventId, note: "Demo mode — event not deleted from real calendar." });
         }
         try {
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
           await calendar.events.delete({ calendarId: "primary", eventId });
 
@@ -290,7 +290,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           return ok({ eventId, note: "Demo mode — event not updated in real calendar." });
         }
         try {
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
           const tz = process.env.USER_TIMEZONE ?? "America/Los_Angeles";
 

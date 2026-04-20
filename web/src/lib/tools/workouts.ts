@@ -163,7 +163,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         }
 
         try {
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
           const description = buildCalendarDescription(warmup, workout, cooldown);
           const title = `Workout — ${new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" })}`;
@@ -314,7 +314,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         let calendar_error: string | undefined;
         if (updated.calendar_event_id) {
           try {
-            const auth = getGoogleAuthClient();
+            const auth = await getGoogleAuthClient({ db: supabase, userId });
             const calendar = google.calendar({ version: "v3", auth });
             const description = buildCalendarDescription(updated.warmup, updated.workout, updated.cooldown);
             await withTimeout(

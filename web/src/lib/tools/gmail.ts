@@ -41,7 +41,7 @@ const DEMO_EMAILS = [
   },
 ];
 
-export function buildGmailTools({ isDemo }: ToolContext) {
+export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
   return {
     search_gmail: tool({
       description:
@@ -69,7 +69,7 @@ export function buildGmailTools({ isDemo }: ToolContext) {
           return { results: mockEmails };
         }
         try {
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const gmail = google.gmail({ version: "v1", auth });
 
           const listRes = await gmail.users.messages.list({
@@ -131,7 +131,7 @@ export function buildGmailTools({ isDemo }: ToolContext) {
           return { id: message_id, from: email.from, subject: email.subject, date: email.date, body: email.body ?? email.subject, truncated: false };
         }
         try {
-          const auth = getGoogleAuthClient();
+          const auth = await getGoogleAuthClient({ db: supabase, userId });
           const gmail = google.gmail({ version: "v1", auth });
 
           const msg = await gmail.users.messages.get({
