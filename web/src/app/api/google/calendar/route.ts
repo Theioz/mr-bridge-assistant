@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { startOfTodayRFC3339, endOfTodayRFC3339, USER_TZ } from "@/lib/timezone";
-import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getGoogleAuthClient, GoogleNotConnectedError } from "@/lib/google-auth";
 import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,7 +45,7 @@ export async function GET() {
   }
 
   try {
-    const auth = getGoogleAuthClient();
+    const auth = await getGoogleAuthClient({ db: serverClient, userId: user.id });
     const calendar = google.calendar({ version: "v3", auth });
 
     const timeMin = startOfTodayRFC3339();
@@ -97,6 +97,9 @@ export async function GET() {
 
     return NextResponse.json({ events });
   } catch (err) {
+    if (err instanceof GoogleNotConnectedError) {
+      return NextResponse.json({ events: [], not_connected: true }, { status: 403 });
+    }
     console.error("[calendar] error:", err);
     return NextResponse.json({ events: [], error: "Failed to fetch calendar" });
   }

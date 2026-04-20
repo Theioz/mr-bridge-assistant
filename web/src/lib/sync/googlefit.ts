@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
+import { loadIntegration } from "@/lib/integrations/tokens";
 
 const SYNC_DAYS = 7;
 
@@ -15,19 +16,29 @@ const BODY_DATA_TYPES = [
 
 // ---------------------------------------------------------------------------
 // OAuth token exchange (refresh token → access token)
-// Google refresh tokens don't rotate, so env var is safe.
 // ---------------------------------------------------------------------------
 
-async function getGoogleAccessToken(): Promise<string> {
-  const clientId = process.env.GOOGLE_FIT_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_FIT_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken =
-    process.env.GOOGLE_FIT_REFRESH_TOKEN ?? process.env.GOOGLE_REFRESH_TOKEN;
+async function getGoogleAccessToken(db: SupabaseClient, userId: string): Promise<string> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
+  }
 
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error(
-      "GOOGLE_FIT_CLIENT_ID, GOOGLE_FIT_CLIENT_SECRET, and GOOGLE_FIT_REFRESH_TOKEN must be set",
-    );
+  // Load from user_integrations; fall back to env for owner before seed is run.
+  // Catch lookup errors (e.g. ENCRYPTION_KEY not yet set in dev) so the env fallback still works.
+  const integration = await loadIntegration(db, userId, "google").catch(() => null);
+  let refreshToken: string;
+  if (integration) {
+    refreshToken = integration.refreshToken;
+  } else {
+    const ownerUserId = process.env.OWNER_USER_ID;
+    const envToken = process.env.GOOGLE_REFRESH_TOKEN;
+    if (userId === ownerUserId && envToken) {
+      refreshToken = envToken;
+    } else {
+      throw new Error("Google account not connected. Connect Google in Settings.");
+    }
   }
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -97,7 +108,7 @@ export interface GoogleFitSyncResult {
 }
 
 export async function syncGoogleFit(db: SupabaseClient, userId: string): Promise<GoogleFitSyncResult> {
-  const accessToken = await getGoogleAccessToken();
+  const accessToken = await getGoogleAccessToken(db, userId);
 
   // Discover available body datasources
   const sourcesResult = await fitGet(accessToken, "dataSources");

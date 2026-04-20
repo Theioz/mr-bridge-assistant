@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import { IntegrationsSettings } from "@/components/settings/integrations-settings";
+import { createServiceClient } from "@/lib/supabase/service";
+import { loadIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
 async function updateProfile(key: string, value: string) {
@@ -77,7 +80,22 @@ async function saveWatchlist(tickers: string[]) {
   revalidatePath("/settings");
 }
 
-export default async function SettingsPage() {
+async function disconnectGoogle() {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const db = createServiceClient();
+  await deleteIntegration(db, user.id, "google");
+  revalidatePath("/settings");
+}
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("profile").select("key,value");
 
@@ -88,6 +106,12 @@ export default async function SettingsPage() {
 
   const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
   const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const db = createServiceClient();
+  const googleIntegration = user
+    ? await loadIntegration(db, user.id, "google").catch(() => null)
+    : null;
 
   return (
     <div className="max-w-2xl">
@@ -112,6 +136,12 @@ export default async function SettingsPage() {
       </header>
 
       <AppearanceSettings />
+
+      <IntegrationsSettings
+        googleIntegration={googleIntegration}
+        disconnectAction={disconnectGoogle}
+        errorParam={params.error}
+      />
 
       <ProfileForm
         values={values}

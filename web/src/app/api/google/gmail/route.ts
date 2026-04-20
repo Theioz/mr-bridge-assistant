@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
-import { getGoogleAuthClient } from "@/lib/google-auth";
+import { getGoogleAuthClient, GoogleNotConnectedError } from "@/lib/google-auth";
 import { createClient } from "@/lib/supabase/server";
 
 export interface EmailSummary {
@@ -42,7 +42,7 @@ export async function GET() {
   }
 
   try {
-    const auth = getGoogleAuthClient();
+    const auth = await getGoogleAuthClient({ db: serverClient, userId: user.id });
     const gmail = google.gmail({ version: "v1", auth });
 
     // Resolve the "Professional" label name → internal ID (user labels use opaque IDs, not names)
@@ -88,6 +88,9 @@ export async function GET() {
 
     return NextResponse.json({ emails });
   } catch (err) {
+    if (err instanceof GoogleNotConnectedError) {
+      return NextResponse.json({ emails: [], not_connected: true }, { status: 403 });
+    }
     console.error("[gmail] error:", err);
     return NextResponse.json({ emails: [], error: "Failed to fetch emails" });
   }
