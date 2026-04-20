@@ -19,3 +19,6 @@ memory/timer_state.json
 .claude/settings.local.json
 credentials.json
 .vercel
+
+# Graphify semantic extraction cache (rebuilt automatically on --update)
+graphify-out/cache/
