@@ -270,6 +270,33 @@ Requires `web/.env.local` to be filled in (see Step 7). The app runs entirely ag
 
 ---
 
+## Running smoke tests
+
+Automated browser smoke for chat-route and tool changes, using Playwright. Replaces the manual "start dev, sign in, send a message" loop for everything covered by a committed spec. `@playwright/mcp` is also registered in [.mcp.json](.mcp.json) so Claude Code can drive a real browser during sessions.
+
+**One-time setup**
+
+```bash
+cd web
+npm run smoke:install           # download Chromium (~150 MB)
+```
+
+Create a dedicated smoke-test Supabase user (never point smoke at your real account) and fill in `SMOKE_TEST_EMAIL`, `SMOKE_TEST_PASSWORD`, and `SMOKE_SUPABASE_SERVICE_KEY` per `.env.example`. Full walkthrough, including the test-account creation steps, lives in [docs/smoke-testing.md](docs/smoke-testing.md).
+
+**Run**
+
+```bash
+cd web
+npm run smoke:chat              # the chat smoke (sign in → send → persist)
+npm run smoke                   # full suite (currently == smoke:chat)
+```
+
+The config auto-starts `next dev` on port 3000 (or reuses a running one). On failure, Playwright writes a trace + screenshot to `web/smoke/test-results/`.
+
+**What's covered:** chat happy-path (send, receive, persist, no console errors). **What stays manual for now:** a11y (axe), perf (Lighthouse), multi-turn + tool-call + mutating-tool flows, iOS Safari, VoiceOver — all tracked as follow-ups to #373. The manual chat-smoke rule still applies for anything outside the committed spec coverage.
+
+---
+
 ## File structure
 
 ```

@@ -4,3 +4,7 @@ node_modules/
 *.tsbuildinfo
 out/
 .vercel
+
+# Playwright smoke suite artifacts (traces, screenshots, HTML report)
+smoke/test-results/
+smoke/playwright-report/

@@ -13,12 +13,23 @@ const eslintConfig = [
     },
   },
   {
+    // Playwright fixtures use `use` as the injection callback parameter name
+    // (per @playwright/test docs). It's unrelated to React's `use` hook, but
+    // react-hooks/rules-of-hooks flags it heuristically.
+    files: ["smoke/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       ".next/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "smoke/test-results/**",
+      "smoke/playwright-report/**",
     ],
   },
 ];
