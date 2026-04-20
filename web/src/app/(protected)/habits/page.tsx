@@ -25,15 +25,18 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   if (completed) {
-    await supabase
+    const { error } = await supabase
       .from("habits")
-      .upsert({ user_id: user.id, habit_id: habitId, date, completed: true }, { onConflict: "habit_id,date" });
+      .upsert({ user_id: user.id, habit_id: habitId, date, completed: true }, { onConflict: "user_id,habit_id,date" });
+    if (error) throw new Error(error.message);
   } else {
-    await supabase
+    const { error } = await supabase
       .from("habits")
       .delete()
+      .eq("user_id", user.id)
       .eq("habit_id", habitId)
       .eq("date", date);
+    if (error) throw new Error(error.message);
   }
   revalidatePath("/habits");
   revalidatePath("/dashboard");
