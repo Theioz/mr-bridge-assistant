@@ -143,6 +143,40 @@ print('Done.')
 
 For platform-specific setup (macOS banners, Android background delivery, Windows) see [docs/notifications-setup.md](docs/notifications-setup.md).
 
+Also set `APP_URL` in `.env` to your Vercel deployment URL (e.g. `https://your-app.vercel.app`). Without it, tap-to-open is silently skipped on all notifications.
+
+#### Notification Setup (local cron)
+
+After filling in `.env`, run the installer once to schedule all five check scripts:
+
+```bash
+bash scripts/install-notifications.sh
+```
+
+This writes idempotent cron entries for:
+
+| Script | Schedule | Alert type |
+|---|---|---|
+| `check_weather_alert.py` | 07:00 daily | Severe weather |
+| `check_daily_alerts.py` | 07:30 daily | Task due-dates (once-per-day) |
+| `check_birthday_notif.py` | 08:00 daily | Google Calendar birthdays |
+| `check_hrv_alert.py` | 08:30 daily | HRV drop vs 7-day baseline |
+| `check_task_due_alerts.py` | 09:00 + 17:00 daily | Task due-dates (per-task 24h dedup) |
+
+Safe to re-run — duplicate entries are never added.
+
+**Delivery log** — every notification attempt appends one line to `~/.mr-bridge/notify.log`:
+
+```
+[2026-04-20T08:00:01Z] title="Birthday Today" ntfy_topic=mr-bridge-xyz click_url="https://..." curl_exit=0
+```
+
+Tail it to debug silent failures:
+
+```bash
+tail -f ~/.mr-bridge/notify.log
+```
+
 ### Step 7 — Configure environment variables
 
 Two env files are required: one for Python sync scripts (root), one for the Next.js web app.

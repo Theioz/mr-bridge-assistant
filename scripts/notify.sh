@@ -31,10 +31,25 @@ if [[ -f "$ENV_FILE" ]]; then
   set -a && source "$ENV_FILE" && set +a
 fi
 
+# Delivery log — one line per attempt so silent failures are visible
+LOG_DIR="$HOME/.mr-bridge"
+LOG_FILE="$LOG_DIR/notify.log"
+mkdir -p "$LOG_DIR"
+
+CURL_EXIT=0
 if [[ -n "$NTFY_TOPIC" ]]; then
   CURL_ARGS=(-s -X POST "https://ntfy.sh/$NTFY_TOPIC" -H "Title: $TITLE")
   if [[ -n "$CLICK_URL" ]]; then
     CURL_ARGS+=(-H "Click: $CLICK_URL")
   fi
   curl "${CURL_ARGS[@]}" -d "$MESSAGE" > /dev/null
+  CURL_EXIT=$?
 fi
+
+printf '[%s] title="%s" ntfy_topic=%s click_url="%s" curl_exit=%s\n' \
+  "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  "$TITLE" \
+  "${NTFY_TOPIC:-<unset>}" \
+  "${CLICK_URL:-}" \
+  "$CURL_EXIT" \
+  >> "$LOG_FILE"
