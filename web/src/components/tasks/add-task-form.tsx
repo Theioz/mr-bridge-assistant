@@ -94,6 +94,7 @@ export default function AddTaskForm({ addAction }: Props) {
 
         <input
           type="date"
+          aria-label="Due date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           className="focus:outline-none flex-shrink-0"

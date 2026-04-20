@@ -453,6 +453,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Ask Mr. Bridge..."
+            aria-label="Message Mr. Bridge"
             enterKeyHint={isTouchDevice ? "enter" : "send"}
             disabled={isLoading}
             autoComplete="off"

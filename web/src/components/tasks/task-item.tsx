@@ -345,6 +345,7 @@ export default function TaskItem({
         >
           <input
             type="date"
+            aria-label="Due date"
             value={editDueDate}
             onChange={(e) => setEditDueDate(e.target.value)}
             className="focus:outline-none"
