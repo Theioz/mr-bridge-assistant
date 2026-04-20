@@ -19,7 +19,7 @@ export async function GET(
 
   let query = supabase
     .from("chat_messages")
-    .select("id, role, content, created_at, position")
+    .select("id, role, content, parts, created_at, position")
     .eq("session_id", id)
     .in("role", ["user", "assistant"])
     .order("position", { ascending: false }) // newest first

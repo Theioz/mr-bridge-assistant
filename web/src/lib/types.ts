@@ -93,7 +93,12 @@ export interface ChatMessage {
   id: string;
   session_id: string;
   role: "user" | "assistant" | "system";
+  // #342: `content` is the denormalized text snapshot used by the session
+  // sidebar preview; `parts` is the structured AI SDK v6 UIMessage.parts
+  // shape used to render the message thread (text, tool calls, tool results,
+  // file attachments). Both columns are populated on insert.
   content: string;
+  parts: unknown[] | null;
   created_at: string;
 }
 
