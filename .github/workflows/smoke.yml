@@ -24,10 +24,16 @@ jobs:
       run:
         working-directory: web
     env:
+      # Smoke-only vars (fixture + supabase-verify admin client)
       SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
       SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
       SMOKE_SUPABASE_SERVICE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
+      # Next app runtime (middleware, server components, API routes).
+      # SUPABASE_SERVICE_ROLE_KEY aliases SMOKE_SUPABASE_SERVICE_KEY per
+      # docs/smoke-testing.md §2 — one secret covers both names.
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +82,8 @@ jobs:
       SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
       SMOKE_SUPABASE_SERVICE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4

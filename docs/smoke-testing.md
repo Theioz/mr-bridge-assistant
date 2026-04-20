@@ -198,9 +198,14 @@ Add these under repo Settings → Secrets and variables → Actions:
 
 - `SMOKE_TEST_EMAIL`
 - `SMOKE_TEST_PASSWORD`
-- `SMOKE_SUPABASE_SERVICE_KEY` (= `SUPABASE_SERVICE_ROLE_KEY`)
+- `SMOKE_SUPABASE_SERVICE_KEY` — service-role key; the workflow aliases
+  it to `SUPABASE_SERVICE_ROLE_KEY` at runtime so server tools find it
+  under their expected name.
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `ANTHROPIC_API_KEY` (chat smoke hits the real Anthropic API)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the Next middleware + auth flow
+  use this on every request; without it the dev server crashes before
+  Playwright ever signs in.
+- `ANTHROPIC_API_KEY` — chat smoke hits the real Anthropic API.
 
 **Never scope these to production.** Always point at the smoke test
 account's Supabase project.
