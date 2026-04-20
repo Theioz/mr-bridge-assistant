@@ -9,3 +9,6 @@ out/
 smoke/test-results/
 smoke/playwright-report/
 smoke/perf-report/
+
+# Lighthouse audit JSON output
+.lighthouse/
