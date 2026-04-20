@@ -13,11 +13,8 @@ export async function POST() {
 
   const db = createServiceClient();
 
-  // Check DB first; fall back to env for owner before seed script is run
   const integration = await loadIntegration(db, user.id, "google").catch(() => null);
-  const ownerEnvFallback =
-    user.id === process.env.OWNER_USER_ID && !!process.env.GOOGLE_REFRESH_TOKEN;
-  if (!integration && !ownerEnvFallback) {
+  if (!integration) {
     return NextResponse.json({ skipped: true, reason: "Google account not connected" });
   }
 

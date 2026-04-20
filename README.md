@@ -102,19 +102,9 @@ This step enables Calendar, Gmail, and optionally Google Fit. It's the most invo
 8. Application type: **Desktop app**. Name it anything.
 9. Click **Download JSON** — save the file somewhere safe. It contains your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
-**Get your refresh tokens:**
+**Connect Google in the web app:**
 
-10. For **Calendar + Gmail** (the main `GOOGLE_REFRESH_TOKEN`):
-```bash
-python3 scripts/setup-web-oauth.py
-```
-This opens a browser, asks you to authorize with your Google account, and prints the refresh token.
-
-11. For **Google Fit** (a separate token with fitness scopes) — only if you use Google Fit:
-```bash
-python3 scripts/sync-googlefit.py --setup
-```
-This opens a browser and prints `GOOGLE_FIT_REFRESH_TOKEN`.
+10. After deploying (Step 8), go to **Settings → Integrations → Connect Google**. This opens the Google consent screen and stores your refresh token encrypted in Supabase. No env token is needed.
 
 ### Step 5 — Set up fitness integrations *(optional)*
 
@@ -173,7 +163,6 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
 | `GOOGLE_CLIENT_ID` | Google Cloud → Credentials (from downloaded JSON) |
 | `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials (from downloaded JSON) |
-| `GOOGLE_REFRESH_TOKEN` | Output of `scripts/setup-web-oauth.py` |
 | `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
 | `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
 | `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
@@ -197,13 +186,12 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials |
 | `GOOGLE_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/google/callback` (dev) / `https://your-app.vercel.app/api/auth/google/callback` (prod) — must match Google Cloud Console |
 | `ENCRYPTION_KEY` | 32-byte hex key for `pgp_sym_encrypt` — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `GOOGLE_REFRESH_TOKEN` | Migration fallback for the owner until `scripts/seed-owner-google-integration.ts` is run. Users connect via `/settings → Integrations`. |
 | `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
 | `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
 | `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
 | `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` *(optional)* |
 | `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
-| `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py` |
+| `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py`. Required for cron sync. |
 | `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
 | `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — stock watchlist widget + `get_stock_quote` chat tool; free tier supports EOD data)* |

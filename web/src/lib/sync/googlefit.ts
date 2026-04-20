@@ -25,21 +25,11 @@ async function getGoogleAccessToken(db: SupabaseClient, userId: string): Promise
     throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
   }
 
-  // Load from user_integrations; fall back to env for owner before seed is run.
-  // Catch lookup errors (e.g. ENCRYPTION_KEY not yet set in dev) so the env fallback still works.
   const integration = await loadIntegration(db, userId, "google").catch(() => null);
-  let refreshToken: string;
-  if (integration) {
-    refreshToken = integration.refreshToken;
-  } else {
-    const ownerUserId = process.env.OWNER_USER_ID;
-    const envToken = process.env.GOOGLE_REFRESH_TOKEN;
-    if (userId === ownerUserId && envToken) {
-      refreshToken = envToken;
-    } else {
-      throw new Error("Google account not connected. Connect Google in Settings.");
-    }
+  if (!integration) {
+    throw new Error("Google account not connected. Connect Google in Settings.");
   }
+  const refreshToken = integration.refreshToken;
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
