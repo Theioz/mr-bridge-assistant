@@ -352,9 +352,13 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         // to succeed but the row reads back unchanged.
         const verifiedArr = (updated[phase] as WorkoutExercise[]) ?? [];
         const verifiedExercise = verifiedArr[idx];
-        const fieldChecks = Object.entries(updates).filter(
-          ([key, value]) => (verifiedExercise as unknown as Record<string, unknown>)[key] !== value
-        );
+        const fieldChecks = Object.entries(updates).filter(([key, value]) => {
+          const actual = (verifiedExercise as unknown as Record<string, unknown>)[key];
+          if (Array.isArray(value) || Array.isArray(actual)) {
+            return JSON.stringify(actual) !== JSON.stringify(value);
+          }
+          return actual !== value;
+        });
         if (fieldChecks.length > 0) {
           return err(
             `Workout plan update returned but the row read-back doesn't show the change: ${fieldChecks
