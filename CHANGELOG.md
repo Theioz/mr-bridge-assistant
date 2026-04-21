@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Meal API routes migrated to ToolLoopAgent.generate() (#366).** All four `generateText()` call sites under `web/src/app/api/meals/` now use `new ToolLoopAgent({ model, instructions, output }).generate({ messages })` — the same config surface as the chat agent. `suggest/route.ts` and both modes in `analyze-photo/route.ts` use `claude-sonnet-4-6`; `estimate-macros/route.ts` retains `claude-haiku-4-5-20251001`. Instructions are extracted from the embedded prompt text into the `instructions` constructor param; user-facing dynamic content remains in the `messages` payload. No behaviour or response shape changes. Prompt caching follow-up tracked in #340.
+
 ### Fixed
 - **Push notifications restored and tap-to-open fixed (#383).** Root causes: (1) `APP_URL` was missing from `.env` — every check script calls `os.environ.get("APP_URL", "")` and silently skips the `--click-url` argument when it's empty, so all ntfy.sh Click headers were dropped. Added `APP_URL=https://mr-bridge-assistant.vercel.app` to `.env`. (2) No cron entries existed — the five check scripts were never scheduled. `scripts/install-notifications.sh` now writes idempotent cron entries for all five scripts with correct schedules (weather 07:00, daily-alerts 07:30, birthdays 08:00, HRV 08:30, tasks 09:00 + 17:00). Each cron entry sources `.env` before invoking the script so env vars are available outside a shell session. (3) `notify.sh` had no delivery log — silent curl failures were invisible. Now appends one ISO-timestamped line per attempt to `~/.mr-bridge/notify.log` whether or not `NTFY_TOPIC` is set.
 

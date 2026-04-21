@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { Output, generateText } from "ai";
+import { Output, ToolLoopAgent } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -99,23 +99,17 @@ export async function POST(req: Request) {
 
   try {
     if (mode === "label") {
-      const { output } = await generateText({
+      const agent = new ToolLoopAgent({
         model: anthropic("claude-sonnet-4-6"),
+        instructions:
+          "Read the nutrition facts label in this image precisely. Extract the exact printed values — do not estimate. If a value is not clearly legible, set it to null. Set readable to false if the label is too blurry, obscured, or not a nutrition facts label.",
         output: Output.object({ schema: NutritionLabelSchema }),
+      });
+      const { output } = await agent.generate({
         messages: [
           {
             role: "user",
-            content: [
-              {
-                type: "image",
-                image: base64,
-                mediaType: mimeType,
-              },
-              {
-                type: "text",
-                text: `Read the nutrition facts label in this image precisely. Extract the exact printed values — do not estimate. If a value is not clearly legible, set it to null. Set readable to false if the label is too blurry, obscured, or not a nutrition facts label.`,
-              },
-            ],
+            content: [{ type: "image", image: base64, mediaType: mimeType }],
           },
         ],
       });
@@ -123,33 +117,30 @@ export async function POST(req: Request) {
       return Response.json({ mode: "label", ...output });
     }
 
-    const { output } = await generateText({
+    const foodAgent = new ToolLoopAgent({
       model: anthropic("claude-sonnet-4-6"),
-      output: Output.object({ schema: FoodAnalysisSchema }),
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              image: base64,
-              mediaType: mimeType,
-            },
-            {
-              type: "text",
-              text: `Analyze this food photo and estimate its nutritional content.
-${userPrompt ? `\nUser context: ${userPrompt}\n` : ""}
+      instructions: `Analyze this food photo and estimate its nutritional content.
 Instructions:
 - Identify the dish name and list all visible ingredients with estimated quantities
 - Estimate macros and micros for the total visible portion (what would be eaten)
 - Use conservative estimates — do not inflate
 - If multiple items are present, sum the totals
-- If the user provided context above, use it to improve accuracy (e.g. specific ingredients, portion size, cooking method)
+- If the user provided context below, use it to improve accuracy (e.g. specific ingredients, portion size, cooking method)
 - Set confidence to "high" only if the food is clearly identifiable and portion is estimable
 - Set confidence to "low" if the image is unclear, the food is ambiguous, or portion size is very uncertain
 - Include any key assumptions in notes (e.g. "sauce not included", "estimated half-plate portion")
 - If this is not a food image, set food_name to "Unknown", ingredients to "unknown", and all numeric values to 0`,
-            },
+      output: Output.object({ schema: FoodAnalysisSchema }),
+    });
+    const { output } = await foodAgent.generate({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", image: base64, mediaType: mimeType },
+            ...(userPrompt
+              ? [{ type: "text" as const, text: `User context: ${userPrompt}` }]
+              : []),
           ],
         },
       ],

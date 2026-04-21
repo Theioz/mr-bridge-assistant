@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { Output, generateText } from "ai";
+import { Output, ToolLoopAgent } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -80,9 +80,12 @@ Instructions:
 - Include any key assumptions in notes`;
 
   try {
-    const { output } = await generateText({
+    const agent = new ToolLoopAgent({
       model: anthropic("claude-haiku-4-5-20251001"),
+      instructions: "Estimate the nutritional content of meals conservatively and accurately.",
       output: Output.object({ schema: MacroEstimateSchema }),
+    });
+    const { output } = await agent.generate({
       messages: [{ role: "user", content: prompt }],
     });
 

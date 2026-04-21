@@ -1,162 +1,161 @@
-# Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-20)
+# Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- Large corpus: 255 files · ~506,320 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder, or use --no-semantic to run AST-only.
+- 204 files · ~582,858 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1007 nodes · 1348 edges · 148 communities detected
+- 1010 nodes · 1350 edges · 146 communities detected
 - Extraction: 75% EXTRACTED · 25% INFERRED · 0% AMBIGUOUS · INFERRED: 336 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Notifications & Alerts Pipeline|Notifications & Alerts Pipeline]]
-- [[_COMMUNITY_Google OAuth & Calendar Integration|Google OAuth & Calendar Integration]]
-- [[_COMMUNITY_Dashboard UI & Design System|Dashboard UI & Design System]]
-- [[_COMMUNITY_Meals & Nutrition Tools|Meals & Nutrition Tools]]
-- [[_COMMUNITY_Weekly Review & Stats|Weekly Review & Stats]]
-- [[_COMMUNITY_Push Notifications (ntfy.sh)|Push Notifications (ntfy.sh)]]
-- [[_COMMUNITY_Chat Tool Builders|Chat Tool Builders]]
-- [[_COMMUNITY_Changelog & Release History|Changelog & Release History]]
-- [[_COMMUNITY_Journal & Memory Layer|Journal & Memory Layer]]
-- [[_COMMUNITY_Google Fit  OAuth Sync Scripts|Google Fit / OAuth Sync Scripts]]
-- [[_COMMUNITY_Calendar Sync (Birthday)|Calendar Sync (Birthday)]]
-- [[_COMMUNITY_Chat Client & Prefill State|Chat Client & Prefill State]]
-- [[_COMMUNITY_System Architecture Overview|System Architecture Overview]]
-- [[_COMMUNITY_Habit Logging UI|Habit Logging UI]]
-- [[_COMMUNITY_Sports & ESPN Widgets|Sports & ESPN Widgets]]
-- [[_COMMUNITY_Data Visualization Charts|Data Visualization Charts]]
-- [[_COMMUNITY_Lighthouse Perf Reports|Lighthouse Perf Reports]]
-- [[_COMMUNITY_CLAUDE.md Rules & Memory|CLAUDE.md Rules & Memory]]
-- [[_COMMUNITY_Voice Interface (Jarvis)|Voice Interface (Jarvis)]]
-- [[_COMMUNITY_Reduced Motion  Theme Store|Reduced Motion / Theme Store]]
-- [[_COMMUNITY_Personal Habits & Fitness Goals|Personal Habits & Fitness Goals]]
-- [[_COMMUNITY_Voice Pipeline Docs|Voice Pipeline Docs]]
-- [[_COMMUNITY_Google OAuth Scopes Setup|Google OAuth Scopes Setup]]
-- [[_COMMUNITY_Gmail Multi-Account Integration|Gmail Multi-Account Integration]]
-- [[_COMMUNITY_Sync Orchestration Scripts|Sync Orchestration Scripts]]
-- [[_COMMUNITY_Module Group 25|Module Group 25]]
-- [[_COMMUNITY_Module Group 26|Module Group 26]]
-- [[_COMMUNITY_Module Group 27|Module Group 27]]
-- [[_COMMUNITY_Module Group 28|Module Group 28]]
-- [[_COMMUNITY_Module Group 29|Module Group 29]]
-- [[_COMMUNITY_Module Group 30|Module Group 30]]
-- [[_COMMUNITY_Module Group 31|Module Group 31]]
-- [[_COMMUNITY_Module Group 32|Module Group 32]]
-- [[_COMMUNITY_Module Group 33|Module Group 33]]
-- [[_COMMUNITY_Module Group 34|Module Group 34]]
-- [[_COMMUNITY_Module Group 35|Module Group 35]]
-- [[_COMMUNITY_Module Group 36|Module Group 36]]
-- [[_COMMUNITY_Module Group 37|Module Group 37]]
-- [[_COMMUNITY_Module Group 38|Module Group 38]]
-- [[_COMMUNITY_Module Group 39|Module Group 39]]
-- [[_COMMUNITY_Module Group 40|Module Group 40]]
-- [[_COMMUNITY_Module Group 41|Module Group 41]]
-- [[_COMMUNITY_Module Group 42|Module Group 42]]
-- [[_COMMUNITY_Module Group 43|Module Group 43]]
-- [[_COMMUNITY_Module Group 44|Module Group 44]]
-- [[_COMMUNITY_Module Group 45|Module Group 45]]
-- [[_COMMUNITY_Module Group 46|Module Group 46]]
-- [[_COMMUNITY_Module Group 47|Module Group 47]]
-- [[_COMMUNITY_Module Group 48|Module Group 48]]
-- [[_COMMUNITY_Module Group 49|Module Group 49]]
-- [[_COMMUNITY_Module Group 50|Module Group 50]]
-- [[_COMMUNITY_Module Group 51|Module Group 51]]
-- [[_COMMUNITY_Module Group 52|Module Group 52]]
-- [[_COMMUNITY_Module Group 53|Module Group 53]]
-- [[_COMMUNITY_Module Group 54|Module Group 54]]
-- [[_COMMUNITY_Module Group 55|Module Group 55]]
-- [[_COMMUNITY_Module Group 56|Module Group 56]]
-- [[_COMMUNITY_Module Group 57|Module Group 57]]
-- [[_COMMUNITY_Module Group 58|Module Group 58]]
-- [[_COMMUNITY_Module Group 59|Module Group 59]]
-- [[_COMMUNITY_Module Group 60|Module Group 60]]
-- [[_COMMUNITY_Module Group 61|Module Group 61]]
-- [[_COMMUNITY_Module Group 62|Module Group 62]]
-- [[_COMMUNITY_Module Group 63|Module Group 63]]
-- [[_COMMUNITY_Module Group 64|Module Group 64]]
-- [[_COMMUNITY_Module Group 65|Module Group 65]]
-- [[_COMMUNITY_Module Group 66|Module Group 66]]
-- [[_COMMUNITY_Module Group 67|Module Group 67]]
-- [[_COMMUNITY_Module Group 68|Module Group 68]]
-- [[_COMMUNITY_Module Group 69|Module Group 69]]
-- [[_COMMUNITY_Module Group 70|Module Group 70]]
-- [[_COMMUNITY_Module Group 71|Module Group 71]]
-- [[_COMMUNITY_Module Group 72|Module Group 72]]
-- [[_COMMUNITY_Module Group 73|Module Group 73]]
-- [[_COMMUNITY_Module Group 74|Module Group 74]]
-- [[_COMMUNITY_Module Group 75|Module Group 75]]
-- [[_COMMUNITY_Module Group 76|Module Group 76]]
-- [[_COMMUNITY_Module Group 77|Module Group 77]]
-- [[_COMMUNITY_Module Group 78|Module Group 78]]
-- [[_COMMUNITY_Module Group 79|Module Group 79]]
-- [[_COMMUNITY_Module Group 80|Module Group 80]]
-- [[_COMMUNITY_Module Group 81|Module Group 81]]
-- [[_COMMUNITY_Module Group 82|Module Group 82]]
-- [[_COMMUNITY_Module Group 83|Module Group 83]]
-- [[_COMMUNITY_Module Group 84|Module Group 84]]
-- [[_COMMUNITY_Module Group 85|Module Group 85]]
-- [[_COMMUNITY_Module Group 86|Module Group 86]]
-- [[_COMMUNITY_Module Group 87|Module Group 87]]
-- [[_COMMUNITY_Module Group 88|Module Group 88]]
-- [[_COMMUNITY_Module Group 89|Module Group 89]]
-- [[_COMMUNITY_Module Group 90|Module Group 90]]
-- [[_COMMUNITY_Module Group 91|Module Group 91]]
-- [[_COMMUNITY_Module Group 92|Module Group 92]]
-- [[_COMMUNITY_Module Group 93|Module Group 93]]
-- [[_COMMUNITY_Module Group 94|Module Group 94]]
-- [[_COMMUNITY_Module Group 95|Module Group 95]]
-- [[_COMMUNITY_Module Group 96|Module Group 96]]
-- [[_COMMUNITY_Module Group 97|Module Group 97]]
-- [[_COMMUNITY_Module Group 98|Module Group 98]]
-- [[_COMMUNITY_Module Group 99|Module Group 99]]
-- [[_COMMUNITY_Module Group 100|Module Group 100]]
-- [[_COMMUNITY_Module Group 101|Module Group 101]]
-- [[_COMMUNITY_Module Group 102|Module Group 102]]
-- [[_COMMUNITY_Module Group 103|Module Group 103]]
-- [[_COMMUNITY_Module Group 104|Module Group 104]]
-- [[_COMMUNITY_Module Group 105|Module Group 105]]
-- [[_COMMUNITY_Module Group 106|Module Group 106]]
-- [[_COMMUNITY_Module Group 107|Module Group 107]]
-- [[_COMMUNITY_Module Group 108|Module Group 108]]
-- [[_COMMUNITY_Module Group 109|Module Group 109]]
-- [[_COMMUNITY_Module Group 110|Module Group 110]]
-- [[_COMMUNITY_Module Group 111|Module Group 111]]
-- [[_COMMUNITY_Module Group 112|Module Group 112]]
-- [[_COMMUNITY_Module Group 113|Module Group 113]]
-- [[_COMMUNITY_Module Group 114|Module Group 114]]
-- [[_COMMUNITY_Module Group 115|Module Group 115]]
-- [[_COMMUNITY_Module Group 116|Module Group 116]]
-- [[_COMMUNITY_Module Group 117|Module Group 117]]
-- [[_COMMUNITY_Module Group 118|Module Group 118]]
-- [[_COMMUNITY_Module Group 119|Module Group 119]]
-- [[_COMMUNITY_Module Group 120|Module Group 120]]
-- [[_COMMUNITY_Module Group 121|Module Group 121]]
-- [[_COMMUNITY_Module Group 122|Module Group 122]]
-- [[_COMMUNITY_Module Group 123|Module Group 123]]
-- [[_COMMUNITY_Module Group 124|Module Group 124]]
-- [[_COMMUNITY_Module Group 125|Module Group 125]]
-- [[_COMMUNITY_Module Group 126|Module Group 126]]
-- [[_COMMUNITY_Module Group 127|Module Group 127]]
-- [[_COMMUNITY_Module Group 128|Module Group 128]]
-- [[_COMMUNITY_Module Group 129|Module Group 129]]
-- [[_COMMUNITY_Module Group 130|Module Group 130]]
-- [[_COMMUNITY_Module Group 131|Module Group 131]]
-- [[_COMMUNITY_Module Group 132|Module Group 132]]
-- [[_COMMUNITY_Module Group 133|Module Group 133]]
-- [[_COMMUNITY_Module Group 134|Module Group 134]]
-- [[_COMMUNITY_Module Group 135|Module Group 135]]
-- [[_COMMUNITY_Module Group 136|Module Group 136]]
-- [[_COMMUNITY_Module Group 137|Module Group 137]]
-- [[_COMMUNITY_Module Group 138|Module Group 138]]
-- [[_COMMUNITY_Module Group 139|Module Group 139]]
-- [[_COMMUNITY_Module Group 140|Module Group 140]]
-- [[_COMMUNITY_Module Group 141|Module Group 141]]
-- [[_COMMUNITY_Module Group 142|Module Group 142]]
-- [[_COMMUNITY_Module Group 143|Module Group 143]]
-- [[_COMMUNITY_Module Group 144|Module Group 144]]
-- [[_COMMUNITY_Module Group 145|Module Group 145]]
-- [[_COMMUNITY_Module Group 146|Module Group 146]]
-- [[_COMMUNITY_Module Group 147|Module Group 147]]
+- [[_COMMUNITY_Community 0|Community 0]]
+- [[_COMMUNITY_Community 1|Community 1]]
+- [[_COMMUNITY_Community 2|Community 2]]
+- [[_COMMUNITY_Community 3|Community 3]]
+- [[_COMMUNITY_Community 4|Community 4]]
+- [[_COMMUNITY_Community 5|Community 5]]
+- [[_COMMUNITY_Community 6|Community 6]]
+- [[_COMMUNITY_Community 7|Community 7]]
+- [[_COMMUNITY_Community 8|Community 8]]
+- [[_COMMUNITY_Community 9|Community 9]]
+- [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
+- [[_COMMUNITY_Community 14|Community 14]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
+- [[_COMMUNITY_Community 68|Community 68]]
+- [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 70|Community 70]]
+- [[_COMMUNITY_Community 71|Community 71]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
+- [[_COMMUNITY_Community 74|Community 74]]
+- [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 76|Community 76]]
+- [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
+- [[_COMMUNITY_Community 79|Community 79]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 81|Community 81]]
+- [[_COMMUNITY_Community 82|Community 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 121|Community 121]]
+- [[_COMMUNITY_Community 122|Community 122]]
+- [[_COMMUNITY_Community 123|Community 123]]
+- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 125|Community 125]]
+- [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 127|Community 127]]
+- [[_COMMUNITY_Community 128|Community 128]]
+- [[_COMMUNITY_Community 129|Community 129]]
+- [[_COMMUNITY_Community 130|Community 130]]
+- [[_COMMUNITY_Community 131|Community 131]]
+- [[_COMMUNITY_Community 132|Community 132]]
+- [[_COMMUNITY_Community 133|Community 133]]
+- [[_COMMUNITY_Community 134|Community 134]]
+- [[_COMMUNITY_Community 135|Community 135]]
+- [[_COMMUNITY_Community 136|Community 136]]
+- [[_COMMUNITY_Community 137|Community 137]]
+- [[_COMMUNITY_Community 138|Community 138]]
+- [[_COMMUNITY_Community 139|Community 139]]
+- [[_COMMUNITY_Community 140|Community 140]]
+- [[_COMMUNITY_Community 141|Community 141]]
+- [[_COMMUNITY_Community 142|Community 142]]
+- [[_COMMUNITY_Community 143|Community 143]]
+- [[_COMMUNITY_Community 144|Community 144]]
+- [[_COMMUNITY_Community 145|Community 145]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `get()` - 59 edges
@@ -177,10 +176,10 @@
   design-system/mr-bridge/MASTER.md → web/public/icon-512.png
 - `Single amber accent color (oklch 62%/74%)` --conceptually_related_to--> `Mr. Bridge brand identity: dark brown #261C13 bg, amber/gold M lettermark`  [INFERRED]
   docs/design/impeccable-revamp/dashboard-mockup.html → web/public/icon-512.png
-- `Lighthouse Perf Report: login-desktop` --references--> `Lighthouse Perf Smoke Tests`  [INFERRED]
-  web/smoke/perf-report/login-desktop.html → README.md
-- `Lighthouse Perf Report: login-mobile` --references--> `Lighthouse Perf Smoke Tests`  [INFERRED]
-  web/smoke/perf-report/login-mobile.html → README.md
+- `Lighthouse Perf Smoke Tests` --references--> `Lighthouse Perf Report: login-desktop`  [INFERRED]
+  README.md → web/smoke/perf-report/login-desktop.html
+- `Lighthouse Perf Smoke Tests` --references--> `Lighthouse Perf Report: login-mobile`  [INFERRED]
+  README.md → web/smoke/perf-report/login-mobile.html
 
 ## Hyperedges (group relationships)
 - **Chat Pipeline: ToolLoopAgent + prompt caching + verified-success contract** — readme_chat_route, readme_tool_loop_agent, readme_prompt_caching, readme_verified_success_contract, readme_tool_modules [INFERRED 0.90]
@@ -203,789 +202,781 @@
 
 ## Communities
 
-### Community 0 - "Notifications & Alerts Pipeline"
-Cohesion: 0.04
-Nodes (82): get_profile_value(), load_notif_cache(), main(), needs_notification(), Return {task_id: iso_timestamp_last_notified} from profile., Return True if the task hasn't been notified within the last 24 hours., save_notif_cache(), send_notify() (+74 more)
-
-### Community 1 - "Google OAuth & Calendar Integration"
+### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (49): getExcludedCalendarIds(), getGoogleAuthClient(), GoogleNotConnectedError, fitGet(), fitPost(), getGoogleAccessToken(), syncGoogleFit(), getSportsProvider() (+41 more)
+Nodes (49): getExcludedCalendarIds(), fmt_hrs(), main(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken() (+41 more)
 
-### Community 2 - "Dashboard UI & Design System"
+### Community 1 - "Community 1"
+Cohesion: 0.04
+Nodes (77): _fetch_forecast(), fetch_weather(), format_weather_line(), _geocode(), Call Open-Meteo forecast API. Returns raw JSON response., Fetch weather data and return a structured dict.      Location resolution (first, Return single-line briefing format: temp, condition | High/Low | Wind | Precip., Resolve a city/address string to (lat, lon, display_name) via Open-Meteo geocodi (+69 more)
+
+### Community 2 - "Community 2"
 Cohesion: 0.04
 Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
 
-### Community 3 - "Meals & Nutrition Tools"
-Cohesion: 0.06
-Nodes (24): addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual(), handleFileChange(), handleLogMeal(), handleMealPrep() (+16 more)
+### Community 3 - "Community 3"
+Cohesion: 0.05
+Nodes (37): getSportsProvider(), syncSports(), async(), load(), onVisibility(), addHabit(), addSubtask(), addTask() (+29 more)
 
-### Community 4 - "Weekly Review & Stats"
+### Community 4 - "Community 4"
 Cohesion: 0.06
-Nodes (28): getISOWeekKey(), getISOWeekLabel(), latestLabel(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken() (+20 more)
+Nodes (44): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range(), get_profile_value() (+36 more)
 
-### Community 5 - "Push Notifications (ntfy.sh)"
+### Community 5 - "Community 5"
 Cohesion: 0.05
 Nodes (45): scripts/notify.sh: macOS osascript-based notification sender, ntfy.sh: free open-source pub/sub notification service, NTFY_TOPIC env var: unique hard-to-guess topic string shared across devices, Notifications Setup Documentation (ntfy.sh push notifications), GitHub Actions Weekly Review Nudge: uses NTFY_TOPIC secret, Lighthouse Report: /chat desktop, Lighthouse Report: /chat mobile, Lighthouse Report: /dashboard desktop (+37 more)
 
-### Community 6 - "Chat Tool Builders"
+### Community 6 - "Community 6"
 Cohesion: 0.05
 Nodes (16): buildCalendarTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools(), extractTextFromParts(), POST() (+8 more)
 
-### Community 7 - "Changelog & Release History"
+### Community 7 - "Community 7"
 Cohesion: 0.09
 Nodes (35): Vercel AI SDK v4→v6 upgrade (#329), Axe A11y Smoke (#377), Birthday widget double-suffix fix (#334), Calendar Exclusion per-profile (#388), Chat Stop Button + Tool Status Bar (#341/#352), CI Smoke Workflow (#379), Delete logged meal (#330), ESLint flat config (#327) (+27 more)
 
-### Community 8 - "Journal & Memory Layer"
+### Community 8 - "Community 8"
 Cohesion: 0.13
 Nodes (29): saveJournalEntry(), main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS. (+21 more)
 
-### Community 9 - "Google Fit / OAuth Sync Scripts"
-Cohesion: 0.12
-Nodes (27): main(), exchange_code(), existing_body_dates(), existing_keys(), fetch_body_data(), fetch_existing_workouts(), fetch_workouts(), filter_overlapping() (+19 more)
+### Community 9 - "Community 9"
+Cohesion: 0.08
+Nodes (14): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual() (+6 more)
 
-### Community 10 - "Calendar Sync (Birthday)"
-Cohesion: 0.16
-Nodes (15): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range(), get_profile_value() (+7 more)
+### Community 10 - "Community 10"
+Cohesion: 0.09
+Nodes (9): getISOWeekKey(), getISOWeekLabel(), latestLabel(), hoursToHm(), sliceByDate(), addDays(), buildWeekDays(), fmtShortDate() (+1 more)
 
-### Community 11 - "Chat Client & Prefill State"
-Cohesion: 0.12
-Nodes (4): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), removeItem()
-
-### Community 12 - "System Architecture Overview"
+### Community 11 - "Community 11"
 Cohesion: 0.16
 Nodes (17): Architecture: Browser / Mobile (end user), Architecture: Data Sources (Oura, Fitbit, Google Fit, Renpho), Architecture: External APIs (Anthropic, Google Calendar, Gmail, Open-Meteo, Polygon.io, ntfy.sh), Architecture: Next.js / Vercel (7 API routes, 10 pages), Mr. Bridge system architecture diagram (PNG render), Architecture: Supabase Postgres (18 tables, RLS enforced), Mr. Bridge system architecture diagram (D2/SVG), Architecture: Sync Layer (Python scripts, TypeScript modules, cron 6am PST) (+9 more)
 
-### Community 13 - "Habit Logging UI"
+### Community 12 - "Community 12"
 Cohesion: 0.14
 Nodes (3): getLogState(), handleLog(), setLogState()
 
-### Community 14 - "Sports & ESPN Widgets"
+### Community 13 - "Community 13"
 Cohesion: 0.23
 Nodes (8): currentSeason(), espnGetRecent(), espnGetUpcoming(), fetchScheduleEvents(), isF1(), parseScore(), teamLogo(), toGame()
 
-### Community 15 - "Data Visualization Charts"
+### Community 14 - "Community 14"
 Cohesion: 0.16
 Nodes (15): Chart: Body Composition from fitness_log (LineChart, AreaChart), Chart: Habits from habits+habit_registry (heatmap, BarChart, RadialBar), Chart: Meals/Nutrition from meal_log+recipes (PieChart, BarChart), Chart: Recovery from recovery_metrics/Oura (RadialBar, AreaChart), Chart: Workouts from workout_sessions/Fitbit (BarChart, AreaChart), Data Visualization: Recharts charts per data source, Fitbit Refresh Token Rotation: rotated on each use, script auto-updates .env, Rationale: Google Fit workout tracking unreliable (background step/activity noise); Fitbit preferred (+7 more)
 
-### Community 16 - "Lighthouse Perf Reports"
-Cohesion: 0.14
-Nodes (14): Lighthouse Perf Report: fitness-desktop, Lighthouse Perf Report: habits-desktop, Lighthouse Perf Report: login-desktop, Lighthouse Perf Report: login-mobile, Lighthouse Perf Report: notifications-desktop, Lighthouse Perf Report: settings-desktop, Lighthouse Perf Report: tasks-desktop, Lighthouse Perf Report: tasks-mobile (+6 more)
-
-### Community 17 - "CLAUDE.md Rules & Memory"
+### Community 15 - "Community 15"
 Cohesion: 0.14
 Nodes (14): Rules file split into core.md + situational files, Core Rules File, Graphify Knowledge Graph, Recipe Library, Rationale: All live data stored in Supabase, not local markdown, Rationale: Rules split saves 3500-4000 cold-session tokens, Calendar Exclusion (excluded_calendar_ids), Claude Code CLI (+6 more)
 
-### Community 18 - "Voice Interface (Jarvis)"
+### Community 16 - "Community 16"
+Cohesion: 0.14
+Nodes (14): Lighthouse Perf Report: fitness-desktop, Lighthouse Perf Report: habits-desktop, Lighthouse Perf Report: login-desktop, Lighthouse Perf Report: login-mobile, Lighthouse Perf Report: notifications-desktop, Lighthouse Perf Report: settings-desktop, Lighthouse Perf Report: tasks-desktop, Lighthouse Perf Report: tasks-mobile (+6 more)
+
+### Community 17 - "Community 17"
 Cohesion: 0.22
 Nodes (11): ask_claude(), load_system_prompt(), main(), Send transcript to Claude and return response text., Record audio until silence is detected., Load CLAUDE.md rules + all memory files into system prompt., Transcribe audio bytes using faster-whisper., Speak text using configured TTS engine. (+3 more)
 
-### Community 19 - "Reduced Motion / Theme Store"
+### Community 18 - "Community 18"
+Cohesion: 0.26
+Nodes (12): discover_body_datasources(), existing_dates(), fetch_body_composition(), fit_get(), fit_post(), get_credentials(), main(), print_probe() (+4 more)
+
+### Community 19 - "Community 19"
 Cohesion: 0.17
 Nodes (0): 
 
-### Community 20 - "Personal Habits & Fitness Goals"
+### Community 20 - "Community 20"
 Cohesion: 0.18
 Nodes (12): Fitness Program: Push/Legs/Pull + Conditioning, Habit: Coding (Daily), Habit: Floss (Daily), Habit: Japanese Study (Daily 30-60 min), Habit: Reading (Daily), Habit Registry, Habit: Workout (4x/week), Cuisine Preferences: Korean, Southeast Asian (+4 more)
 
-### Community 21 - "Voice Pipeline Docs"
+### Community 21 - "Community 21"
 Cohesion: 0.17
 Nodes (12): Mr. Bridge Voice Interface README, Voice pipeline: Porcupine → faster-whisper → Claude API → TTS, bridge_voice.py entry point, Voice sessions write to memory/*.md (shared with Claude Code), STT: faster-whisper (base.en model), TTS: macOS say (built-in) or ElevenLabs, Wake word: Hey Bridge (Porcupine, pvporcupine), anthropic>=0.40.0 (voice dependency) (+4 more)
 
-### Community 22 - "Google OAuth Scopes Setup"
+### Community 22 - "Community 22"
 Cohesion: 0.2
 Nodes (11): Google Calendar readonly OAuth scope, FastAPI backend (web app Google API caller), Gmail readonly OAuth scope, google-auth Python library (auto token refresh), GOOGLE_CLIENT_ID credential, GOOGLE_CLIENT_SECRET credential, GOOGLE_REFRESH_TOKEN credential, Google OAuth Setup Guide (+3 more)
 
-### Community 23 - "Gmail Multi-Account Integration"
+### Community 23 - "Community 23"
 Cohesion: 0.22
 Nodes (10): Gmail Dashboard Query: is:unread subject:(meeting OR urgent OR invoice OR action required OR deadline), Rationale: Gmailify not used — OAuth flow not straightforward; POP3 preferred, Gmail Label ID Resolution: fetches label list to map name to opaque ID per request, Gmail Multi-Account Setup (POP3 aggregation + Calendar sharing), Gmail POP3 Aggregation: secondary into primary via port 995, Gmail POP3 Sync Delay: ~30-60 min polling, not real-time, Gmail Label: Professional (badges secondary account emails as 'work'), API Route: /api/google/calendar unions all calendars + sorts by start time (+2 more)
 
-### Community 24 - "Sync Orchestration Scripts"
-Cohesion: 0.32
-Nodes (7): last_sync_age(), main(), Run alert scripts sequentially after syncs. Errors are non-fatal., Return seconds since last successful sync for source, or None if never., Run one sync script as a subprocess. Returns (source, returncode, output)., _run_alerts(), run_sync()
-
-### Community 25 - "Module Group 25"
+### Community 24 - "Community 24"
 Cohesion: 0.29
 Nodes (0): 
 
-### Community 26 - "Module Group 26"
+### Community 25 - "Community 25"
 Cohesion: 0.33
 Nodes (2): clearLongPress(), handleTouchStart()
 
-### Community 27 - "Module Group 27"
+### Community 26 - "Community 26"
 Cohesion: 0.33
 Nodes (2): datePreview(), formatShortDate()
 
-### Community 28 - "Module Group 28"
+### Community 27 - "Community 27"
 Cohesion: 0.47
 Nodes (3): confirmProposal(), dashOr(), round()
 
-### Community 29 - "Module Group 29"
+### Community 28 - "Community 28"
 Cohesion: 0.47
 Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
 
-### Community 30 - "Module Group 30"
+### Community 29 - "Community 29"
 Cohesion: 0.47
 Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
 
-### Community 31 - "Module Group 31"
+### Community 30 - "Community 30"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 32 - "Module Group 32"
+### Community 31 - "Community 31"
 Cohesion: 0.4
 Nodes (2): getSnapshot(), readColors()
 
-### Community 33 - "Module Group 33"
-Cohesion: 0.4
-Nodes (3): apiKey(), startTime(), toGame()
-
-### Community 34 - "Module Group 34"
+### Community 32 - "Community 32"
 Cohesion: 0.6
 Nodes (5): existing_dates(), find_col(), insert_rows_after_table(), main(), parse_date()
 
-### Community 35 - "Module Group 35"
-Cohesion: 0.5
-Nodes (3): async(), load(), onVisibility()
-
-### Community 36 - "Module Group 36"
+### Community 33 - "Community 33"
 Cohesion: 0.6
 Nodes (3): handleFreeWriteChange(), handleResponseChange(), scheduleAutoSave()
 
-### Community 37 - "Module Group 37"
+### Community 34 - "Community 34"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 38 - "Module Group 38"
+### Community 35 - "Community 35"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
-### Community 39 - "Module Group 39"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 40 - "Module Group 40"
+### Community 37 - "Community 37"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 41 - "Module Group 41"
+### Community 38 - "Community 38"
 Cohesion: 0.4
 Nodes (5): Chat API Route, Anthropic Prompt Caching, ToolLoopAgent, Per-Domain Tool Modules, Verified-Success Contract (ok/error shape)
 
-### Community 42 - "Module Group 42"
+### Community 39 - "Community 39"
 Cohesion: 0.5
 Nodes (5): Fitness Baseline Metrics (weight/BF% history), Fitbit Sync, Google Fit Sync, Oura Ring Sync, Python Sync Scripts
 
-### Community 43 - "Module Group 43"
+### Community 40 - "Community 40"
 Cohesion: 0.5
 Nodes (2): MastheadRefresh(), useSyncAll()
 
-### Community 44 - "Module Group 44"
+### Community 41 - "Community 41"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 45 - "Module Group 45"
+### Community 42 - "Community 42"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 46 - "Module Group 46"
+### Community 43 - "Community 43"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 47 - "Module Group 47"
+### Community 44 - "Community 44"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 48 - "Module Group 48"
+### Community 45 - "Community 45"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 49 - "Module Group 49"
+### Community 46 - "Community 46"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 50 - "Module Group 50"
+### Community 47 - "Community 47"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 51 - "Module Group 51"
+### Community 48 - "Community 48"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 52 - "Module Group 52"
+### Community 49 - "Community 49"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 53 - "Module Group 53"
+### Community 50 - "Community 50"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 54 - "Module Group 54"
+### Community 51 - "Community 51"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 55 - "Module Group 55"
+### Community 52 - "Community 52"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 56 - "Module Group 56"
+### Community 53 - "Community 53"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 57 - "Module Group 57"
+### Community 54 - "Community 54"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 58 - "Module Group 58"
+### Community 55 - "Community 55"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 56 - "Community 56"
 Cohesion: 1.0
 Nodes (2): getGrantedScopes(), main()
 
-### Community 59 - "Module Group 59"
+### Community 57 - "Community 57"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 60 - "Module Group 60"
+### Community 58 - "Community 58"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 61 - "Module Group 61"
+### Community 59 - "Community 59"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 62 - "Module Group 62"
+### Community 60 - "Community 60"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 63 - "Module Group 63"
+### Community 61 - "Community 61"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 64 - "Module Group 64"
+### Community 62 - "Community 62"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 65 - "Module Group 65"
+### Community 63 - "Community 63"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 66 - "Module Group 66"
+### Community 64 - "Community 64"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 67 - "Module Group 67"
+### Community 65 - "Community 65"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 68 - "Module Group 68"
+### Community 66 - "Community 66"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 69 - "Module Group 69"
+### Community 67 - "Community 67"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 70 - "Module Group 70"
+### Community 68 - "Community 68"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 71 - "Module Group 71"
+### Community 69 - "Community 69"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 72 - "Module Group 72"
+### Community 70 - "Community 70"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 73 - "Module Group 73"
+### Community 71 - "Community 71"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 74 - "Module Group 74"
+### Community 72 - "Community 72"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 75 - "Module Group 75"
+### Community 73 - "Community 73"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 76 - "Module Group 76"
+### Community 74 - "Community 74"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 77 - "Module Group 77"
+### Community 75 - "Community 75"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 78 - "Module Group 78"
+### Community 76 - "Community 76"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 79 - "Module Group 79"
+### Community 77 - "Community 77"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 80 - "Module Group 80"
+### Community 78 - "Community 78"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 81 - "Module Group 81"
+### Community 79 - "Community 79"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 82 - "Module Group 82"
+### Community 80 - "Community 80"
 Cohesion: 1.0
 Nodes (2): Vercel Cron Daily Sync, Vercel Deployment
 
-### Community 83 - "Module Group 83"
+### Community 81 - "Community 81"
 Cohesion: 1.0
 Nodes (2): .mcp.json MCP Server Config, Playwright MCP
 
-### Community 84 - "Module Group 84"
+### Community 82 - "Community 82"
 Cohesion: 1.0
 Nodes (2): Stocks Sync (Polygon.io), Stock Watchlist Widget
 
-### Community 85 - "Module Group 85"
+### Community 83 - "Community 83"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 86 - "Module Group 86"
+### Community 84 - "Community 84"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 87 - "Module Group 87"
+### Community 85 - "Community 85"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 88 - "Module Group 88"
+### Community 86 - "Community 86"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 89 - "Module Group 89"
+### Community 87 - "Community 87"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 90 - "Module Group 90"
+### Community 88 - "Community 88"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 91 - "Module Group 91"
+### Community 89 - "Community 89"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 92 - "Module Group 92"
+### Community 90 - "Community 90"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 93 - "Module Group 93"
+### Community 91 - "Community 91"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 94 - "Module Group 94"
+### Community 92 - "Community 92"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 95 - "Module Group 95"
+### Community 93 - "Community 93"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 96 - "Module Group 96"
+### Community 94 - "Community 94"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 97 - "Module Group 97"
+### Community 95 - "Community 95"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 98 - "Module Group 98"
+### Community 96 - "Community 96"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 99 - "Module Group 99"
+### Community 97 - "Community 97"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 100 - "Module Group 100"
+### Community 98 - "Community 98"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 101 - "Module Group 101"
+### Community 99 - "Community 99"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 102 - "Module Group 102"
+### Community 100 - "Community 100"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 103 - "Module Group 103"
+### Community 101 - "Community 101"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 104 - "Module Group 104"
+### Community 102 - "Community 102"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 105 - "Module Group 105"
+### Community 103 - "Community 103"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 106 - "Module Group 106"
+### Community 104 - "Community 104"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 107 - "Module Group 107"
+### Community 105 - "Community 105"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 108 - "Module Group 108"
+### Community 106 - "Community 106"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 109 - "Module Group 109"
+### Community 107 - "Community 107"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 110 - "Module Group 110"
+### Community 108 - "Community 108"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 111 - "Module Group 111"
+### Community 109 - "Community 109"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 112 - "Module Group 112"
+### Community 110 - "Community 110"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 113 - "Module Group 113"
+### Community 111 - "Community 111"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 114 - "Module Group 114"
+### Community 112 - "Community 112"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 115 - "Module Group 115"
+### Community 113 - "Community 113"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 116 - "Module Group 116"
+### Community 114 - "Community 114"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 117 - "Module Group 117"
+### Community 115 - "Community 115"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 118 - "Module Group 118"
+### Community 116 - "Community 116"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 119 - "Module Group 119"
+### Community 117 - "Community 117"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 120 - "Module Group 120"
+### Community 118 - "Community 118"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 121 - "Module Group 121"
+### Community 119 - "Community 119"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 122 - "Module Group 122"
+### Community 120 - "Community 120"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 123 - "Module Group 123"
+### Community 121 - "Community 121"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 124 - "Module Group 124"
+### Community 122 - "Community 122"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 125 - "Module Group 125"
+### Community 123 - "Community 123"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 126 - "Module Group 126"
+### Community 124 - "Community 124"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 127 - "Module Group 127"
+### Community 125 - "Community 125"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 128 - "Module Group 128"
+### Community 126 - "Community 126"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 129 - "Module Group 129"
+### Community 127 - "Community 127"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 130 - "Module Group 130"
+### Community 128 - "Community 128"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 131 - "Module Group 131"
+### Community 129 - "Community 129"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 132 - "Module Group 132"
+### Community 130 - "Community 130"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 133 - "Module Group 133"
+### Community 131 - "Community 131"
 Cohesion: 1.0
 Nodes (1): Chat Page
 
-### Community 134 - "Module Group 134"
+### Community 132 - "Community 132"
 Cohesion: 1.0
 Nodes (1): Habits Page
 
-### Community 135 - "Module Group 135"
+### Community 133 - "Community 133"
 Cohesion: 1.0
 Nodes (1): Fitness Page
 
-### Community 136 - "Module Group 136"
+### Community 134 - "Community 134"
 Cohesion: 1.0
 Nodes (1): Weekly Review Page
 
-### Community 137 - "Module Group 137"
+### Community 135 - "Community 135"
 Cohesion: 1.0
 Nodes (1): Notifications Page
 
-### Community 138 - "Module Group 138"
+### Community 136 - "Community 136"
 Cohesion: 1.0
 Nodes (1): Settings Page
 
-### Community 139 - "Module Group 139"
+### Community 137 - "Community 137"
 Cohesion: 1.0
 Nodes (1): Push Notifications via ntfy.sh
 
-### Community 140 - "Module Group 140"
+### Community 138 - "Community 138"
 Cohesion: 1.0
 Nodes (1): Voice Interface (Jarvis mode)
 
-### Community 141 - "Module Group 141"
+### Community 139 - "Community 139"
 Cohesion: 1.0
 Nodes (1): Demo Account
 
-### Community 142 - "Module Group 142"
+### Community 140 - "Community 140"
 Cohesion: 1.0
 Nodes (1): Fitness Goal: Fat Loss + Strength Maintenance
 
-### Community 143 - "Module Group 143"
+### Community 141 - "Community 141"
 Cohesion: 1.0
 Nodes (1): Core Cooking Principles
 
-### Community 144 - "Module Group 144"
+### Community 142 - "Community 142"
 Cohesion: 1.0
 Nodes (1): Active Tasks Tracker
 
-### Community 145 - "Module Group 145"
+### Community 143 - "Community 143"
 Cohesion: 1.0
 Nodes (1): Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms
 
-### Community 146 - "Module Group 146"
+### Community 144 - "Community 144"
 Cohesion: 1.0
 Nodes (1): App Route: /tasks
 
-### Community 147 - "Module Group 147"
+### Community 145 - "Community 145"
 Cohesion: 1.0
 Nodes (1): App Route: /login
 
 ## Knowledge Gaps
 - **196 isolated node(s):** `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.`, `Send transcript to Claude and return response text.`, `Record audio until silence is detected.` (+191 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Module Group 59`** (2 nodes): `loadEnvFile()`, `playwright.config.ts`
+- **Thin community `Community 57`** (2 nodes): `loadEnvFile()`, `playwright.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 60`** (2 nodes): `requireEnv()`, `auth.ts`
+- **Thin community `Community 58`** (2 nodes): `requireEnv()`, `auth.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 61`** (2 nodes): `isCacheableStatic()`, `sw.js`
+- **Thin community `Community 59`** (2 nodes): `isCacheableStatic()`, `sw.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 62`** (2 nodes): `proxy()`, `proxy.ts`
+- **Thin community `Community 60`** (2 nodes): `proxy()`, `proxy.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 63`** (2 nodes): `RootPage()`, `page.tsx`
+- **Thin community `Community 61`** (2 nodes): `RootPage()`, `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 64`** (2 nodes): `Loading()`, `loading.tsx`
+- **Thin community `Community 62`** (2 nodes): `Loading()`, `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 65`** (2 nodes): `LoginLayout()`, `layout.tsx`
+- **Thin community `Community 63`** (2 nodes): `LoginLayout()`, `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 66`** (2 nodes): `ThemeProvider()`, `theme-provider.tsx`
+- **Thin community `Community 64`** (2 nodes): `ThemeProvider()`, `theme-provider.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 67`** (2 nodes): `ServiceWorkerRegister()`, `service-worker-register.tsx`
+- **Thin community `Community 65`** (2 nodes): `ServiceWorkerRegister()`, `service-worker-register.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 68`** (2 nodes): `ThemeToggle()`, `theme-toggle.tsx`
+- **Thin community `Community 66`** (2 nodes): `ThemeToggle()`, `theme-toggle.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 69`** (2 nodes): `SignOutButton()`, `sign-out-button.tsx`
+- **Thin community `Community 67`** (2 nodes): `SignOutButton()`, `sign-out-button.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 70`** (2 nodes): `Logo()`, `logo.tsx`
+- **Thin community `Community 68`** (2 nodes): `Logo()`, `logo.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 71`** (2 nodes): `handleSubmit()`, `add-task-form.tsx`
+- **Thin community `Community 69`** (2 nodes): `handleSubmit()`, `add-task-form.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 72`** (2 nodes): `Sparkline()`, `sparkline.tsx`
+- **Thin community `Community 70`** (2 nodes): `Sparkline()`, `sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 73`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
+- **Thin community `Community 71`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 74`** (2 nodes): `EmptyState()`, `empty-state.tsx`
+- **Thin community `Community 72`** (2 nodes): `EmptyState()`, `empty-state.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 75`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
+- **Thin community `Community 73`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 76`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
+- **Thin community `Community 74`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 77`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
+- **Thin community `Community 75`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 78`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
+- **Thin community `Community 76`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 79`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
+- **Thin community `Community 77`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 80`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
+- **Thin community `Community 78`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 81`** (2 nodes): `createClient()`, `client.ts`
+- **Thin community `Community 79`** (2 nodes): `createClient()`, `client.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 82`** (2 nodes): `Vercel Cron Daily Sync`, `Vercel Deployment`
+- **Thin community `Community 80`** (2 nodes): `Vercel Cron Daily Sync`, `Vercel Deployment`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 83`** (2 nodes): `.mcp.json MCP Server Config`, `Playwright MCP`
+- **Thin community `Community 81`** (2 nodes): `.mcp.json MCP Server Config`, `Playwright MCP`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 84`** (2 nodes): `Stocks Sync (Polygon.io)`, `Stock Watchlist Widget`
+- **Thin community `Community 82`** (2 nodes): `Stocks Sync (Polygon.io)`, `Stock Watchlist Widget`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 85`** (1 nodes): `postcss.config.mjs`
+- **Thin community `Community 83`** (1 nodes): `postcss.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 86`** (1 nodes): `next-env.d.ts`
+- **Thin community `Community 84`** (1 nodes): `next-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 87`** (1 nodes): `eslint.config.mjs`
+- **Thin community `Community 85`** (1 nodes): `eslint.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 88`** (1 nodes): `next.config.ts`
+- **Thin community `Community 86`** (1 nodes): `next.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 89`** (1 nodes): `calendar-smoke.spec.ts`
+- **Thin community `Community 87`** (1 nodes): `calendar-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 90`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
+- **Thin community `Community 88`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 91`** (1 nodes): `a11y.spec.ts`
+- **Thin community `Community 89`** (1 nodes): `a11y.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 92`** (1 nodes): `calendar-mutate-smoke.spec.ts`
+- **Thin community `Community 90`** (1 nodes): `calendar-mutate-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 93`** (1 nodes): `chat.spec.ts`
+- **Thin community `Community 91`** (1 nodes): `chat.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 94`** (1 nodes): `generate-pwa-icons.mjs`
+- **Thin community `Community 92`** (1 nodes): `generate-pwa-icons.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 95`** (1 nodes): `layout.tsx`
+- **Thin community `Community 93`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 96`** (1 nodes): `error.tsx`
+- **Thin community `Community 94`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 97`** (1 nodes): `layout.tsx`
+- **Thin community `Community 95`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 98`** (1 nodes): `error.tsx`
+- **Thin community `Community 96`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 99`** (1 nodes): `loading.tsx`
+- **Thin community `Community 97`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 100`** (1 nodes): `loading.tsx`
+- **Thin community `Community 98`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 101`** (1 nodes): `loading.tsx`
+- **Thin community `Community 99`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 102`** (1 nodes): `loading.tsx`
+- **Thin community `Community 100`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 103`** (1 nodes): `page.tsx`
+- **Thin community `Community 101`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 104`** (1 nodes): `loading.tsx`
+- **Thin community `Community 102`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 105`** (1 nodes): `loading.tsx`
+- **Thin community `Community 103`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 106`** (1 nodes): `page.tsx`
+- **Thin community `Community 104`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 107`** (1 nodes): `loading.tsx`
+- **Thin community `Community 105`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 108`** (1 nodes): `page.tsx`
+- **Thin community `Community 106`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 109`** (1 nodes): `loading.tsx`
+- **Thin community `Community 107`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 110`** (1 nodes): `loading.tsx`
+- **Thin community `Community 108`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 111`** (1 nodes): `ambient-background.tsx`
+- **Thin community `Community 109`** (1 nodes): `ambient-background.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 112`** (1 nodes): `sheet.tsx`
+- **Thin community `Community 110`** (1 nodes): `sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 113`** (1 nodes): `undo-toast.tsx`
+- **Thin community `Community 111`** (1 nodes): `undo-toast.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 114`** (1 nodes): `completed-tasks.tsx`
+- **Thin community `Community 112`** (1 nodes): `completed-tasks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 115`** (1 nodes): `session-sheet.tsx`
+- **Thin community `Community 113`** (1 nodes): `session-sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 116`** (1 nodes): `slash-command-menu.tsx`
+- **Thin community `Community 114`** (1 nodes): `slash-command-menu.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 117`** (1 nodes): `session-sidebar.tsx`
+- **Thin community `Community 115`** (1 nodes): `session-sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 118`** (1 nodes): `radial-completion.tsx`
+- **Thin community `Community 116`** (1 nodes): `radial-completion.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 119`** (1 nodes): `longest-chain-badges.tsx`
+- **Thin community `Community 117`** (1 nodes): `longest-chain-badges.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 120`** (1 nodes): `habit-icon-picker.tsx`
+- **Thin community `Community 118`** (1 nodes): `habit-icon-picker.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 121`** (1 nodes): `momentum-line.tsx`
+- **Thin community `Community 119`** (1 nodes): `momentum-line.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 122`** (1 nodes): `dashboard-masthead.tsx`
+- **Thin community `Community 120`** (1 nodes): `dashboard-masthead.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 123`** (1 nodes): `dashboard-briefing.tsx`
+- **Thin community `Community 121`** (1 nodes): `dashboard-briefing.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 124`** (1 nodes): `tasks-summary.tsx`
+- **Thin community `Community 122`** (1 nodes): `tasks-summary.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 125`** (1 nodes): `important-emails.tsx`
+- **Thin community `Community 123`** (1 nodes): `important-emails.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 126`** (1 nodes): `recent-sessions-list.tsx`
+- **Thin community `Community 124`** (1 nodes): `recent-sessions-list.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 127`** (1 nodes): `exercise-sparkline.tsx`
+- **Thin community `Community 125`** (1 nodes): `exercise-sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 128`** (1 nodes): `types.ts`
+- **Thin community `Community 126`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 129`** (1 nodes): `_strict.ts`
+- **Thin community `Community 127`** (1 nodes): `_strict.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 130`** (1 nodes): `_context.ts`
+- **Thin community `Community 128`** (1 nodes): `_context.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 131`** (1 nodes): `provider.ts`
+- **Thin community `Community 129`** (1 nodes): `provider.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 132`** (1 nodes): `config.py`
+- **Thin community `Community 130`** (1 nodes): `config.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 133`** (1 nodes): `Chat Page`
+- **Thin community `Community 131`** (1 nodes): `Chat Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 134`** (1 nodes): `Habits Page`
+- **Thin community `Community 132`** (1 nodes): `Habits Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 135`** (1 nodes): `Fitness Page`
+- **Thin community `Community 133`** (1 nodes): `Fitness Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 136`** (1 nodes): `Weekly Review Page`
+- **Thin community `Community 134`** (1 nodes): `Weekly Review Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 137`** (1 nodes): `Notifications Page`
+- **Thin community `Community 135`** (1 nodes): `Notifications Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 138`** (1 nodes): `Settings Page`
+- **Thin community `Community 136`** (1 nodes): `Settings Page`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 139`** (1 nodes): `Push Notifications via ntfy.sh`
+- **Thin community `Community 137`** (1 nodes): `Push Notifications via ntfy.sh`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 140`** (1 nodes): `Voice Interface (Jarvis mode)`
+- **Thin community `Community 138`** (1 nodes): `Voice Interface (Jarvis mode)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 141`** (1 nodes): `Demo Account`
+- **Thin community `Community 139`** (1 nodes): `Demo Account`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 142`** (1 nodes): `Fitness Goal: Fat Loss + Strength Maintenance`
+- **Thin community `Community 140`** (1 nodes): `Fitness Goal: Fat Loss + Strength Maintenance`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 143`** (1 nodes): `Core Cooking Principles`
+- **Thin community `Community 141`** (1 nodes): `Core Cooking Principles`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 144`** (1 nodes): `Active Tasks Tracker`
+- **Thin community `Community 142`** (1 nodes): `Active Tasks Tracker`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 145`** (1 nodes): `Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms`
+- **Thin community `Community 143`** (1 nodes): `Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 146`** (1 nodes): `App Route: /tasks`
+- **Thin community `Community 144`** (1 nodes): `App Route: /tasks`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Module Group 147`** (1 nodes): `App Route: /login`
+- **Thin community `Community 145`** (1 nodes): `App Route: /login`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `get()` connect `Notifications & Alerts Pipeline` to `Module Group 33`, `Google OAuth & Calendar Integration`, `Meals & Nutrition Tools`, `Weekly Review & Stats`, `Module Group 34`, `Chat Tool Builders`, `Journal & Memory Layer`, `Google Fit / OAuth Sync Scripts`, `Calendar Sync (Birthday)`, `Module Group 29`?**
-  _High betweenness centrality (0.098) - this node is a cross-community bridge._
-- **Why does `POST()` connect `Chat Tool Builders` to `Notifications & Alerts Pipeline`, `Google OAuth & Calendar Integration`, `Meals & Nutrition Tools`, `Weekly Review & Stats`, `Journal & Memory Layer`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
-- **Why does `round()` connect `Meals & Nutrition Tools` to `Notifications & Alerts Pipeline`, `Google OAuth & Calendar Integration`, `Weekly Review & Stats`, `Chat Tool Builders`, `Journal & Memory Layer`, `Google Fit / OAuth Sync Scripts`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `get()` connect `Community 1` to `Community 0`, `Community 32`, `Community 3`, `Community 4`, `Community 6`, `Community 8`, `Community 9`, `Community 18`, `Community 28`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `round()` connect `Community 0` to `Community 1`, `Community 6`, `Community 8`, `Community 9`, `Community 10`, `Community 18`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 8`?**
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Are the 57 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
   _`get()` has 57 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 23 inferred relationships involving `POST()` (e.g. with `createClient()` and `todayString()`) actually correct?**
