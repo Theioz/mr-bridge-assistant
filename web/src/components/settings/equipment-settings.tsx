@@ -138,6 +138,7 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
         <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
           <Plus size={16} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden />
           <select
+            aria-label="Equipment type"
             value={type}
             onChange={(e) => { setType(e.target.value); setError(null); }}
             className="flex-1 bg-transparent focus:outline-none min-w-0"

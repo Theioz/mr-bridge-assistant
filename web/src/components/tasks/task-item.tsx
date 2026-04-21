@@ -369,6 +369,7 @@ export default function TaskItem({
             </button>
           )}
           <select
+            aria-label="Priority"
             value={editPriority}
             onChange={(e) => setEditPriority(e.target.value as "high" | "medium" | "low")}
             className="focus:outline-none"

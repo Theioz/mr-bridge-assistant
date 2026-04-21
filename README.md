@@ -466,7 +466,7 @@ mr-bridge-assistant/
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
 │   ├── requirements.txt                   # Pinned Python dependencies
-│   ├── setup-web-oauth.py                 # Browser-based OAuth flow → prints GOOGLE_REFRESH_TOKEN
+│   ├── setup-web-oauth.py                 # Browser-based OAuth flow (legacy — users now connect Google via /settings → Integrations per #390)
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
