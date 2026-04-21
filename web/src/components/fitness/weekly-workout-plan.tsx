@@ -130,7 +130,7 @@ function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: 
             style={{
               fontSize: 10,
               fontWeight: 600,
-              color: "var(--color-amber, #f59e0b)",
+              color: "var(--color-amber)",
               lineHeight: 1,
             }}
           >

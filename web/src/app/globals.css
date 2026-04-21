@@ -76,6 +76,7 @@
   --color-warning:        var(--accent);
   --warning-subtle:           oklch(74% 0.14 70 / 0.08);
   --warning-subtle-strong:    oklch(74% 0.14 70 / 0.16);
+  --color-amber:              oklch(74% 0.14 70);
 
   /* Status */
   --color-positive:               oklch(72% 0.15 155);

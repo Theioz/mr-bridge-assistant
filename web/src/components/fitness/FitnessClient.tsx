@@ -253,6 +253,7 @@ function fmtPRDate(iso: string | null): string {
 }
 
 function PersonalRecords({ prs, unit }: { prs: ExercisePR[]; unit: WeightUnit }) {
+  const [now] = useState(() => Date.now());
   const sorted = [...prs].sort((a, b) =>
     a.exercise_name.localeCompare(b.exercise_name)
   );
@@ -321,14 +322,14 @@ function PersonalRecords({ prs, unit }: { prs: ExercisePR[]; unit: WeightUnit })
                 .sort()
                 .at(-1) ?? null;
               const isRecent = latestDate
-                ? Date.now() - new Date(latestDate).getTime() < 30 * 24 * 60 * 60 * 1000
+                ? now - new Date(latestDate).getTime() < 30 * 24 * 60 * 60 * 1000
                 : false;
 
               return (
                 <tr key={pr.exercise_name} style={{ borderBottom: "1px solid var(--rule-soft)" }}>
                   <td style={{ padding: "var(--space-2) var(--space-3) var(--space-2) 0", color: "var(--color-text)", fontWeight: 500 }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                      {isRecent && <span style={{ color: "var(--color-amber, #f59e0b)", fontSize: 10 }}>🏆</span>}
+                      {isRecent && <span style={{ color: "var(--color-amber)", fontSize: 10 }}>🏆</span>}
                       {pr.exercise_name}
                     </span>
                   </td>

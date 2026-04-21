@@ -53,24 +53,20 @@ export function InlineSetLogger({
   const [err, setErr] = useState<string | null>(null);
 
   // Rest timer state
-  const [timerEndMs, setTimerEndMs] = useState<number | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  const pulseFiredRef = useRef(false);
-
-  // On mount: resume an in-progress timer from localStorage
-  useEffect(() => {
+  const [timerEndMs, setTimerEndMs] = useState<number | null>(() => {
     try {
       const stored = localStorage.getItem(LS_END);
       if (stored) {
         const end = parseInt(stored, 10);
-        if (Number.isFinite(end) && end > Date.now()) {
-          setTimerEndMs(end);
-        }
+        if (Number.isFinite(end) && end > Date.now()) return end;
       }
     } catch {
       // localStorage unavailable — skip
     }
-  }, []);
+    return null;
+  });
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const pulseFiredRef = useRef(false);
 
   // Tick every 250ms while the timer is active
   useEffect(() => {
