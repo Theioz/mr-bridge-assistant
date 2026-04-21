@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 215 files · ~590,892 words
+- 218 files · ~596,370 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1043 nodes · 1409 edges · 150 communities detected
-- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 366 edges (avg confidence: 0.81)
+- 1079 nodes · 1440 edges · 170 communities detected
+- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 379 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -160,15 +160,35 @@
 - [[_COMMUNITY_Community 147|Community 147]]
 - [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
+- [[_COMMUNITY_Community 150|Community 150]]
+- [[_COMMUNITY_Community 151|Community 151]]
+- [[_COMMUNITY_Community 152|Community 152]]
+- [[_COMMUNITY_Community 153|Community 153]]
+- [[_COMMUNITY_Community 154|Community 154]]
+- [[_COMMUNITY_Community 155|Community 155]]
+- [[_COMMUNITY_Community 156|Community 156]]
+- [[_COMMUNITY_Community 157|Community 157]]
+- [[_COMMUNITY_Community 158|Community 158]]
+- [[_COMMUNITY_Community 159|Community 159]]
+- [[_COMMUNITY_Community 160|Community 160]]
+- [[_COMMUNITY_Community 161|Community 161]]
+- [[_COMMUNITY_Community 162|Community 162]]
+- [[_COMMUNITY_Community 163|Community 163]]
+- [[_COMMUNITY_Community 164|Community 164]]
+- [[_COMMUNITY_Community 165|Community 165]]
+- [[_COMMUNITY_Community 166|Community 166]]
+- [[_COMMUNITY_Community 167|Community 167]]
+- [[_COMMUNITY_Community 168|Community 168]]
+- [[_COMMUNITY_Community 169|Community 169]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `get()` - 62 edges
+1. `get()` - 64 edges
 2. `POST()` - 46 edges
-3. `select()` - 38 edges
-4. `GET()` - 35 edges
-5. `round()` - 35 edges
-6. `createClient()` - 34 edges
-7. `upsert()` - 32 edges
+3. `select()` - 39 edges
+4. `GET()` - 37 edges
+5. `createClient()` - 37 edges
+6. `round()` - 35 edges
+7. `upsert()` - 33 edges
 8. `CHANGELOG [Unreleased]` - 25 edges
 9. `Mr. Bridge Design System MASTER.md` - 22 edges
 10. `DELETE()` - 20 edges
@@ -208,187 +228,187 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.04
-Nodes (98): _fire(), get_profile_value(), main(), set_profile_value(), fmt_hrs(), main(), _fetch_forecast(), fetch_weather() (+90 more)
+Nodes (82): get_profile_value(), load_notif_cache(), main(), needs_notification(), Return {task_id: iso_timestamp_last_notified} from profile., Return True if the task hasn't been notified within the last 24 hours., save_notif_cache(), send_notify() (+74 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (41): fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins(), fitGet() (+33 more)
+Cohesion: 0.04
+Nodes (57): cancelWorkout(), get_profile_value(), main(), set_profile_value(), get_profile_value(), main(), set_profile_value(), backfillAllPRs() (+49 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (58): cancelWorkout(), get_profile_value(), main(), set_profile_value(), get_profile_value(), main(), set_profile_value(), backfillAllPRs() (+50 more)
+Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
-Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
+Nodes (33): getExcludedCalendarIds(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+25 more)
 
 ### Community 4 - "Community 4"
+Cohesion: 0.05
+Nodes (28): clearChatPrefill(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual(), handleFileChange(), handleLogMeal() (+20 more)
+
+### Community 5 - "Community 5"
 Cohesion: 0.06
 Nodes (49): Vercel AI SDK v4→v6 upgrade (#329), Axe A11y Smoke (#377), Birthday widget double-suffix fix (#334), Calendar Exclusion per-profile (#388), Chat Stop Button + Tool Status Bar (#341/#352), CI Smoke Workflow (#379), Delete logged meal (#330), ESLint flat config (#327) (+41 more)
 
-### Community 5 - "Community 5"
+### Community 6 - "Community 6"
 Cohesion: 0.05
 Nodes (17): buildCalendarTools(), buildEquipmentTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools(), extractTextFromParts() (+9 more)
 
-### Community 6 - "Community 6"
+### Community 7 - "Community 7"
 Cohesion: 0.05
 Nodes (45): scripts/notify.sh: macOS osascript-based notification sender, ntfy.sh: free open-source pub/sub notification service, NTFY_TOPIC env var: unique hard-to-guess topic string shared across devices, Notifications Setup Documentation (ntfy.sh push notifications), GitHub Actions Weekly Review Nudge: uses NTFY_TOPIC secret, Lighthouse Report: /chat desktop, Lighthouse Report: /chat mobile, Lighthouse Report: /dashboard desktop (+37 more)
 
-### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (18): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual() (+10 more)
-
 ### Community 8 - "Community 8"
+Cohesion: 0.09
+Nodes (34): load_integration(), _now_iso(), persist_rotated_token(), Per-user integration token helpers — mirrors web/src/lib/integrations/tokens.ts., Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if, Encrypt and save a rotated refresh token back to user_integrations., _require_encryption_key(), main() (+26 more)
+
+### Community 9 - "Community 9"
 Cohesion: 0.13
 Nodes (29): saveJournalEntry(), main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS. (+21 more)
 
-### Community 9 - "Community 9"
+### Community 10 - "Community 10"
 Cohesion: 0.08
 Nodes (9): getISOWeekKey(), getISOWeekLabel(), latestLabel(), hoursToHm(), sliceByDate(), addDays(), buildWeekDays(), fmtShortDate() (+1 more)
 
-### Community 10 - "Community 10"
+### Community 11 - "Community 11"
 Cohesion: 0.16
 Nodes (17): Architecture: Browser / Mobile (end user), Architecture: Data Sources (Oura, Fitbit, Google Fit, Renpho), Architecture: External APIs (Anthropic, Google Calendar, Gmail, Open-Meteo, Polygon.io, ntfy.sh), Architecture: Next.js / Vercel (7 API routes, 10 pages), Mr. Bridge system architecture diagram (PNG render), Architecture: Supabase Postgres (18 tables, RLS enforced), Mr. Bridge system architecture diagram (D2/SVG), Architecture: Sync Layer (Python scripts, TypeScript modules, cron 6am PST) (+9 more)
 
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.14
 Nodes (3): getLogState(), handleLog(), setLogState()
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
+Cohesion: 0.14
+Nodes (2): toggleDesktopHistory(), writeHistoryOpen()
+
+### Community 14 - "Community 14"
 Cohesion: 0.23
 Nodes (8): currentSeason(), espnGetRecent(), espnGetUpcoming(), fetchScheduleEvents(), isF1(), parseScore(), teamLogo(), toGame()
 
-### Community 13 - "Community 13"
+### Community 15 - "Community 15"
 Cohesion: 0.16
 Nodes (15): Chart: Body Composition from fitness_log (LineChart, AreaChart), Chart: Habits from habits+habit_registry (heatmap, BarChart, RadialBar), Chart: Meals/Nutrition from meal_log+recipes (PieChart, BarChart), Chart: Recovery from recovery_metrics/Oura (RadialBar, AreaChart), Chart: Workouts from workout_sessions/Fitbit (BarChart, AreaChart), Data Visualization: Recharts charts per data source, Fitbit Refresh Token Rotation: rotated on each use, script auto-updates .env, Rationale: Google Fit workout tracking unreliable (background step/activity noise); Fitbit preferred (+7 more)
 
-### Community 14 - "Community 14"
+### Community 16 - "Community 16"
 Cohesion: 0.14
 Nodes (14): Lighthouse Perf Report: fitness-desktop, Lighthouse Perf Report: habits-desktop, Lighthouse Perf Report: login-desktop, Lighthouse Perf Report: login-mobile, Lighthouse Perf Report: notifications-desktop, Lighthouse Perf Report: settings-desktop, Lighthouse Perf Report: tasks-desktop, Lighthouse Perf Report: tasks-mobile (+6 more)
 
-### Community 15 - "Community 15"
+### Community 17 - "Community 17"
 Cohesion: 0.22
 Nodes (11): ask_claude(), load_system_prompt(), main(), Send transcript to Claude and return response text., Record audio until silence is detected., Load CLAUDE.md rules + all memory files into system prompt., Transcribe audio bytes using faster-whisper., Speak text using configured TTS engine. (+3 more)
 
-### Community 16 - "Community 16"
+### Community 18 - "Community 18"
 Cohesion: 0.17
 Nodes (0): 
 
-### Community 17 - "Community 17"
+### Community 19 - "Community 19"
 Cohesion: 0.18
 Nodes (12): Fitness Program: Push/Legs/Pull + Conditioning, Habit: Coding (Daily), Habit: Floss (Daily), Habit: Japanese Study (Daily 30-60 min), Habit: Reading (Daily), Habit Registry, Habit: Workout (4x/week), Cuisine Preferences: Korean, Southeast Asian (+4 more)
 
-### Community 18 - "Community 18"
+### Community 20 - "Community 20"
 Cohesion: 0.17
 Nodes (12): Mr. Bridge Voice Interface README, Voice pipeline: Porcupine → faster-whisper → Claude API → TTS, bridge_voice.py entry point, Voice sessions write to memory/*.md (shared with Claude Code), STT: faster-whisper (base.en model), TTS: macOS say (built-in) or ElevenLabs, Wake word: Hey Bridge (Porcupine, pvporcupine), anthropic>=0.40.0 (voice dependency) (+4 more)
 
-### Community 19 - "Community 19"
+### Community 21 - "Community 21"
 Cohesion: 0.2
 Nodes (11): Google Calendar readonly OAuth scope, FastAPI backend (web app Google API caller), Gmail readonly OAuth scope, google-auth Python library (auto token refresh), GOOGLE_CLIENT_ID credential, GOOGLE_CLIENT_SECRET credential, GOOGLE_REFRESH_TOKEN credential, Google OAuth Setup Guide (+3 more)
 
-### Community 20 - "Community 20"
-Cohesion: 0.33
-Nodes (9): get_profile_value(), load_notif_cache(), main(), needs_notification(), Return {task_id: iso_timestamp_last_notified} from profile., Return True if the task hasn't been notified within the last 24 hours., save_notif_cache(), send_notify() (+1 more)
-
-### Community 21 - "Community 21"
+### Community 22 - "Community 22"
 Cohesion: 0.22
 Nodes (10): Gmail Dashboard Query: is:unread subject:(meeting OR urgent OR invoice OR action required OR deadline), Rationale: Gmailify not used — OAuth flow not straightforward; POP3 preferred, Gmail Label ID Resolution: fetches label list to map name to opaque ID per request, Gmail Multi-Account Setup (POP3 aggregation + Calendar sharing), Gmail POP3 Aggregation: secondary into primary via port 995, Gmail POP3 Sync Delay: ~30-60 min polling, not real-time, Gmail Label: Professional (badges secondary account emails as 'work'), API Route: /api/google/calendar unions all calendars + sorts by start time (+2 more)
 
-### Community 22 - "Community 22"
+### Community 23 - "Community 23"
 Cohesion: 0.39
 Nodes (7): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range()
 
-### Community 23 - "Community 23"
+### Community 24 - "Community 24"
 Cohesion: 0.32
 Nodes (7): last_sync_age(), main(), Run alert scripts sequentially after syncs. Errors are non-fatal., Return seconds since last successful sync for source, or None if never., Run one sync script as a subprocess. Returns (source, returncode, output)., _run_alerts(), run_sync()
 
-### Community 24 - "Community 24"
+### Community 25 - "Community 25"
 Cohesion: 0.29
 Nodes (0): 
 
-### Community 25 - "Community 25"
+### Community 26 - "Community 26"
 Cohesion: 0.33
 Nodes (2): clearLongPress(), handleTouchStart()
 
-### Community 26 - "Community 26"
+### Community 27 - "Community 27"
 Cohesion: 0.33
 Nodes (2): datePreview(), formatShortDate()
 
-### Community 27 - "Community 27"
+### Community 28 - "Community 28"
 Cohesion: 0.47
 Nodes (3): confirmProposal(), dashOr(), round()
 
-### Community 28 - "Community 28"
-Cohesion: 0.47
-Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
-
 ### Community 29 - "Community 29"
-Cohesion: 0.47
-Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
-
-### Community 30 - "Community 30"
 Cohesion: 0.33
 Nodes (0): 
 
+### Community 30 - "Community 30"
+Cohesion: 0.47
+Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
+
 ### Community 31 - "Community 31"
+Cohesion: 0.47
+Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
+
+### Community 32 - "Community 32"
+Cohesion: 0.33
+Nodes (0): 
+
+### Community 33 - "Community 33"
 Cohesion: 0.4
 Nodes (2): getSnapshot(), readColors()
 
-### Community 32 - "Community 32"
+### Community 34 - "Community 34"
 Cohesion: 0.4
 Nodes (3): apiKey(), startTime(), toGame()
 
-### Community 33 - "Community 33"
+### Community 35 - "Community 35"
 Cohesion: 0.6
 Nodes (5): existing_dates(), find_col(), insert_rows_after_table(), main(), parse_date()
 
-### Community 34 - "Community 34"
+### Community 36 - "Community 36"
 Cohesion: 0.5
 Nodes (3): async(), load(), onVisibility()
 
-### Community 35 - "Community 35"
+### Community 37 - "Community 37"
 Cohesion: 0.6
 Nodes (3): handleFreeWriteChange(), handleResponseChange(), scheduleAutoSave()
 
-### Community 36 - "Community 36"
+### Community 38 - "Community 38"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 37 - "Community 37"
+### Community 39 - "Community 39"
 Cohesion: 0.5
 Nodes (2): formatItem(), titleCase()
 
-### Community 38 - "Community 38"
+### Community 40 - "Community 40"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
-### Community 39 - "Community 39"
+### Community 41 - "Community 41"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 40 - "Community 40"
+### Community 42 - "Community 42"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 41 - "Community 41"
+### Community 43 - "Community 43"
 Cohesion: 0.4
 Nodes (5): Chat API Route, Anthropic Prompt Caching, ToolLoopAgent, Per-Domain Tool Modules, Verified-Success Contract (ok/error shape)
 
-### Community 42 - "Community 42"
+### Community 44 - "Community 44"
 Cohesion: 0.5
 Nodes (5): Fitness Baseline Metrics (weight/BF% history), Fitbit Sync, Google Fit Sync, Oura Ring Sync, Python Sync Scripts
 
-### Community 43 - "Community 43"
+### Community 45 - "Community 45"
 Cohesion: 0.5
 Nodes (2): MastheadRefresh(), useSyncAll()
-
-### Community 44 - "Community 44"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 45 - "Community 45"
-Cohesion: 0.67
-Nodes (0): 
 
 ### Community 46 - "Community 46"
 Cohesion: 0.67
@@ -439,8 +459,8 @@ Cohesion: 0.67
 Nodes (0): 
 
 ### Community 58 - "Community 58"
-Cohesion: 1.0
-Nodes (2): computeStreaks(), dateToDayNum()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
@@ -748,66 +768,146 @@ Nodes (0):
 
 ### Community 135 - "Community 135"
 Cohesion: 1.0
-Nodes (1): Chat Page
+Nodes (1): Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req
 
 ### Community 136 - "Community 136"
 Cohesion: 1.0
-Nodes (1): Habits Page
+Nodes (1): Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat
 
 ### Community 137 - "Community 137"
 Cohesion: 1.0
-Nodes (1): Fitness Page
+Nodes (1): Extract HH:MM:SS from ISO datetime string for Postgres time column.
 
 ### Community 138 - "Community 138"
 Cohesion: 1.0
-Nodes (1): Weekly Review Page
+Nodes (1): Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be
 
 ### Community 139 - "Community 139"
 Cohesion: 1.0
-Nodes (1): Notifications Page
+Nodes (1): Returns (score_by_day, body_temp_delta_by_day).
 
 ### Community 140 - "Community 140"
 Cohesion: 1.0
-Nodes (1): Settings Page
+Nodes (1): Returns dict keyed by day with active_cal, steps, total_calories, activity_score
 
 ### Community 141 - "Community 141"
 Cohesion: 1.0
-Nodes (1): Push Notifications via ntfy.sh
+Nodes (1): Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.
 
 ### Community 142 - "Community 142"
 Cohesion: 1.0
-Nodes (1): Voice Interface (Jarvis mode)
+Nodes (1): Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional
 
 ### Community 143 - "Community 143"
 Cohesion: 1.0
-Nodes (1): Demo Account
+Nodes (1): Returns dict keyed by day with resilience level string. Optional endpoint.
 
 ### Community 144 - "Community 144"
 Cohesion: 1.0
-Nodes (1): Fitness Goal: Fat Loss + Strength Maintenance
+Nodes (1): Returns dict keyed by day with VO2 max value. Optional endpoint.
 
 ### Community 145 - "Community 145"
 Cohesion: 1.0
-Nodes (1): Core Cooking Principles
+Nodes (1): Fetch intraday heart rate samples and group by date.     Returns dict keyed by d
 
 ### Community 146 - "Community 146"
 Cohesion: 1.0
-Nodes (1): Active Tasks Tracker
+Nodes (1): Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u
 
 ### Community 147 - "Community 147"
 Cohesion: 1.0
-Nodes (1): Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms
+Nodes (1): Replace all oura-source workout_sessions rows in the date range, then insert fre
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
-Nodes (1): App Route: /tasks
+Nodes (1): Returns (access_token, new_refresh_token_or_none).
 
 ### Community 149 - "Community 149"
+Cohesion: 1.0
+Nodes (1): Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm
+
+### Community 150 - "Community 150"
+Cohesion: 1.0
+Nodes (1): Fetch existing workout rows for a set of dates (for overlap detection).
+
+### Community 151 - "Community 151"
+Cohesion: 1.0
+Nodes (1): Convert HH:MM:SS string to total minutes past midnight.
+
+### Community 152 - "Community 152"
+Cohesion: 1.0
+Nodes (1): Return True if new_row is preferable to existing_row.      Priority: has HR data
+
+### Community 153 - "Community 153"
+Cohesion: 1.0
+Nodes (1): Compare new workouts against existing rows for time-overlap (±5 min).      Retur
+
+### Community 154 - "Community 154"
+Cohesion: 1.0
+Nodes (1): Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act
+
+### Community 155 - "Community 155"
+Cohesion: 1.0
+Nodes (1): Chat Page
+
+### Community 156 - "Community 156"
+Cohesion: 1.0
+Nodes (1): Habits Page
+
+### Community 157 - "Community 157"
+Cohesion: 1.0
+Nodes (1): Fitness Page
+
+### Community 158 - "Community 158"
+Cohesion: 1.0
+Nodes (1): Weekly Review Page
+
+### Community 159 - "Community 159"
+Cohesion: 1.0
+Nodes (1): Notifications Page
+
+### Community 160 - "Community 160"
+Cohesion: 1.0
+Nodes (1): Settings Page
+
+### Community 161 - "Community 161"
+Cohesion: 1.0
+Nodes (1): Push Notifications via ntfy.sh
+
+### Community 162 - "Community 162"
+Cohesion: 1.0
+Nodes (1): Voice Interface (Jarvis mode)
+
+### Community 163 - "Community 163"
+Cohesion: 1.0
+Nodes (1): Demo Account
+
+### Community 164 - "Community 164"
+Cohesion: 1.0
+Nodes (1): Fitness Goal: Fat Loss + Strength Maintenance
+
+### Community 165 - "Community 165"
+Cohesion: 1.0
+Nodes (1): Core Cooking Principles
+
+### Community 166 - "Community 166"
+Cohesion: 1.0
+Nodes (1): Active Tasks Tracker
+
+### Community 167 - "Community 167"
+Cohesion: 1.0
+Nodes (1): Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms
+
+### Community 168 - "Community 168"
+Cohesion: 1.0
+Nodes (1): App Route: /tasks
+
+### Community 169 - "Community 169"
 Cohesion: 1.0
 Nodes (1): App Route: /login
 
 ## Knowledge Gaps
-- **196 isolated node(s):** `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.`, `Send transcript to Claude and return response text.`, `Record audio until silence is detected.` (+191 more)
+- **219 isolated node(s):** `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.`, `Send transcript to Claude and return response text.`, `Record audio until silence is detected.` (+214 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 60`** (2 nodes): `loadEnvFile()`, `playwright.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -959,51 +1059,91 @@ Nodes (1): App Route: /login
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 134`** (1 nodes): `config.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `Chat Page`
+- **Thin community `Community 135`** (1 nodes): `Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `Habits Page`
+- **Thin community `Community 136`** (1 nodes): `Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `Fitness Page`
+- **Thin community `Community 137`** (1 nodes): `Extract HH:MM:SS from ISO datetime string for Postgres time column.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `Weekly Review Page`
+- **Thin community `Community 138`** (1 nodes): `Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `Notifications Page`
+- **Thin community `Community 139`** (1 nodes): `Returns (score_by_day, body_temp_delta_by_day).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `Settings Page`
+- **Thin community `Community 140`** (1 nodes): `Returns dict keyed by day with active_cal, steps, total_calories, activity_score`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `Push Notifications via ntfy.sh`
+- **Thin community `Community 141`** (1 nodes): `Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (1 nodes): `Voice Interface (Jarvis mode)`
+- **Thin community `Community 142`** (1 nodes): `Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (1 nodes): `Demo Account`
+- **Thin community `Community 143`** (1 nodes): `Returns dict keyed by day with resilience level string. Optional endpoint.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `Fitness Goal: Fat Loss + Strength Maintenance`
+- **Thin community `Community 144`** (1 nodes): `Returns dict keyed by day with VO2 max value. Optional endpoint.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `Core Cooking Principles`
+- **Thin community `Community 145`** (1 nodes): `Fetch intraday heart rate samples and group by date.     Returns dict keyed by d`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `Active Tasks Tracker`
+- **Thin community `Community 146`** (1 nodes): `Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms`
+- **Thin community `Community 147`** (1 nodes): `Replace all oura-source workout_sessions rows in the date range, then insert fre`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `App Route: /tasks`
+- **Thin community `Community 148`** (1 nodes): `Returns (access_token, new_refresh_token_or_none).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `App Route: /login`
+- **Thin community `Community 149`** (1 nodes): `Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 150`** (1 nodes): `Fetch existing workout rows for a set of dates (for overlap detection).`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 151`** (1 nodes): `Convert HH:MM:SS string to total minutes past midnight.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 152`** (1 nodes): `Return True if new_row is preferable to existing_row.      Priority: has HR data`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 153`** (1 nodes): `Compare new workouts against existing rows for time-overlap (±5 min).      Retur`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 154`** (1 nodes): `Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 155`** (1 nodes): `Chat Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 156`** (1 nodes): `Habits Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 157`** (1 nodes): `Fitness Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 158`** (1 nodes): `Weekly Review Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 159`** (1 nodes): `Notifications Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 160`** (1 nodes): `Settings Page`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 161`** (1 nodes): `Push Notifications via ntfy.sh`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 162`** (1 nodes): `Voice Interface (Jarvis mode)`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 163`** (1 nodes): `Demo Account`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 164`** (1 nodes): `Fitness Goal: Fat Loss + Strength Maintenance`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 165`** (1 nodes): `Core Cooking Principles`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 166`** (1 nodes): `Active Tasks Tracker`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 167`** (1 nodes): `Perf Gate B Thresholds: CLS<0.1, LCP<2500ms, TBT<200ms`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 168`** (1 nodes): `App Route: /tasks`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 169`** (1 nodes): `App Route: /login`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `get()` connect `Community 0` to `Community 32`, `Community 1`, `Community 2`, `Community 33`, `Community 5`, `Community 7`, `Community 8`, `Community 20`, `Community 22`, `Community 58`, `Community 28`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **Why does `POST()` connect `Community 5` to `Community 0`, `Community 1`, `Community 2`, `Community 8`, `Community 9`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
-- **Why does `round()` connect `Community 1` to `Community 0`, `Community 5`, `Community 7`, `Community 8`, `Community 9`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **Are the 60 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
-  _`get()` has 60 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `get()` connect `Community 0` to `Community 1`, `Community 34`, `Community 3`, `Community 4`, `Community 35`, `Community 6`, `Community 8`, `Community 9`, `Community 23`, `Community 30`?**
+  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 9`, `Community 10`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+- **Why does `round()` connect `Community 4` to `Community 0`, `Community 3`, `Community 6`, `Community 8`, `Community 9`, `Community 10`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Are the 62 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
+  _`get()` has 62 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**
   _`POST()` has 26 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 37 inferred relationships involving `select()` (e.g. with `getMessagesForSession()` and `saveSportsFavorites()`) actually correct?**
-  _`select()` has 37 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 38 inferred relationships involving `select()` (e.g. with `getMessagesForSession()` and `saveSportsFavorites()`) actually correct?**
+  _`select()` has 38 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 17 inferred relationships involving `GET()` (e.g. with `createClient()` and `DELETE()`) actually correct?**
   _`GET()` has 17 INFERRED edges - model-reasoned connections that need verification._

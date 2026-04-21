@@ -1,22 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
 import { todayString, daysAgoString } from "@/lib/timezone";
+import { loadIntegration, persistRotatedToken } from "@/lib/integrations/tokens";
 
 const FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token";
 const FITBIT_API_BASE = "https://api.fitbit.com";
 const SYNC_DAYS = 7;
 
 // ---------------------------------------------------------------------------
-// OAuth token refresh — saves new token back to profile table (it rotates)
+// OAuth token refresh — exchanges refresh token for a new access token.
+// Returns the new access token and the rotated refresh token if it changed.
+// Persistence of the rotated token is the caller's responsibility.
 // ---------------------------------------------------------------------------
 
 async function refreshFitbitToken(
-  db: SupabaseClient,
   clientId: string,
   clientSecret: string,
   refreshToken: string,
-  userId: string,
-): Promise<string> {
+): Promise<{ accessToken: string; newRefreshToken: string | null }> {
   const credentials = btoa(`${clientId}:${clientSecret}`);
   const res = await fetch(FITBIT_TOKEN_URL, {
     method: "POST",
@@ -34,19 +35,11 @@ async function refreshFitbitToken(
   }
 
   const data = await res.json();
-
-  // Save rotated refresh token back to profile table
-  if (data.refresh_token && data.refresh_token !== refreshToken && userId) {
-    const { error: saveErr } = await db
-      .from("profile")
-      .upsert(
-        { user_id: userId, key: "fitbit_refresh_token", value: data.refresh_token },
-        { onConflict: "user_id,key" },
-      );
-    if (saveErr) throw new Error(`Failed to save rotated Fitbit token: ${saveErr.message}`);
-  }
-
-  return data.access_token as string;
+  const newRefreshToken =
+    data.refresh_token && data.refresh_token !== refreshToken
+      ? (data.refresh_token as string)
+      : null;
+  return { accessToken: data.access_token as string, newRefreshToken };
 }
 
 // ---------------------------------------------------------------------------
@@ -126,18 +119,40 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
     throw new Error("FITBIT_CLIENT_ID or FITBIT_CLIENT_SECRET not configured");
   }
 
-  // Read refresh token from profile table (it rotates, so env var won't work long-term)
-  const { data: tokenRow } = await db
-    .from("profile")
-    .select("value")
-    .eq("user_id", userId)
-    .eq("key", "fitbit_refresh_token")
-    .maybeSingle();
+  // Load refresh token from user_integrations; fall back to profile table for owner migration
+  const integration = await loadIntegration(db, userId, "fitbit");
+  let refreshToken: string | undefined;
+  const fromIntegrations = !!integration;
 
-  const refreshToken = tokenRow?.value as string | undefined;
-  if (!refreshToken) throw new Error("fitbit_refresh_token not found in profile table");
+  if (integration) {
+    refreshToken = integration.refreshToken;
+  } else {
+    const { data: tokenRow } = await db
+      .from("profile")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("key", "fitbit_refresh_token")
+      .maybeSingle();
+    refreshToken = tokenRow?.value as string | undefined;
+  }
+  if (!refreshToken) throw new Error("Fitbit not connected — authorize via Settings");
 
-  const accessToken = await refreshFitbitToken(db, clientId, clientSecret, refreshToken, userId);
+  const { accessToken, newRefreshToken } = await refreshFitbitToken(clientId, clientSecret, refreshToken);
+
+  // Persist rotated token to wherever it was read from
+  if (newRefreshToken) {
+    if (fromIntegrations) {
+      await persistRotatedToken(db, userId, "fitbit", newRefreshToken);
+    } else {
+      const { error: saveErr } = await db
+        .from("profile")
+        .upsert(
+          { user_id: userId, key: "fitbit_refresh_token", value: newRefreshToken },
+          { onConflict: "user_id,key" },
+        );
+      if (saveErr) throw new Error(`Failed to save rotated Fitbit token: ${saveErr.message}`);
+    }
+  }
 
   const startStr = daysAgoString(SYNC_DAYS);
   const endStr = todayString();

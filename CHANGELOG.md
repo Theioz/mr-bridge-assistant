@@ -8,6 +8,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Per-user Oura and Fitbit token storage in `user_integrations` (#394, #395).** Oura and Fitbit are now multi-tenant:
+  - **Oura:** Users paste a Personal Access Token in Settings → Integrations (inline expand). Token is stored encrypted in `user_integrations` (provider `"oura"`). `syncOura` reads from the table first, falls back to `OURA_ACCESS_TOKEN` env var (owner migration path). Python `scripts/sync-oura.py` updated to use `_integrations.py` helper with the same priority.
+  - **Fitbit:** New `/api/auth/fitbit/start` + `/api/auth/fitbit/callback` OAuth 2.0 routes (mirrors Google pattern: CSRF cookie, Basic auth code exchange, `storeIntegration`). `syncFitbit` reads refresh token from `user_integrations` first, falls back to `profile` table. Token rotation writes back to the same source via `persistRotatedToken`. Python `scripts/sync-fitbit.py` updated similarly.
+  - **UI:** Integrations settings panel now shows Oura and Fitbit rows (connected badge + Disconnect server action when connected; Connect Oura inline paste field / Connect Fitbit OAuth button when not).
+  - **New env var:** `FITBIT_OAUTH_REDIRECT_URI` — required for Fitbit OAuth (app-level, not per-user). `FITBIT_CLIENT_ID` / `FITBIT_CLIENT_SECRET` unchanged.
+  - **New helper:** `scripts/_integrations.py` mirrors `web/src/lib/integrations/tokens.ts` for Python scripts, using the same Supabase encrypt/decrypt RPCs.
+
 - **Expandable exercise description/tips panel and in-app rest timer (#414, #283).**
   - `description` (string) and `tips` (string[]) optional fields added to `WorkoutExercise` in types and the `assign_workout` / `update_workout_exercise` tool schemas. The AI now populates 1–3 sentence how-to descriptions and 2–4 form cues per exercise at plan generation time.
   - Each `ExerciseRow` in the weekly workout plan shows a `▾` chevron button when `description` or `tips` data is present. Tapping it collapses/expands an inline panel with the description paragraph and a tips bullet list. Exercises without these fields are unaffected.

@@ -47,6 +47,7 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry, HTTP_TIMEOUT
+from _integrations import load_integration, persist_rotated_token
 
 FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
@@ -432,10 +433,20 @@ def main():
 
     client_id = os.environ.get("FITBIT_CLIENT_ID", "")
     client_secret = os.environ.get("FITBIT_CLIENT_SECRET", "")
-    refresh_token = os.environ.get("FITBIT_REFRESH_TOKEN", "")
 
-    if not all([client_id, client_secret, refresh_token]):
-        print("[error] FITBIT_CLIENT_ID, FITBIT_CLIENT_SECRET, FITBIT_REFRESH_TOKEN not set in .env")
+    if not client_id or not client_secret:
+        print("[error] FITBIT_CLIENT_ID and FITBIT_CLIENT_SECRET must be set in .env")
+        sys.exit(1)
+
+    # Resolve refresh token: user_integrations first, then FITBIT_REFRESH_TOKEN env fallback
+    client = get_client()
+    owner_user_id = get_owner_user_id()
+    integration = load_integration(client, owner_user_id, "fitbit")
+    from_integrations = integration is not None
+    refresh_token = (integration or {}).get("refresh_token") or os.environ.get("FITBIT_REFRESH_TOKEN", "")
+
+    if not refresh_token:
+        print("[error] Fitbit not connected — authorize via Settings or set FITBIT_REFRESH_TOKEN in .env")
         print("Run: python3 scripts/sync-fitbit.py --setup")
         sys.exit(1)
 
@@ -459,15 +470,16 @@ def main():
     print(f"[sync-fitbit] Fetching workouts {start_str} to {end_str}...")
     workout_rows = fetch_workouts(access_token, start_str, end_str)
 
-    client = get_client()
-    owner_user_id = get_owner_user_id()
-
-    # Keep Supabase profile table in sync with the rotated token so the web app stays valid
+    # Persist rotated token to wherever it was read from
     if rotated_token:
-        client.table("profile").upsert(
-            {"user_id": owner_user_id, "key": "fitbit_refresh_token", "value": rotated_token},
-            on_conflict="user_id,key",
-        ).execute()
+        if from_integrations:
+            persist_rotated_token(client, owner_user_id, "fitbit", rotated_token)
+        else:
+            # Legacy path: write back to profile table so the web app stays valid
+            client.table("profile").upsert(
+                {"user_id": owner_user_id, "key": "fitbit_refresh_token", "value": rotated_token},
+                on_conflict="user_id,key",
+            ).execute()
 
     # Write body composition
     existing_body = existing_body_dates(client, owner_user_id)

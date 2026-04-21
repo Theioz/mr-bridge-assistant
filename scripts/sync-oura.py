@@ -26,13 +26,17 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
+from _integrations import load_integration
+
+# Resolved once in main() — either from user_integrations or OURA_ACCESS_TOKEN env fallback
+_OURA_TOKEN: str = ""
 
 
 def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = True) -> dict | None:
     """Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when required=False and a 4xx occurs."""
-    token = os.environ.get("OURA_ACCESS_TOKEN", "")
+    token = _OURA_TOKEN
     if not token:
-        print("[error] OURA_ACCESS_TOKEN not set in .env")
+        print("[error] No Oura token — connect via Settings or set OURA_ACCESS_TOKEN in .env")
         sys.exit(1)
     url = (
         f"https://api.ouraring.com/v2/usercollection/{endpoint}"
@@ -51,9 +55,9 @@ def oura_get(endpoint: str, start_date: str, end_date: str, required: bool = Tru
 
 def oura_get_datetime(endpoint: str, start_dt: str, end_dt: str) -> dict | None:
     """Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrate, workout)."""
-    token = os.environ.get("OURA_ACCESS_TOKEN", "")
+    token = _OURA_TOKEN
     if not token:
-        print("[error] OURA_ACCESS_TOKEN not set in .env")
+        print("[error] No Oura token — connect via Settings or set OURA_ACCESS_TOKEN in .env")
         sys.exit(1)
     url = (
         f"https://api.ouraring.com/v2/usercollection/{endpoint}"
@@ -334,10 +338,21 @@ def sync_oura_workouts(client, workout_rows: list[dict], start_date: str, end_da
 
 
 def main():
+    global _OURA_TOKEN
+
     parser = argparse.ArgumentParser(description="Sync Oura recovery metrics to Supabase")
     parser.add_argument("--days", type=int, default=7)
     parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
     args = parser.parse_args()
+
+    # Resolve token before any API calls
+    client = get_client()
+    owner_user_id = get_owner_user_id()
+    integration = load_integration(client, owner_user_id, "oura")
+    _OURA_TOKEN = (integration or {}).get("refresh_token") or os.environ.get("OURA_ACCESS_TOKEN", "")
+    if not _OURA_TOKEN:
+        print("[error] Oura not connected — add a Personal Access Token in Settings or set OURA_ACCESS_TOKEN in .env")
+        sys.exit(1)
 
     now = datetime.now()
     start = now - timedelta(days=args.days)
@@ -368,8 +383,6 @@ def main():
         print("[sync-oura] No data returned from Oura.")
         return
 
-    client = get_client()
-    owner_user_id = get_owner_user_id()
     existing = existing_dates(client, owner_user_id)
     new_dates    = [d for d in all_dates if d not in existing]
     update_dates = [d for d in all_dates if d in existing]
