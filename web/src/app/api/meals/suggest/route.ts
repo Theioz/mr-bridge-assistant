@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { Output, generateText } from "ai";
+import { Output, ToolLoopAgent } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -122,9 +122,10 @@ export async function POST(req: Request) {
           .join("\n")
       : "None";
 
-  const prompt = `You are a meal planning assistant. Suggest 2–3 meals the user can make right now.
+  const instructions =
+    "You are a meal planning assistant. Suggest 2–3 meals the user can make right now.";
 
-INGREDIENTS ON HAND:
+  const userMessage = `INGREDIENTS ON HAND:
 ${body.ingredients}
 
 REMAINING MACRO BUDGET FOR TODAY:
@@ -149,15 +150,13 @@ INSTRUCTIONS:
 - Keep descriptions concise: cooking method + why it fits the macros`;
 
   try {
-    const { output } = await generateText({
+    const agent = new ToolLoopAgent({
       model: anthropic("claude-sonnet-4-6"),
+      instructions,
       output: Output.object({ schema: SuggestionsSchema }),
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    });
+    const { output } = await agent.generate({
+      messages: [{ role: "user", content: userMessage }],
     });
 
     return Response.json(output);
