@@ -28,7 +28,8 @@ function buildMonthGrid(year: number, month: number): Date[] {
   return days;
 }
 
-const DOW_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DOW_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const IS_WEEKEND = [true, false, false, false, false, false, true]; // Sun=0, Sat=6
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   primary: { bg: "var(--accent-soft)", text: "var(--accent)" },
@@ -63,34 +64,7 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* DOW header row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          borderBottom: "1px solid var(--rule-soft)",
-          flexShrink: 0,
-        }}
-      >
-        {DOW_HEADERS.map((dow) => (
-          <div
-            key={dow}
-            style={{
-              padding: "var(--space-2) var(--space-2)",
-              fontSize: "var(--t-micro)",
-              color: "var(--color-text-faint)",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              fontWeight: 500,
-              textAlign: "center",
-            }}
-          >
-            {dow}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
+      {/* Calendar grid — no separate header; DOW is inline in each cell */}
       <div
         style={{
           display: "grid",
@@ -108,6 +82,8 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
           const dayEvents = (eventsByDate[key] ?? []).sort((a, b) => a.start.localeCompare(b.start));
           const visible = dayEvents.slice(0, MAX_VISIBLE);
           const overflow = dayEvents.length - MAX_VISIBLE;
+          const dow = idx % 7; // 0=Sun … 6=Sat
+          const isWeekend = IS_WEEKEND[dow];
 
           return (
             <div
@@ -115,7 +91,7 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
               onClick={() => onSlotClick(key, "09:00")}
               style={{
                 borderTop: "1px solid var(--rule-soft)",
-                borderLeft: idx % 7 === 0 ? "none" : "1px solid var(--rule-soft)",
+                borderLeft: dow === 0 ? "none" : "1px solid var(--rule-soft)",
                 padding: "var(--space-1)",
                 cursor: "default",
                 opacity: isCurrentMonth ? 1 : 0.35,
@@ -123,26 +99,41 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
                 flexDirection: "column",
                 gap: 2,
                 minHeight: 80,
+                background: isWeekend ? "var(--color-surface)" : "transparent",
               }}
             >
-              {/* Day number */}
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  fontSize: "var(--t-micro)",
-                  fontWeight: isToday ? 700 : 400,
-                  color: isToday ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-                  background: isToday ? "var(--accent)" : "transparent",
-                  flexShrink: 0,
-                }}
-              >
-                {day.getDate()}
-              </span>
+              {/* DOW label + date number on the same row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: isWeekend ? "var(--color-text-muted)" : "var(--color-text-faint)",
+                    fontWeight: isWeekend ? 600 : 400,
+                    letterSpacing: "0.04em",
+                    userSelect: "none",
+                    flexShrink: 0,
+                  }}
+                >
+                  {DOW_SHORT[dow]}
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    fontSize: "var(--t-micro)",
+                    fontWeight: isToday ? 700 : 400,
+                    color: isToday ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+                    background: isToday ? "var(--accent)" : "transparent",
+                    flexShrink: 0,
+                  }}
+                >
+                  {day.getDate()}
+                </span>
+              </div>
 
               {/* Event pills */}
               {visible.map((e) => {

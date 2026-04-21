@@ -160,6 +160,8 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
           const key = isoDate(day);
           const isToday = key === todayStr;
           const { dow, day: dayNum } = formatDayHeader(day);
+          const dayOfWeek = day.getDay();
+          const isWeekendHeader = dayOfWeek === 0 || dayOfWeek === 6;
           return (
             <div
               key={key}
@@ -167,7 +169,7 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
               style={{
                 padding: "var(--space-2) var(--space-1) var(--space-2)",
                 borderLeft: "1px solid var(--rule-soft)",
-                background: "var(--color-bg)",
+                background: isWeekendHeader ? "var(--color-surface)" : "var(--color-bg)",
               }}
             >
               <span
@@ -302,6 +304,8 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
             const key = isoDate(day);
             const dayEvents = eventsByDate[key] ?? [];
             const laid = layoutDayEvents(dayEvents);
+            const dow = day.getDay(); // 0=Sun, 6=Sat
+            const isWeekend = dow === 0 || dow === 6;
 
             return (
               <div
@@ -310,6 +314,7 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
                   position: "relative",
                   borderLeft: "1px solid var(--rule-soft)",
                   height: 24 * HOUR_HEIGHT,
+                  background: isWeekend ? "var(--color-surface)" : "transparent",
                 }}
               >
                 {/* Hour grid lines */}
