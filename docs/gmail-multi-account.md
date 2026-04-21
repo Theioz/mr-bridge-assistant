@@ -6,62 +6,55 @@ Replace `<your-primary@gmail.com>` and `<your-secondary@gmail.com>` with your ac
 
 ---
 
-## Gmail — POP3 aggregation
+## Gmail — auto-forwarding aggregation
 
-Gmail's "Check mail from other accounts" pulls your secondary account into your primary inbox via POP3. Secondary emails land in the primary inbox with a `Professional` label, which the dashboard uses to badge them as `work`.
+> **Migration note (April 2026):** Google is deprecating the "Check mail from other accounts (POP)" feature in 2026. New users lost access in Q1 2026; existing users lose access later in 2026. If you previously used POP3 aggregation, follow the steps below to switch to auto-forwarding. No Mr. Bridge code changes are needed — the `Professional` label detection works the same way regardless of how emails arrive.
 
-> **Note:** Gmailify (Google's OAuth-based import) does not accept normal Google passwords and requires an OAuth flow that is not straightforward to complete. Use POP3 instead.
+Emails from the secondary account are forwarded into the primary inbox automatically. A Gmail filter on the primary account applies the `Professional` label to forwarded messages, which the dashboard uses to badge them as `work`.
 
-### Step 1 — Enable POP3 on your secondary account
+### Step 1 — Enable auto-forwarding on your secondary account
 
 1. Sign into `<your-secondary@gmail.com>`
 2. Settings (gear) → **See all settings** → **Forwarding and POP/IMAP** tab
-3. Under **POP Download** → select **Enable POP for all mail**
-4. Save changes
+3. Under **Forwarding** → click **Add a forwarding address**
+4. Enter `<your-primary@gmail.com>` → Next → Proceed → OK
+5. Gmail sends a verification email to your primary address — open it and click the confirmation link (or copy the code and paste it back on the Forwarding settings page)
+6. Once verified, select **Forward a copy of incoming mail to `<your-primary@gmail.com>`** and choose **Keep Gmail's copy in the Inbox**
+7. Save changes
 
-### Step 2 — Generate an App Password for your secondary account
+> **Enterprise accounts:** If the "Forwarding" section is grayed out, your domain admin has disabled it. Contact your admin or use a Gmail filter with label rules on the primary account side as a partial workaround (you'll need to add the secondary inbox separately via IMAP in Gmail mobile — see Google's support docs).
 
-Gmail's POP3 requires an App Password, not your regular account password (this is true even if 2-Step Verification was already enabled).
+### Step 2 — Create a Gmail filter on your primary account to apply the `Professional` label
 
-1. Go to **myaccount.google.com** while signed into `<your-secondary@gmail.com>`
-2. Security → **2-Step Verification** — enable it if not already on
-3. Search for **"App passwords"** at the top of the page
-4. Create a new App Password (name it anything, e.g. "Mr Bridge POP3")
-5. Copy the 16-character code — you'll use it in the next step
-
-### Step 3 — Add your secondary account as a mail source in your primary
+Auto-forwarded emails keep the **original sender's** address in `From`, so a `from:` filter won't match them. Use `deliveredto:` instead — Gmail sets this header to the forwarding destination address on every forwarded message.
 
 1. Sign into `<your-primary@gmail.com>`
-2. Settings → **See all settings** → **Accounts and Import** tab
-3. Under **Check mail from other accounts** → click **Add a mail account**
-4. Enter `<your-secondary@gmail.com>` → Next → select **Import emails from my other account (Gmailify)** if offered, or choose **POP3**
-5. Use these POP3 settings:
-   - **Username:** `<your-secondary@gmail.com>`
-   - **Password:** the 16-character App Password from Step 2
-   - **POP Server:** `pop.gmail.com`
-   - **Port:** `995`
-   - **Always use a secure connection (SSL):** checked
-6. Check **Label incoming messages** → create label `Professional`
-7. Leave **Archive incoming messages** unchecked (professional = high signal, keep in inbox)
-8. Click **Add Account**
+2. In the search bar, type: `deliveredto:<your-secondary@gmail.com>`
+3. Click the **filter icon** (sliders) → **Create filter**
+4. Check **Apply the label** → select **New label…** → name it `Professional` → Create
+5. Optionally check **Never send it to Spam** to prevent misfiling
+6. Click **Create filter**
 
-### Step 4 — Verify
+### Step 3 — Verify
 
-- In your primary Gmail settings, click **Check mail now** next to your secondary address to trigger an immediate pull
 - Send a test email to `<your-secondary@gmail.com>` with subject `urgent: test`
-- It should appear in your primary inbox within seconds (after "Check mail now") or within 30–60 min on the normal polling schedule
-- Confirm it has the `Professional` label applied
+- It should appear in your primary inbox within 1–2 minutes with the `Professional` label applied
+- Confirm it has the `Professional` label attached before proceeding
 
-### Sync delay
+### Decommission POP3 (existing users only)
 
-POP3 polls approximately every 30–60 minutes. Not real-time. Acceptable for session briefings. Use **Check mail now** in Gmail settings to force an immediate pull.
+Once auto-forwarding is working and verified, remove the old POP3 source:
+
+1. Sign into `<your-primary@gmail.com>` → Settings → **Accounts and Import** tab
+2. Under **Check mail from other accounts** → click **delete** next to `<your-secondary@gmail.com>`
+3. Confirm deletion
 
 ### How emails surface in Mr. Bridge
 
 | Email type | Source | Label in primary inbox | Dashboard? |
 |---|---|---|---|
 | Personal, high-signal | primary directly | none | Yes, if subject matches filter |
-| Professional | secondary via POP3 | `Professional` | Yes, if subject matches filter — shown with `work` badge |
+| Professional | secondary via auto-forward | `Professional` | Yes, if subject matches filter — shown with `work` badge |
 | Personal, noise | primary directly | none | No — subject keyword filter blocks it |
 
 **Dashboard query:** `is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)`
@@ -110,4 +103,4 @@ Non-primary calendar events show the `calendarName` as a subtitle in the Schedul
 Steps 4 and 5 of the Session Start Protocol reflect multi-account coverage:
 
 - **Calendar**: `List Calendar Events` returns events from all connected calendars. Note the source for non-primary events.
-- **Gmail**: `Search Gmail Emails` covers both accounts (secondary emails arrive via POP3 with label `Professional`). Note "personal" or "work" when surfacing emails in the briefing.
+- **Gmail**: `Search Gmail Emails` covers both accounts (secondary emails arrive via auto-forwarding with label `Professional`). Note "personal" or "work" when surfacing emails in the briefing.
