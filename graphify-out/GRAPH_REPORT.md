@@ -1,7 +1,7 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 212 files · ~588,061 words
+- 212 files · ~588,207 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -981,11 +981,11 @@ Nodes (1): App Route: /login
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `get()` connect `Community 0` to `Community 33`, `Community 1`, `Community 2`, `Community 4`, `Community 34`, `Community 6`, `Community 8`, `Community 9`, `Community 23`, `Community 29`?**
-  _High betweenness centrality (0.078) - this node is a cross-community bridge._
-- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 8`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Why does `round()` connect `Community 4` to `Community 0`, `Community 2`, `Community 6`, `Community 8`, `Community 9`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `get()` connect `Community 0` to `Community 33`, `Community 1`, `Community 2`, `Community 4`, `Community 34`, `Community 6`, `Community 8`, `Community 9`, `Community 23`, `Community 29`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 8`?**
   _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Are the 60 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
   _`get()` has 60 INFERRED edges - model-reasoned connections that need verification._
