@@ -116,6 +116,21 @@ export function FitnessClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-fill missing exercise descriptions in the background on page load
+  const hasMissingDescriptions = weeklyPlans.some((p) =>
+    [...p.warmup, ...p.workout, ...p.cooldown].some((ex) => !ex.description)
+  );
+  useEffect(() => {
+    if (!hasMissingDescriptions) return;
+    fetch("/api/workout-plans/backfill-descriptions", { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.backfilled > 0) router.refresh();
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMissingDescriptions]);
+
   return (
     <div className="flex flex-col" style={{ gap: "var(--space-6)" }}>
       {/* Tab bar */}

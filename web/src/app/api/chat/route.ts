@@ -272,11 +272,11 @@ function synthesizeFallbackSummary(
   }
 
   const reason = flags.aborted
-    ? " (I ran out of time before I could finish a full summary — your request may or may not have completed; check before retrying.)"
+    ? " (I ran out of time before finishing — your request may or may not have completed; check before retrying.)"
     : flags.budgetExceeded
       ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
       : flags.hitStepCap
-        ? " (Hit my step limit before I could write a longer summary — let me know if you need detail.)"
+        ? " (Hit my 20-step turn limit — this task has more work remaining. Reply **\"continue\"** and I'll pick up where I left off.)"
         : "";
   return body + reason;
 }
@@ -589,7 +589,26 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     // invoke so future callers could swap tools at call time without
     // reconstructing the agent. Passthrough today satisfies #350's contract
     // that tools wire through prepareCall.
-    prepareCall: async (args) => args,
+    //
+    // Step-limit warning: when >= 15 steps have been used this turn, inject
+    // a countdown into instructions so the model stops and hands off rather
+    // than running silently into the cap.
+    prepareCall: async (args) => {
+      const used = (args as { messages?: unknown[] }).messages?.length
+        ? Math.floor(((args as { messages: unknown[] }).messages.length - 1) / 2)
+        : 0;
+      if (used >= MAX_STEPS - 5) {
+        const remaining = MAX_STEPS - used;
+        return {
+          ...args,
+          instructions:
+            `${args.instructions ?? ""}\n\n` +
+            `⚠ STEP LIMIT: You have used approximately ${used} of ${MAX_STEPS} steps this turn — roughly ${remaining} remaining. ` +
+            `Do NOT start any new work. Finish only the current action, then stop and tell the user exactly what was completed, what remains, and to reply "continue" to proceed.`,
+        };
+      }
+      return args;
+    },
     onFinish: async ({ text, steps, finishReason, totalUsage, warnings }) => {
       clearTimeout(deadlineTimer);
 
