@@ -8,6 +8,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Calendar tab — week/day/month views with full CRUD (#375).**
+  - New `/calendar` route with a full-height calendar surface. Week view is the default; toggle to Day or Month via the view pill in the toolbar. Prev/next navigation and "Today" jump button.
+  - Week/day view: 24-hour scrollable time grid (starts at 7 AM), events positioned absolutely by start/end time, greedy overlap detection shows simultaneous events side-by-side. All-day events rendered in a banner row above the grid. Current-time indicator line.
+  - Month view: 7-column grid with event pills (up to 3 per day, "+N more" overflow label).
+  - Click any empty slot → create-event modal (title, date, start/end time, all-day toggle, location). Click any event → detail dialog (time, location, calendar label) with Edit and Delete (two-tap confirm) actions.
+  - `calendarType` (primary / birthday / holiday / other) maps to distinct accent colors across all views.
+  - New API routes: `GET /api/google/calendar/range?timeMin=&timeMax=` for range queries; `POST /api/google/calendar/events` to create; `PATCH /api/google/calendar/events/[eventId]` to update; `DELETE /api/google/calendar/events/[eventId]` to delete.
+  - Demo mode: `DEMO_CALENDAR_EVENTS` extended from 4 to 20 events spanning 3 weeks (all-day, birthday, holiday, overlapping, and multi-hour events) so all three views are populated with meaningful data.
+  - Calendar nav item (CalendarDays icon) added between Weekly and Journal; appears in the "More" bottom sheet on mobile.
+  - All colors use existing CSS tokens (`--accent`, `--accent-soft`, `--rule-soft`, etc.); no raw hex in `.tsx` files — token-lint clean.
+
+
 - **Per-user Oura and Fitbit token storage in `user_integrations` (#394, #395).** Oura and Fitbit are now multi-tenant:
   - **Oura:** Users paste a Personal Access Token in Settings → Integrations (inline expand). Token is stored encrypted in `user_integrations` (provider `"oura"`). `syncOura` reads from the table first, falls back to `OURA_ACCESS_TOKEN` env var (owner migration path). Python `scripts/sync-oura.py` updated to use `_integrations.py` helper with the same priority.
   - **Fitbit:** New `/api/auth/fitbit/start` + `/api/auth/fitbit/callback` OAuth 2.0 routes (mirrors Google pattern: CSRF cookie, Basic auth code exchange, `storeIntegration`). `syncFitbit` reads refresh token from `user_integrations` first, falls back to `profile` table. Token rotation writes back to the same source via `persistRotatedToken`. Python `scripts/sync-fitbit.py` updated similarly.
