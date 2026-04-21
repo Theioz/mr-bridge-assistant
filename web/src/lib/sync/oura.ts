@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
 import { todayString, daysAgoString } from "@/lib/timezone";
+import { loadIntegration } from "@/lib/integrations/tokens";
 
 const OURA_BASE = "https://api.ouraring.com/v2/usercollection";
 
@@ -51,8 +52,9 @@ export interface OuraSyncResult {
 }
 
 export async function syncOura(db: SupabaseClient, userId: string, days = 3): Promise<OuraSyncResult> {
-  const token = process.env.OURA_ACCESS_TOKEN;
-  if (!token) throw new Error("OURA_ACCESS_TOKEN not configured");
+  const integration = await loadIntegration(db, userId, "oura");
+  const token = integration?.refreshToken ?? process.env.OURA_ACCESS_TOKEN;
+  if (!token) throw new Error("Oura not connected — add a Personal Access Token in Settings");
 
   const startStr = daysAgoString(days);
   const endStr = todayString();

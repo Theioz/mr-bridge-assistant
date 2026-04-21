@@ -111,28 +111,19 @@ This step enables Calendar, Gmail, and optionally Google Fit. It's the most invo
 Skip any integrations you don't use. The app works with none, one, or all of them.
 
 **Oura Ring:**
-1. Go to [cloud.ouraring.com](https://cloud.ouraring.com) → **Account → Personal Access Tokens → Create token**.
-2. Copy the token — this is your `OURA_ACCESS_TOKEN`.
+1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) and create a Personal Access Token.
+2. In your running app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
+3. *(Migration fallback)* If you set `OURA_ACCESS_TOKEN` in `.env` before connecting via Settings, the sync scripts will fall back to it until you connect via UI.
 
 **Fitbit:**
 1. Go to [dev.fitbit.com](https://dev.fitbit.com) → **Register an app**.
-2. Fill in: Application Name (anything), OAuth 2.0 Application Type → **Personal**, Callback URL → `http://localhost:8080/`.
-3. Save — you'll see your `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET`.
-4. Authorize and get the initial refresh token:
-```bash
-python3 scripts/sync-fitbit.py --setup
-```
-5. The refresh token rotates on every use, so it's stored in Supabase (not in an env file). Write the initial token with:
-```bash
-python3 -c "
-import sys, os; sys.path.insert(0, 'scripts')
-from dotenv import load_dotenv; load_dotenv(dotenv_path='.env')
-from _supabase import get_client, get_owner_user_id
-uid = get_owner_user_id()
-get_client().table('profile').upsert({'user_id': uid, 'key': 'fitbit_refresh_token', 'value': os.environ['FITBIT_REFRESH_TOKEN']}, on_conflict='user_id,key').execute()
-print('Done.')
-"
-```
+2. Fill in: Application Name (anything), OAuth 2.0 Application Type → **Personal**, Callback URL → your redirect URI (see below).
+3. Copy your `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` into `.env`.
+4. Set `FITBIT_OAUTH_REDIRECT_URI` in `.env`:
+   - Local: `http://localhost:3000/api/auth/fitbit/callback`
+   - Production (Vercel): `https://your-app.vercel.app/api/auth/fitbit/callback`
+   - Register the same URL under your app's **Callback URL** on dev.fitbit.com.
+5. In your running app, go to **Settings → Integrations → Connect Fitbit** and complete the OAuth flow. The refresh token is stored encrypted in `user_integrations` and rotates automatically.
 
 ### Step 6 — Set up push notifications via ntfy.sh *(optional)*
 
@@ -220,9 +211,10 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials |
 | `GOOGLE_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/google/callback` (dev) / `https://your-app.vercel.app/api/auth/google/callback` (prod) — must match Google Cloud Console |
 | `ENCRYPTION_KEY` | 32-byte hex key for `pgp_sym_encrypt` — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
-| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
-| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
+| `OURA_ACCESS_TOKEN` | Owner fallback during migration — new users connect via /settings *(optional)* |
+| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app — app-level credential, required for Fitbit OAuth |
+| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app — app-level credential, required for Fitbit OAuth |
+| `FITBIT_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/fitbit/callback` (dev) / `https://your-app.vercel.app/api/auth/fitbit/callback` (prod) — must match the **Redirect URL** field in your Fitbit app on dev.fitbit.com. Fitbit allows only one redirect URL per personal app; update it when switching from local to prod. |
 | `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` *(optional)* |
 | `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
 | `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py`. Required for cron sync. |

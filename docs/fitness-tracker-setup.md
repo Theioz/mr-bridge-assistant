@@ -26,27 +26,33 @@ pip3 install google-auth google-auth-oauthlib python-dotenv
 
 ---
 
-## Fitbit — workout sessions
+## Fitbit — workout sessions + body composition
 
 **Script:** `scripts/sync-fitbit.py`
 
-Pulls explicitly logged workout sessions from Fitbit API. Uses PKCE OAuth 2.0 — no browser extension needed, callback is captured on localhost:8080.
+Pulls explicitly logged workout sessions and body composition (weight/fat/BMI) from Fitbit API.
 
-**First-time setup:**
+**First-time setup (web UI — recommended):**
 1. Go to [dev.fitbit.com/apps/new](https://dev.fitbit.com/apps/new)
 2. Fill in:
-   - **Application Name:** Mr. Bridge
-   - **Application Type:** Personal
+   - **Application Name:** Mr. Bridge (or anything)
    - **OAuth 2.0 Application Type:** Personal
-   - **Redirect URI:** `http://localhost:8080`
+   - **Redirect URL:** `http://localhost:3000/api/auth/fitbit/callback`
+     *(For production on Vercel, change this to `https://your-app.vercel.app/api/auth/fitbit/callback`.
+     Fitbit allows only one redirect URL per app — update it in the app settings when switching from local to prod.)*
    - **Default Access Type:** Read Only
-3. Submit → copy **Client ID** and **Client Secret**
-4. Run the setup flow:
-   ```bash
-   python3 scripts/sync-fitbit.py --setup
+3. Copy **Client ID** and **Client Secret** → add to `web/.env.local`:
    ```
-5. Browser opens → authorize → token is printed
-6. Paste `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, `FITBIT_REFRESH_TOKEN` into `.env`
+   FITBIT_CLIENT_ID=your_client_id
+   FITBIT_CLIENT_SECRET=your_client_secret
+   FITBIT_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/fitbit/callback
+   ```
+4. Restart the dev server so Next.js picks up the new env vars.
+5. In the app, go to **Settings → Integrations → Connect Fitbit**. Complete the OAuth flow. Refresh token is stored encrypted in `user_integrations`.
+
+**First-time setup (Python script only — fallback):**
+1. Run `python3 scripts/sync-fitbit.py --setup` (uses localhost:8080 redirect).
+2. Paste `FITBIT_REFRESH_TOKEN` from the output into `.env`. The script will use this as a fallback until you connect via UI.
 
 **Run:**
 ```bash
@@ -54,7 +60,7 @@ python3 scripts/sync-fitbit.py           # last 7 days
 python3 scripts/sync-fitbit.py --days 30 # last 30 days
 ```
 
-**Note:** Fitbit rotates refresh tokens on each use. The script updates `.env` automatically — no manual action needed.
+**Note:** Fitbit rotates refresh tokens on each use. The script persists rotated tokens back to `user_integrations` (if connected via UI) or `.env` + the `profile` table (if using the fallback path).
 
 ---
 
@@ -62,15 +68,18 @@ python3 scripts/sync-fitbit.py --days 30 # last 30 days
 
 **Script:** `scripts/sync-oura.py`
 
-Uses a personal access token (no OAuth flow). Pulls daily readiness score, sleep score, HRV balance, and resting HR.
+Uses a Personal Access Token (no OAuth flow).
 
-**First-time setup:**
-1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens)
-2. Click **Create New Personal Access Token** → give it a name → copy the token
-3. Add to `.env`:
+**First-time setup (web UI — recommended):**
+1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) and create a token.
+2. In the app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
+
+**First-time setup (env var — owner fallback):**
+1. Create a token as above and add to `.env`:
    ```
    OURA_ACCESS_TOKEN=your_token_here
    ```
+   The script uses this as a fallback if no `user_integrations` row exists.
 
 **Run:**
 ```bash

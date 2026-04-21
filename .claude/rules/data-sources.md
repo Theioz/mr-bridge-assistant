@@ -4,6 +4,7 @@ All live data is stored in Supabase. Local markdown files are archived originals
 
 | Supabase Table | Source | Script |
 |----------------|--------|--------|
+| `user_integrations` | OAuth tokens (Google, Fitbit, Oura PAT) — encrypted | Connect via /settings |
 | `fitness_log` | Google Fit (weight) + Fitbit (weight/fat/BMI) | `sync-googlefit.py`, `sync-fitbit.py` |
 | `workout_sessions` | Fitbit | `sync-fitbit.py` |
 | `recovery_metrics` | Oura Ring | `sync-oura.py` |

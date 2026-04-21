@@ -16,7 +16,7 @@ import { FitnessSettings } from "@/components/settings/fitness-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";
 import { EquipmentSettings, type EquipmentItemInput } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
-import { loadIntegration, deleteIntegration } from "@/lib/integrations/tokens";
+import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
 async function updateProfile(key: string, value: string) {
@@ -113,6 +113,41 @@ async function disconnectGoogle() {
   revalidatePath("/settings");
 }
 
+async function saveOuraToken(pat: string) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const trimmed = pat.trim();
+  if (!trimmed) return;
+  const db = createServiceClient();
+  await storeIntegration(db, user.id, "oura", {
+    refreshToken: trimmed,
+    scopes: ["daily", "workout", "sleep"],
+  });
+  revalidatePath("/settings");
+}
+
+async function disconnectOura() {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const db = createServiceClient();
+  await deleteIntegration(db, user.id, "oura");
+  revalidatePath("/settings");
+}
+
+async function disconnectFitbit() {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const db = createServiceClient();
+  await deleteIntegration(db, user.id, "fitbit");
+  revalidatePath("/settings");
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -135,9 +170,11 @@ export default async function SettingsPage({
 
   const { data: { user } } = await supabase.auth.getUser();
   const db = createServiceClient();
-  const googleIntegration = user
-    ? await loadIntegration(db, user.id, "google").catch(() => null)
-    : null;
+  const [googleIntegration, ouraIntegration, fitbitIntegration] = await Promise.all([
+    user ? loadIntegration(db, user.id, "google").catch(() => null) : null,
+    user ? loadIntegration(db, user.id, "oura").catch(() => null) : null,
+    user ? loadIntegration(db, user.id, "fitbit").catch(() => null) : null,
+  ]);
 
   return (
     <div className="max-w-2xl">
@@ -171,6 +208,11 @@ export default async function SettingsPage({
       <IntegrationsSettings
         googleIntegration={googleIntegration}
         disconnectAction={disconnectGoogle}
+        ouraIntegration={ouraIntegration}
+        saveOuraTokenAction={saveOuraToken}
+        disconnectOuraAction={disconnectOura}
+        fitbitIntegration={fitbitIntegration}
+        disconnectFitbitAction={disconnectFitbit}
         errorParam={params.error}
       />
 
