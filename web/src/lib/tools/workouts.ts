@@ -14,6 +14,7 @@ interface WorkoutExercise {
   sets?: number;
   reps?: string;
   weight_lbs?: number | null;
+  weight_notation?: "per_hand" | "total" | null;
   notes?: string | null;
 }
 
@@ -26,7 +27,10 @@ function buildCalendarDescription(
     const parts = [ex.exercise];
     if (ex.sets) parts.push(`${ex.sets} sets`);
     if (ex.reps) parts.push(`× ${ex.reps}`);
-    if (ex.weight_lbs) parts.push(`@ ${ex.weight_lbs} lbs`);
+    if (ex.weight_lbs) {
+      const notation = ex.weight_notation === "per_hand" ? " / hand" : ex.weight_notation === "total" ? " total" : "";
+      parts.push(`@ ${ex.weight_lbs} lbs${notation}`);
+    }
     return parts.join(" ");
   };
   const sections: string[] = [];
@@ -73,7 +77,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
     }),
 
     assign_workout: tool({
-      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool.",
+      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool. For each exercise, default weight_notation to 'per_hand' if the exercise name contains 'dumbbell', 'db', or 'single-arm' (case-insensitive); otherwise 'total'.",
       inputSchema: jsonSchema<{
         date: string;
         name?: string;
@@ -103,6 +107,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
+                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
               },
             },
@@ -119,6 +124,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
+                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
               },
             },
@@ -135,6 +141,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
+                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
               },
             },
@@ -249,7 +256,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         date: string;
         phase: "warmup" | "workout" | "cooldown";
         exercise_name: string;
-        updates: { exercise?: string; sets?: number; reps?: string; weight_lbs?: number; notes?: string };
+        updates: { exercise?: string; sets?: number; reps?: string; weight_lbs?: number; weight_notation?: "per_hand" | "total"; notes?: string };
       }>({
         type: "object",
         additionalProperties: false,
@@ -267,6 +274,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
               sets: { type: "number" },
               reps: { type: "string" },
               weight_lbs: { type: "number" },
+              weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand or total." },
               notes: { type: "string" },
             },
           },

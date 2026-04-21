@@ -11,7 +11,7 @@ create or replace function encrypt_integration_token(token text, key text)
   security definer
   set search_path = ''
 as $$
-  select pgp_sym_encrypt(token, key)
+  select extensions.pgp_sym_encrypt(token, key)
 $$;
 
 create or replace function decrypt_integration_token(encrypted bytea, key text)
@@ -20,7 +20,7 @@ create or replace function decrypt_integration_token(encrypted bytea, key text)
   security definer
   set search_path = ''
 as $$
-  select pgp_sym_decrypt(encrypted, key)
+  select extensions.pgp_sym_decrypt(encrypted, key)
 $$;
 
 create table user_integrations (

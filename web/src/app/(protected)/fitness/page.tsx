@@ -10,13 +10,7 @@ export const metadata: Metadata = {
   description: "Body composition, recovery, sleep, and activity trends.",
 };
 import { WindowSelector } from "@/components/ui/window-selector";
-import { BodyCompTrends } from "@/components/fitness/body-comp-trends";
-import { RecoveryTrends } from "@/components/fitness/recovery-trends";
-import { ActivityTrends } from "@/components/fitness/activity-trends";
-import { WorkoutHistoryTable } from "@/components/fitness/workout-history-table";
-import { WeeklyWorkoutPlan } from "@/components/fitness/weekly-workout-plan";
-import { RecentSessionsList } from "@/components/fitness/recent-sessions-list";
-import { ExerciseSparkline } from "@/components/fitness/exercise-sparkline";
+import { FitnessClient } from "@/components/fitness/FitnessClient";
 import type {
   FitnessLog,
   WorkoutSession,
@@ -24,6 +18,7 @@ import type {
   WorkoutPlan,
   StrengthSession,
   StrengthSessionSet,
+  ExercisePR,
 } from "@/lib/types";
 import { parseWeightUnit } from "@/lib/units";
 import { revalidatePath } from "next/cache";
@@ -45,15 +40,12 @@ export default async function FitnessPage() {
   const { key: windowKey, days } = await getWindow();
   const weekCount = Math.ceil(days / 7);
 
-  // Current ISO week bounds (Mon–Sun) in user's local timezone
   const todayStr = todayString();
   const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7;
   const mondayStr = addDays(todayStr, -dow);
   const sundayStr = addDays(mondayStr, 6);
 
   const strengthSessionsSince = daysAgoString(89);
-  // Recovery-trend window: always at least 30 days so HRV / RHR panels stay
-  // populated even when the user picks a 7d or 14d top-level range.
   const recoveryDays = Math.max(days, 30);
 
   const [
@@ -63,6 +55,7 @@ export default async function FitnessPage() {
     profileRes,
     weeklyPlansRes,
     strengthSessionsRes,
+    exercisePRsRes,
   ] = await Promise.all([
     supabase
       .from("fitness_log")
@@ -101,6 +94,9 @@ export default async function FitnessPage() {
       .select("*, sets:strength_session_sets(*)")
       .gte("performed_on", strengthSessionsSince)
       .order("performed_on", { ascending: false }),
+    supabase
+      .from("exercise_prs")
+      .select("exercise_name,weight_pr_kg,rep_pr_reps,rep_pr_weight_kg,volume_pr_kg,weight_pr_achieved_at,rep_pr_achieved_at,volume_pr_achieved_at"),
   ]);
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
@@ -141,8 +137,6 @@ export default async function FitnessPage() {
   const latest = fitnessData[fitnessData.length - 1] ?? null;
   const latestRecovery = recoveryAll[recoveryAll.length - 1] ?? null;
 
-  // Active-cal chart is scoped to the top-level window; recovery panels
-  // always lean on the 30-day slice.
   const activeCalWindow = recoveryAll
     .filter((r) => r.date >= daysAgoString(weekCount * 7 - 1))
     .map((r) => ({ date: r.date, active_cal: r.active_cal }));
@@ -153,6 +147,8 @@ export default async function FitnessPage() {
   const todaySets = todaySession?.sets ?? [];
   const recentSessions = strengthSessions.slice(0, 10);
   const topExercises = rankExercisesByVolume(strengthSessions, 3);
+
+  const exercisePRs = (exercisePRsRes.data ?? []) as ExercisePR[];
 
   return (
     <div
@@ -195,77 +191,32 @@ export default async function FitnessPage() {
         <WindowSelector current={windowKey} />
       </header>
 
-      {/* ── Weekly program ───────────────────────────────────────────── */}
-      <WeeklyWorkoutPlan
-        plans={weeklyPlans}
+      {/* ── Tabbed fitness surface ────────────────────────────────────── */}
+      <FitnessClient
+        weeklyPlans={weeklyPlans}
         completedDates={completedDates}
         todaySession={todaySession}
         todaySets={todaySets}
         weightUnit={weightUnit}
         cancelAction={cancelWorkoutPlan}
-      />
-
-      {/* ── Top exercises ────────────────────────────────────────────── */}
-      {topExercises.length > 0 && (
-        <section
-          className="flex flex-col"
-          style={{ gap: "var(--space-3)", minWidth: 0 }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              fontFamily: "var(--font-display), system-ui, sans-serif",
-              fontSize: "var(--t-h2)",
-              fontWeight: 600,
-              color: "var(--color-text)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Top exercises
-          </h2>
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            style={{ gap: "var(--space-5)" }}
-          >
-            {topExercises.map((ex) => (
-              <ExerciseSparkline
-                key={ex.name}
-                exerciseName={ex.name}
-                points={ex.points}
-                unit={weightUnit}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Recent sessions ──────────────────────────────────────────── */}
-      <RecentSessionsList sessions={recentSessions} unit={weightUnit} />
-
-      {/* ── Body composition ─────────────────────────────────────────── */}
-      <BodyCompTrends
-        data={fitnessData}
-        windowKey={windowKey}
-        weightGoal={weightGoal}
-        bodyFatGoal={bodyFatGoal}
-      />
-
-      {/* ── Recovery + sleep ─────────────────────────────────────────── */}
-      <RecoveryTrends trends={recoveryAll} />
-
-      {/* ── Activity ─────────────────────────────────────────────────── */}
-      <ActivityTrends
-        sessions={workouts}
-        recovery={activeCalWindow}
-        days={days}
-        weeklyWorkoutGoal={weeklyWorkoutGoal}
-        weeklyActiveCalGoal={weeklyActiveCalGoal}
+        recentSessions={recentSessions}
+        fitnessData={fitnessData}
+        allWorkouts={allWorkouts}
+        recoveryAll={recoveryAll}
+        activeCalWindow={activeCalWindow}
+        topExercises={topExercises}
         walkCount={walkCount}
         walkDuration={walkDuration}
+        weeklyWorkoutGoal={weeklyWorkoutGoal}
+        weeklyActiveCalGoal={weeklyActiveCalGoal}
+        weightGoal={weightGoal}
+        bodyFatGoal={bodyFatGoal}
+        windowKey={windowKey}
+        days={days}
+        weekCount={weekCount}
+        exercisePRs={exercisePRs}
+        prCount={exercisePRs.length}
       />
-
-      {/* ── Workout history ──────────────────────────────────────────── */}
-      <WorkoutHistoryTable workouts={allWorkouts} />
     </div>
   );
 }

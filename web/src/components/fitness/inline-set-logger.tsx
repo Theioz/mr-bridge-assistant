@@ -15,6 +15,7 @@ interface Props {
   targetSets?: number;
   targetReps?: string;
   targetWeightLbs?: number | null;
+  weightNotation?: "per_hand" | "total" | null;
   existingSets: StrengthSessionSet[];
   unit: WeightUnit;
 }
@@ -27,6 +28,7 @@ export function InlineSetLogger({
   targetSets,
   targetReps,
   targetWeightLbs,
+  weightNotation,
   existingSets,
   unit,
 }: Props) {
@@ -115,7 +117,10 @@ export function InlineSetLogger({
           {existingSets.map((s) => {
             const displayWeight = kgToDisplay(s.weight_kg, unit);
             const parts: string[] = [];
-            if (displayWeight != null) parts.push(`${displayWeight} ${unit}`);
+            if (displayWeight != null) {
+              const notation = weightNotation === "per_hand" ? " / hand" : weightNotation === "total" ? " total" : "";
+              parts.push(`${displayWeight} ${unit}${notation}`);
+            }
             if (s.reps != null) parts.push(`× ${s.reps}`);
             if (s.rpe != null) parts.push(`@ RPE ${s.rpe}`);
             return (

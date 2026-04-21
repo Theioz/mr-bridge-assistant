@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { todayString } from "@/lib/timezone";
+import { upsertExercisePRs } from "@/lib/fitness/compute-prs";
 
 interface LogSetBody {
   performed_on?: string;
@@ -130,6 +131,10 @@ export async function PATCH(req: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
   if (!data) return Response.json({ error: "Session not found" }, { status: 404 });
+
+  // Fire-and-forget PR computation on session completion
+  upsertExercisePRs(supabase, user.id, body.session_id).catch(() => {});
+
   return Response.json(data);
 }
 

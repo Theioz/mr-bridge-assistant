@@ -151,7 +151,19 @@ export interface WorkoutExercise {
   sets?: number;
   reps?: string;
   weight_lbs?: number | null;
+  weight_notation?: "per_hand" | "total" | null;
   notes?: string | null;
+}
+
+export interface ExercisePR {
+  exercise_name: string;
+  weight_pr_kg: number | null;
+  rep_pr_reps: number | null;
+  rep_pr_weight_kg: number | null;
+  volume_pr_kg: number | null;
+  weight_pr_achieved_at: string | null;
+  rep_pr_achieved_at: string | null;
+  volume_pr_achieved_at: string | null;
 }
 
 export type WorkoutPlanStatus = "planned" | "completed" | "cancelled" | "skipped";
