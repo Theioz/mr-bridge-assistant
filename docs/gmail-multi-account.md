@@ -26,10 +26,10 @@ Emails from the secondary account are forwarded into the primary inbox automatic
 
 ### Step 2 — Create a Gmail filter on your primary account to apply the `Professional` label
 
-Auto-forwarded emails keep the **original sender's** address in `From`, so a `from:` filter won't match them. Use `deliveredto:` instead — Gmail sets this header to the forwarding destination address on every forwarded message.
+Auto-forwarded emails keep the **original sender's** address in `From` and the original recipient in `To`, so use `to:` to match them — it's preserved through forwarding and reliably identifies the destination account.
 
 1. Sign into `<your-primary@gmail.com>`
-2. In the search bar, type: `deliveredto:<your-secondary@gmail.com>`
+2. In the search bar, type: `to:<your-secondary@gmail.com>`
 3. Click the **filter icon** (sliders) → **Create filter**
 4. Check **Apply the label** → select **New label…** → name it `Professional` → Create
 5. Optionally check **Never send it to Spam** to prevent misfiling
