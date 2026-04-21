@@ -994,11 +994,11 @@ Nodes (1): App Route: /login
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `get()` connect `Community 1` to `Community 0`, `Community 34`, `Community 3`, `Community 4`, `Community 35`, `Community 6`, `Community 8`, `Community 9`, `Community 22`, `Community 24`, `Community 30`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+  _High betweenness centrality (0.090) - this node is a cross-community bridge._
 - **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 8`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Why does `round()` connect `Community 4` to `Community 1`, `Community 3`, `Community 6`, `Community 8`, `Community 9`, `Community 10`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Are the 60 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
   _`get()` has 60 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 25 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**
