@@ -26,6 +26,19 @@ import type {
   StrengthSessionSet,
 } from "@/lib/types";
 import { parseWeightUnit } from "@/lib/units";
+import { revalidatePath } from "next/cache";
+import { cancelWorkout } from "@/lib/fitness/cancel-workout";
+import { createServiceClient } from "@/lib/supabase/service";
+
+async function cancelWorkoutPlan(date: string, reason?: string) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const db = createServiceClient();
+  await cancelWorkout({ supabase: db, userId: user.id, date, reason });
+  revalidatePath("/fitness");
+}
 
 export default async function FitnessPage() {
   const supabase = await createClient();
@@ -189,6 +202,7 @@ export default async function FitnessPage() {
         todaySession={todaySession}
         todaySets={todaySets}
         weightUnit={weightUnit}
+        cancelAction={cancelWorkoutPlan}
       />
 
       {/* ── Top exercises ────────────────────────────────────────────── */}

@@ -16,6 +16,7 @@ import { buildCalendarTools } from "@/lib/tools/calendar";
 import { buildMealsTools } from "@/lib/tools/meals";
 import { buildSessionTools } from "@/lib/tools/session";
 import { buildWorkoutTools } from "@/lib/tools/workouts";
+import { buildEquipmentTools } from "@/lib/tools/equipment";
 import { buildStocksTools } from "@/lib/tools/stocks";
 import { buildSportsTools } from "@/lib/tools/sports";
 
@@ -149,10 +150,19 @@ Tools available:
 - get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
 - get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
 - get_session_history: fetch earlier messages from this chat session. Ask the user before calling: "Should I pull earlier messages from this session for more context?"
+- get_user_equipment: fetch the user's equipment inventory (items list + maxes map giving the highest weight_lbs per type). Call this before proposing any workout weights.
 - get_workout_plan: fetch this week's workout plan (Mon–Sun). Call before making any suggestion or edit to the program.
-- assign_workout: upsert one day's workout plan to Supabase and create/update the Google Calendar event. Pre-flight required: call list_calendar_events first, check for overlaps and duplicate Workout titles on that date, surface conflicts to the user, and confirm before proceeding.
-- update_workout_exercise: patch a single exercise within a day's plan by name (case-insensitive) and refresh the calendar event description.
+- assign_workout: upsert one day's workout plan to Supabase and create/update the Google Calendar event. Pre-flight required: call list_calendar_events first, check for overlaps and duplicate Workout titles on that date, surface conflicts to the user, and confirm before proceeding. Equipment pre-flight: call get_user_equipment first — never propose a weight exceeding the user's inventory max for that equipment type.
+- update_workout_exercise: patch a single exercise within a day's plan by name (case-insensitive) and refresh the calendar event description. Same equipment constraint: never set weight_lbs beyond inventory max.
 - get_workout_history: fetch logged strength-session performance (actual sets/reps/weights/RPE/notes). Filter by exercise_name (case-insensitive partial match) and/or days back (default 30). Weights are returned in kg canonically — include the user's weight_unit from get_profile when reporting numbers.
+- cancel_workout: soft-cancel a scheduled workout — updates status to 'cancelled', records reason, deletes the calendar event. Pre-flight: state the date and workout name; require explicit user confirmation. Never delete a calendar event directly to cancel a workout — always use this tool so the skip is recorded in the database.
+- reschedule_workout: move a planned workout from one date to another atomically — copies full exercise config, soft-cancels the source row, PATCHes the existing calendar event to the new date. Pre-flight: state from/to dates; require explicit user confirmation. Use this instead of chaining cancel_workout + assign_workout.
+
+Equipment rules (apply whenever proposing workout weights):
+1. Before proposing weights in assign_workout or suggesting progressions, call get_user_equipment.
+2. Never propose a weight_lbs value that exceeds the user's inventory max for that equipment type (e.g. if max dumbbell is 30 lbs, never write weight_lbs: 35 for a dumbbell exercise).
+3. assign_workout and update_workout_exercise will reject out-of-inventory weights — if you see a rejection, call get_user_equipment to refresh the bounds and re-propose.
+4. If the user asks for a weight beyond their current inventory, tell them and offer alternatives (lower weight + higher reps, substitute exercise) rather than writing an unachievable plan.
 
 Progression heuristics (apply when the user asks for planning/adjustment — always call get_workout_history first):
 1. If the last 2 sessions for an exercise hit top-of-range reps at the prescribed weight, suggest +2.5 kg upper-body / +5 kg lower-body for the next session.
@@ -160,6 +170,7 @@ Progression heuristics (apply when the user asks for planning/adjustment — alw
 3. If the user missed target reps 2 sessions in a row for the same exercise, suggest a 10% deload.
 4. If an exercise hasn't progressed (top weight × reps flat or lower) across 4+ sessions, suggest a variation swap.
 Always surface the evidence ("last 3 bench sessions: 135×8, 135×8, 135×9 — hit top of range twice, ready to go to 137.5") before making the recommendation. The user may override any suggestion.
+Only include sessions with status 'planned' or 'completed' in progression analysis — never count cancelled or skipped sessions.
 
 Recipes and meal planning are in scope.
 
@@ -201,6 +212,8 @@ const TOOL_PHRASING: Record<string, [success: string, attempt: string]> = {
   delete_calendar_event: ["deleted a calendar event", "delete a calendar event"],
   assign_workout: ["assigned a workout", "assign a workout"],
   update_workout_exercise: ["updated a workout exercise", "update a workout exercise"],
+  cancel_workout: ["cancelled a workout", "cancel a workout"],
+  reschedule_workout: ["rescheduled a workout", "reschedule a workout"],
 };
 
 interface CompletedToolStep {
@@ -444,7 +457,7 @@ Tools available:
 - search_gmail, get_email_body (returns demo emails)
 - list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
 - get_recipes, get_today_meals
-- get_workout_plan, assign_workout, update_workout_exercise, get_workout_history`;
+- get_user_equipment, get_workout_plan, assign_workout, update_workout_exercise, get_workout_history, cancel_workout, reschedule_workout`;
 
   const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
 Today's date is ${todayString()}.
@@ -466,6 +479,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     ...buildMealsTools(toolContext),
     ...buildSessionTools(toolContext),
     ...buildWorkoutTools(toolContext),
+    ...buildEquipmentTools(toolContext),
     ...buildStocksTools(toolContext),
     ...buildSportsTools(toolContext),
   };

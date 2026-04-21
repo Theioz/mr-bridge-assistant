@@ -154,6 +154,8 @@ export interface WorkoutExercise {
   notes?: string | null;
 }
 
+export type WorkoutPlanStatus = "planned" | "completed" | "cancelled" | "skipped";
+
 export interface WorkoutPlan {
   id: string;
   user_id: string;
@@ -163,6 +165,9 @@ export interface WorkoutPlan {
   workout: WorkoutExercise[];
   cooldown: WorkoutExercise[];
   notes: string | null;
+  status: WorkoutPlanStatus;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
   calendar_event_id: string | null;
   created_at: string;
   updated_at: string;
