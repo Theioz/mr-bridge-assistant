@@ -8,19 +8,11 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function addDay(d: Date, n: number): Date {
-  const copy = new Date(d);
-  copy.setDate(copy.getDate() + n);
-  return copy;
-}
-
 function buildMonthGrid(year: number, month: number): Date[] {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  // Pad to Sunday start
   const startPad = first.getDay(); // 0 = Sunday
   const endPad = 6 - last.getDay();
-  const total = startPad + last.getDate() + endPad;
   const days: Date[] = [];
   for (let i = -startPad; i < last.getDate() + endPad; i++) {
     days.push(new Date(year, month, 1 + i));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CalendarRangeEvent, CalendarRangeResponse } from "@/lib/calendar-types";
 import WeekView from "./week-view";
@@ -95,9 +95,11 @@ const btnBase = {
 export default function CalendarView() {
   const [view, setView] = useState<View>("week");
   const [current, setCurrent] = useState(new Date());
-  const [events, setEvents] = useState<CalendarRangeEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  // null = loading; array = loaded (even if empty)
+  const [events, setEvents] = useState<CalendarRangeEvent[] | null>(null);
   const [notConnected, setNotConnected] = useState(false);
+  // Increment to force a refetch without changing view/current (after save/delete)
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Modal state
   const [createOpen, setCreateOpen] = useState(false);
@@ -109,29 +111,33 @@ export default function CalendarView() {
   const [detailEvent, setDetailEvent] = useState<CalendarRangeEvent | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const fetchEvents = useCallback(async (v: View, d: Date) => {
-    setLoading(true);
-    const { timeMin, timeMax } = rangeForView(v, d);
-    try {
-      const res = await fetch(`/api/google/calendar/range?timeMin=${timeMin}&timeMax=${timeMax}`);
-      const data: CalendarRangeResponse = await res.json();
-      if (data.not_connected) {
-        setNotConnected(true);
-        setEvents([]);
-      } else {
-        setNotConnected(false);
-        setEvents(data.events ?? []);
-      }
-    } catch {
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Fetch whenever view, current date, or refreshKey changes.
+  // All setState calls here are inside async callbacks — not synchronous in the effect body.
   useEffect(() => {
-    fetchEvents(view, current);
-  }, [view, current, fetchEvents]);
+    let cancelled = false;
+    const { timeMin, timeMax } = rangeForView(view, current);
+    fetch(`/api/google/calendar/range?timeMin=${timeMin}&timeMax=${timeMax}`)
+      .then((r) => r.json())
+      .then((data: CalendarRangeResponse) => {
+        if (cancelled) return;
+        setNotConnected(!!data.not_connected);
+        setEvents(data.events ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setEvents([]);
+      });
+    return () => { cancelled = true; };
+  }, [view, current, refreshKey]);
+
+  function changeView(v: View) {
+    setView(v);
+    setEvents(null); // show loading while new range fetches
+  }
+
+  function changeCurrent(d: Date) {
+    setCurrent(d);
+    setEvents(null);
+  }
 
   function handleSlotClick(date: string, time: string) {
     setCreateDate(date);
@@ -151,11 +157,11 @@ export default function CalendarView() {
   }
 
   function handleSaved() {
-    fetchEvents(view, current);
+    setRefreshKey((k) => k + 1);
   }
 
   function handleDeleted() {
-    fetchEvents(view, current);
+    setRefreshKey((k) => k + 1);
   }
 
   const today = new Date();
@@ -176,7 +182,7 @@ export default function CalendarView() {
       >
         {/* Today button */}
         <button
-          onClick={() => setCurrent(new Date())}
+          onClick={() => changeCurrent(new Date())}
           style={{
             ...btnBase,
             padding: "var(--space-2) var(--space-3)",
@@ -190,14 +196,14 @@ export default function CalendarView() {
         {/* Prev / next */}
         <div style={{ display: "flex", gap: 4 }}>
           <button
-            onClick={() => setCurrent((c) => navigate(view, c, -1))}
+            onClick={() => changeCurrent(navigate(view, current, -1))}
             style={btnBase}
             aria-label="Previous"
           >
             <ChevronLeft size={16} />
           </button>
           <button
-            onClick={() => setCurrent((c) => navigate(view, c, 1))}
+            onClick={() => changeCurrent(navigate(view, current, 1))}
             style={btnBase}
             aria-label="Next"
           >
@@ -229,7 +235,7 @@ export default function CalendarView() {
           {(["day", "week", "month"] as View[]).map((v) => (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={() => changeView(v)}
               style={{
                 background: view === v ? "var(--accent-soft)" : "transparent",
                 border: "none",
@@ -288,7 +294,7 @@ export default function CalendarView() {
       )}
 
       {/* ── Loading skeleton ─────────────────────────────────────────────── */}
-      {loading && (
+      {events === null && (
         <div
           style={{
             flex: 1,
@@ -304,7 +310,7 @@ export default function CalendarView() {
       )}
 
       {/* ── Calendar view ────────────────────────────────────────────────── */}
-      {!loading && (view === "week" || view === "day") && (
+      {events !== null && (view === "week" || view === "day") && (
         <WeekView
           events={events}
           currentDate={current}
@@ -314,7 +320,7 @@ export default function CalendarView() {
         />
       )}
 
-      {!loading && view === "month" && (
+      {events !== null && view === "month" && (
         <MonthView
           events={events}
           currentDate={current}
@@ -325,6 +331,7 @@ export default function CalendarView() {
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
       <EventModal
+        key={editEvent ? `edit-${editEvent.eventId}` : `create-${createDate}-${createTime}`}
         open={createOpen}
         onOpenChange={setCreateOpen}
         initialDate={createDate}

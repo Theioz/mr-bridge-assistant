@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { CalendarRangeEvent } from "@/lib/calendar-types";
@@ -46,41 +46,26 @@ export default function EventModal({
 }: EventModalProps) {
   const isEdit = !!editEvent;
 
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [allDay, setAllDay] = useState(false);
+  // State initialized from props — parent passes a `key` prop to remount when the
+  // target event or slot changes, so these initializers always run fresh.
+  const [title, setTitle] = useState(editEvent?.title ?? "");
+  const [date, setDate] = useState(
+    editEvent ? editEvent.start.slice(0, 10) : (initialDate ?? new Date().toISOString().slice(0, 10))
+  );
+  const [allDay, setAllDay] = useState(editEvent?.allDay ?? false);
+  const [startTime, setStartTime] = useState(() => {
+    if (editEvent && !editEvent.allDay) return editEvent.start.slice(11, 16);
+    return initialTime ?? "09:00";
+  });
+  const [endTime, setEndTime] = useState(() => {
+    if (editEvent && !editEvent.allDay) return editEvent.end.slice(11, 16);
+    const t = initialTime ?? "09:00";
+    const [h, m] = t.split(":").map(Number);
+    return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  });
+  const [location, setLocation] = useState(editEvent?.location ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  // Pre-fill when opening
-  useEffect(() => {
-    if (!open) return;
-    if (editEvent) {
-      setTitle(editEvent.title);
-      setDate(editEvent.start.slice(0, 10));
-      setAllDay(editEvent.allDay);
-      if (!editEvent.allDay) {
-        setStartTime(editEvent.start.slice(11, 16));
-        setEndTime(editEvent.end.slice(11, 16));
-      } else {
-        setStartTime("");
-        setEndTime("");
-      }
-      setLocation(editEvent.location ?? "");
-    } else {
-      setTitle("");
-      setDate(initialDate ?? new Date().toISOString().slice(0, 10));
-      setAllDay(false);
-      setStartTime(initialTime ?? "09:00");
-      const [h, m] = (initialTime ?? "09:00").split(":").map(Number);
-      setEndTime(`${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-      setLocation("");
-    }
-    setError("");
-  }, [open, editEvent, initialDate, initialTime]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
