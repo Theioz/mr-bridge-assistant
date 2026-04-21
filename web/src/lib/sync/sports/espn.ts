@@ -20,7 +20,7 @@ function isF1(leagueId: string): boolean {
   return leagueId === "racing/f1";
 }
 
-async function get<T>(url: string): Promise<T | null> {
+async function espnGet<T>(url: string): Promise<T | null> {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     console.error(`[sports/espn] ${url} → ${res.status}`);
@@ -189,7 +189,7 @@ function toRaceGame(e: RawEvent): Game {
 async function fetchAllTeams(): Promise<Team[]> {
   const lists = await Promise.all(
     LEAGUES.map(async ({ league_id, display }) => {
-      const json = await get<RawTeamsResponse>(`${SITE_BASE}/sports/${league_id}/teams`);
+      const json = await espnGet<RawTeamsResponse>(`${SITE_BASE}/sports/${league_id}/teams`);
       const teams = json?.sports?.[0]?.leagues?.[0]?.teams ?? [];
       return teams.map<Team>((t) => ({
         team_id: t.team.id,
@@ -222,7 +222,7 @@ export const ESPN: SportsProvider = {
   },
 
   async getStandings({ team_id, league_id }): Promise<Standing | null> {
-    const json = await get<RawStandingNode>(`${CORE_BASE}/sports/${league_id}/standings`);
+    const json = await espnGet<RawStandingNode>(`${CORE_BASE}/sports/${league_id}/standings`);
     if (!json) return null;
 
     if (isF1(league_id)) {
@@ -279,7 +279,7 @@ async function fetchScheduleEvents(
 ): Promise<RawEvent[]> {
   const responses = await Promise.all(
     SCHEDULE_SEASON_TYPES.map((st) =>
-      get<{ events: RawEvent[] | null }>(
+      espnGet<{ events: RawEvent[] | null }>(
         `${SITE_BASE}/sports/${league_id}/teams/${team_id}/schedule?season=${season}&seasontype=${st}`,
       ),
     ),
@@ -305,7 +305,7 @@ export async function espnGetUpcoming(
   limit = 3,
 ): Promise<Game[]> {
   if (isF1(league_id)) {
-    const json = await get<{ events: RawEvent[] | null }>(
+    const json = await espnGet<{ events: RawEvent[] | null }>(
       `${SITE_BASE}/sports/racing/f1/scoreboard?dates=${currentSeason(league_id)}`,
     );
     const events = (json?.events ?? []).filter((e) => e.competitions?.[0]?.status.type.state !== "post");
@@ -341,7 +341,7 @@ export async function espnGetRecent(
   limit = 3,
 ): Promise<Game[]> {
   if (isF1(league_id)) {
-    const json = await get<{ events: RawEvent[] | null }>(
+    const json = await espnGet<{ events: RawEvent[] | null }>(
       `${SITE_BASE}/sports/racing/f1/scoreboard?dates=${currentSeason(league_id)}`,
     );
     const events = (json?.events ?? []).filter((e) => e.competitions?.[0]?.status.type.state === "post");

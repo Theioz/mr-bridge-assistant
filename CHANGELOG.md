@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Renamed bare `get()` helpers in sports sync files to domain-scoped names (#404).**
+  - `get<T>()` in `web/src/lib/sync/sports/thesportsdb.ts` renamed to `sportsDbGet<T>()`.
+  - `get<T>()` in `web/src/lib/sync/sports/espn.ts` renamed to `espnGet<T>()`.
+  - Both are private (non-exported) helpers; no call-site changes outside each file.
+  - Matches the convention already used across other sync modules (`fitbitGet`, `ouraGet`, `fitGet`, `polygonGet`).
+  - `get()` has been eliminated from the graphify God Nodes list (was #1 at 64 edges).
+
 ### Fixed
 - **WCAG 2.1 AA color-contrast — axe sweep re-enabled (#381).**
   - Added `--accent-text: oklch(45% 0.13 65)` in light mode (≈5:1 on page bg) alongside existing `--accent`; dark mode aliases `--accent-text` to `--accent` unchanged.

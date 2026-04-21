@@ -42,7 +42,7 @@ function apiKey(): string {
   return process.env.SPORTSDB_API_KEY || "3"; // "3" is the public test key
 }
 
-async function get<T>(path: string): Promise<T | null> {
+async function sportsDbGet<T>(path: string): Promise<T | null> {
   const url = `${BASE}/${apiKey()}${path}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
@@ -113,7 +113,7 @@ function currentSeason(league: string): string {
 
 export const TheSportsDB: SportsProvider = {
   async searchTeams(query: string): Promise<Team[]> {
-    const json = await get<{ teams: RawTeam[] | null }>(
+    const json = await sportsDbGet<{ teams: RawTeam[] | null }>(
       `/searchteams.php?t=${encodeURIComponent(query)}`,
     );
     const teams = json?.teams ?? [];
@@ -128,7 +128,7 @@ export const TheSportsDB: SportsProvider = {
   },
 
   async getUpcoming({ team_id }, limit = 3): Promise<Game[]> {
-    const json = await get<{ events: RawEvent[] | null }>(
+    const json = await sportsDbGet<{ events: RawEvent[] | null }>(
       `/eventsnext.php?id=${encodeURIComponent(team_id)}`,
     );
     const events = (json?.events ?? []).filter(
@@ -138,7 +138,7 @@ export const TheSportsDB: SportsProvider = {
   },
 
   async getRecent({ team_id }, limit = 3): Promise<Game[]> {
-    const json = await get<{ results: RawEvent[] | null }>(
+    const json = await sportsDbGet<{ results: RawEvent[] | null }>(
       `/eventslast.php?id=${encodeURIComponent(team_id)}`,
     );
     const events = (json?.results ?? []).filter(
@@ -159,7 +159,7 @@ export const TheSportsDB: SportsProvider = {
     if (fallback) seasons.push(fallback);
 
     for (const season of seasons) {
-      const json = await get<{ table: RawStanding[] | null }>(
+      const json = await sportsDbGet<{ table: RawStanding[] | null }>(
         `/lookuptable.php?l=${encodeURIComponent(league_id)}&s=${encodeURIComponent(season)}`,
       );
       const row = json?.table?.find((r) => r.idTeam === team_id);
