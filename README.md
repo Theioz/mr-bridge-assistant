@@ -461,7 +461,7 @@ mr-bridge-assistant/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
 │   ├── fitness-tracker-setup.md           # Google Fit, Oura, Fitbit, Renpho setup
 │   ├── google-oauth-setup.md              # OAuth token setup + refresh guide
-│   └── gmail-multi-account.md             # POP3 aggregation + Calendar sharing setup
+│   └── gmail-multi-account.md             # Auto-forwarding + Calendar sharing setup
 │
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
