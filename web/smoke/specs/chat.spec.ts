@@ -8,6 +8,10 @@ test("chat — send, receive, persist", async ({ signedInPage, consoleErrors }) 
   const page = signedInPage;
 
   await page.goto("/chat");
+  // Discard any console errors from the login redirect (/ → /dashboard renders
+  // calendar/gmail widgets that 403 when Google isn't connected on the smoke
+  // account). This test only cares about errors during the chat interaction.
+  consoleErrors.length = 0;
 
   // Start a fresh session — SSR hydrates the most recent web session, so
   // without this the POST appends to whatever the last turn was. Two "New
