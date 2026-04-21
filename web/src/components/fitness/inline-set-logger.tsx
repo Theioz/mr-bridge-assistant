@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Trash2, Loader2 } from "lucide-react";
 import type { WeightUnit } from "@/lib/units";
 import { displayToKg, kgToDisplay } from "@/lib/units";
 import type { StrengthSessionSet } from "@/lib/types";
+
+const LS_END = "bridge:rest_timer_end";
+const LS_DURATION = "bridge:rest_timer_duration";
+const DEFAULT_DURATION_S = 90;
+
+function formatMMSS(ms: number): string {
+  const totalSec = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 interface Props {
   date: string;
@@ -18,6 +29,7 @@ interface Props {
   weightNotation?: "per_hand" | "total" | null;
   existingSets: StrengthSessionSet[];
   unit: WeightUnit;
+  restTimerEnabled?: boolean;
 }
 
 export function InlineSetLogger({
@@ -31,6 +43,7 @@ export function InlineSetLogger({
   weightNotation,
   existingSets,
   unit,
+  restTimerEnabled = true,
 }: Props) {
   const router = useRouter();
   const [weight, setWeight] = useState<string>(() => suggestWeight(targetWeightLbs, unit));
@@ -38,6 +51,74 @@ export function InlineSetLogger({
   const [rpe, setRpe] = useState<string>("");
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Rest timer state
+  const [timerEndMs, setTimerEndMs] = useState<number | null>(() => {
+    try {
+      const stored = localStorage.getItem(LS_END);
+      if (stored) {
+        const end = parseInt(stored, 10);
+        if (Number.isFinite(end) && end > Date.now()) return end;
+      }
+    } catch {
+      // localStorage unavailable — skip
+    }
+    return null;
+  });
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const pulseFiredRef = useRef(false);
+
+  // Tick every 250ms while the timer is active
+  useEffect(() => {
+    if (timerEndMs == null) return;
+    const id = setInterval(() => setNowMs(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [timerEndMs]);
+
+  // Fire push notification once when timer reaches zero
+  useEffect(() => {
+    if (timerEndMs == null || pulseFiredRef.current) return;
+    if (nowMs >= timerEndMs) {
+      pulseFiredRef.current = true;
+      fetch("/api/notifications/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Rest done", message: "Time to log your next set." }),
+      }).catch(() => {});
+    }
+  }, [nowMs, timerEndMs]);
+
+  function startTimer() {
+    pulseFiredRef.current = false;
+    let durationSec = DEFAULT_DURATION_S;
+    try {
+      const stored = localStorage.getItem(LS_DURATION);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (Number.isFinite(parsed) && parsed > 0) durationSec = parsed;
+      }
+    } catch {
+      // ignore
+    }
+    const end = Date.now() + durationSec * 1000;
+    try {
+      localStorage.setItem(LS_END, String(end));
+    } catch {
+      // ignore
+    }
+    setTimerEndMs(end);
+    setNowMs(Date.now());
+  }
+
+  function dismissTimer() {
+    try {
+      localStorage.removeItem(LS_END);
+    } catch {
+      // ignore
+    }
+    setTimerEndMs(null);
+    pulseFiredRef.current = false;
+  }
 
   const nextSetNumber = (existingSets[existingSets.length - 1]?.set_number ?? 0) + 1;
   const totalTarget = targetSets ?? null;
@@ -84,6 +165,7 @@ export function InlineSetLogger({
         return;
       }
       setRpe("");
+      if (restTimerEnabled) startTimer();
       router.refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Network error");
@@ -108,6 +190,9 @@ export function InlineSetLogger({
       setPending(false);
     }
   }
+
+  const timerDone = timerEndMs != null && nowMs >= timerEndMs;
+  const remainingMs = timerEndMs != null ? Math.max(0, timerEndMs - nowMs) : 0;
 
   return (
     <div style={{ marginTop: 4, marginBottom: 6 }}>
@@ -217,6 +302,43 @@ export function InlineSetLogger({
         >
           Target sets logged ✓
         </p>
+      )}
+
+      {/* Rest timer widget */}
+      {timerEndMs != null && (
+        <div
+          className={timerDone ? "rest-timer-done" : undefined}
+          style={{
+            marginTop: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            background: "var(--color-surface-raised)",
+            border: "1px solid var(--color-border)",
+            borderRadius: 6,
+            padding: "6px 10px",
+            fontSize: 11,
+            fontVariantNumeric: "tabular-nums",
+            color: timerDone ? "var(--color-positive)" : "var(--color-text-muted)",
+          }}
+        >
+          <span>Rest · {timerDone ? "0:00" : formatMMSS(remainingMs)}</span>
+          <button
+            onClick={dismissTimer}
+            aria-label="Dismiss rest timer"
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "var(--color-text-faint)",
+              fontSize: 11,
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {err && (

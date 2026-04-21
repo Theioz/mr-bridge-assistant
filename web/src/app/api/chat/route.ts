@@ -116,7 +116,12 @@ Do not narrate before calling tools — never say things like "Let me check that
 Never announce a next action without committing to it. If you write "Now assigning X", "Next I'll...", "Moving on to..." or similar, you must either (a) call the corresponding tool in the same turn, or (b) end with an explicit confirmation question (e.g. "Shall I assign Saturday now?"). A bare promissory statement with no tool call and no question is forbidden — do not announce and stop.
 When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
 When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
-If a task will require more than 20 sequential tool calls, stop before hitting the limit, summarize what you've done so far, and ask the user to break the remaining work into smaller requests. Never let the step limit cut you off silently mid-task.
+Step-limit planning rule (hard requirement — never skip this):
+Before starting any task, count the total tool calls it will require. If the total is more than 15:
+1. BEFORE calling any tool, state: how many total tool calls are needed, how many batches that splits into (max 15 per batch), and exactly what each batch will cover.
+2. Execute only batch 1. At the end of batch 1, stop and tell the user word-for-word what to reply to continue — e.g. 'Reply "continue — batch 2 of 3" to proceed.' Include a clear summary of what was done and what remains.
+3. Do not start batch 2 until the user replies. Never silently exceed 15 tool calls in a single turn.
+If you are mid-task and realize you are approaching 15 steps without having announced a batch plan, stop immediately, report what you completed, and give the user the explicit continuation prompt before calling any more tools.
 Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
 
 Verified-success rule: Every state-mutating tool returns either { ok: true, ... } or { ok: false, error }. Never say a mutating action is "done" or use ✓ unless the most recent tool result for that action has ok: true in this turn. If you don't see a successful tool result, either run the tool now or tell the user the action didn't go through (with the error if you have one). Do not infer success from the user's confirmation alone or from the absence of a visible failure.
@@ -267,11 +272,11 @@ function synthesizeFallbackSummary(
   }
 
   const reason = flags.aborted
-    ? " (I ran out of time before I could finish a full summary — your request may or may not have completed; check before retrying.)"
+    ? " (I ran out of time before finishing — your request may or may not have completed; check before retrying.)"
     : flags.budgetExceeded
       ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
       : flags.hitStepCap
-        ? " (Hit my step limit before I could write a longer summary — let me know if you need detail.)"
+        ? " (Hit my 20-step turn limit — this task has more work remaining. Reply **\"continue\"** and I'll pick up where I left off.)"
         : "";
   return body + reason;
 }
@@ -584,7 +589,26 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     // invoke so future callers could swap tools at call time without
     // reconstructing the agent. Passthrough today satisfies #350's contract
     // that tools wire through prepareCall.
-    prepareCall: async (args) => args,
+    //
+    // Step-limit warning: when >= 15 steps have been used this turn, inject
+    // a countdown into instructions so the model stops and hands off rather
+    // than running silently into the cap.
+    prepareCall: async (args) => {
+      const used = (args as { messages?: unknown[] }).messages?.length
+        ? Math.floor(((args as { messages: unknown[] }).messages.length - 1) / 2)
+        : 0;
+      if (used >= MAX_STEPS - 5) {
+        const remaining = MAX_STEPS - used;
+        return {
+          ...args,
+          instructions:
+            `${args.instructions ?? ""}\n\n` +
+            `⚠ STEP LIMIT: You have used approximately ${used} of ${MAX_STEPS} steps this turn — roughly ${remaining} remaining. ` +
+            `Do NOT start any new work. Finish only the current action, then stop and tell the user exactly what was completed, what remains, and to reply "continue" to proceed.`,
+        };
+      }
+      return args;
+    },
     onFinish: async ({ text, steps, finishReason, totalUsage, warnings }) => {
       clearTimeout(deadlineTimer);
 

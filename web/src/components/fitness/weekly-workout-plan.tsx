@@ -22,6 +22,7 @@ interface Props {
   weightUnit?: WeightUnit;
   cancelAction?: (date: string, reason?: string) => Promise<void>;
   prsByExercise?: Record<string, ExercisePR>;
+  restTimerEnabled?: boolean;
 }
 
 interface DaySlot {
@@ -87,6 +88,7 @@ interface ExerciseRowProps {
   ex: WorkoutExercise;
   unit: WeightUnit;
   exercisePR?: ExercisePR | null;
+  restTimerEnabled?: boolean;
   loggerContext?: {
     date: string;
     workoutPlanId: string | null;
@@ -96,11 +98,13 @@ interface ExerciseRowProps {
   };
 }
 
-function ExerciseRow({ ex, unit, exercisePR, loggerContext }: ExerciseRowProps) {
+function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: ExerciseRowProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const setsStr = ex.sets ? `${ex.sets} sets` : null;
   const repsStr = ex.reps ? `× ${ex.reps}` : null;
   const hasWeight = ex.weight_lbs != null && ex.weight_lbs > 0;
   const notation = resolveNotation(ex);
+  const hasDetails = !!(ex.description || (ex.tips && ex.tips.length > 0));
 
   const recentPRAchievedAt =
     exercisePR != null
@@ -126,7 +130,7 @@ function ExerciseRow({ ex, unit, exercisePR, loggerContext }: ExerciseRowProps) 
             style={{
               fontSize: 10,
               fontWeight: 600,
-              color: "var(--color-amber, #f59e0b)",
+              color: "var(--color-amber)",
               lineHeight: 1,
             }}
           >
@@ -158,7 +162,64 @@ function ExerciseRow({ ex, unit, exercisePR, loggerContext }: ExerciseRowProps) 
             </span>
           </>
         )}
+        {hasDetails && (
+          <button
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+            aria-label="Exercise details"
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "var(--color-text-faint)",
+              display: "inline-flex",
+              alignItems: "center",
+              lineHeight: 1,
+            }}
+          >
+            {detailsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+        )}
       </div>
+
+      {detailsOpen && hasDetails && (
+        <div
+          style={{
+            marginTop: "var(--space-1)",
+            paddingLeft: "var(--space-2)",
+            borderLeft: "1px solid var(--rule-soft)",
+          }}
+        >
+          {ex.description && (
+            <p
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              {ex.description}
+            </p>
+          )}
+          {ex.tips && ex.tips.length > 0 && (
+            <ul
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+                margin: "var(--space-1) 0 0",
+                paddingLeft: "var(--space-4)",
+                lineHeight: 1.5,
+              }}
+            >
+              {ex.tips.map((t, i) => (
+                <li key={i}>{t}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {loggerContext && (
         <InlineSetLogger
@@ -172,6 +233,7 @@ function ExerciseRow({ ex, unit, exercisePR, loggerContext }: ExerciseRowProps) 
           weightNotation={notation}
           existingSets={loggerContext.setsForThisExercise}
           unit={loggerContext.unit}
+          restTimerEnabled={restTimerEnabled}
         />
       )}
     </div>
@@ -184,6 +246,7 @@ interface PhaseSectionProps {
   exercises: WorkoutExercise[];
   unit: WeightUnit;
   prsByExercise?: Record<string, ExercisePR>;
+  restTimerEnabled?: boolean;
   loggerBase?: {
     date: string;
     workoutPlanId: string | null;
@@ -193,7 +256,7 @@ interface PhaseSectionProps {
   };
 }
 
-function PhaseSection({ label, exercises, unit, prsByExercise, loggerBase }: PhaseSectionProps) {
+function PhaseSection({ label, exercises, unit, prsByExercise, restTimerEnabled, loggerBase }: PhaseSectionProps) {
   if (exercises.length === 0) return null;
   return (
     <div style={{ marginBottom: "var(--space-4)" }}>
@@ -229,6 +292,7 @@ function PhaseSection({ label, exercises, unit, prsByExercise, loggerBase }: Pha
             ex={ex}
             unit={unit}
             exercisePR={exercisePR}
+            restTimerEnabled={restTimerEnabled}
             loggerContext={loggerContext}
           />
         );
@@ -245,6 +309,7 @@ export function WeeklyWorkoutPlan({
   weightUnit = "lb",
   cancelAction,
   prsByExercise,
+  restTimerEnabled = true,
 }: Props) {
   const days = buildWeekDays(plans, completedDates);
   const todayDate = todayString();
@@ -531,6 +596,7 @@ export function WeeklyWorkoutPlan({
                     exercises={day.plan.workout}
                     unit={weightUnit}
                     prsByExercise={prsByExercise}
+                    restTimerEnabled={restTimerEnabled}
                     loggerBase={
                       day.isToday
                         ? {
