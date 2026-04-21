@@ -7,6 +7,7 @@ import type {
   WorkoutExercise,
   StrengthSession,
   StrengthSessionSet,
+  ExercisePR,
 } from "@/lib/types";
 import { todayString, addDays } from "@/lib/timezone";
 import type { WeightUnit } from "@/lib/units";
@@ -20,6 +21,7 @@ interface Props {
   todaySets?: StrengthSessionSet[];
   weightUnit?: WeightUnit;
   cancelAction?: (date: string, reason?: string) => Promise<void>;
+  prsByExercise?: Record<string, ExercisePR>;
 }
 
 interface DaySlot {
@@ -59,8 +61,32 @@ function fmtWeekRange(days: DaySlot[]): string {
   return `${fmtShortDate(days[0].date)} – ${fmtShortDate(days[6].date)}`;
 }
 
+
+function isRecentPR(achievedAt: string | null): boolean {
+  if (!achievedAt) return false;
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(achievedAt).getTime() < THIRTY_DAYS_MS;
+}
+
+function notationLabel(notation: "per_hand" | "total" | null | undefined): string {
+  if (notation === "per_hand") return " / hand";
+  if (notation === "total") return " total";
+  return "";
+}
+
+const DB_PATTERN = /dumbbell|\bdb\b|single.arm/i;
+
+/** Resolves effective notation: explicit field wins; DB exercises fall back to per_hand; everything else null. */
+function resolveNotation(ex: WorkoutExercise): "per_hand" | "total" | null {
+  if (ex.weight_notation != null) return ex.weight_notation;
+  if (!ex.weight_lbs) return null;
+  return DB_PATTERN.test(ex.exercise) ? "per_hand" : null;
+}
+
 interface ExerciseRowProps {
   ex: WorkoutExercise;
+  unit: WeightUnit;
+  exercisePR?: ExercisePR | null;
   loggerContext?: {
     date: string;
     workoutPlanId: string | null;
@@ -70,11 +96,18 @@ interface ExerciseRowProps {
   };
 }
 
-function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
-  const details: string[] = [];
-  if (ex.sets) details.push(`${ex.sets} sets`);
-  if (ex.reps) details.push(`× ${ex.reps}`);
-  if (ex.weight_lbs) details.push(`@ ${ex.weight_lbs} lbs`);
+function ExerciseRow({ ex, unit, exercisePR, loggerContext }: ExerciseRowProps) {
+  const setsStr = ex.sets ? `${ex.sets} sets` : null;
+  const repsStr = ex.reps ? `× ${ex.reps}` : null;
+  const hasWeight = ex.weight_lbs != null && ex.weight_lbs > 0;
+  const notation = resolveNotation(ex);
+
+  const recentPRAchievedAt =
+    exercisePR != null
+      ? (([exercisePR.weight_pr_achieved_at ?? null, exercisePR.rep_pr_achieved_at ?? null, exercisePR.volume_pr_achieved_at ?? null] as (string | null)[])
+          .find(isRecentPR) ?? null)
+      : null;
+  const showPRChip = recentPRAchievedAt != null;
 
   return (
     <div style={{ padding: "var(--space-1) 0" }}>
@@ -88,7 +121,19 @@ function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
         >
           {ex.exercise}
         </span>
-        {details.length > 0 && (
+        {showPRChip && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: "var(--color-amber, #f59e0b)",
+              lineHeight: 1,
+            }}
+          >
+            🏆 PR
+          </span>
+        )}
+        {(setsStr || repsStr || hasWeight) && (
           <>
             <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>·</span>
             <span
@@ -98,11 +143,23 @@ function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
                 color: "var(--color-text-muted)",
               }}
             >
-              {details.join(" ")}
+              {[setsStr, repsStr].filter(Boolean).join(" ")}
+              {hasWeight && (
+                <>
+                  {(setsStr || repsStr) ? " @ " : "@ "}
+                  {ex.weight_lbs} lbs
+                  {notation && (
+                    <span style={{ color: "var(--color-text-faint)" }}>
+                      {notationLabel(notation)}
+                    </span>
+                  )}
+                </>
+              )}
             </span>
           </>
         )}
       </div>
+
       {loggerContext && (
         <InlineSetLogger
           date={loggerContext.date}
@@ -112,6 +169,7 @@ function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
           targetSets={ex.sets}
           targetReps={ex.reps}
           targetWeightLbs={ex.weight_lbs}
+          weightNotation={notation}
           existingSets={loggerContext.setsForThisExercise}
           unit={loggerContext.unit}
         />
@@ -120,9 +178,12 @@ function ExerciseRow({ ex, loggerContext }: ExerciseRowProps) {
   );
 }
 
+
 interface PhaseSectionProps {
   label: string;
   exercises: WorkoutExercise[];
+  unit: WeightUnit;
+  prsByExercise?: Record<string, ExercisePR>;
   loggerBase?: {
     date: string;
     workoutPlanId: string | null;
@@ -132,7 +193,7 @@ interface PhaseSectionProps {
   };
 }
 
-function PhaseSection({ label, exercises, loggerBase }: PhaseSectionProps) {
+function PhaseSection({ label, exercises, unit, prsByExercise, loggerBase }: PhaseSectionProps) {
   if (exercises.length === 0) return null;
   return (
     <div style={{ marginBottom: "var(--space-4)" }}>
@@ -161,7 +222,16 @@ function PhaseSection({ label, exercises, loggerBase }: PhaseSectionProps) {
               unit: loggerBase.unit,
             }
           : undefined;
-        return <ExerciseRow key={i} ex={ex} loggerContext={loggerContext} />;
+        const exercisePR = prsByExercise?.[ex.exercise.toLowerCase()] ?? null;
+        return (
+          <ExerciseRow
+            key={i}
+            ex={ex}
+            unit={unit}
+            exercisePR={exercisePR}
+            loggerContext={loggerContext}
+          />
+        );
       })}
     </div>
   );
@@ -174,6 +244,7 @@ export function WeeklyWorkoutPlan({
   todaySets = [],
   weightUnit = "lb",
   cancelAction,
+  prsByExercise,
 }: Props) {
   const days = buildWeekDays(plans, completedDates);
   const todayDate = todayString();
@@ -295,7 +366,6 @@ export function WeeklyWorkoutPlan({
           const isCancelled = day.plan.status === "cancelled";
           const isCancelling = cancellingDates.has(day.date);
 
-          // Cancelled plans: dimmed non-interactive row
           if (isCancelled) {
             return (
               <div
@@ -378,8 +448,7 @@ export function WeeklyWorkoutPlan({
                   background: "transparent",
                   border: "none",
                   gap: "var(--space-3)",
-                  transition:
-                    "color var(--motion-fast) var(--ease-out-quart)",
+                  transition: "color var(--motion-fast) var(--ease-out-quart)",
                   color: "var(--color-text)",
                 }}
                 aria-expanded={isOpen}
@@ -451,10 +520,17 @@ export function WeeklyWorkoutPlan({
                     padding: "var(--space-3) 0 var(--space-4) calc(32px + var(--space-3))",
                   }}
                 >
-                  <PhaseSection label="Warm-up" exercises={day.plan.warmup} />
+                  <PhaseSection
+                    label="Warm-up"
+                    exercises={day.plan.warmup}
+                    unit={weightUnit}
+                    prsByExercise={prsByExercise}
+                  />
                   <PhaseSection
                     label="Workout"
                     exercises={day.plan.workout}
+                    unit={weightUnit}
+                    prsByExercise={prsByExercise}
                     loggerBase={
                       day.isToday
                         ? {
@@ -467,7 +543,12 @@ export function WeeklyWorkoutPlan({
                         : undefined
                     }
                   />
-                  <PhaseSection label="Cool-down" exercises={day.plan.cooldown} />
+                  <PhaseSection
+                    label="Cool-down"
+                    exercises={day.plan.cooldown}
+                    unit={weightUnit}
+                    prsByExercise={prsByExercise}
+                  />
                   {day.plan.notes && (
                     <p
                       style={{

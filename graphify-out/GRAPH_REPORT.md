@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 209 files · ~584,429 words
+- 212 files · ~588,061 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1028 nodes · 1387 edges · 148 communities detected
-- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 358 edges (avg confidence: 0.81)
+- 1036 nodes · 1400 edges · 148 communities detected
+- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 364 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -160,13 +160,13 @@
 - [[_COMMUNITY_Community 147|Community 147]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `get()` - 61 edges
-2. `POST()` - 41 edges
-3. `select()` - 36 edges
+1. `get()` - 62 edges
+2. `POST()` - 43 edges
+3. `select()` - 38 edges
 4. `GET()` - 35 edges
 5. `round()` - 35 edges
 6. `createClient()` - 34 edges
-7. `upsert()` - 31 edges
+7. `upsert()` - 32 edges
 8. `CHANGELOG [Unreleased]` - 25 edges
 9. `Mr. Bridge Design System MASTER.md` - 22 edges
 10. `DELETE()` - 20 edges
@@ -206,47 +206,47 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.04
-Nodes (80): handleToggle(), fmtHrs(), fmtNum(), main(), computeStreaks(), dateToDayNum(), Open a urllib request with timeout and exponential backoff on transient errors., urlopen_with_retry() (+72 more)
+Nodes (82): get_profile_value(), load_notif_cache(), main(), needs_notification(), Return {task_id: iso_timestamp_last_notified} from profile., Return True if the task hasn't been notified within the last 24 hours., save_notif_cache(), send_notify() (+74 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.05
-Nodes (57): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range(), get_profile_value() (+49 more)
+Cohesion: 0.04
+Nodes (59): cancelWorkout(), get_profile_value(), main(), set_profile_value(), get_profile_value(), main(), set_profile_value(), backfillAllPRs() (+51 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (37): getExcludedCalendarIds(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+29 more)
+Nodes (38): getISOWeekKey(), getISOWeekLabel(), latestLabel(), getExcludedCalendarIds(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity() (+30 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (45): cancelWorkout(), err(), ok(), getGoogleAuthClient(), GoogleNotConnectedError, async(), load(), onVisibility() (+37 more)
-
-### Community 4 - "Community 4"
 Cohesion: 0.04
 Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
 
-### Community 5 - "Community 5"
+### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (45): scripts/notify.sh: macOS osascript-based notification sender, ntfy.sh: free open-source pub/sub notification service, NTFY_TOPIC env var: unique hard-to-guess topic string shared across devices, Notifications Setup Documentation (ntfy.sh push notifications), GitHub Actions Weekly Review Nudge: uses NTFY_TOPIC secret, Lighthouse Report: /chat desktop, Lighthouse Report: /chat mobile, Lighthouse Report: /dashboard desktop (+37 more)
+Nodes (25): addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual(), handleFileChange(), handleLogMeal(), handleMealPrep() (+17 more)
+
+### Community 5 - "Community 5"
+Cohesion: 0.06
+Nodes (49): Vercel AI SDK v4→v6 upgrade (#329), Axe A11y Smoke (#377), Birthday widget double-suffix fix (#334), Calendar Exclusion per-profile (#388), Chat Stop Button + Tool Status Bar (#341/#352), CI Smoke Workflow (#379), Delete logged meal (#330), ESLint flat config (#327) (+41 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.05
 Nodes (17): buildCalendarTools(), buildEquipmentTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools(), extractTextFromParts() (+9 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.09
-Nodes (35): Vercel AI SDK v4→v6 upgrade (#329), Axe A11y Smoke (#377), Birthday widget double-suffix fix (#334), Calendar Exclusion per-profile (#388), Chat Stop Button + Tool Status Bar (#341/#352), CI Smoke Workflow (#379), Delete logged meal (#330), ESLint flat config (#327) (+27 more)
+Cohesion: 0.05
+Nodes (45): scripts/notify.sh: macOS osascript-based notification sender, ntfy.sh: free open-source pub/sub notification service, NTFY_TOPIC env var: unique hard-to-guess topic string shared across devices, Notifications Setup Documentation (ntfy.sh push notifications), GitHub Actions Weekly Review Nudge: uses NTFY_TOPIC secret, Lighthouse Report: /chat desktop, Lighthouse Report: /chat mobile, Lighthouse Report: /dashboard desktop (+37 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.13
-Nodes (29): saveJournalEntry(), main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS. (+21 more)
+Cohesion: 0.14
+Nodes (28): main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS., Logged strength sessions + sets (issue #249) — 6 sessions over 3 weeks.     stre (+20 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.08
-Nodes (14): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual() (+6 more)
+Cohesion: 0.12
+Nodes (27): main(), exchange_code(), existing_body_dates(), existing_keys(), fetch_body_data(), fetch_existing_workouts(), fetch_workouts(), filter_overlapping() (+19 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.09
-Nodes (9): getISOWeekKey(), getISOWeekLabel(), latestLabel(), hoursToHm(), sliceByDate(), addDays(), buildWeekDays(), fmtShortDate() (+1 more)
+Cohesion: 0.12
+Nodes (4): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), removeItem()
 
 ### Community 11 - "Community 11"
 Cohesion: 0.16
@@ -269,40 +269,40 @@ Cohesion: 0.14
 Nodes (14): Lighthouse Perf Report: fitness-desktop, Lighthouse Perf Report: habits-desktop, Lighthouse Perf Report: login-desktop, Lighthouse Perf Report: login-mobile, Lighthouse Perf Report: notifications-desktop, Lighthouse Perf Report: settings-desktop, Lighthouse Perf Report: tasks-desktop, Lighthouse Perf Report: tasks-mobile (+6 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.14
-Nodes (14): Rules file split into core.md + situational files, Core Rules File, Graphify Knowledge Graph, Recipe Library, Rationale: All live data stored in Supabase, not local markdown, Rationale: Rules split saves 3500-4000 cold-session tokens, Calendar Exclusion (excluded_calendar_ids), Claude Code CLI (+6 more)
-
-### Community 17 - "Community 17"
 Cohesion: 0.22
 Nodes (11): ask_claude(), load_system_prompt(), main(), Send transcript to Claude and return response text., Record audio until silence is detected., Load CLAUDE.md rules + all memory files into system prompt., Transcribe audio bytes using faster-whisper., Speak text using configured TTS engine. (+3 more)
 
-### Community 18 - "Community 18"
+### Community 17 - "Community 17"
 Cohesion: 0.17
 Nodes (0): 
 
-### Community 19 - "Community 19"
+### Community 18 - "Community 18"
 Cohesion: 0.18
 Nodes (12): Fitness Program: Push/Legs/Pull + Conditioning, Habit: Coding (Daily), Habit: Floss (Daily), Habit: Japanese Study (Daily 30-60 min), Habit: Reading (Daily), Habit Registry, Habit: Workout (4x/week), Cuisine Preferences: Korean, Southeast Asian (+4 more)
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
 Cohesion: 0.17
 Nodes (12): Mr. Bridge Voice Interface README, Voice pipeline: Porcupine → faster-whisper → Claude API → TTS, bridge_voice.py entry point, Voice sessions write to memory/*.md (shared with Claude Code), STT: faster-whisper (base.en model), TTS: macOS say (built-in) or ElevenLabs, Wake word: Hey Bridge (Porcupine, pvporcupine), anthropic>=0.40.0 (voice dependency) (+4 more)
 
-### Community 21 - "Community 21"
+### Community 20 - "Community 20"
 Cohesion: 0.2
 Nodes (11): Google Calendar readonly OAuth scope, FastAPI backend (web app Google API caller), Gmail readonly OAuth scope, google-auth Python library (auto token refresh), GOOGLE_CLIENT_ID credential, GOOGLE_CLIENT_SECRET credential, GOOGLE_REFRESH_TOKEN credential, Google OAuth Setup Guide (+3 more)
 
-### Community 22 - "Community 22"
+### Community 21 - "Community 21"
 Cohesion: 0.22
 Nodes (10): Gmail Dashboard Query: is:unread subject:(meeting OR urgent OR invoice OR action required OR deadline), Rationale: Gmailify not used — OAuth flow not straightforward; POP3 preferred, Gmail Label ID Resolution: fetches label list to map name to opaque ID per request, Gmail Multi-Account Setup (POP3 aggregation + Calendar sharing), Gmail POP3 Aggregation: secondary into primary via port 995, Gmail POP3 Sync Delay: ~30-60 min polling, not real-time, Gmail Label: Professional (badges secondary account emails as 'work'), API Route: /api/google/calendar unions all calendars + sorts by start time (+2 more)
 
+### Community 22 - "Community 22"
+Cohesion: 0.29
+Nodes (2): fmtShortDate(), fmtWeekRange()
+
 ### Community 23 - "Community 23"
-Cohesion: 0.25
-Nodes (1): fmtNum()
+Cohesion: 0.39
+Nodes (7): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range()
 
 ### Community 24 - "Community 24"
-Cohesion: 0.29
-Nodes (4): logSet(), displayToKg(), formatWeight(), kgToDisplay()
+Cohesion: 0.32
+Nodes (7): last_sync_age(), main(), Run alert scripts sequentially after syncs. Errors are non-fatal., Return seconds since last successful sync for source, or None if never., Run one sync script as a subprocess. Returns (source, returncode, output)., _run_alerts(), run_sync()
 
 ### Community 25 - "Community 25"
 Cohesion: 0.29
@@ -357,32 +357,32 @@ Cohesion: 0.5
 Nodes (2): formatItem(), titleCase()
 
 ### Community 38 - "Community 38"
-Cohesion: 0.4
-Nodes (1): suggestMacros()
-
-### Community 39 - "Community 39"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 41 - "Community 41"
+### Community 40 - "Community 40"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 42 - "Community 42"
+### Community 41 - "Community 41"
 Cohesion: 0.4
 Nodes (5): Chat API Route, Anthropic Prompt Caching, ToolLoopAgent, Per-Domain Tool Modules, Verified-Success Contract (ok/error shape)
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.5
 Nodes (5): Fitness Baseline Metrics (weight/BF% history), Fitbit Sync, Google Fit Sync, Oura Ring Sync, Python Sync Scripts
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.5
 Nodes (2): MastheadRefresh(), useSyncAll()
+
+### Community 44 - "Community 44"
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 45 - "Community 45"
 Cohesion: 0.67
@@ -437,12 +437,12 @@ Cohesion: 0.67
 Nodes (0): 
 
 ### Community 58 - "Community 58"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getGrantedScopes(), main()
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
-Nodes (2): getGrantedScopes(), main()
+Nodes (0): 
 
 ### Community 60 - "Community 60"
 Cohesion: 1.0
@@ -534,19 +534,19 @@ Nodes (0):
 
 ### Community 82 - "Community 82"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Vercel Cron Daily Sync, Vercel Deployment
 
 ### Community 83 - "Community 83"
 Cohesion: 1.0
-Nodes (2): Vercel Cron Daily Sync, Vercel Deployment
+Nodes (2): .mcp.json MCP Server Config, Playwright MCP
 
 ### Community 84 - "Community 84"
 Cohesion: 1.0
-Nodes (2): .mcp.json MCP Server Config, Playwright MCP
+Nodes (2): Stocks Sync (Polygon.io), Stock Watchlist Widget
 
 ### Community 85 - "Community 85"
 Cohesion: 1.0
-Nodes (2): Stocks Sync (Polygon.io), Stock Watchlist Widget
+Nodes (0): 
 
 ### Community 86 - "Community 86"
 Cohesion: 1.0
@@ -799,85 +799,87 @@ Nodes (1): App Route: /login
 ## Knowledge Gaps
 - **196 isolated node(s):** `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.`, `Send transcript to Claude and return response text.`, `Record audio until silence is detected.` (+191 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 60`** (2 nodes): `loadEnvFile()`, `playwright.config.ts`
+- **Thin community `Community 59`** (2 nodes): `loadEnvFile()`, `playwright.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (2 nodes): `requireEnv()`, `auth.ts`
+- **Thin community `Community 60`** (2 nodes): `requireEnv()`, `auth.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (2 nodes): `isCacheableStatic()`, `sw.js`
+- **Thin community `Community 61`** (2 nodes): `isCacheableStatic()`, `sw.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (2 nodes): `proxy()`, `proxy.ts`
+- **Thin community `Community 62`** (2 nodes): `proxy()`, `proxy.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (2 nodes): `RootPage()`, `page.tsx`
+- **Thin community `Community 63`** (2 nodes): `RootPage()`, `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (2 nodes): `Loading()`, `loading.tsx`
+- **Thin community `Community 64`** (2 nodes): `Loading()`, `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (2 nodes): `LoginLayout()`, `layout.tsx`
+- **Thin community `Community 65`** (2 nodes): `LoginLayout()`, `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (2 nodes): `ThemeProvider()`, `theme-provider.tsx`
+- **Thin community `Community 66`** (2 nodes): `ThemeProvider()`, `theme-provider.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (2 nodes): `ServiceWorkerRegister()`, `service-worker-register.tsx`
+- **Thin community `Community 67`** (2 nodes): `ServiceWorkerRegister()`, `service-worker-register.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (2 nodes): `ThemeToggle()`, `theme-toggle.tsx`
+- **Thin community `Community 68`** (2 nodes): `ThemeToggle()`, `theme-toggle.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (2 nodes): `SignOutButton()`, `sign-out-button.tsx`
+- **Thin community `Community 69`** (2 nodes): `SignOutButton()`, `sign-out-button.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (2 nodes): `Logo()`, `logo.tsx`
+- **Thin community `Community 70`** (2 nodes): `Logo()`, `logo.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (2 nodes): `handleSubmit()`, `add-task-form.tsx`
+- **Thin community `Community 71`** (2 nodes): `handleSubmit()`, `add-task-form.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (2 nodes): `Sparkline()`, `sparkline.tsx`
+- **Thin community `Community 72`** (2 nodes): `Sparkline()`, `sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
+- **Thin community `Community 73`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (2 nodes): `EmptyState()`, `empty-state.tsx`
+- **Thin community `Community 74`** (2 nodes): `EmptyState()`, `empty-state.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
+- **Thin community `Community 75`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
+- **Thin community `Community 76`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
+- **Thin community `Community 77`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
+- **Thin community `Community 78`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
+- **Thin community `Community 79`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
+- **Thin community `Community 80`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (2 nodes): `createClient()`, `client.ts`
+- **Thin community `Community 81`** (2 nodes): `createClient()`, `client.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (2 nodes): `Vercel Cron Daily Sync`, `Vercel Deployment`
+- **Thin community `Community 82`** (2 nodes): `Vercel Cron Daily Sync`, `Vercel Deployment`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (2 nodes): `.mcp.json MCP Server Config`, `Playwright MCP`
+- **Thin community `Community 83`** (2 nodes): `.mcp.json MCP Server Config`, `Playwright MCP`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (2 nodes): `Stocks Sync (Polygon.io)`, `Stock Watchlist Widget`
+- **Thin community `Community 84`** (2 nodes): `Stocks Sync (Polygon.io)`, `Stock Watchlist Widget`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `postcss.config.mjs`
+- **Thin community `Community 85`** (1 nodes): `postcss.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (1 nodes): `next-env.d.ts`
+- **Thin community `Community 86`** (1 nodes): `next-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (1 nodes): `eslint.config.mjs`
+- **Thin community `Community 87`** (1 nodes): `eslint.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (1 nodes): `next.config.ts`
+- **Thin community `Community 88`** (1 nodes): `next.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (1 nodes): `calendar-smoke.spec.ts`
+- **Thin community `Community 89`** (1 nodes): `calendar-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
+- **Thin community `Community 90`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (1 nodes): `a11y.spec.ts`
+- **Thin community `Community 91`** (1 nodes): `a11y.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (1 nodes): `calendar-mutate-smoke.spec.ts`
+- **Thin community `Community 92`** (1 nodes): `calendar-mutate-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (1 nodes): `chat.spec.ts`
+- **Thin community `Community 93`** (1 nodes): `chat.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (1 nodes): `generate-pwa-icons.mjs`
+- **Thin community `Community 94`** (1 nodes): `generate-pwa-icons.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (1 nodes): `layout.tsx`
+- **Thin community `Community 95`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (1 nodes): `error.tsx`
+- **Thin community `Community 96`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (1 nodes): `layout.tsx`
+- **Thin community `Community 97`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (1 nodes): `error.tsx`
+- **Thin community `Community 98`** (1 nodes): `error.tsx`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 99`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 100`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -885,51 +887,51 @@ Nodes (1): App Route: /login
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 102`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (1 nodes): `loading.tsx`
+- **Thin community `Community 103`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (1 nodes): `page.tsx`
+- **Thin community `Community 104`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 105`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (1 nodes): `loading.tsx`
+- **Thin community `Community 106`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (1 nodes): `page.tsx`
+- **Thin community `Community 107`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 108`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 109`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (1 nodes): `loading.tsx`
+- **Thin community `Community 110`** (1 nodes): `ambient-background.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (1 nodes): `ambient-background.tsx`
+- **Thin community `Community 111`** (1 nodes): `sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (1 nodes): `sheet.tsx`
+- **Thin community `Community 112`** (1 nodes): `undo-toast.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `undo-toast.tsx`
+- **Thin community `Community 113`** (1 nodes): `completed-tasks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 114`** (1 nodes): `completed-tasks.tsx`
+- **Thin community `Community 114`** (1 nodes): `session-sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 115`** (1 nodes): `session-sheet.tsx`
+- **Thin community `Community 115`** (1 nodes): `slash-command-menu.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 116`** (1 nodes): `slash-command-menu.tsx`
+- **Thin community `Community 116`** (1 nodes): `session-sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `session-sidebar.tsx`
+- **Thin community `Community 117`** (1 nodes): `radial-completion.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `radial-completion.tsx`
+- **Thin community `Community 118`** (1 nodes): `longest-chain-badges.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (1 nodes): `longest-chain-badges.tsx`
+- **Thin community `Community 119`** (1 nodes): `habit-icon-picker.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `habit-icon-picker.tsx`
+- **Thin community `Community 120`** (1 nodes): `momentum-line.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `momentum-line.tsx`
+- **Thin community `Community 121`** (1 nodes): `dashboard-masthead.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `dashboard-masthead.tsx`
+- **Thin community `Community 122`** (1 nodes): `dashboard-briefing.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `dashboard-briefing.tsx`
+- **Thin community `Community 123`** (1 nodes): `tasks-summary.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `tasks-summary.tsx`
+- **Thin community `Community 124`** (1 nodes): `important-emails.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `important-emails.tsx`
+- **Thin community `Community 125`** (1 nodes): `FitnessClient.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 126`** (1 nodes): `recent-sessions-list.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -979,17 +981,17 @@ Nodes (1): App Route: /login
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `get()` connect `Community 0` to `Community 33`, `Community 2`, `Community 3`, `Community 1`, `Community 34`, `Community 6`, `Community 8`, `Community 9`, `Community 29`?**
-  _High betweenness centrality (0.085) - this node is a cross-community bridge._
-- **Why does `round()` connect `Community 0` to `Community 1`, `Community 2`, `Community 6`, `Community 38`, `Community 8`, `Community 9`, `Community 10`, `Community 23`, `Community 24`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 8`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Are the 59 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
-  _`get()` has 59 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 24 inferred relationships involving `POST()` (e.g. with `createClient()` and `todayString()`) actually correct?**
-  _`POST()` has 24 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 35 inferred relationships involving `select()` (e.g. with `getMessagesForSession()` and `saveSportsFavorites()`) actually correct?**
-  _`select()` has 35 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `get()` connect `Community 0` to `Community 33`, `Community 1`, `Community 2`, `Community 4`, `Community 34`, `Community 6`, `Community 8`, `Community 9`, `Community 23`, `Community 29`?**
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
+- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 8`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `round()` connect `Community 4` to `Community 0`, `Community 2`, `Community 6`, `Community 8`, `Community 9`?**
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+- **Are the 60 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
+  _`get()` has 60 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 25 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**
+  _`POST()` has 25 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 37 inferred relationships involving `select()` (e.g. with `getMessagesForSession()` and `saveSportsFavorites()`) actually correct?**
+  _`select()` has 37 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 17 inferred relationships involving `GET()` (e.g. with `createClient()` and `DELETE()`) actually correct?**
   _`GET()` has 17 INFERRED edges - model-reasoned connections that need verification._
