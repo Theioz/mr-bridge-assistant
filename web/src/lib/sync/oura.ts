@@ -53,7 +53,7 @@ export interface OuraSyncResult {
 
 export async function syncOura(db: SupabaseClient, userId: string, days = 3): Promise<OuraSyncResult> {
   const integration = await loadIntegration(db, userId, "oura");
-  const token = integration?.refreshToken ?? process.env.OURA_ACCESS_TOKEN;
+  const token = integration?.refreshToken;
   if (!token) throw new Error("Oura not connected — add a Personal Access Token in Settings");
 
   const startStr = daysAgoString(days);

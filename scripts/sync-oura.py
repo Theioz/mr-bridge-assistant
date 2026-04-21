@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
 from _integrations import load_integration
 
-# Resolved once in main() — either from user_integrations or OURA_ACCESS_TOKEN env fallback
+# Resolved once in main() from user_integrations
 _OURA_TOKEN: str = ""
 
 
@@ -349,9 +349,9 @@ def main():
     client = get_client()
     owner_user_id = get_owner_user_id()
     integration = load_integration(client, owner_user_id, "oura")
-    _OURA_TOKEN = (integration or {}).get("refresh_token") or os.environ.get("OURA_ACCESS_TOKEN", "")
+    _OURA_TOKEN = (integration or {}).get("refresh_token") or ""
     if not _OURA_TOKEN:
-        print("[error] Oura not connected — add a Personal Access Token in Settings or set OURA_ACCESS_TOKEN in .env")
+        print("[error] Oura not connected — add a Personal Access Token in Settings")
         sys.exit(1)
 
     now = datetime.now()

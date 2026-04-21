@@ -135,28 +135,13 @@ def refresh_access_token(client_id, client_secret, refresh_token):
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
             data = json.loads(resp.read())
             new_token = data.get("refresh_token")
-            if new_token and new_token != refresh_token:
-                update_env_token(new_token)
-                return data["access_token"], new_token
-            return data["access_token"], None
+            rotated = new_token if new_token and new_token != refresh_token else None
+            return data["access_token"], rotated
     except urllib.error.HTTPError as e:
         print(f"[error] Token refresh failed {e.code}: {e.read().decode()}")
         print("Run: python3 scripts/sync-fitbit.py --setup  to re-authenticate")
         sys.exit(1)
 
-
-def update_env_token(new_token):
-    env_path = ROOT / ".env"
-    tmp_path = ROOT / ".env.tmp"
-    text = env_path.read_text()
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if line.startswith("FITBIT_REFRESH_TOKEN="):
-            lines[i] = f"FITBIT_REFRESH_TOKEN={new_token}"
-            break
-    # Write to temp file first, then atomically replace — prevents corruption on interrupt
-    tmp_path.write_text("\n".join(lines))
-    tmp_path.replace(env_path)
 
 
 def setup_oauth():
@@ -438,15 +423,13 @@ def main():
         print("[error] FITBIT_CLIENT_ID and FITBIT_CLIENT_SECRET must be set in .env")
         sys.exit(1)
 
-    # Resolve refresh token: user_integrations first, then FITBIT_REFRESH_TOKEN env fallback
     client = get_client()
     owner_user_id = get_owner_user_id()
     integration = load_integration(client, owner_user_id, "fitbit")
-    from_integrations = integration is not None
-    refresh_token = (integration or {}).get("refresh_token") or os.environ.get("FITBIT_REFRESH_TOKEN", "")
+    refresh_token = (integration or {}).get("refresh_token") or ""
 
     if not refresh_token:
-        print("[error] Fitbit not connected — authorize via Settings or set FITBIT_REFRESH_TOKEN in .env")
+        print("[error] Fitbit not connected — authorize via Settings")
         print("Run: python3 scripts/sync-fitbit.py --setup")
         sys.exit(1)
 
@@ -470,16 +453,8 @@ def main():
     print(f"[sync-fitbit] Fetching workouts {start_str} to {end_str}...")
     workout_rows = fetch_workouts(access_token, start_str, end_str)
 
-    # Persist rotated token to wherever it was read from
     if rotated_token:
-        if from_integrations:
-            persist_rotated_token(client, owner_user_id, "fitbit", rotated_token)
-        else:
-            # Legacy path: write back to profile table so the web app stays valid
-            client.table("profile").upsert(
-                {"user_id": owner_user_id, "key": "fitbit_refresh_token", "value": rotated_token},
-                on_conflict="user_id,key",
-            ).execute()
+        persist_rotated_token(client, owner_user_id, "fitbit", rotated_token)
 
     # Write body composition
     existing_body = existing_body_dates(client, owner_user_id)

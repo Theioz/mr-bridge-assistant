@@ -119,39 +119,14 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
     throw new Error("FITBIT_CLIENT_ID or FITBIT_CLIENT_SECRET not configured");
   }
 
-  // Load refresh token from user_integrations; fall back to profile table for owner migration
   const integration = await loadIntegration(db, userId, "fitbit");
-  let refreshToken: string | undefined;
-  const fromIntegrations = !!integration;
-
-  if (integration) {
-    refreshToken = integration.refreshToken;
-  } else {
-    const { data: tokenRow } = await db
-      .from("profile")
-      .select("value")
-      .eq("user_id", userId)
-      .eq("key", "fitbit_refresh_token")
-      .maybeSingle();
-    refreshToken = tokenRow?.value as string | undefined;
-  }
+  const refreshToken = integration?.refreshToken;
   if (!refreshToken) throw new Error("Fitbit not connected — authorize via Settings");
 
   const { accessToken, newRefreshToken } = await refreshFitbitToken(clientId, clientSecret, refreshToken);
 
-  // Persist rotated token to wherever it was read from
   if (newRefreshToken) {
-    if (fromIntegrations) {
-      await persistRotatedToken(db, userId, "fitbit", newRefreshToken);
-    } else {
-      const { error: saveErr } = await db
-        .from("profile")
-        .upsert(
-          { user_id: userId, key: "fitbit_refresh_token", value: newRefreshToken },
-          { onConflict: "user_id,key" },
-        );
-      if (saveErr) throw new Error(`Failed to save rotated Fitbit token: ${saveErr.message}`);
-    }
+    await persistRotatedToken(db, userId, "fitbit", newRefreshToken);
   }
 
   const startStr = daysAgoString(SYNC_DAYS);
