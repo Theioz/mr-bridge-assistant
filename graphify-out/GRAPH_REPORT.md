@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 214 files · ~589,905 words
+- 215 files · ~590,892 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1042 nodes · 1407 edges · 150 communities detected
-- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 365 edges (avg confidence: 0.81)
+- 1043 nodes · 1409 edges · 150 communities detected
+- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 366 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -163,7 +163,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `get()` - 62 edges
-2. `POST()` - 44 edges
+2. `POST()` - 46 edges
 3. `select()` - 38 edges
 4. `GET()` - 35 edges
 5. `round()` - 35 edges
@@ -208,183 +208,183 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.04
-Nodes (60): cancelWorkout(), get_profile_value(), main(), set_profile_value(), get_profile_value(), main(), set_profile_value(), backfillAllPRs() (+52 more)
+Nodes (98): _fire(), get_profile_value(), main(), set_profile_value(), fmt_hrs(), main(), _fetch_forecast(), fetch_weather() (+90 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.05
-Nodes (73): _fire(), get_profile_value(), main(), set_profile_value(), fmt_hrs(), main(), _fetch_forecast(), fetch_weather() (+65 more)
+Cohesion: 0.03
+Nodes (41): fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins(), fitGet() (+33 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
+Nodes (58): cancelWorkout(), get_profile_value(), main(), set_profile_value(), get_profile_value(), main(), set_profile_value(), backfillAllPRs() (+50 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (30): getExcludedCalendarIds(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+22 more)
+Cohesion: 0.04
+Nodes (67): Mr. Bridge Apple touch icon — dark rounded square with gold M lettermark, Everything-wrapped-in-a-card anti-pattern, Mr. Bridge Dashboard Design Audit Baseline (2026-04-16), DashboardHeader component, dashboard/page.tsx (server component, force-dynamic), Dead dashboard files (recent-workouts-table, trends-card, weight-trend-chart), Design token system (MASTER.md / globals.css), HabitsCheckin component (+59 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (28): clearChatPrefill(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual(), handleFileChange(), handleLogMeal() (+20 more)
-
-### Community 5 - "Community 5"
 Cohesion: 0.06
 Nodes (49): Vercel AI SDK v4→v6 upgrade (#329), Axe A11y Smoke (#377), Birthday widget double-suffix fix (#334), Calendar Exclusion per-profile (#388), Chat Stop Button + Tool Status Bar (#341/#352), CI Smoke Workflow (#379), Delete logged meal (#330), ESLint flat config (#327) (+41 more)
 
-### Community 6 - "Community 6"
+### Community 5 - "Community 5"
 Cohesion: 0.05
 Nodes (17): buildCalendarTools(), buildEquipmentTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools(), extractTextFromParts() (+9 more)
 
-### Community 7 - "Community 7"
+### Community 6 - "Community 6"
 Cohesion: 0.05
 Nodes (45): scripts/notify.sh: macOS osascript-based notification sender, ntfy.sh: free open-source pub/sub notification service, NTFY_TOPIC env var: unique hard-to-guess topic string shared across devices, Notifications Setup Documentation (ntfy.sh push notifications), GitHub Actions Weekly Review Nudge: uses NTFY_TOPIC secret, Lighthouse Report: /chat desktop, Lighthouse Report: /chat mobile, Lighthouse Report: /dashboard desktop (+37 more)
+
+### Community 7 - "Community 7"
+Cohesion: 0.06
+Nodes (18): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), addItem(), buildNutritionContext(), clearAll(), compressImage(), handleAddManual() (+10 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.13
 Nodes (29): saveJournalEntry(), main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS. (+21 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.12
-Nodes (27): main(), exchange_code(), existing_body_dates(), existing_keys(), fetch_body_data(), fetch_existing_workouts(), fetch_workouts(), filter_overlapping() (+19 more)
-
-### Community 10 - "Community 10"
 Cohesion: 0.08
 Nodes (9): getISOWeekKey(), getISOWeekLabel(), latestLabel(), hoursToHm(), sliceByDate(), addDays(), buildWeekDays(), fmtShortDate() (+1 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.16
 Nodes (17): Architecture: Browser / Mobile (end user), Architecture: Data Sources (Oura, Fitbit, Google Fit, Renpho), Architecture: External APIs (Anthropic, Google Calendar, Gmail, Open-Meteo, Polygon.io, ntfy.sh), Architecture: Next.js / Vercel (7 API routes, 10 pages), Mr. Bridge system architecture diagram (PNG render), Architecture: Supabase Postgres (18 tables, RLS enforced), Mr. Bridge system architecture diagram (D2/SVG), Architecture: Sync Layer (Python scripts, TypeScript modules, cron 6am PST) (+9 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.14
 Nodes (3): getLogState(), handleLog(), setLogState()
 
-### Community 13 - "Community 13"
-Cohesion: 0.14
-Nodes (2): toggleDesktopHistory(), writeHistoryOpen()
-
-### Community 14 - "Community 14"
+### Community 12 - "Community 12"
 Cohesion: 0.23
 Nodes (8): currentSeason(), espnGetRecent(), espnGetUpcoming(), fetchScheduleEvents(), isF1(), parseScore(), teamLogo(), toGame()
 
-### Community 15 - "Community 15"
+### Community 13 - "Community 13"
 Cohesion: 0.16
 Nodes (15): Chart: Body Composition from fitness_log (LineChart, AreaChart), Chart: Habits from habits+habit_registry (heatmap, BarChart, RadialBar), Chart: Meals/Nutrition from meal_log+recipes (PieChart, BarChart), Chart: Recovery from recovery_metrics/Oura (RadialBar, AreaChart), Chart: Workouts from workout_sessions/Fitbit (BarChart, AreaChart), Data Visualization: Recharts charts per data source, Fitbit Refresh Token Rotation: rotated on each use, script auto-updates .env, Rationale: Google Fit workout tracking unreliable (background step/activity noise); Fitbit preferred (+7 more)
 
-### Community 16 - "Community 16"
+### Community 14 - "Community 14"
 Cohesion: 0.14
 Nodes (14): Lighthouse Perf Report: fitness-desktop, Lighthouse Perf Report: habits-desktop, Lighthouse Perf Report: login-desktop, Lighthouse Perf Report: login-mobile, Lighthouse Perf Report: notifications-desktop, Lighthouse Perf Report: settings-desktop, Lighthouse Perf Report: tasks-desktop, Lighthouse Perf Report: tasks-mobile (+6 more)
 
-### Community 17 - "Community 17"
+### Community 15 - "Community 15"
 Cohesion: 0.22
 Nodes (11): ask_claude(), load_system_prompt(), main(), Send transcript to Claude and return response text., Record audio until silence is detected., Load CLAUDE.md rules + all memory files into system prompt., Transcribe audio bytes using faster-whisper., Speak text using configured TTS engine. (+3 more)
 
-### Community 18 - "Community 18"
+### Community 16 - "Community 16"
 Cohesion: 0.17
 Nodes (0): 
 
-### Community 19 - "Community 19"
+### Community 17 - "Community 17"
 Cohesion: 0.18
 Nodes (12): Fitness Program: Push/Legs/Pull + Conditioning, Habit: Coding (Daily), Habit: Floss (Daily), Habit: Japanese Study (Daily 30-60 min), Habit: Reading (Daily), Habit Registry, Habit: Workout (4x/week), Cuisine Preferences: Korean, Southeast Asian (+4 more)
 
-### Community 20 - "Community 20"
+### Community 18 - "Community 18"
 Cohesion: 0.17
 Nodes (12): Mr. Bridge Voice Interface README, Voice pipeline: Porcupine → faster-whisper → Claude API → TTS, bridge_voice.py entry point, Voice sessions write to memory/*.md (shared with Claude Code), STT: faster-whisper (base.en model), TTS: macOS say (built-in) or ElevenLabs, Wake word: Hey Bridge (Porcupine, pvporcupine), anthropic>=0.40.0 (voice dependency) (+4 more)
 
-### Community 21 - "Community 21"
+### Community 19 - "Community 19"
 Cohesion: 0.2
 Nodes (11): Google Calendar readonly OAuth scope, FastAPI backend (web app Google API caller), Gmail readonly OAuth scope, google-auth Python library (auto token refresh), GOOGLE_CLIENT_ID credential, GOOGLE_CLIENT_SECRET credential, GOOGLE_REFRESH_TOKEN credential, Google OAuth Setup Guide (+3 more)
 
-### Community 22 - "Community 22"
+### Community 20 - "Community 20"
 Cohesion: 0.33
 Nodes (9): get_profile_value(), load_notif_cache(), main(), needs_notification(), Return {task_id: iso_timestamp_last_notified} from profile., Return True if the task hasn't been notified within the last 24 hours., save_notif_cache(), send_notify() (+1 more)
 
-### Community 23 - "Community 23"
+### Community 21 - "Community 21"
 Cohesion: 0.22
 Nodes (10): Gmail Dashboard Query: is:unread subject:(meeting OR urgent OR invoice OR action required OR deadline), Rationale: Gmailify not used — OAuth flow not straightforward; POP3 preferred, Gmail Label ID Resolution: fetches label list to map name to opaque ID per request, Gmail Multi-Account Setup (POP3 aggregation + Calendar sharing), Gmail POP3 Aggregation: secondary into primary via port 995, Gmail POP3 Sync Delay: ~30-60 min polling, not real-time, Gmail Label: Professional (badges secondary account emails as 'work'), API Route: /api/google/calendar unions all calendars + sorts by start time (+2 more)
 
-### Community 24 - "Community 24"
+### Community 22 - "Community 22"
 Cohesion: 0.39
 Nodes (7): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range()
 
-### Community 25 - "Community 25"
+### Community 23 - "Community 23"
 Cohesion: 0.32
 Nodes (7): last_sync_age(), main(), Run alert scripts sequentially after syncs. Errors are non-fatal., Return seconds since last successful sync for source, or None if never., Run one sync script as a subprocess. Returns (source, returncode, output)., _run_alerts(), run_sync()
 
-### Community 26 - "Community 26"
+### Community 24 - "Community 24"
 Cohesion: 0.29
 Nodes (0): 
 
-### Community 27 - "Community 27"
+### Community 25 - "Community 25"
 Cohesion: 0.33
 Nodes (2): clearLongPress(), handleTouchStart()
 
-### Community 28 - "Community 28"
+### Community 26 - "Community 26"
 Cohesion: 0.33
 Nodes (2): datePreview(), formatShortDate()
 
-### Community 29 - "Community 29"
+### Community 27 - "Community 27"
 Cohesion: 0.47
 Nodes (3): confirmProposal(), dashOr(), round()
 
-### Community 30 - "Community 30"
+### Community 28 - "Community 28"
 Cohesion: 0.47
 Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
 
-### Community 31 - "Community 31"
+### Community 29 - "Community 29"
 Cohesion: 0.47
 Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
 
-### Community 32 - "Community 32"
+### Community 30 - "Community 30"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 33 - "Community 33"
+### Community 31 - "Community 31"
 Cohesion: 0.4
 Nodes (2): getSnapshot(), readColors()
 
-### Community 34 - "Community 34"
+### Community 32 - "Community 32"
 Cohesion: 0.4
 Nodes (3): apiKey(), startTime(), toGame()
 
-### Community 35 - "Community 35"
+### Community 33 - "Community 33"
 Cohesion: 0.6
 Nodes (5): existing_dates(), find_col(), insert_rows_after_table(), main(), parse_date()
 
-### Community 36 - "Community 36"
+### Community 34 - "Community 34"
+Cohesion: 0.5
+Nodes (3): async(), load(), onVisibility()
+
+### Community 35 - "Community 35"
 Cohesion: 0.6
 Nodes (3): handleFreeWriteChange(), handleResponseChange(), scheduleAutoSave()
 
-### Community 37 - "Community 37"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.5
 Nodes (2): formatItem(), titleCase()
 
-### Community 39 - "Community 39"
+### Community 38 - "Community 38"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 41 - "Community 41"
+### Community 40 - "Community 40"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 42 - "Community 42"
+### Community 41 - "Community 41"
 Cohesion: 0.4
 Nodes (5): Chat API Route, Anthropic Prompt Caching, ToolLoopAgent, Per-Domain Tool Modules, Verified-Success Contract (ok/error shape)
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.5
 Nodes (5): Fitness Baseline Metrics (weight/BF% history), Fitbit Sync, Google Fit Sync, Oura Ring Sync, Python Sync Scripts
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.5
 Nodes (2): MastheadRefresh(), useSyncAll()
+
+### Community 44 - "Community 44"
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 45 - "Community 45"
 Cohesion: 0.67
@@ -439,8 +439,8 @@ Cohesion: 0.67
 Nodes (0): 
 
 ### Community 58 - "Community 58"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): computeStreaks(), dateToDayNum()
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
@@ -993,16 +993,16 @@ Nodes (1): App Route: /login
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `get()` connect `Community 1` to `Community 0`, `Community 34`, `Community 3`, `Community 4`, `Community 35`, `Community 6`, `Community 8`, `Community 9`, `Community 22`, `Community 24`, `Community 30`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
-- **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 8`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
-- **Why does `round()` connect `Community 4` to `Community 1`, `Community 3`, `Community 6`, `Community 8`, `Community 9`, `Community 10`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `get()` connect `Community 0` to `Community 32`, `Community 1`, `Community 2`, `Community 33`, `Community 5`, `Community 7`, `Community 8`, `Community 20`, `Community 22`, `Community 58`, `Community 28`?**
+  _High betweenness centrality (0.086) - this node is a cross-community bridge._
+- **Why does `POST()` connect `Community 5` to `Community 0`, `Community 1`, `Community 2`, `Community 8`, `Community 9`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `round()` connect `Community 1` to `Community 0`, `Community 5`, `Community 7`, `Community 8`, `Community 9`?**
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
 - **Are the 60 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
   _`get()` has 60 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 25 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**
-  _`POST()` has 25 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 26 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**
+  _`POST()` has 26 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 37 inferred relationships involving `select()` (e.g. with `getMessagesForSession()` and `saveSportsFavorites()`) actually correct?**
   _`select()` has 37 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 17 inferred relationships involving `GET()` (e.g. with `createClient()` and `DELETE()`) actually correct?**
