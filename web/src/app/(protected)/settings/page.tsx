@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import { FitnessSettings } from "@/components/settings/fitness-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";
 import { EquipmentSettings, type EquipmentItemInput } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -161,6 +162,11 @@ export default async function SettingsPage({
       </header>
 
       <AppearanceSettings />
+
+      <FitnessSettings
+        restTimerEnabled={values["rest_timer_enabled"] !== "0"}
+        updateAction={updateProfile}
+      />
 
       <IntegrationsSettings
         googleIntegration={googleIntegration}

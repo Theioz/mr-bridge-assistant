@@ -82,6 +82,7 @@ export default async function FitnessPage() {
         "weight_goal_lbs",
         "body_fat_goal_pct",
         "weight_unit",
+        "rest_timer_enabled",
       ]),
     supabase
       .from("workout_plans")
@@ -119,15 +120,21 @@ export default async function FitnessPage() {
 
   const goals: Record<string, number | null> = {};
   let rawWeightUnit: string | null = null;
+  let rawRestTimerEnabled: string | null = null;
   for (const row of profileRes.data ?? []) {
     if (row.key === "weight_unit") {
       rawWeightUnit = row.value;
+      continue;
+    }
+    if (row.key === "rest_timer_enabled") {
+      rawRestTimerEnabled = row.value;
       continue;
     }
     const n = parseFloat(row.value ?? "");
     goals[row.key] = isNaN(n) ? null : n;
   }
   const weightUnit = parseWeightUnit(rawWeightUnit);
+  const restTimerEnabled = rawRestTimerEnabled !== "0";
 
   const weeklyWorkoutGoal = goals["weekly_workout_goal"] ?? null;
   const weeklyActiveCalGoal = goals["weekly_active_cal_goal"] ?? null;
@@ -216,6 +223,7 @@ export default async function FitnessPage() {
         weekCount={weekCount}
         exercisePRs={exercisePRs}
         prCount={exercisePRs.length}
+        restTimerEnabled={restTimerEnabled}
       />
     </div>
   );

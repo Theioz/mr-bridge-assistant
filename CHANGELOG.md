@@ -8,6 +8,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Expandable exercise description/tips panel and in-app rest timer (#414, #283).**
+  - `description` (string) and `tips` (string[]) optional fields added to `WorkoutExercise` in types and the `assign_workout` / `update_workout_exercise` tool schemas. The AI now populates 1–3 sentence how-to descriptions and 2–4 form cues per exercise at plan generation time.
+  - Each `ExerciseRow` in the weekly workout plan shows a `▾` chevron button when `description` or `tips` data is present. Tapping it collapses/expands an inline panel with the description paragraph and a tips bullet list. Exercises without these fields are unaffected.
+  - `InlineSetLogger` now starts a rest countdown automatically after each successful set log. Duration defaults to 90 s; override via `localStorage` key `bridge:rest_timer_duration`. The timer persists across page reloads via `bridge:rest_timer_end`. Dismissible with ✕. On completion a gentle pulse animation plays and an optional ntfy.sh push fires via a new `/api/notifications/push` route (requires `NTFY_TOPIC` env var; silent if unset).
+  - New Settings → Fitness section with a rest-timer On/Off toggle backed by the profile kv key `rest_timer_enabled`.
+
 - **Workout improvements: weight notation, fitness tabs, personal records (#331).**
   - `weight_notation` field (`per_hand` | `total` | `null`) on `WorkoutExercise` — Bridge now writes it for new exercises; existing dumbbell exercises auto-infer `per_hand` at render time via name pattern match. Weight display shows "/ hand" or "total" muted label next to target weights throughout the plan and logged sets.
   - `/fitness` page refactored into a tabbed surface (Dashboard / Workouts / History) using a new `FitnessClient` client component. Dashboard (body comp, recovery, activity trends) is the default landing tab.

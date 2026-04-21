@@ -153,6 +153,8 @@ export interface WorkoutExercise {
   weight_lbs?: number | null;
   weight_notation?: "per_hand" | "total" | null;
   notes?: string | null;
+  description?: string | null;
+  tips?: string[] | null;
 }
 
 export interface ExercisePR {

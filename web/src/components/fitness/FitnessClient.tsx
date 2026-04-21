@@ -60,6 +60,7 @@ interface Props {
   // PRs
   exercisePRs: ExercisePR[];
   prCount: number;
+  restTimerEnabled: boolean;
 }
 
 const TAB_LABELS: { id: Tab; label: string }[] = [
@@ -92,6 +93,7 @@ export function FitnessClient({
   weekCount,
   exercisePRs,
   prCount,
+  restTimerEnabled,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("progress");
@@ -157,6 +159,7 @@ export function FitnessClient({
           weightUnit={weightUnit}
           cancelAction={cancelAction}
           prsByExercise={prsByExercise}
+          restTimerEnabled={restTimerEnabled}
         />
       )}
 

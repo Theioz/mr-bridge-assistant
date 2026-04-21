@@ -16,6 +16,8 @@ interface WorkoutExercise {
   weight_lbs?: number | null;
   weight_notation?: "per_hand" | "total" | null;
   notes?: string | null;
+  description?: string | null;
+  tips?: string[] | null;
 }
 
 function buildCalendarDescription(
@@ -77,7 +79,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
     }),
 
     assign_workout: tool({
-      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool. For each exercise, default weight_notation to 'per_hand' if the exercise name contains 'dumbbell', 'db', or 'single-arm' (case-insensitive); otherwise 'total'.",
+      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool. For each exercise, default weight_notation to 'per_hand' if the exercise name contains 'dumbbell', 'db', or 'single-arm' (case-insensitive); otherwise 'total'. Populate description (1-3 sentences on how to perform the movement) and tips (2-4 short form cues, muscles targeted, or common mistakes) for every exercise so the UI can show technique guidance on expand.",
       inputSchema: jsonSchema<{
         date: string;
         name?: string;
@@ -109,6 +111,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
                 weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
+                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
               },
             },
           },
@@ -126,6 +130,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
                 weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
+                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
               },
             },
           },
@@ -143,6 +149,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
                 weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
+                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
+                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
               },
             },
           },
@@ -276,6 +284,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
               weight_lbs: { type: "number" },
               weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand or total." },
               notes: { type: "string" },
+              description: { type: "string", description: "1-3 sentences on how to perform the movement." },
+              tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
             },
           },
         },
