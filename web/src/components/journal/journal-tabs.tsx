@@ -74,7 +74,7 @@ export default function JournalTabs({
                   fontWeight: 600,
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: isActive ? "var(--accent)" : "var(--color-text-faint)",
+                  color: isActive ? "var(--accent-text)" : "var(--color-text-faint)",
                   background: "transparent",
                   border: "none",
                   borderBottom: isActive

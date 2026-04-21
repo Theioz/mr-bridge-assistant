@@ -157,7 +157,7 @@ export default async function MacroSummaryCard() {
           No nutrition goals set.{" "}
           <Link
             href="/settings"
-            style={{ color: "var(--color-primary)", textDecoration: "underline", textUnderlineOffset: 2 }}
+            style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
           >
             Configure goals in Settings
           </Link>{" "}

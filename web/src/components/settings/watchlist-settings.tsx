@@ -82,7 +82,7 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
           <code
             style={{
               fontSize: "var(--t-micro)",
-              color: "var(--accent)",
+              color: "var(--accent-text)",
               background: "var(--accent-soft)",
               padding: "1px 5px",
               borderRadius: "var(--r-1)",

@@ -66,6 +66,7 @@
      attention-required items. Primary/secondary/CTA alias to it: the
      design spec calls for one accent, not three. */
   --accent:               oklch(74% 0.14 70);
+  --accent-text:          var(--accent);
   --accent-soft:          oklch(28% 0.05 70);
   --color-primary:        var(--accent);
   --color-primary-dim:    oklch(74% 0.14 70 / 0.18);
@@ -123,6 +124,7 @@
   --color-text-faint:     oklch(38% 0.014 var(--hue));
 
   --accent:               oklch(62% 0.13 65);
+  --accent-text:          oklch(45% 0.13 65);
   --accent-soft:          oklch(94% 0.04 65);
   --color-primary:        var(--accent);
   --color-primary-dim:    oklch(62% 0.13 65 / 0.12);
@@ -147,7 +149,7 @@
   --rule:                 var(--color-border);
   --rule-soft:            var(--color-border-subtle);
 
-  --color-text-on-cta:    oklch(98% 0 0);
+  --color-text-on-cta:    oklch(16% 0.020 var(--hue));
 
   --overlay-scrim:        oklch(22% 0.018 var(--hue) / 0.4);
   --hover-subtle:         oklch(22% 0.018 var(--hue) / 0.04);

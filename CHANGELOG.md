@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **WCAG 2.1 AA color-contrast — axe sweep re-enabled (#381).**
+  - Added `--accent-text: oklch(45% 0.13 65)` in light mode (≈5:1 on page bg) alongside existing `--accent`; dark mode aliases `--accent-text` to `--accent` unchanged.
+  - Darkened light-mode `--color-text-on-cta` from near-white `oklch(98% 0 0)` to dark ink `oklch(16% 0.020 var(--hue))` — fixes near-white-on-amber pill fills (notifications filter, settings theme radio, window-selector pills).
+  - Updated all Pattern A consumers (amber-as-text) to use `--accent-text`: nav active links/icons, journal outer/inner tabs, meals settings links, macro summary settings link, meals "Add macros"/"Ingredients"/"Estimate macros" action links, meals chat link.
+  - Removed `data-reveal` from the desktop nav (`position: fixed`) — the entrance animation started at `opacity: 0`, causing axe to evaluate link text at reduced opacity and produce spurious timing-dependent failures.
+  - Re-enabled `color-contrast` rule in `smoke/specs/a11y.spec.ts` (removed `.disableRules(["color-contrast"])` + TODO comment). All 11 routes now pass the axe critical/serious gate.
+
 ### Added
 - **Calendar tab — week/day/month views with full CRUD (#375).**
   - New `/calendar` route with a full-height calendar surface. Week view is the default; toggle to Day or Month via the view pill in the toolbar. Prev/next navigation and "Today" jump button.

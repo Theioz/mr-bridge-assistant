@@ -673,7 +673,7 @@ function TodayTab({
             No nutrition goals set.{" "}
             <Link
               href="/settings"
-              style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
+              style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
             >
               Configure goals in Settings
             </Link>{" "}
@@ -763,7 +763,7 @@ function TodayTab({
             style={{
               gap: "var(--space-1)",
               fontSize: "var(--t-micro)",
-              color: "var(--accent)",
+              color: "var(--accent-text)",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -779,7 +779,7 @@ function TodayTab({
             style={{
               gap: "var(--space-1)",
               fontSize: "var(--t-micro)",
-              color: "var(--accent)",
+              color: "var(--accent-text)",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -798,7 +798,7 @@ function TodayTab({
             style={{
               gap: "var(--space-1)",
               fontSize: "var(--t-micro)",
-              color: "var(--accent)",
+              color: "var(--accent-text)",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -891,7 +891,7 @@ function TodayTab({
           Or ask{" "}
           <Link
             href="/chat"
-            style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
+            style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
           >
             Mr. Bridge
           </Link>{" "}

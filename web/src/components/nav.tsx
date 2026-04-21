@@ -97,8 +97,6 @@ export default function Nav() {
       {/* Transparent surface — ambient watercolor + grain pass through;
           a single hairline rule separates the rail from the canvas. */}
       <nav
-        data-reveal
-        data-stagger="0"
         className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-60 z-50 print:hidden"
         style={{ borderRight: "1px solid var(--rule-soft)" }}
       >
@@ -141,7 +139,7 @@ export default function Nav() {
               borderRadius: "var(--r-2)",
               fontSize: "var(--t-meta)",
               fontWeight: active ? 500 : 400,
-              color: active ? "var(--accent)" : "var(--color-text-muted)",
+              color: active ? "var(--accent-text)" : "var(--color-text-muted)",
               transition: navTransition,
             };
             return (
@@ -171,7 +169,7 @@ export default function Nav() {
                   <Icon
                     size={18}
                     strokeWidth={active ? 2 : 1.5}
-                    style={{ color: active ? "var(--accent)" : "currentColor" }}
+                    style={{ color: active ? "var(--accent-text)" : "currentColor" }}
                   />
                   {showBadge && (
                     <span
@@ -279,7 +277,7 @@ export default function Nav() {
                 className="flex-1 flex flex-col items-center justify-center cursor-pointer"
                 style={{
                   gap: 2,
-                  color: active ? "var(--accent)" : "var(--color-text-muted)",
+                  color: active ? "var(--accent-text)" : "var(--color-text-muted)",
                   transition: navTransition,
                   minHeight: 44,
                 }}
@@ -306,7 +304,7 @@ export default function Nav() {
             className="flex-1 flex flex-col items-center justify-center cursor-pointer"
             style={{
               gap: 2,
-              color: moreIsActive ? "var(--accent)" : "var(--color-text-muted)",
+              color: moreIsActive ? "var(--accent-text)" : "var(--color-text-muted)",
               background: "transparent",
               border: "none",
               transition: navTransition,
@@ -388,7 +386,7 @@ export default function Nav() {
                     gap: "var(--space-3)",
                     padding: "var(--space-3) var(--space-5)",
                     minHeight: 48,
-                    color: active ? "var(--accent)" : "var(--color-text)",
+                    color: active ? "var(--accent-text)" : "var(--color-text)",
                     fontSize: "var(--t-meta)",
                     fontWeight: active ? 500 : 400,
                     transition: navTransition,
@@ -399,7 +397,7 @@ export default function Nav() {
                     <Icon
                       size={18}
                       strokeWidth={active ? 2 : 1.5}
-                      style={{ color: active ? "var(--accent)" : "var(--color-text-muted)" }}
+                      style={{ color: active ? "var(--accent-text)" : "var(--color-text-muted)" }}
                     />
                     {showBadge && (
                       <span
