@@ -31,11 +31,7 @@ test.describe("a11y — axe sweep (critical + serious)", () => {
       await target.goto(route.path);
       await expect(route.settled(target)).toBeVisible({ timeout: 20_000 });
 
-      // color-contrast baselined in #381 — affects active nav links, tab /
-      // radio segmented controls, and a few secondary-text spans across all
-      // 10 protected routes. Re-enable once #381 lands.
       const results = await new AxeBuilder({ page: target })
-        .disableRules(["color-contrast"])
         .analyze();
 
       const blocking = results.violations.filter(
