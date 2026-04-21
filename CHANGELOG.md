@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Equipment inventory + cancel/reschedule-workout support (#370).** Three new capabilities:
+  - New `user_equipment` table (RLS-enabled) with composite unique `NULLS NOT DISTINCT` on `(user_id, equipment_type, weight_lbs, resistance_level)`. New Settings → Equipment section where you can add/remove equipment by type, weight, resistance level, and quantity. Stock types: dumbbell pair, barbell, plate set, kettlebell, resistance band, slider.
+  - New `get_user_equipment` Bridge tool returns a structured `{ items, maxes }` map. `assign_workout` and `update_workout_exercise` now validate proposed weights against inventory before writing — reject with a truth-in-payload error listing each violation and the available max (per #346). System prompt updated: Bridge always calls `get_user_equipment` before proposing weights and never exceeds inventory limits.
+  - Workout plan status column (`planned | completed | cancelled | skipped`, default `planned`) with `cancel_reason` and `cancelled_at`. Backfill migration marks plans with linked `strength_sessions` as `completed`, all others remain `planned`. New `cancel_workout` Bridge tool soft-cancels the DB row and deletes the Google Calendar event in one atomic operation with read-after-write verification on both (per #319). Cancel action added to the Fitness tab weekly plan — "Cancel workout" button in each expanded plan row (planned status only); confirmed cancelled rows render dimmed with strikethrough and a "Cancelled" badge.
+  - New `reschedule_workout` Bridge tool moves a planned workout atomically: copies config to target date, soft-cancels source, PATCHes (not recreates) the existing calendar event to the new date preserving event ID and attendees. New shared logic in `web/src/lib/fitness/` consumed by both tools and the server action.
+
 ### Changed
 - **Meal API routes migrated to ToolLoopAgent.generate() (#366).** All four `generateText()` call sites under `web/src/app/api/meals/` now use `new ToolLoopAgent({ model, instructions, output }).generate({ messages })` — the same config surface as the chat agent. `suggest/route.ts` and both modes in `analyze-photo/route.ts` use `claude-sonnet-4-6`; `estimate-macros/route.ts` retains `claude-haiku-4-5-20251001`. Instructions are extracted from the embedded prompt text into the `instructions` constructor param; user-facing dynamic content remains in the `messages` payload. No behaviour or response shape changes. Prompt caching follow-up tracked in #340.
 

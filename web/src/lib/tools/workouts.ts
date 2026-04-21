@@ -5,6 +5,9 @@ import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import { ok, err } from "./_contract";
 import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
+import { cancelWorkout } from "@/lib/fitness/cancel-workout";
+import { rescheduleWorkout } from "@/lib/fitness/reschedule-workout";
+import { validateWeights } from "@/lib/fitness/equipment-validation";
 
 interface WorkoutExercise {
   exercise: string;
@@ -59,7 +62,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         const sunday = addDays(monday, 6);
         const { data, error } = await supabase
           .from("workout_plans")
-          .select("*")
+          .select("id, date, name, warmup, workout, cooldown, notes, status, cancel_reason, cancelled_at, calendar_event_id, created_at, updated_at")
           .eq("user_id", userId)
           .gte("date", monday)
           .lte("date", sunday)
@@ -146,6 +149,22 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       execute: async ({ date, name, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
         if (!userId) return err("Not authenticated");
         if (isDemo) return ok({ demo: true, note: "Demo mode — plan not saved." });
+
+        // Equipment validation (#346 truth-in-payload): reject before write if
+        // proposed weights exceed the user's inventory max for that equipment type.
+        const allExercises = [...warmup, ...workout, ...cooldown];
+        const validation = await validateWeights({ supabase, userId, exercises: allExercises });
+        if (!validation.valid) {
+          const inventoryMaxes: Record<string, number> = {};
+          for (const v of validation.violations) {
+            inventoryMaxes[v.equipment_type] = v.max_available;
+          }
+          return err(
+            `Proposed weights exceed available inventory. ` +
+            `Violations: ${validation.violations.map((v) => `${v.exercise} (${v.requested_weight} lbs requested, max ${v.max_available} lbs available for ${v.equipment_type})`).join("; ")}. ` +
+            `Call get_user_equipment to see the full inventory and re-propose within these limits.`
+          );
+        }
 
         const { data: upserted, error: upsertError } = await supabase
           .from("workout_plans")
@@ -258,6 +277,22 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         if (!userId) return err("Not authenticated");
         if (isDemo) return ok({ demo: true, note: "Demo mode — not saved." });
 
+        // Validate weight update against inventory before touching the DB
+        if (updates.weight_lbs != null) {
+          const validation = await validateWeights({
+            supabase,
+            userId,
+            exercises: [{ exercise: updates.exercise ?? exercise_name, weight_lbs: updates.weight_lbs }],
+          });
+          if (!validation.valid) {
+            const v = validation.violations[0];
+            return err(
+              `Cannot set ${v.exercise} to ${v.requested_weight} lbs — max available ${v.equipment_type} is ${v.max_available} lbs. ` +
+              `Call get_user_equipment to see the full inventory.`
+            );
+          }
+        }
+
         const { data: row, error: fetchErr } = await supabase
           .from("workout_plans")
           .select("*")
@@ -334,6 +369,45 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         }
 
         return ok({ plan: updated, calendar_synced, ...(calendar_error ? { calendar_error } : {}) });
+      },
+    }),
+
+    cancel_workout: tool({
+      description:
+        "Soft-cancel a scheduled workout plan. Updates the plan status to 'cancelled', records an optional reason, and deletes the corresponding Google Calendar event in one operation. Pre-flight required: state the workout date and name to the user and get explicit confirmation before calling. Returns verified { ok, plan, calendar_synced }.",
+      inputSchema: jsonSchema<{ date: string; reason?: string }>({
+        type: "object",
+        additionalProperties: false,
+        required: ["date"],
+        properties: {
+          date: { type: "string", description: "Date of the workout to cancel in YYYY-MM-DD format." },
+          reason: { type: "string", description: "Optional reason for cancellation (e.g. 'sick', 'schedule conflict')." },
+        },
+      }),
+      execute: async ({ date, reason }) => {
+        if (!userId) return err("Not authenticated");
+        if (isDemo) return ok({ demo: true, note: "Demo mode — cancel not applied." });
+        return cancelWorkout({ supabase, userId, date, reason });
+      },
+    }),
+
+    reschedule_workout: tool({
+      description:
+        "Move a planned workout from one date to another in one atomic operation. Copies the full exercise config to the new date, soft-cancels the original row, and PATCHes the existing calendar event to the new date (preserving the event ID). Pre-flight required: state the from/to dates and confirm with user. Fails if the source is not 'planned' or if the target already has a non-cancelled workout. Returns verified { ok, from_plan, to_plan, calendar_synced }.",
+      inputSchema: jsonSchema<{ from_date: string; to_date: string; reason?: string }>({
+        type: "object",
+        additionalProperties: false,
+        required: ["from_date", "to_date"],
+        properties: {
+          from_date: { type: "string", description: "Date of the workout to move in YYYY-MM-DD format." },
+          to_date: { type: "string", description: "Target date in YYYY-MM-DD format." },
+          reason: { type: "string", description: "Optional reason for rescheduling." },
+        },
+      }),
+      execute: async ({ from_date, to_date, reason }) => {
+        if (!userId) return err("Not authenticated");
+        if (isDemo) return ok({ demo: true, note: "Demo mode — reschedule not applied." });
+        return rescheduleWorkout({ supabase, userId, from_date, to_date, reason });
       },
     }),
 

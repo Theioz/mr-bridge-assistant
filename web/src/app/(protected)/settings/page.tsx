@@ -13,6 +13,7 @@ import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";
+import { EquipmentSettings, type EquipmentItemInput } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import type { SportsFavorite } from "@/lib/sync/sports";
@@ -80,6 +81,27 @@ async function saveWatchlist(tickers: string[]) {
   revalidatePath("/settings");
 }
 
+async function addEquipment(item: EquipmentItemInput) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_equipment").upsert(
+    { user_id: user.id, ...item, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,equipment_type,weight_lbs,resistance_level" }
+  );
+  revalidatePath("/settings");
+}
+
+async function removeEquipment(id: string) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_equipment").delete().eq("id", id).eq("user_id", user.id);
+  revalidatePath("/settings");
+}
+
 async function disconnectGoogle() {
   "use server";
   const supabase = await createClient();
@@ -97,7 +119,10 @@ export default async function SettingsPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const { data } = await supabase.from("profile").select("key,value");
+  const [{ data }, { data: equipmentData }] = await Promise.all([
+    supabase.from("profile").select("key,value"),
+    supabase.from("user_equipment").select("id,equipment_type,weight_lbs,resistance_level,count,notes").order("equipment_type"),
+  ]);
 
   const values: Record<string, string> = {};
   for (const row of data ?? []) {
@@ -147,6 +172,12 @@ export default async function SettingsPage({
         values={values}
         updateAction={updateProfile}
         deleteAction={deleteProfile}
+      />
+
+      <EquipmentSettings
+        items={equipmentData ?? []}
+        addAction={addEquipment}
+        removeAction={removeEquipment}
       />
 
       <WatchlistSettings

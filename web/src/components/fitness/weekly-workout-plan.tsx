@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ChevronUp, ChevronDown, X } from "lucide-react";
 import type {
   WorkoutPlan,
   WorkoutExercise,
@@ -19,6 +19,7 @@ interface Props {
   todaySession?: StrengthSession | null;
   todaySets?: StrengthSessionSet[];
   weightUnit?: WeightUnit;
+  cancelAction?: (date: string, reason?: string) => Promise<void>;
 }
 
 interface DaySlot {
@@ -172,6 +173,7 @@ export function WeeklyWorkoutPlan({
   todaySession = null,
   todaySets = [],
   weightUnit = "lb",
+  cancelAction,
 }: Props) {
   const days = buildWeekDays(plans, completedDates);
   const todayDate = todayString();
@@ -190,9 +192,25 @@ export function WeeklyWorkoutPlan({
   const [open, setOpen] = useState<Record<string, boolean>>(() => ({
     [todayDate]: true,
   }));
+  const [cancellingDates, setCancellingDates] = useState<Set<string>>(new Set());
+  const [, startTransition] = useTransition();
 
   function toggle(date: string) {
     setOpen((prev) => ({ ...prev, [date]: !prev[date] }));
+  }
+
+  function handleCancel(date: string, planName: string | null) {
+    const label = planName ?? "this workout";
+    if (!window.confirm(`Cancel ${label} on ${date}? This will also delete the calendar event.`)) return;
+    setCancellingDates((prev) => new Set(prev).add(date));
+    startTransition(async () => {
+      await cancelAction?.(date);
+      setCancellingDates((prev) => {
+        const next = new Set(prev);
+        next.delete(date);
+        return next;
+      });
+    });
   }
 
   if (days.length === 0) return null;
@@ -274,11 +292,81 @@ export function WeeklyWorkoutPlan({
             );
           }
 
+          const isCancelled = day.plan.status === "cancelled";
+          const isCancelling = cancellingDates.has(day.date);
+
+          // Cancelled plans: dimmed non-interactive row
+          if (isCancelled) {
+            return (
+              <div
+                key={day.date}
+                className="flex items-center flex-wrap"
+                style={{
+                  minHeight: 44,
+                  padding: "var(--space-3) 0",
+                  borderTop: isFirst ? undefined : "1px solid var(--rule-soft)",
+                  gap: "var(--space-3)",
+                  opacity: 0.45,
+                }}
+              >
+                <span
+                  className="tnum"
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    fontWeight: 600,
+                    color: "var(--color-text-muted)",
+                    width: 32,
+                    flexShrink: 0,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {day.label}
+                </span>
+                <span
+                  className="tnum"
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                >
+                  {fmtShortDate(day.date)}
+                </span>
+                {day.plan.name && (
+                  <span
+                    style={{
+                      fontSize: "var(--t-body)",
+                      color: "var(--color-text-muted)",
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      textDecoration: "line-through",
+                    }}
+                  >
+                    {day.plan.name}
+                  </span>
+                )}
+                {!day.plan.name && <span style={{ flex: 1 }} />}
+                <span
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    background: "var(--rule-soft)",
+                    padding: "2px 6px",
+                    borderRadius: "var(--r-1)",
+                    flexShrink: 0,
+                  }}
+                >
+                  Cancelled
+                </span>
+              </div>
+            );
+          }
+
           return (
             <div
               key={day.date}
               style={{
                 borderTop: isFirst ? undefined : "1px solid var(--rule-soft)",
+                opacity: isCancelling ? 0.5 : 1,
+                transition: "opacity var(--motion-fast) var(--ease-out-quart)",
               }}
             >
               <button
@@ -399,6 +487,27 @@ export function WeeklyWorkoutPlan({
                       initialNotes={todaySession?.notes ?? null}
                       completedAt={todaySession?.completed_at ?? null}
                     />
+                  )}
+                  {cancelAction && day.plan.status === "planned" && (
+                    <div style={{ marginTop: "var(--space-4)" }}>
+                      <button
+                        onClick={() => handleCancel(day.date, day.plan!.name)}
+                        disabled={isCancelling}
+                        className="flex items-center cursor-pointer disabled:opacity-40"
+                        style={{
+                          gap: "var(--space-1)",
+                          background: "transparent",
+                          border: "none",
+                          padding: 0,
+                          color: "var(--color-text-faint)",
+                          fontSize: "var(--t-micro)",
+                          transition: "color var(--motion-fast) var(--ease-out-quart)",
+                        }}
+                      >
+                        <X size={12} />
+                        Cancel workout
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
