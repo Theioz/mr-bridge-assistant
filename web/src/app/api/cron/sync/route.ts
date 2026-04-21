@@ -6,6 +6,7 @@ import { syncGoogleFit } from "@/lib/sync/googlefit";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import { lastSyncAgeSecs } from "@/lib/sync/log";
+import { listConnectedUsers } from "@/lib/integrations/tokens";
 
 const SKIP_WINDOW_SECS = 30 * 60; // 30 minutes — same as run-syncs.py
 
@@ -37,39 +38,38 @@ export async function GET(request: NextRequest) {
     lastSyncAgeSecs(db, "google_fit"),
   ]);
 
-  const tasks: Promise<void>[] = [];
-
   if (ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
-    tasks.push(
-      syncOura(db, ownerUserId)
-        .then((r) => { results.oura = r; })
-        .catch((e) => { results.oura = { error: (e as Error).message }; }),
-    );
+    const userIds = await listConnectedUsers(db, "oura");
+    const settled = await Promise.allSettled(userIds.map((uid) => syncOura(db, uid)));
+    const errors = settled
+      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .filter((e): e is { userId: string; error: string } => e !== null);
+    results.oura = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
   } else {
     results.oura = { skipped: true, ageSecs: Math.round(ouraAge) };
   }
 
   if (fitbitAge === null || fitbitAge >= SKIP_WINDOW_SECS) {
-    tasks.push(
-      syncFitbit(db, ownerUserId)
-        .then((r) => { results.fitbit = r; })
-        .catch((e) => { results.fitbit = { error: (e as Error).message }; }),
-    );
+    const userIds = await listConnectedUsers(db, "fitbit");
+    const settled = await Promise.allSettled(userIds.map((uid) => syncFitbit(db, uid)));
+    const errors = settled
+      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .filter((e): e is { userId: string; error: string } => e !== null);
+    results.fitbit = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
   } else {
     results.fitbit = { skipped: true, ageSecs: Math.round(fitbitAge) };
   }
 
   if (googleFitAge === null || googleFitAge >= SKIP_WINDOW_SECS) {
-    tasks.push(
-      syncGoogleFit(db, ownerUserId)
-        .then((r) => { results.googleFit = r; })
-        .catch((e) => { results.googleFit = { error: (e as Error).message }; }),
-    );
+    const userIds = await listConnectedUsers(db, "google");
+    const settled = await Promise.allSettled(userIds.map((uid) => syncGoogleFit(db, uid)));
+    const errors = settled
+      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .filter((e): e is { userId: string; error: string } => e !== null);
+    results.googleFit = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
   } else {
     results.googleFit = { skipped: true, ageSecs: Math.round(googleFitAge) };
   }
-
-  await Promise.all(tasks);
 
   // Stocks sync — no skip window; EOD data doesn't change intraday
   const { data: watchlistRow } = await db

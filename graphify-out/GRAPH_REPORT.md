@@ -1,7 +1,7 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 218 files · ~596,370 words
+- 218 files · ~596,597 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -1134,11 +1134,11 @@ Nodes (1): App Route: /login
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `get()` connect `Community 0` to `Community 1`, `Community 34`, `Community 3`, `Community 4`, `Community 35`, `Community 6`, `Community 8`, `Community 9`, `Community 23`, `Community 30`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+  _High betweenness centrality (0.091) - this node is a cross-community bridge._
 - **Why does `POST()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 9`, `Community 10`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._
 - **Why does `round()` connect `Community 4` to `Community 0`, `Community 3`, `Community 6`, `Community 8`, `Community 9`, `Community 10`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Are the 62 inferred relationships involving `get()` (e.g. with `handleFileChange()` and `DELETE()`) actually correct?**
   _`get()` has 62 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `POST()` (e.g. with `createClient()` and `select()`) actually correct?**

@@ -32,6 +32,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   - New `reschedule_workout` Bridge tool moves a planned workout atomically: copies config to target date, soft-cancels source, PATCHes (not recreates) the existing calendar event to the new date preserving event ID and attendees. New shared logic in `web/src/lib/fitness/` consumed by both tools and the server action.
 
 ### Changed
+- **Cron now syncs Oura, Fitbit, and Google Fit for all connected users, not just the owner (#420).** `web/src/app/api/cron/sync/route.ts` replaces the single-owner `syncOura/syncFitbit/syncGoogleFit(db, ownerUserId)` calls with a per-provider fan-out:
+  - `listConnectedUsers(db, provider)` (already in `web/src/lib/integrations/tokens.ts:86`, zero callers before this PR) fetches all `user_id` values for a given provider from `user_integrations`.
+  - `Promise.allSettled` runs each user's sync concurrently; one user's failure does not abort others.
+  - Response shape changes from `{ updated: N }` to `{ usersSynced: N, usersFailed: N, errors: [{userId, error}] }` per provider.
+  - The 30-min skip window remains a **global gate per provider** (`lastSyncAgeSecs` is not user-scoped; no schema change to `sync_log`).
+  - Stocks and sports syncs remain owner-scoped (`OWNER_USER_ID` still required); `OWNER_USER_ID` env var is unchanged.
+
 - **Meal API routes migrated to ToolLoopAgent.generate() (#366).** All four `generateText()` call sites under `web/src/app/api/meals/` now use `new ToolLoopAgent({ model, instructions, output }).generate({ messages })` — the same config surface as the chat agent. `suggest/route.ts` and both modes in `analyze-photo/route.ts` use `claude-sonnet-4-6`; `estimate-macros/route.ts` retains `claude-haiku-4-5-20251001`. Instructions are extracted from the embedded prompt text into the `instructions` constructor param; user-facing dynamic content remains in the `messages` payload. No behaviour or response shape changes. Prompt caching follow-up tracked in #340.
 
 ### Fixed
