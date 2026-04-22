@@ -22,6 +22,7 @@ interface ScanItemInput {
   fat_g: number;
   fiber_g: number | null;
   sugar_g: number | null;
+  user_context?: string;
 }
 
 interface ScanChatBody {
@@ -60,7 +61,10 @@ ${scanItems
       .filter(Boolean)
       .join(", ");
     const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
-    return extras ? `${base}, ${extras}` : base;
+    const withExtras = extras ? `${base}, ${extras}` : base;
+    return i.user_context
+      ? `${withExtras}\n  User-provided description of the dish (for reference; may be inaccurate): ${i.user_context}`
+      : withExtras;
   })
   .join("\n")}
 Default meal type: ${mealType}
@@ -152,11 +156,13 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
             sugar_g: null as number | null,
           },
         );
+        const firstUserContext = scanItems.find((i) => i.user_context)?.user_context;
         return {
           kind: "log_meal_proposal",
           items,
           meal_type,
           notes: notes ?? items.map((i) => i.label).join(", "),
+          user_context: firstUserContext ?? null,
           totals,
         };
       },

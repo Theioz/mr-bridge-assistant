@@ -4,6 +4,7 @@ import { todayString } from "@/lib/timezone";
 interface MealLogBody {
   meal_type: "breakfast" | "lunch" | "dinner" | "snack";
   notes?: string;
+  user_context?: string;
   date?: string;
   calories?: number;
   protein_g?: number;
@@ -32,6 +33,10 @@ export async function POST(req: Request) {
     );
   }
 
+  if (typeof body.user_context === "string" && body.user_context.length > 500) {
+    return Response.json({ error: "user_context must be ≤ 500 characters" }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,6 +49,7 @@ export async function POST(req: Request) {
     user_id: user.id,
     meal_type: body.meal_type,
     notes: body.notes ?? null,
+    user_context: body.user_context?.trim() || null,
     date: body.date ?? todayString(),
     calories: body.calories ?? null,
     protein_g: body.protein_g ?? null,
@@ -80,6 +86,7 @@ export async function POST(req: Request) {
 interface MealLogPatchBody {
   id: string;
   notes?: string;
+  user_context?: string;
   meal_type?: "breakfast" | "lunch" | "dinner" | "snack";
   calories?: number | null;
   protein_g?: number | null;

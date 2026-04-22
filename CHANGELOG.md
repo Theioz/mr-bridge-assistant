@@ -8,6 +8,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Optional dish description field on Food Analyzer (#371).** An optional textarea ("Tell Bridge what's in the dish (optional)") appears above the camera/library buttons on the Food Analyzer landing view. User text (max 500 chars) is injected as an untrusted reference note in the user-turn slot of the vision model for more accurate macro estimates. The value persists on each `ScanItem` through re-estimates and inline edits, is stored in a new `meal_log.user_context` column, and flows through the Bridge chat log path. Users who skip the field see no change in behavior.
+
 - **Pre-commit hook via husky + lint-staged (#354).** ESLint (--fix) and Prettier run on staged files before every local commit. All four token guards (hover handlers, hardcoded white, color-mix(), raw hex) also run via `scripts/lint-tokens.sh` so local behaviour matches CI. The hook is non-interactive and bypassed cleanly by `git commit --no-verify`. Installed automatically on `cd web && npm install`.
 - **Prettier code-formatting with explicit config (#355).** `printWidth: 100`, `trailingComma: "all"` (all other defaults kept). `eslint-config-prettier` added as the last entry in `web/eslint.config.mjs` to disable conflicting stylistic ESLint rules. CI enforces formatting via `npm run format:check` added to the `eslint` workflow job. Use `cd web && npm run format` to reformat locally.
 

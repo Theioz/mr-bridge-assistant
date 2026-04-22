@@ -41,6 +41,8 @@ export interface ScanItem {
   fatManuallyEdited?: boolean;
   fiberManuallyEdited?: boolean;
   sugarManuallyEdited?: boolean;
+  // User-supplied dish description at capture time (#371).
+  user_context?: string;
 }
 
 function roundOrDash(v: number | null, digits = 0): string {
@@ -228,6 +230,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Inline chat state ────────────────────────────────────────────────────
   const [showInlineChat, setShowInlineChat] = useState(false);
 
+  // ── User context (optional dish description, #371) ───────────────────────
+  const [userContext, setUserContext] = useState("");
+  const scanCtaRef = useRef<HTMLDivElement>(null);
+
   // ── Derived totals ────────────────────────────────────────────────────────
   const combined = items.reduce(
     (acc, item) => ({
@@ -339,6 +345,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     const formData = new FormData();
     formData.append("image", imageBlob, "photo.jpg");
     formData.append("mode", analyzerMode);
+    const trimmedContext = userContext.trim();
+    if (trimmedContext) formData.append("user_context", trimmedContext);
 
     try {
       const res = await fetch("/api/meals/analyze-photo", {
@@ -367,6 +375,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             fiber_g: data.fiber_g ?? null,
             sugar_g: data.sugar_g ?? null,
             sodium_mg: data.sodium_mg ?? undefined,
+            user_context: trimmedContext || undefined,
           });
         } else {
           addItem({
@@ -381,6 +390,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             sugar_g: data.sugar_g ?? null,
             sodium_mg: data.sodium_mg ?? undefined,
             ingredients: data.ingredients ?? undefined,
+            user_context: trimmedContext || undefined,
           });
         }
         setScanPhase("idle");
@@ -400,31 +410,29 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Per-item re-estimation ────────────────────────────────────────────────
   async function handleReestimateItem(id: string, ingredients: string) {
     setReestimatingId(id);
+    const item = items.find((i) => i.id === id);
     try {
       const res = await fetch("/api/meals/estimate-macros", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients }),
+        body: JSON.stringify({ ingredients, user_context: item?.user_context }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Re-estimation failed");
       // Respect per-field manual-edit flags — don't clobber anything the user typed (#302).
       setItems((prev) =>
-        prev.map((item) => {
-          if (item.id !== id) return item;
+        prev.map((it) => {
+          if (it.id !== id) return it;
           return {
-            ...item,
-            label: item.labelManuallyEdited ? item.label : (data.food_name ?? item.label),
-            calories: item.caloriesManuallyEdited
-              ? item.calories
-              : (data.calories ?? item.calories),
-            protein_g: item.proteinManuallyEdited
-              ? item.protein_g
-              : (data.protein_g ?? item.protein_g),
-            carbs_g: item.carbsManuallyEdited ? item.carbs_g : (data.carbs_g ?? item.carbs_g),
-            fat_g: item.fatManuallyEdited ? item.fat_g : (data.fat_g ?? item.fat_g),
-            fiber_g: item.fiberManuallyEdited ? item.fiber_g : (data.fiber_g ?? null),
-            sugar_g: item.sugarManuallyEdited ? item.sugar_g : (data.sugar_g ?? null),
+            ...it,
+            label: it.labelManuallyEdited ? it.label : (data.food_name ?? it.label),
+            calories: it.caloriesManuallyEdited ? it.calories : (data.calories ?? it.calories),
+            protein_g: it.proteinManuallyEdited ? it.protein_g : (data.protein_g ?? it.protein_g),
+            carbs_g: it.carbsManuallyEdited ? it.carbs_g : (data.carbs_g ?? it.carbs_g),
+            fat_g: it.fatManuallyEdited ? it.fat_g : (data.fat_g ?? it.fat_g),
+            fiber_g: it.fiberManuallyEdited ? it.fiber_g : (data.fiber_g ?? null),
+            sugar_g: it.sugarManuallyEdited ? it.sugar_g : (data.sugar_g ?? null),
+            // user_context is user-authored — always preserve it unchanged.
           };
         }),
       );
@@ -460,6 +468,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Log as meal ───────────────────────────────────────────────────────────
   async function handleLogMeal() {
     const s = parseFloat(servings) || 1;
+    const logUserContext = items.find((i) => i.user_context)?.user_context;
     setLogging(true);
     try {
       const res = await fetch("/api/meals/log", {
@@ -468,6 +477,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         body: JSON.stringify({
           meal_type: logMealType,
           notes: items.map((i) => i.label).join(", "),
+          user_context: logUserContext ?? undefined,
           calories: Math.round(combined.calories * s),
           protein_g: Math.round(combined.protein_g * s * 10) / 10,
           carbs_g: Math.round(combined.carbs_g * s * 10) / 10,
@@ -500,6 +510,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       fiber_g: combinedFiber === null ? null : Math.round((combinedFiber / n) * 10) / 10,
       sugar_g: combinedSugar === null ? null : Math.round((combinedSugar / n) * 10) / 10,
     };
+    const prepUserContext = items.find((i) => i.user_context)?.user_context;
     setPrepping(true);
     try {
       const res = await fetch("/api/meals/log", {
@@ -508,6 +519,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         body: JSON.stringify({
           meal_type: mealPrepType,
           notes: items.map((i) => i.label).join(", "),
+          user_context: prepUserContext ?? undefined,
           ...perContainer,
           source: "scanner",
           count: n,
@@ -801,7 +813,43 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           >
             Scan a nutrition label or food photo to get started.
           </p>
-          <div className="flex flex-wrap justify-center" style={{ gap: "var(--space-2)" }}>
+          <div style={{ width: "100%", maxWidth: 360 }}>
+            <textarea
+              value={userContext}
+              onChange={(e) => setUserContext(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Tell Bridge what's in the dish (optional)"
+              autoComplete="off"
+              autoCorrect="off"
+              onFocus={() =>
+                scanCtaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
+              }
+              style={{
+                ...inputStyle,
+                resize: "none",
+                lineHeight: 1.6,
+                fontSize: "var(--t-meta)",
+              }}
+            />
+            {userContext.length > 0 && (
+              <div
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  textAlign: "right",
+                  marginTop: "var(--space-1)",
+                }}
+              >
+                {userContext.length}/500
+              </div>
+            )}
+          </div>
+          <div
+            ref={scanCtaRef}
+            className="flex flex-wrap justify-center"
+            style={{ gap: "var(--space-2)" }}
+          >
             <button
               onClick={() => cameraInputRef.current?.click()}
               className="flex items-center justify-center transition-opacity active:opacity-70"
