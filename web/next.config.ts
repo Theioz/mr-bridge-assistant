@@ -6,6 +6,14 @@ const withAnalyze = withBundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "a.espncdn.com",
+      },
+    ],
+  },
   experimental: {
     // Cache dynamic route RSC payloads in the client-side router cache.
     // Without this, force-dynamic pages re-fetch on every tab switch (stale=0).
