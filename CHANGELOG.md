@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Post-incident secret rotation and posture upgrade (#368).** All production secrets were rotated after the Vercel April 2026 security incident (see `docs/runbooks/secret-rotation-2026-04.md` for the full rotation log). Every secret env var was re-added to Vercel with the Sensitive flag. Monarch Money credentials and TheSportsDB API key were deleted entirely — both were abandoned integrations no longer in use. `SPORTSDB_API_KEY` / `SPORTS_PROVIDER` removed from env templates and `thesportsdb.ts` deleted; the sports widget now routes exclusively through ESPN (no key required). A new `docs/SECURITY.md` documents the sensitive-flag rule, rotation cadence, and breach-response protocol. `.github/PULL_REQUEST_TEMPLATE.md` added with a security checklist required for any PR that introduces env vars.
+  - If Google Calendar, Gmail, or Fitness shows as disconnected: reconnect it via Settings → Integrations — `GOOGLE_CLIENT_SECRET` was rotated and existing OAuth sessions need re-authorisation.
+
 ### Added
 - **Optional dish description field on Food Analyzer (#371).** An optional textarea ("Tell Bridge what's in the dish (optional)") appears above the camera/library buttons on the Food Analyzer landing view. User text (max 500 chars) is injected as an untrusted reference note in the user-turn slot of the vision model for more accurate macro estimates. The value persists on each `ScanItem` through re-estimates and inline edits, is stored in a new `meal_log.user_context` column, and flows through the Bridge chat log path. Users who skip the field see no change in behavior.
 

@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SportsCacheData, SportsProvider } from "./provider";
 import { ESPN } from "./espn";
-import { TheSportsDB } from "./thesportsdb";
 
 export type SportsFavorite = {
   team_id: string;
@@ -19,9 +18,6 @@ export interface SportsSyncResult {
 }
 
 export function getSportsProvider(): SportsProvider {
-  // Default to ESPN (free, no key, no rate limit). Set SPORTS_PROVIDER=thesportsdb
-  // to fall back to TheSportsDB (requires SPORTSDB_API_KEY for non-trivial use).
-  if (process.env.SPORTS_PROVIDER === "thesportsdb") return TheSportsDB;
   return ESPN;
 }
 
