@@ -27,6 +27,7 @@ interface LogMealProposal {
   items: ProposalItem[];
   meal_type: MealType;
   notes: string;
+  user_context: string | null;
   totals: {
     calories: number;
     protein_g: number;
@@ -120,6 +121,7 @@ export default function InlineMealChat({
             fat_g: i.fat_g,
             fiber_g: i.fiber_g,
             sugar_g: i.sugar_g,
+            user_context: i.user_context,
           })),
           mealType: defaultMealType,
         }),
@@ -218,6 +220,7 @@ export default function InlineMealChat({
         body: JSON.stringify({
           meal_type: p.meal_type,
           notes: p.notes,
+          user_context: p.user_context ?? undefined,
           calories: Math.round(p.totals.calories),
           protein_g: round(p.totals.protein_g, 1),
           carbs_g: round(p.totals.carbs_g, 1),

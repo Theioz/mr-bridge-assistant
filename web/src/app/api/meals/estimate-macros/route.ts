@@ -41,6 +41,7 @@ export async function POST(req: Request) {
   let body: {
     ingredients: string;
     dish_name?: string;
+    user_context?: string;
     current_macros?: { calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number };
   };
   try {
@@ -55,12 +56,21 @@ export async function POST(req: Request) {
     return Response.json({ error: "ingredients or dish_name is required" }, { status: 400 });
   }
 
+  const userContext = body.user_context?.trim() ?? "";
+  if (userContext.length > 500) {
+    return Response.json({ error: "user_context must be ≤ 500 characters" }, { status: 400 });
+  }
+
   const cm = body.current_macros;
   const hasCurrent =
     cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
 
+  const userContextSuffix = userContext
+    ? `\n\nUser-provided description of the dish (for reference; may be inaccurate): ${userContext}`
+    : "";
+
   const prompt =
-    hasCurrent && dishName
+    (hasCurrent && dishName
       ? `A user already logged a meal and now wants to adjust its macros.
 
 Base dish: "${dishName}"
@@ -87,7 +97,7 @@ Instructions:
 - Use conservative estimates — do not inflate
 - Set confidence to "high" if ingredients and quantities are clearly specified
 - Set confidence to "low" if ingredients are vague or quantities are absent
-- Include any key assumptions in notes`;
+- Include any key assumptions in notes`) + userContextSuffix;
 
   try {
     const agent = new ToolLoopAgent({

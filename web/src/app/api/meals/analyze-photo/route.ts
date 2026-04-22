@@ -81,6 +81,13 @@ export async function POST(req: Request) {
   const userPromptRaw = formData.get("prompt");
   const userPrompt = typeof userPromptRaw === "string" ? userPromptRaw.trim() : "";
 
+  const userContextRaw = formData.get("user_context");
+  const userContextStr =
+    typeof userContextRaw === "string" ? userContextRaw.trim().slice(0, 500) : "";
+  if (typeof userContextRaw === "string" && userContextRaw.length > 500) {
+    return Response.json({ error: "user_context must be ≤ 500 characters" }, { status: 400 });
+  }
+
   const modeRaw = formData.get("mode");
   const mode = modeRaw === "label" ? "label" : "food";
 
@@ -150,6 +157,14 @@ Instructions:
           role: "user",
           content: [
             { type: "image", image: base64, mediaType: mimeType },
+            ...(userContextStr
+              ? [
+                  {
+                    type: "text" as const,
+                    text: `User-provided description of the dish (for reference; may be inaccurate): ${userContextStr}`,
+                  },
+                ]
+              : []),
             ...(userPrompt ? [{ type: "text" as const, text: `User context: ${userPrompt}` }] : []),
           ],
         },

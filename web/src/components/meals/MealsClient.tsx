@@ -18,6 +18,7 @@ export interface MealRow {
   date: string;
   meal_type: string;
   notes: string | null;
+  user_context: string | null;
   recipes: { name: string } | null;
   calories: number | null;
   protein_g: number | null;

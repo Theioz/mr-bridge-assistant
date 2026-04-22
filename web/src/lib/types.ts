@@ -126,6 +126,7 @@ export interface MealLog {
   meal_type: "breakfast" | "lunch" | "dinner" | "snack" | null;
   recipe_id: string | null;
   notes: string | null;
+  user_context: string | null;
   metadata: Record<string, unknown>;
 }
 
