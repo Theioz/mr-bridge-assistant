@@ -17,6 +17,7 @@ import { IntegrationsSettings } from "@/components/settings/integrations-setting
 import { EquipmentSettings, type EquipmentItemInput } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
+import { lastSyncStatus, type SyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
 async function updateProfile(key: string, value: string) {
@@ -170,10 +171,20 @@ export default async function SettingsPage({
 
   const { data: { user } } = await supabase.auth.getUser();
   const db = createServiceClient();
-  const [googleIntegration, ouraIntegration, fitbitIntegration] = await Promise.all([
-    user ? loadIntegration(db, user.id, "google").catch(() => null) : null,
-    user ? loadIntegration(db, user.id, "oura").catch(() => null) : null,
-    user ? loadIntegration(db, user.id, "fitbit").catch(() => null) : null,
+  const [
+    googleIntegration,
+    ouraIntegration,
+    fitbitIntegration,
+    googleLastSync,
+    ouraLastSync,
+    fitbitLastSync,
+  ] = await Promise.all([
+    user ? loadIntegration(db, user.id, "google").catch((): null => null) : Promise.resolve(null),
+    user ? loadIntegration(db, user.id, "oura").catch((): null => null) : Promise.resolve(null),
+    user ? loadIntegration(db, user.id, "fitbit").catch((): null => null) : Promise.resolve(null),
+    lastSyncStatus(db, "google_fit").catch((): null => null),
+    lastSyncStatus(db, "oura").catch((): null => null),
+    lastSyncStatus(db, "fitbit").catch((): null => null),
   ]);
 
   return (
@@ -208,11 +219,14 @@ export default async function SettingsPage({
       <IntegrationsSettings
         googleIntegration={googleIntegration}
         disconnectAction={disconnectGoogle}
+        googleLastSync={googleLastSync}
         ouraIntegration={ouraIntegration}
         saveOuraTokenAction={saveOuraToken}
         disconnectOuraAction={disconnectOura}
+        ouraLastSync={ouraLastSync}
         fitbitIntegration={fitbitIntegration}
         disconnectFitbitAction={disconnectFitbit}
+        fitbitLastSync={fitbitLastSync}
         errorParam={params.error}
       />
 
