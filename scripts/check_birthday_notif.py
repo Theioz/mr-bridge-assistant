@@ -25,19 +25,24 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 load_dotenv(ROOT / ".env")
 from _supabase import get_client, get_owner_user_id, log_notification  # noqa: E402
+from _integrations import load_integration  # noqa: E402
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/dashboard"
 
 
 def get_credentials() -> Credentials:
+    client = get_client()
+    user_id = get_owner_user_id()
+    integration = load_integration(client, user_id, "google")
+    if not integration:
+        raise RuntimeError("Google integration not connected — visit Settings to reconnect.")
     creds = Credentials(
         token=None,
-        refresh_token=os.environ["GOOGLE_REFRESH_TOKEN"],
+        refresh_token=integration["refresh_token"],
         client_id=os.environ["GOOGLE_CLIENT_ID"],
         client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
         token_uri="https://oauth2.googleapis.com/token",
-        scopes=["https://www.googleapis.com/auth/calendar.readonly"],
     )
     creds.refresh(Request())
     return creds
