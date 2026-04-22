@@ -258,6 +258,17 @@ export function IntegrationsSettings({
         </p>
       )}
 
+      <p
+        style={{
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          marginBottom: "var(--space-4)",
+        }}
+      >
+        If Google shows as disconnected, reconnect it below — OAuth credentials were rotated on
+        2026-04-22 as part of a routine security update.
+      </p>
+
       {/* ── Google ── */}
       <div style={rowStyle}>
         <div style={labelColStyle}>
