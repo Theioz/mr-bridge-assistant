@@ -1,7 +1,7 @@
-# Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
+# Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-22)
 
 ## Corpus Check
-- 228 files · ~583,454 words
+- 228 files · ~584,145 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -903,7 +903,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 1`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Are the 71 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `ProtectedLayout()`) actually correct?**
+- **Are the 71 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `saveJournalEntry()`) actually correct?**
   _`createClient()` has 71 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 15 inferred relationships involving `POST@chat/route.ts` (e.g. with `createClient()` and `createServiceClient()`) actually correct?**
   _`POST@chat/route.ts` has 15 INFERRED edges - model-reasoned connections that need verification._

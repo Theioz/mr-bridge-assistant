@@ -23,6 +23,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   - Sync Now button is absent when a provider is disconnected.
 
 ### Fixed
+- **Non-owner accounts redirected to /login when opening /settings (#424).** The protected layout was running a redundant `supabase.auth.getUser()` + `redirect("/login")` check on every render, duplicating the auth gate already enforced by `proxy.ts`. On `/settings` (the only `force-dynamic` protected route that always hits the server fresh), the layout's network-backed `getUser()` raced the proxy's cookie refresh and observed a null user, firing the guard for any non-owner Supabase Auth user including the smoke test account. The redundant check is removed; auth enforcement now lives exclusively in `proxy.ts` where session cookies can be correctly refreshed and persisted.
+
 - **`logSync()` was writing to a non-existent column `rows_written`; corrected to `records_written`.**
   Previously every web-triggered sync silently failed to write its sync_log row (supabase-js returns an error object rather than throwing, and the return value was ignored). This meant the Sync Now timestamps above would never update. The Python sync scripts already used the correct column name.
 

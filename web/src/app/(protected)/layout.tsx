@@ -1,17 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 
+// Auth enforcement is handled by proxy.ts (Next.js 16 middleware), which
+// refreshes the session and redirects unauthenticated requests before this
+// layout ever runs. A redundant getUser() + redirect() here raced the
+// proxy's cookie refresh on force-dynamic routes, causing the smoke test
+// user to be redirected to /login on /settings despite a valid session.
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
   return (
     <div className="flex min-h-screen" style={{ color: "var(--color-text)" }}>
       <a
