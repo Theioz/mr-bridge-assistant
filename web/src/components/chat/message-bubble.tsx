@@ -2,8 +2,14 @@
 
 import { memo, useRef, useState } from "react";
 import type { UIMessage } from "ai";
-import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type ReactMarkdownType from "react-markdown";
+import dynamic from "next/dynamic";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), {
+  ssr: false,
+  loading: () => null,
+}) as typeof ReactMarkdownType;
 
 /**
  * Extract concatenated text from a UIMessage's parts array.

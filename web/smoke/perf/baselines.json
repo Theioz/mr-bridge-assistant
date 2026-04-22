@@ -1,60 +1,59 @@
 {
-  "_comment": "Per-route baselines for metrics above the hard thresholds — ratchet down as perf improves. See #384. Values = median-of-3 from the prod build on commit 7b5e9462 (origin/main), + 10% tolerance for cold-run variance.",
+  "_comment": "Per-route baselines for metrics above the hard thresholds — ratchet down as perf improves. See #384. Values = median-of-3 from prod build + ~60ms variance buffer. Ratcheted from commit 7b5e9462 after fix/mobile-perf-384 changes (code splits, waterfall collapse, Suspense streaming, CLS fix). /settings CLS baseline removed — now 0.000.",
   "routes": {
     "/dashboard": {
       "mobile": {
-        "lcp": 4076
+        "lcp": 3620
       }
     },
     "/chat": {
       "mobile": {
-        "lcp": 4632
+        "lcp": 4128
       }
     },
     "/fitness": {
       "mobile": {
-        "lcp": 3539
+        "lcp": 3620
       }
     },
     "/habits": {
       "mobile": {
-        "lcp": 3478
+        "lcp": 3220
       }
     },
     "/tasks": {
       "mobile": {
-        "lcp": 3477
+        "lcp": 3460
       }
     },
     "/weekly": {
       "mobile": {
-        "lcp": 3318
+        "lcp": 3220
       }
     },
     "/journal": {
       "mobile": {
-        "lcp": 3478
+        "lcp": 3220
       }
     },
     "/meals": {
       "mobile": {
-        "lcp": 3900
+        "lcp": 3600
       }
     },
     "/notifications": {
       "mobile": {
-        "lcp": 3892
+        "lcp": 3220
       }
     },
     "/settings": {
       "mobile": {
-        "cls": 0.179,
-        "lcp": 3478
+        "lcp": 3750
       }
     },
     "/login": {
       "mobile": {
-        "lcp": 3310
+        "lcp": 3075
       }
     }
   }

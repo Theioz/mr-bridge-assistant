@@ -52,7 +52,7 @@ export function AppearanceSettings() {
       </h2>
 
       <div
-        className="flex flex-wrap items-center"
+        className="flex flex-col items-start sm:flex-row sm:flex-wrap sm:items-center"
         style={{ gap: "var(--space-4)" }}
         role="radiogroup"
         aria-label="Theme preference"
@@ -105,7 +105,7 @@ export function AppearanceSettings() {
           }}
           aria-live="polite"
         >
-          {mounted ? active.desc : "\u00A0"}
+          {active.desc}
         </span>
       </div>
     </section>

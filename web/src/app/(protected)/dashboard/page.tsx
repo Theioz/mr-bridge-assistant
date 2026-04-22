@@ -14,8 +14,10 @@ import { getWindow } from "@/lib/window";
 import DashboardMasthead from "@/components/dashboard/dashboard-masthead";
 import DashboardGreeting from "@/components/dashboard/dashboard-greeting";
 import DashboardBriefing from "@/components/dashboard/dashboard-briefing";
-import BodyFitnessSummary from "@/components/dashboard/body-fitness-summary";
-import HealthBreakdown from "@/components/dashboard/health-breakdown";
+import {
+  LazyBodyFitnessSummary as BodyFitnessSummary,
+  LazyHealthBreakdown as HealthBreakdown,
+} from "@/components/dashboard/lazy-chart-widgets";
 import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
@@ -106,9 +108,8 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
   const today = todayString();
-  const { key: windowKey, days } = await getWindow();
+  const [supabase, { key: windowKey, days }] = await Promise.all([createClient(), getWindow()]);
 
   const [
     fitnessTrendRes,

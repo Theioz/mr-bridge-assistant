@@ -18,12 +18,15 @@ export const metadata: Metadata = {
 export default async function MealsPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id;
-
-  const [{ data: mealsData }, { data: recipesData }, { data: profileData }] = await Promise.all([
+  // Wave 1 — meal_log and profile don't need user.id; run with getUser in parallel.
+  const [
+    {
+      data: { user },
+    },
+    { data: mealsData },
+    { data: profileData },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
     supabase
       .from("meal_log")
       .select(
@@ -32,15 +35,18 @@ export default async function MealsPage() {
       .gte("date", daysAgoString(6))
       .order("date", { ascending: false })
       .order("meal_type", { ascending: true }),
-    userId
-      ? supabase
-          .from("recipes")
-          .select("id, name, cuisine, tags, ingredients")
-          .eq("user_id", userId)
-          .order("name")
-      : Promise.resolve({ data: [] }),
     supabase.from("profile").select("key, value"),
   ]);
+
+  // Wave 2 — recipes query needs user.id from Wave 1.
+  const userId = user?.id;
+  const { data: recipesData } = await (userId
+    ? supabase
+        .from("recipes")
+        .select("id, name, cuisine, tags, ingredients")
+        .eq("user_id", userId)
+        .order("name")
+    : Promise.resolve({ data: [] }));
 
   const meals = (mealsData ?? []) as unknown as MealRow[];
   const recipes = (recipesData ?? []) as unknown as RecipeRow[];

@@ -14,13 +14,31 @@ import type {
 import type { WeightUnit } from "@/lib/units";
 import { kgToDisplay } from "@/lib/units";
 import type { WindowKey } from "@/lib/window";
+import dynamic from "next/dynamic";
 import { WeeklyWorkoutPlan } from "./weekly-workout-plan";
 import { RecentSessionsList } from "./recent-sessions-list";
 import { ExerciseSparkline } from "./exercise-sparkline";
-import { BodyCompTrends } from "./body-comp-trends";
-import { RecoveryTrends } from "./recovery-trends";
-import { ActivityTrends } from "./activity-trends";
 import { WorkoutHistoryTable } from "./workout-history-table";
+
+const ChartSkeleton = ({ height = 200 }: { height?: number }) => (
+  <div
+    style={{ height, borderRadius: "var(--r-1)", background: "var(--color-surface-2)" }}
+    aria-hidden
+  />
+);
+
+const BodyCompTrends = dynamic(() => import("./body-comp-trends").then((m) => m.BodyCompTrends), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
+const RecoveryTrends = dynamic(() => import("./recovery-trends").then((m) => m.RecoveryTrends), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
+const ActivityTrends = dynamic(() => import("./activity-trends").then((m) => m.ActivityTrends), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
 
 type Tab = "workouts" | "history" | "progress";
 

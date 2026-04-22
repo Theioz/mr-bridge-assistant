@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -174,19 +175,24 @@ async function disconnectFitbit() {
   revalidatePath("/settings");
 }
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string>>;
-}) {
-  const params = await searchParams;
+async function SettingsContent({ params }: { params: Record<string, string> }) {
   const supabase = await createClient();
-  const [{ data }, { data: equipmentData }] = await Promise.all([
+  const db = createServiceClient();
+
+  // Wave 1 — profile, equipment, and getUser run in parallel (none depend on each other).
+  const [
+    { data },
+    { data: equipmentData },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
     supabase.from("profile").select("key,value"),
     supabase
       .from("user_equipment")
       .select("id,equipment_type,weight_lbs,resistance_level,count,notes")
       .order("equipment_type"),
+    supabase.auth.getUser(),
   ]);
 
   const values: Record<string, string> = {};
@@ -197,10 +203,7 @@ export default async function SettingsPage({
   const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
   const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const db = createServiceClient();
+  // Wave 2 — integration loads (need user.id) + sync status checks run together.
   const [
     googleIntegration,
     ouraIntegration,
@@ -218,29 +221,7 @@ export default async function SettingsPage({
   ]);
 
   return (
-    <div className="max-w-2xl">
-      <header style={{ marginBottom: "var(--space-2)" }}>
-        <h1
-          className="font-heading"
-          style={{
-            fontSize: "var(--t-h1)",
-            fontWeight: 600,
-            color: "var(--color-text)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Settings
-        </h1>
-        <p
-          className="mt-1"
-          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
-        >
-          Edit and save changes inline. Press Enter or click Save on any field.
-        </p>
-      </header>
-
-      <AppearanceSettings />
-
+    <>
       <FitnessSettings
         restTimerEnabled={values["rest_timer_enabled"] !== "0"}
         updateAction={updateProfile}
@@ -275,6 +256,44 @@ export default async function SettingsPage({
       />
 
       <SportsSettings favorites={sportsFavorites} saveAction={saveSportsFavorites} />
+    </>
+  );
+}
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
+
+  return (
+    <div className="max-w-2xl">
+      <header style={{ marginBottom: "var(--space-2)" }}>
+        <h1
+          className="font-heading"
+          style={{
+            fontSize: "var(--t-h1)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Settings
+        </h1>
+        <p
+          className="mt-1"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+        >
+          Edit and save changes inline. Press Enter or click Save on any field.
+        </p>
+      </header>
+
+      <AppearanceSettings />
+
+      <Suspense fallback={<div style={{ minHeight: 400 }} />}>
+        <SettingsContent params={params} />
+      </Suspense>
     </div>
   );
 }

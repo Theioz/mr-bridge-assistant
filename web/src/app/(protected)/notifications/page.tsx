@@ -47,18 +47,25 @@ async function markAllAsReadAction(): Promise<{ error?: string }> {
 // request if this ever gets called twice.
 const loadNotificationsPage = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: rows } = await supabase
-    .from("notifications")
-    .select("id, type, title, body, sent_at, read_at")
-    .gte("sent_at", cutoff)
-    .order("sent_at", { ascending: false })
-    .limit(50);
+
+  // Run auth and data fetch in parallel — RLS filters by JWT; user.id is only
+  // needed for the subsequent mark-as-read update.
+  const [
+    {
+      data: { user },
+    },
+    { data: rows },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("notifications")
+      .select("id, type, title, body, sent_at, read_at")
+      .gte("sent_at", cutoff)
+      .order("sent_at", { ascending: false })
+      .limit(50),
+  ]);
+  if (!user) return null;
 
   const notifications: Notification[] = (rows ?? []).map((n) => ({
     ...n,
