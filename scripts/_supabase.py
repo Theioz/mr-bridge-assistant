@@ -1,41 +1,17 @@
 """
 Shared Supabase client helper for sync scripts.
 Uses SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
-Import as: from _supabase import get_client, get_owner_user_id, log_sync, log_notification, urlopen_with_retry
+Import as: from _supabase import get_client, get_owner_user_id, upsert
 """
 from __future__ import annotations
 
-import json
 import os
-import sys
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
-
-RETRYABLE_CODES = {429, 502, 503}
-HTTP_TIMEOUT = 30
-
-
-def urlopen_with_retry(req: urllib.request.Request, max_retries: int = 3) -> dict:
-    """Open a urllib request with timeout and exponential backoff on transient errors."""
-    for attempt in range(max_retries):
-        try:
-            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as e:
-            if e.code in RETRYABLE_CODES and attempt < max_retries - 1:
-                wait = 2 ** attempt
-                print(f"[warn] HTTP {e.code} — retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
-                time.sleep(wait)
-            else:
-                raise
-    raise RuntimeError("urlopen_with_retry: exceeded max retries")  # unreachable
 
 
 def get_client():
@@ -67,25 +43,3 @@ def upsert(client, table: str, rows: list[dict], conflict: str | None = None) ->
     kwargs = {"on_conflict": conflict} if conflict else {}
     resp = client.table(table).upsert(rows, **kwargs).execute()
     return len(resp.data)
-
-
-def log_notification(client, user_id: str, type_: str, title: str, body: str | None = None) -> None:
-    """Insert a row into the notifications table. Non-fatal — errors are printed to stderr."""
-    try:
-        client.table("notifications").insert({
-            "user_id": user_id,
-            "type": type_,
-            "title": title,
-            "body": body,
-        }).execute()
-    except Exception as e:
-        print(f"[notify] Failed to log notification: {e}", file=sys.stderr)
-
-
-def log_sync(client, source: str, status: str, records_written: int = 0, error_message: str | None = None):
-    client.table("sync_log").insert({
-        "source": source,
-        "status": status,
-        "records_written": records_written,
-        "error_message": error_message,
-    }).execute()

@@ -46,7 +46,8 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry, HTTP_TIMEOUT
+from _supabase import get_client, get_owner_user_id, upsert
+from _sync_log import log_sync, urlopen_with_retry, HTTP_TIMEOUT
 from _integrations import load_integration, persist_rotated_token
 
 FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"

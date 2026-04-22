@@ -17,7 +17,8 @@ import subprocess
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client, log_sync
+from _supabase import get_client
+from _sync_log import log_sync
 
 SKIP_WINDOW_SECS = 30 * 60  # 30 minutes
 

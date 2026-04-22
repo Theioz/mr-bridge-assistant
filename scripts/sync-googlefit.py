@@ -44,7 +44,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id, upsert
+from _sync_log import log_sync, urlopen_with_retry
 
 
 FITNESS_SCOPES = ["https://www.googleapis.com/auth/fitness.body.read"]

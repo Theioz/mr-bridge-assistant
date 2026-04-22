@@ -25,7 +25,8 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, get_owner_user_id, upsert, log_sync, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id, upsert
+from _sync_log import log_sync, urlopen_with_retry
 from _integrations import load_integration
 
 # Resolved once in main() from user_integrations

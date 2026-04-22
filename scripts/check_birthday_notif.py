@@ -24,7 +24,8 @@ from googleapiclient.discovery import build
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 load_dotenv(ROOT / ".env")
-from _supabase import get_client, get_owner_user_id, log_notification  # noqa: E402
+from _supabase import get_client, get_owner_user_id  # noqa: E402
+from _notifications import log_notification  # noqa: E402
 from _integrations import load_integration  # noqa: E402
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
