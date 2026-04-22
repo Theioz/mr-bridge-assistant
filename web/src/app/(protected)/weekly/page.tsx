@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { todayString, daysAgoString, getLast7Days } from "@/lib/timezone";
@@ -102,11 +103,16 @@ function Panel({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function WeeklyPage() {
+async function WeeklyGrid({
+  today,
+  weekStart,
+  last7Days,
+}: {
+  today: string;
+  weekStart: string;
+  last7Days: string[];
+}) {
   const supabase = await createClient();
-  const today = todayString();
-  const weekStart = daysAgoString(6); // inclusive: 7 days ending today
-  const last7Days = getLast7Days(); // [oldest, ..., today]
 
   const [
     habitRegistryRes,
@@ -269,10 +275,6 @@ export default async function WeeklyPage() {
   const journalCount = (journalCountRes.count ?? 0) as number;
   const journalMissed = Math.max(0, 7 - journalCount);
 
-  // ── Range label ──────────────────────────────────────────────────────────
-
-  const rangeLabel = `${fmtDate(weekStart)} – ${fmtDate(today)}`;
-
   // ── Shared table tokens ──────────────────────────────────────────────────
 
   const thStyle: React.CSSProperties = {
@@ -321,33 +323,7 @@ export default async function WeeklyPage() {
   const rowStyleLast: React.CSSProperties = { gap: "var(--space-7)" };
 
   return (
-    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <header>
-        <h1
-          className="font-heading"
-          style={{
-            fontSize: "var(--t-h1)",
-            fontWeight: 600,
-            color: "var(--color-text)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Weekly Review
-        </h1>
-        <p
-          className="tnum"
-          style={{
-            marginTop: "var(--space-1)",
-            fontSize: "var(--t-micro)",
-            letterSpacing: "0.04em",
-            color: "var(--color-text-muted)",
-          }}
-        >
-          {rangeLabel}
-        </p>
-      </header>
-
+    <>
       {/* ── Row 1: Habits + Tasks ───────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
         <Panel
@@ -901,6 +877,45 @@ export default async function WeeklyPage() {
           </div>
         </Panel>
       </div>
+    </>
+  );
+}
+
+export default async function WeeklyPage() {
+  const today = todayString();
+  const weekStart = daysAgoString(6);
+  const last7Days = getLast7Days();
+  const rangeLabel = `${fmtDate(weekStart)} – ${fmtDate(today)}`;
+
+  return (
+    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
+      <header>
+        <h1
+          className="font-heading"
+          style={{
+            fontSize: "var(--t-h1)",
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Weekly Review
+        </h1>
+        <p
+          className="tnum"
+          style={{
+            marginTop: "var(--space-1)",
+            fontSize: "var(--t-micro)",
+            letterSpacing: "0.04em",
+            color: "var(--color-text-muted)",
+          }}
+        >
+          {rangeLabel}
+        </p>
+      </header>
+      <Suspense fallback={<div style={{ minHeight: 880 }} />}>
+        <WeeklyGrid today={today} weekStart={weekStart} last7Days={last7Days} />
+      </Suspense>
     </div>
   );
 }

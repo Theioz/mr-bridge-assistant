@@ -99,9 +99,8 @@ async function updateHabit(
 }
 
 export default async function HabitsPage() {
-  const supabase = await createClient();
   const today = todayString();
-  const { key: windowKey, days } = await getWindow();
+  const [supabase, { key: windowKey, days }] = await Promise.all([createClient(), getWindow()]);
 
   const historyDays = Math.min(days, 90);
   const historyDates = getLastNDays(historyDays);
