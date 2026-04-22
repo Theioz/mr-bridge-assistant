@@ -23,7 +23,15 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import { lastSyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
-import { SettingsTabs, isSettingsTab, type SettingsTab } from "@/components/settings/settings-tabs";
+import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
+
+const VALID_TABS = new Set<string>([
+  "profile",
+  "fitness",
+  "integrations",
+  "watchlists",
+  "appearance",
+]);
 
 async function updateProfile(key: string, value: string) {
   "use server";
@@ -300,7 +308,9 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const params = await searchParams;
-  const activeTab: SettingsTab = isSettingsTab(params.tab) ? params.tab : "profile";
+  const activeTab: SettingsTab = VALID_TABS.has(params.tab ?? "")
+    ? (params.tab as SettingsTab)
+    : "profile";
 
   return (
     <div className="max-w-2xl">
