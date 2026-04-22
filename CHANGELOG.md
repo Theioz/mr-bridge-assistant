@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Settings page reorganized into tabbed navigation (#434).** Replaces the single long-scroll layout with five named tabs — Profile, Fitness, Integrations, Watchlists, Appearance. Active tab persists to `?tab=` URL param for deep-link and back-navigation support. Default tab on first load is Profile. Each tab fetches only the Supabase data its sections require (e.g. the Integrations tab is the only one that invokes `loadIntegration` and `lastSyncStatus`). No changes to any individual settings section component.
+
 ### Performance
 - **Mobile Lighthouse LCP improvements and /settings CLS fix (#384).** All 11 routes now pass the perf smoke gate. Key changes:
   - `/settings` mobile CLS fixed (0.163 → 0.000): `AppearanceSettings` description text now always renders server-side (removed the `mounted ? active.desc : ' '` gate); outer flex row changed to `flex-col` on mobile so the description can't wrap and push content below it.
