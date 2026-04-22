@@ -25,7 +25,7 @@ interface SetRow {
 export async function upsertExercisePRs(
   supabase: SupabaseClient,
   userId: string,
-  sessionId: string
+  sessionId: string,
 ): Promise<void> {
   const { data: session, error: sessionErr } = await supabase
     .from("strength_sessions")
@@ -116,17 +116,12 @@ export async function upsertExercisePRs(
     }
 
     if (changed) {
-      await supabase
-        .from("exercise_prs")
-        .upsert(row, { onConflict: "user_id,exercise_name" });
+      await supabase.from("exercise_prs").upsert(row, { onConflict: "user_id,exercise_name" });
     }
   }
 }
 
-export async function backfillAllPRs(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<number> {
+export async function backfillAllPRs(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data: sessions } = await supabase
     .from("strength_sessions")
     .select("id")

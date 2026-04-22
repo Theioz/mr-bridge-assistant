@@ -8,23 +8,27 @@ import { todayString } from "@/lib/timezone";
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
   const today = todayString();
   const diff = Math.round(
-    (new Date(dateStr + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86_400_000
+    (new Date(dateStr + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) /
+      86_400_000,
   );
-  if (diff < 0)   return { label: `${Math.abs(diff)}d overdue`, urgent: true  };
-  if (diff === 0) return { label: "Today",    urgent: true  };
+  if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, urgent: true };
+  if (diff === 0) return { label: "Today", urgent: true };
   if (diff === 1) return { label: "Tomorrow", urgent: false };
-  if (diff <= 7)  return { label: `${diff}d`, urgent: false };
+  if (diff <= 7) return { label: `${diff}d`, urgent: false };
   return { label: dateStr.slice(5).replace("-", "/"), urgent: false };
 }
 
 interface Props {
   task: Task;
-  completeAction:       (id: string) => Promise<{ error?: string }>;
-  archiveAction:        (id: string) => Promise<{ error?: string }>;
-  updateAction:         (id: string, fields: { title?: string; due_date?: string | null; priority?: string | null }) => Promise<{ error?: string }>;
-  addSubtaskAction:     (parentId: string, title: string) => Promise<{ error?: string }>;
-  completeSubtaskAction:(id: string) => Promise<{ error?: string }>;
-  deleteSubtaskAction:  (id: string) => Promise<{ error?: string }>;
+  completeAction: (id: string) => Promise<{ error?: string }>;
+  archiveAction: (id: string) => Promise<{ error?: string }>;
+  updateAction: (
+    id: string,
+    fields: { title?: string; due_date?: string | null; priority?: string | null },
+  ) => Promise<{ error?: string }>;
+  addSubtaskAction: (parentId: string, title: string) => Promise<{ error?: string }>;
+  completeSubtaskAction: (id: string) => Promise<{ error?: string }>;
+  deleteSubtaskAction: (id: string) => Promise<{ error?: string }>;
 }
 
 function SubtaskRow({
@@ -35,12 +39,15 @@ function SubtaskRow({
 }: {
   subtask: Subtask;
   completeSubtaskAction: (id: string) => Promise<{ error?: string }>;
-  deleteSubtaskAction:   (id: string) => Promise<{ error?: string }>;
-  updateAction:          (id: string, fields: { title?: string; due_date?: string | null; priority?: string | null }) => Promise<{ error?: string }>;
+  deleteSubtaskAction: (id: string) => Promise<{ error?: string }>;
+  updateAction: (
+    id: string,
+    fields: { title?: string; due_date?: string | null; priority?: string | null },
+  ) => Promise<{ error?: string }>;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [editing, setEditing]       = useState(false);
-  const [editTitle, setEditTitle]   = useState(subtask.title);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(subtask.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -51,7 +58,9 @@ function SubtaskRow({
     setEditing(false);
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== subtask.title) {
-      startTransition(async () => { await updateAction(subtask.id, { title: trimmed }); });
+      startTransition(async () => {
+        await updateAction(subtask.id, { title: trimmed });
+      });
     } else {
       setEditTitle(subtask.title);
     }
@@ -72,7 +81,12 @@ function SubtaskRow({
     >
       {/* Checkbox — 32px touch target */}
       <button
-        onClick={() => !done && startTransition(async () => { await completeSubtaskAction(subtask.id); })}
+        onClick={() =>
+          !done &&
+          startTransition(async () => {
+            await completeSubtaskAction(subtask.id);
+          })
+        }
         disabled={isPending || done}
         className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
         style={{ width: 32, height: 32 }}
@@ -100,8 +114,11 @@ function SubtaskRow({
             onChange={(e) => setEditTitle(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => {
-              if (e.key === "Enter")  commitEdit();
-              if (e.key === "Escape") { setEditTitle(subtask.title); setEditing(false); }
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") {
+                setEditTitle(subtask.title);
+                setEditing(false);
+              }
             }}
             className="w-full bg-transparent focus:outline-none"
             style={{ color: "var(--color-text)", fontSize: "var(--t-micro)" }}
@@ -124,7 +141,11 @@ function SubtaskRow({
       {/* Delete */}
       {!done && (
         <button
-          onClick={() => startTransition(async () => { await deleteSubtaskAction(subtask.id); })}
+          onClick={() =>
+            startTransition(async () => {
+              await deleteSubtaskAction(subtask.id);
+            })
+          }
           disabled={isPending}
           className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
           style={{ color: "var(--color-text-faint)" }}
@@ -147,8 +168,8 @@ export default function TaskItem({
   deleteSubtaskAction,
 }: Props) {
   const [isPending, startTransition] = useTransition();
-  const [editing, setEditing]       = useState(false);
-  const [editTitle, setEditTitle]   = useState(task.title);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const subtasks = task.subtasks ?? [];
@@ -158,8 +179,10 @@ export default function TaskItem({
   const addInputRef = useRef<HTMLInputElement>(null);
 
   const [showEditPanel, setShowEditPanel] = useState(false);
-  const [editDueDate, setEditDueDate]     = useState(task.due_date ?? "");
-  const [editPriority, setEditPriority]   = useState<"high" | "medium" | "low">((task.priority as "high" | "medium" | "low") ?? "medium");
+  const [editDueDate, setEditDueDate] = useState(task.due_date ?? "");
+  const [editPriority, setEditPriority] = useState<"high" | "medium" | "low">(
+    (task.priority as "high" | "medium" | "low") ?? "medium",
+  );
 
   useEffect(() => {
     if (editing) inputRef.current?.focus();
@@ -173,18 +196,24 @@ export default function TaskItem({
   const allDone = totalCount > 0 && completedCount === totalCount;
 
   function handleComplete() {
-    startTransition(async () => { await completeAction(task.id); });
+    startTransition(async () => {
+      await completeAction(task.id);
+    });
   }
 
   function handleArchive() {
-    startTransition(async () => { await archiveAction(task.id); });
+    startTransition(async () => {
+      await archiveAction(task.id);
+    });
   }
 
   function commitEdit() {
     setEditing(false);
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== task.title) {
-      startTransition(async () => { await updateAction(task.id, { title: trimmed }); });
+      startTransition(async () => {
+        await updateAction(task.id, { title: trimmed });
+      });
     } else {
       setEditTitle(task.title);
     }
@@ -245,8 +274,11 @@ export default function TaskItem({
               onChange={(e) => setEditTitle(e.target.value)}
               onBlur={commitEdit}
               onKeyDown={(e) => {
-                if (e.key === "Enter")  commitEdit();
-                if (e.key === "Escape") { setEditTitle(task.title); setEditing(false); }
+                if (e.key === "Enter") commitEdit();
+                if (e.key === "Escape") {
+                  setEditTitle(task.title);
+                  setEditing(false);
+                }
               }}
               className="flex-1 bg-transparent focus:outline-none"
               style={{ color: "var(--color-text)", fontSize: "var(--t-body)" }}

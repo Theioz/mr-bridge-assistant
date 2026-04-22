@@ -20,8 +20,24 @@ interface ValidationResult {
 // Map exercise name keywords to equipment_type values in user_equipment table.
 // No match → skip validation for that exercise (user may have unlisted equipment).
 const EQUIPMENT_KEYWORDS: [string[], string][] = [
-  [["dumbbell", " db ", "db curl", "db press", "db row", "db fly", "db lateral", "db front", "db lunge"], "dumbbell pair"],
-  [["barbell", " bb ", "squat", "deadlift", "bench press", "overhead press", "ohs", "rdl", "sumo"], "barbell"],
+  [
+    [
+      "dumbbell",
+      " db ",
+      "db curl",
+      "db press",
+      "db row",
+      "db fly",
+      "db lateral",
+      "db front",
+      "db lunge",
+    ],
+    "dumbbell pair",
+  ],
+  [
+    ["barbell", " bb ", "squat", "deadlift", "bench press", "overhead press", "ohs", "rdl", "sumo"],
+    "barbell",
+  ],
   [["band", "resistance band", "banded"], "resistance band"],
   [["kettlebell", "kb "], "kettlebell"],
 ];
@@ -43,9 +59,7 @@ export async function validateWeights({
   userId: string;
   exercises: Exercise[];
 }): Promise<ValidationResult> {
-  const weightedExercises = exercises.filter(
-    (e) => e.weight_lbs != null && e.weight_lbs > 0
-  );
+  const weightedExercises = exercises.filter((e) => e.weight_lbs != null && e.weight_lbs > 0);
   if (weightedExercises.length === 0) return { valid: true, violations: [] };
 
   // Collect unique equipment types we need to check

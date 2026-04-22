@@ -15,7 +15,7 @@ interface Props {
   saveAction: (
     date: string,
     responses: JournalResponses,
-    freeWrite: string
+    freeWrite: string,
   ) => Promise<{ error?: string }>;
 }
 
@@ -26,13 +26,13 @@ export default function JournalTabs({
   allEntries,
   saveAction,
 }: Props) {
-  const [tab, setTab]                     = useState<OuterTab>("write");
-  const [editingEntry, setEditingEntry]   = useState<JournalEntry | null>(null);
+  const [tab, setTab] = useState<OuterTab>("write");
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
 
   const isEditingPast = editingEntry !== null;
-  const editorDate    = editingEntry?.date ?? today;
-  const editorResponses  = editingEntry?.responses  ?? initialResponses;
-  const editorFreeWrite  = editingEntry?.free_write ?? initialFreeWrite ?? "";
+  const editorDate = editingEntry?.date ?? today;
+  const editorResponses = editingEntry?.responses ?? initialResponses;
+  const editorFreeWrite = editingEntry?.free_write ?? initialFreeWrite ?? "";
 
   function handleEditEntry(entry: JournalEntry) {
     setEditingEntry(entry);
@@ -56,53 +56,53 @@ export default function JournalTabs({
           borderBottom: "1px solid var(--rule-soft)",
         }}
       >
-        {([["write", "Write"], ["history", "History"]] as [OuterTab, string][]).map(
-          ([t, label]) => {
-            const isActive = tab === t;
-            return (
-              <button
-                key={t}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setTab(t)}
-                className="transition-colors"
-                style={{
-                  minHeight: 44,
-                  padding: "var(--space-2) var(--space-1)",
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "var(--t-micro)",
-                  fontWeight: 600,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: isActive ? "var(--accent-text)" : "var(--color-text-faint)",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: isActive
-                    ? "2px solid var(--accent)"
-                    : "2px solid transparent",
-                  marginBottom: -1,
-                  transitionDuration: "var(--motion-fast)",
-                  transitionTimingFunction: "var(--ease-out-quart)",
-                  cursor: "pointer",
-                }}
-              >
-                {label}
-              </button>
-            );
-          }
-        )}
+        {(
+          [
+            ["write", "Write"],
+            ["history", "History"],
+          ] as [OuterTab, string][]
+        ).map(([t, label]) => {
+          const isActive = tab === t;
+          return (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setTab(t)}
+              className="transition-colors"
+              style={{
+                minHeight: 44,
+                padding: "var(--space-2) var(--space-1)",
+                fontFamily: "var(--font-display), system-ui, sans-serif",
+                fontSize: "var(--t-micro)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: isActive ? "var(--accent-text)" : "var(--color-text-faint)",
+                background: "transparent",
+                border: "none",
+                borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+                marginBottom: -1,
+                transitionDuration: "var(--motion-fast)",
+                transitionTimingFunction: "var(--ease-out-quart)",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Write tab */}
       {tab === "write" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {isEditingPast && (
-            <div
-              className="flex items-center print:hidden"
-              style={{ gap: "var(--space-3)" }}
-            >
+            <div className="flex items-center print:hidden" style={{ gap: "var(--space-3)" }}>
               <button
-                onClick={() => { setEditingEntry(null); }}
+                onClick={() => {
+                  setEditingEntry(null);
+                }}
                 className="hover-text-brighten transition-colors"
                 style={{
                   minHeight: 44,
@@ -126,7 +126,9 @@ export default function JournalTabs({
               >
                 Editing{" "}
                 {new Date(editingEntry.date + "T00:00:00").toLocaleDateString("en-US", {
-                  weekday: "long", month: "long", day: "numeric",
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
                 })}
               </span>
             </div>
@@ -144,11 +146,7 @@ export default function JournalTabs({
 
       {/* History tab */}
       {tab === "history" && (
-        <JournalHistory
-          entries={allEntries}
-          today={today}
-          onEdit={handleEditEntry}
-        />
+        <JournalHistory entries={allEntries} today={today} onEdit={handleEditEntry} />
       )}
     </div>
   );

@@ -10,7 +10,7 @@ export function formatDate(dateStr: string): string {
 
 /** Derive the WindowKey from a days count (inverse of WINDOW_DAYS). */
 export function daysToWindowKey(days: number): WindowKey {
-  if (days <= 7)  return "7d";
+  if (days <= 7) return "7d";
   if (days <= 14) return "14d";
   if (days <= 30) return "30d";
   if (days <= 90) return "90d";
@@ -34,9 +34,7 @@ export function computeDailyTicks(dates: string[], windowKey: WindowKey): string
   }
 
   if (windowKey === "14d" || windowKey === "30d") {
-    return dates
-      .filter((d) => new Date(d + "T00:00:00").getDay() === 1)
-      .map(formatDate);
+    return dates.filter((d) => new Date(d + "T00:00:00").getDay() === 1).map(formatDate);
   }
 
   // 90d or 1yr: every 14th index starting from the first
@@ -53,7 +51,7 @@ export function computeDailyTicks(dates: string[], windowKey: WindowKey): string
  *   >26 weeks  → every 4th
  */
 export function computeWeeklyTicks(labels: string[], weekCount: number): string[] {
-  if (weekCount <= 8)  return [...labels];
+  if (weekCount <= 8) return [...labels];
   if (weekCount <= 26) return labels.filter((_, i) => i % 2 === 0);
   return labels.filter((_, i) => i % 4 === 0);
 }

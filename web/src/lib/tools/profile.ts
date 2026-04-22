@@ -12,7 +12,10 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
         properties: {},
       }),
       execute: async () => {
-        let q = supabase.from("profile").select("key, value, updated_at").order("key", { ascending: true });
+        let q = supabase
+          .from("profile")
+          .select("key, value, updated_at")
+          .order("key", { ascending: true });
         if (userId) q = q.eq("user_id", userId);
         const { data, error } = await q;
         if (error) return { error: error.message };
@@ -49,14 +52,20 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
       }),
       strict: STRICT_TOOLS.update_profile,
       execute: async ({ updates }) => {
-        const rows = updates.map(({ key, value }) => ({ key, value, ...(userId ? { user_id: userId } : {}) }));
+        const rows = updates.map(({ key, value }) => ({
+          key,
+          value,
+          ...(userId ? { user_id: userId } : {}),
+        }));
         const { data, error: upsertError } = await supabase
           .from("profile")
           .upsert(rows, { onConflict: "user_id,key" })
           .select("key, value, updated_at");
         if (upsertError) return err(upsertError.message);
         if (!data || data.length !== rows.length) {
-          return err(`Profile upsert returned ${data?.length ?? 0} rows, expected ${rows.length} — values may not be saved.`);
+          return err(
+            `Profile upsert returned ${data?.length ?? 0} rows, expected ${rows.length} — values may not be saved.`,
+          );
         }
         return ok({ written: data });
       },

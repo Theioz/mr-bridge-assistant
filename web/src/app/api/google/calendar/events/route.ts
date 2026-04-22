@@ -5,14 +5,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   const serverClient = await createClient();
-  const { data: { user } } = await serverClient.auth.getUser();
+  const {
+    data: { user },
+  } = await serverClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (user.id === process.env.DEMO_USER_ID) {
     return NextResponse.json({ eventId: `demo-${Date.now()}`, note: "Demo mode — not saved." });
   }
 
-  const body = await req.json() as {
+  const body = (await req.json()) as {
     title: string;
     date: string;
     start_time?: string;
@@ -44,7 +46,8 @@ export async function POST(req: NextRequest) {
     } else {
       const startTime = body.start_time ?? "09:00";
       const [h, m] = startTime.split(":").map(Number);
-      const endTime = body.end_time ?? `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      const endTime =
+        body.end_time ?? `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       eventBody = {
         summary: body.title,
         start: { dateTime: `${body.date}T${startTime}:00`, timeZone: tz },
@@ -55,7 +58,12 @@ export async function POST(req: NextRequest) {
     }
 
     const res = await calendar.events.insert({ calendarId: "primary", requestBody: eventBody });
-    return NextResponse.json({ eventId: res.data.id, title: res.data.summary, start: res.data.start, end: res.data.end });
+    return NextResponse.json({
+      eventId: res.data.id,
+      title: res.data.summary,
+      start: res.data.start,
+      end: res.data.end,
+    });
   } catch (err) {
     if (err instanceof GoogleNotConnectedError) {
       return NextResponse.json({ error: "Google Calendar not connected" }, { status: 403 });

@@ -10,7 +10,7 @@ const FoodAnalysisSchema = z.object({
   ingredients: z
     .string()
     .describe(
-      "Comma-separated list of visible ingredients and their estimated quantities, e.g. 'chicken breast ~150g, white rice ~1 cup, broccoli ~½ cup, olive oil ~1 tbsp'"
+      "Comma-separated list of visible ingredients and their estimated quantities, e.g. 'chicken breast ~150g, white rice ~1 cup, broccoli ~½ cup, olive oil ~1 tbsp'",
     ),
   meal_type_guess: z
     .enum(["breakfast", "lunch", "dinner", "snack"])
@@ -19,8 +19,14 @@ const FoodAnalysisSchema = z.object({
   protein_g: z.number().describe("Estimated protein in grams"),
   carbs_g: z.number().describe("Estimated carbohydrates in grams"),
   fat_g: z.number().describe("Estimated fat in grams"),
-  fiber_g: z.number().nullable().describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
-  sugar_g: z.number().nullable().describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
+  fiber_g: z
+    .number()
+    .nullable()
+    .describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
+  sugar_g: z
+    .number()
+    .nullable()
+    .describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
   sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the analysis"),
   notes: z
@@ -42,14 +48,20 @@ const NutritionLabelSchema = z.object({
   sugar_g: z.number().nullable().describe("Total sugars in grams per serving"),
   sodium_mg: z.number().nullable().describe("Sodium in milligrams per serving"),
   readable: z.boolean().describe("Whether the label was clearly readable"),
-  notes: z.string().describe("Any caveats, e.g. 'label partially obscured' or 'daily value % used where grams not shown'"),
+  notes: z
+    .string()
+    .describe(
+      "Any caveats, e.g. 'label partially obscured' or 'daily value % used where grams not shown'",
+    ),
 });
 
 export type NutritionLabel = z.infer<typeof NutritionLabelSchema>;
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -82,7 +94,7 @@ export async function POST(req: Request) {
   if (!SUPPORTED_TYPES.includes(imageFile.type)) {
     return Response.json(
       { error: `Unsupported format: ${imageFile.type}. Use JPEG, PNG, or WebP.` },
-      { status: 415 }
+      { status: 415 },
     );
   }
 
@@ -138,9 +150,7 @@ Instructions:
           role: "user",
           content: [
             { type: "image", image: base64, mediaType: mimeType },
-            ...(userPrompt
-              ? [{ type: "text" as const, text: `User context: ${userPrompt}` }]
-              : []),
+            ...(userPrompt ? [{ type: "text" as const, text: `User context: ${userPrompt}` }] : []),
           ],
         },
       ],
@@ -151,7 +161,7 @@ Instructions:
     console.error("[analyze-photo] Claude error:", err);
     return Response.json(
       { error: err instanceof Error ? err.message : "Analysis failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

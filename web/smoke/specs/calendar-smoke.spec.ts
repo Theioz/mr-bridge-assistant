@@ -1,6 +1,9 @@
 import { test, expect } from "../fixtures/auth";
 
-test("calendar tool — list events fires without config error", async ({ signedInPage: page, consoleErrors }) => {
+test("calendar tool — list events fires without config error", async ({
+  signedInPage: page,
+  consoleErrors,
+}) => {
   await page.goto("/chat");
   await expect(page.getByPlaceholder("Ask Mr. Bridge...")).toBeVisible({ timeout: 10000 });
 

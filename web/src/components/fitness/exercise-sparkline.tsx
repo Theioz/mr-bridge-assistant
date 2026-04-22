@@ -53,17 +53,13 @@ export function ExerciseSparkline({ exerciseName, points, unit }: Props) {
         >
           {exerciseName}
         </span>
-        <span
-          className="tnum"
-          style={{ fontSize: 11, color: "var(--color-text-muted)" }}
-        >
+        <span className="tnum" style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
           {latest != null ? `${latest} ${unit}` : "—"}
           {delta != null && delta !== 0 && (
             <span
               style={{
                 marginLeft: 6,
-                color:
-                  delta > 0 ? "var(--color-positive)" : "var(--color-danger)",
+                color: delta > 0 ? "var(--color-positive)" : "var(--color-danger)",
               }}
             >
               {delta > 0 ? "+" : ""}

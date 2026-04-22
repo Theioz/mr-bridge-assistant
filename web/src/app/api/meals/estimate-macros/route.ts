@@ -14,8 +14,14 @@ const MacroEstimateSchema = z.object({
   protein_g: z.number().describe("Estimated protein in grams"),
   carbs_g: z.number().describe("Estimated carbohydrates in grams"),
   fat_g: z.number().describe("Estimated fat in grams"),
-  fiber_g: z.number().nullable().describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
-  sugar_g: z.number().nullable().describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
+  fiber_g: z
+    .number()
+    .nullable()
+    .describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
+  sugar_g: z
+    .number()
+    .nullable()
+    .describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
   sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the estimate"),
   notes: z.string().describe("Brief caveats, e.g. 'portion size assumed standard serving'"),
@@ -25,7 +31,9 @@ export type MacroEstimate = z.infer<typeof MacroEstimateSchema>;
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -48,10 +56,12 @@ export async function POST(req: Request) {
   }
 
   const cm = body.current_macros;
-  const hasCurrent = cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
+  const hasCurrent =
+    cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
 
-  const prompt = hasCurrent && dishName
-    ? `A user already logged a meal and now wants to adjust its macros.
+  const prompt =
+    hasCurrent && dishName
+      ? `A user already logged a meal and now wants to adjust its macros.
 
 Base dish: "${dishName}"
 Current macros: ${cm!.calories ?? "?"} cal, P ${cm!.protein_g ?? "?"}g, C ${cm!.carbs_g ?? "?"}g, F ${cm!.fat_g ?? "?"}g
@@ -67,7 +77,7 @@ Instructions:
 - Return the NEW TOTAL macros for the adjusted meal, not just the delta
 - Set confidence to "medium" for vague modifications, "high" for specific quantities
 - Include what you assumed for the modification in notes`
-    : `Estimate the nutritional content of a meal with these ingredients:
+      : `Estimate the nutritional content of a meal with these ingredients:
 
 "${ingredients || dishName}"
 
@@ -94,7 +104,7 @@ Instructions:
     console.error("[estimate-macros] Claude error:", err);
     return Response.json(
       { error: err instanceof Error ? err.message : "Estimation failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

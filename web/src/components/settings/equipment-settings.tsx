@@ -60,7 +60,9 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const effectiveType = type === "_custom" ? customType.trim() : type;
-  const isWeightBased = ["dumbbell pair", "barbell", "plate set", "kettlebell"].includes(effectiveType);
+  const isWeightBased = ["dumbbell pair", "barbell", "plate set", "kettlebell"].includes(
+    effectiveType,
+  );
 
   async function handleAdd() {
     if (!effectiveType) {
@@ -86,10 +88,7 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
     startTransition(async () => {
       await addAction(newItem);
       // Optimistic update: add a placeholder row (id unknown until revalidation)
-      setList((prev) => [
-        ...prev,
-        { ...newItem, id: `pending-${Date.now()}` } as EquipmentItem,
-      ]);
+      setList((prev) => [...prev, { ...newItem, id: `pending-${Date.now()}` } as EquipmentItem]);
       setWeight("");
       setResistance("");
       setNotes("");
@@ -140,7 +139,10 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
           <select
             aria-label="Equipment type"
             value={type}
-            onChange={(e) => { setType(e.target.value); setError(null); }}
+            onChange={(e) => {
+              setType(e.target.value);
+              setError(null);
+            }}
             className="flex-1 bg-transparent focus:outline-none min-w-0"
             style={{
               color: "var(--color-text)",
@@ -162,7 +164,10 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
         {type === "_custom" && (
           <input
             value={customType}
-            onChange={(e) => { setCustomType(e.target.value); setError(null); }}
+            onChange={(e) => {
+              setCustomType(e.target.value);
+              setError(null);
+            }}
             placeholder="Equipment name"
             className="bg-transparent focus:outline-none"
             style={{
@@ -184,7 +189,10 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
             <input
               type="number"
               value={weight}
-              onChange={(e) => { setWeight(e.target.value); setError(null); }}
+              onChange={(e) => {
+                setWeight(e.target.value);
+                setError(null);
+              }}
               placeholder="Weight (lbs)"
               min={0}
               step={2.5}
@@ -202,7 +210,10 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
           {!isWeightBased && (
             <input
               value={resistance}
-              onChange={(e) => { setResistance(e.target.value); setError(null); }}
+              onChange={(e) => {
+                setResistance(e.target.value);
+                setError(null);
+              }}
               placeholder="Resistance (e.g. medium)"
               className="bg-transparent focus:outline-none"
               style={{
@@ -268,7 +279,13 @@ export function EquipmentSettings({ items, addAction, removeAction }: Props) {
           </button>
         </div>
         {error && (
-          <p style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)", marginLeft: "calc(16px + var(--space-3))" }}>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-danger)",
+              marginLeft: "calc(16px + var(--space-3))",
+            }}
+          >
             {error}
           </p>
         )}

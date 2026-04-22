@@ -5,7 +5,7 @@ import { setWindowPreference } from "@/lib/window-actions";
 import type { WindowKey } from "@/lib/window";
 
 const WINDOWS: { key: WindowKey; label: string }[] = [
-  { key: "7d",  label: "7D" },
+  { key: "7d", label: "7D" },
   { key: "14d", label: "14D" },
   { key: "30d", label: "30D" },
   { key: "90d", label: "90D" },
@@ -46,7 +46,8 @@ export function WindowSelector({ current }: Props) {
               color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               minHeight: 44,
               minWidth: 44,
-              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+              transition:
+                "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             {label}

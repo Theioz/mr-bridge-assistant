@@ -15,7 +15,11 @@ import type { UIMessage } from "ai";
 interface Props {
   sessionId: string;
   initialMessages: UIMessage[];
-  onMessageSent?: (info?: { turnComplete: boolean; hadFailures: boolean; deadlineExceeded: boolean }) => void;
+  onMessageSent?: (info?: {
+    turnComplete: boolean;
+    hadFailures: boolean;
+    deadlineExceeded: boolean;
+  }) => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
@@ -71,7 +75,15 @@ function getTouchServerSnapshot(): boolean {
   return false;
 }
 
-export default function ChatInterface({ sessionId, initialMessages, onMessageSent, hasMore, loadingMore, onLoadMore, initialInput }: Props) {
+export default function ChatInterface({
+  sessionId,
+  initialMessages,
+  onMessageSent,
+  hasMore,
+  loadingMore,
+  onLoadMore,
+  initialInput,
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -103,10 +115,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
   // Transport sends UIMessage[] (with structured tool / file / text parts)
   // directly. The server route converts to ModelMessage[] via
   // convertToModelMessages — see web/src/app/api/chat/route.ts.
-  const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/chat" }),
-    []
-  );
+  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
 
   const { messages, sendMessage, regenerate, status, stop, error } = useChat({
     transport,
@@ -131,13 +140,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       e?.preventDefault?.();
       const text = input.trim();
       if (!text || isLoading) return;
-      sendMessage(
-        { text },
-        { body: { sessionId, model: modelOverride } }
-      );
+      sendMessage({ text }, { body: { sessionId, model: modelOverride } });
       setInput("");
     },
-    [input, isLoading, sendMessage, sessionId, modelOverride]
+    [input, isLoading, sendMessage, sessionId, modelOverride],
   );
 
   // ── Slash-command menu state ──────────────────────────────────────────
@@ -150,9 +156,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       setMenuCommands([]);
       return;
     }
-    const filtered = SLASH_COMMANDS.filter((c) =>
-      c.name.startsWith(token.query)
-    );
+    const filtered = SLASH_COMMANDS.filter((c) => c.name.startsWith(token.query));
     setMenuCommands(filtered);
     setActiveIndex(0);
   }, []);
@@ -162,7 +166,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
       setInput(e.target.value);
       updateMenu(e.target.value, e.target.selectionStart ?? e.target.value.length);
     },
-    [updateMenu]
+    [updateMenu],
   );
 
   const applyCommand = useCallback(
@@ -181,7 +185,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         el?.setSelectionRange(newCursor, newCursor);
       });
     },
-    [input, setInput]
+    [input, setInput],
   );
 
   const handleKeyDown = useCallback(
@@ -226,7 +230,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
           break;
       }
     },
-    [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit, status, stop]
+    [isTouchDevice, menuCommands, activeIndex, applyCommand, handleSubmit, status, stop],
   );
 
   // Esc cancels a turn in flight. The textarea is disabled while streaming
@@ -279,10 +283,7 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
         }}
       >
         {hasMore && (
-          <div
-            className="flex justify-center print:hidden"
-            style={{ padding: "var(--space-2) 0" }}
-          >
+          <div className="flex justify-center print:hidden" style={{ padding: "var(--space-2) 0" }}>
             <button
               onClick={() => {
                 const el = scrollContainerRef.current;
@@ -404,7 +405,9 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
               }}
             >
               <span style={{ fontSize: "var(--t-meta)", color: "var(--color-danger)" }}>
-                {error.message?.includes("overloaded") ? "API overloaded — try again." : "Error — try again."}
+                {error.message?.includes("overloaded")
+                  ? "API overloaded — try again."
+                  : "Error — try again."}
               </span>
               <button
                 onClick={() => regenerate()}
@@ -522,7 +525,10 @@ export default function ChatInterface({ sessionId, initialMessages, onMessageSen
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => { setModelOverride(opt); setModelMenuOpen(false); }}
+                  onClick={() => {
+                    setModelOverride(opt);
+                    setModelMenuOpen(false);
+                  }}
                   className="w-full text-left cursor-pointer hover-bg-subtle"
                   style={{
                     padding: "var(--space-2) var(--space-3)",

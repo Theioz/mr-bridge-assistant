@@ -27,7 +27,7 @@ function last7<T extends { date: string }>(rows: T[]): T[] {
  */
 function lastNonNull<T extends { date: string }>(
   rows: T[],
-  key: keyof T
+  key: keyof T,
 ): { value: number; date: string } | null {
   for (let i = rows.length - 1; i >= 0; i--) {
     const v = rows[i][key];
@@ -105,9 +105,7 @@ function SummaryCell({
   const delta = showDelta ? latestValue - avgValue : 0;
   const dir = showDelta ? direction(latestValue, avgValue) : "flat";
   const deltaDigits = Math.abs(delta) >= 1000 ? 0 : digits;
-  const deltaText = showDelta
-    ? `${arrow(dir)}${formatNumber(Math.abs(delta), deltaDigits)}`
-    : "—";
+  const deltaText = showDelta ? `${arrow(dir)}${formatNumber(Math.abs(delta), deltaDigits)}` : "—";
   const latestLabelText = latestLabel(latestDate, today);
 
   return (
@@ -173,14 +171,10 @@ function SummaryCell({
         }}
       >
         <span>
-          <span style={{ color: "var(--color-text-faint)" }}>
-            {latestLabelText || "latest"}
-          </span>{" "}
+          <span style={{ color: "var(--color-text-faint)" }}>{latestLabelText || "latest"}</span>{" "}
           {latestValue !== null ? formatNumber(latestValue, digits) : "—"}
         </span>
-        {showDelta && (
-          <span className={deltaClass(dir, higherIsBetter)}>{deltaText}</span>
-        )}
+        {showDelta && <span className={deltaClass(dir, higherIsBetter)}>{deltaText}</span>}
       </span>
       {series.length > 0 && <Sparkline values={series} ariaLabel={ariaLabel} />}
     </div>

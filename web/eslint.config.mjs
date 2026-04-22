@@ -1,5 +1,6 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
+import eslintConfigPrettier from "eslint-config-prettier";
 
 const eslintConfig = [
   ...nextCoreWebVitals,
@@ -21,6 +22,7 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  eslintConfigPrettier,
   {
     ignores: [
       "node_modules/**",

@@ -90,12 +90,8 @@ export function LongestChainBadges({ habits, streaks }: Props) {
                     }}
                   />
                 )}
-                <span style={{ color: "var(--color-text)", fontWeight: 500 }}>
-                  {r.current}d
-                </span>
-                <span style={{ color: "var(--color-text-faint)" }}>
-                  · best {r.best}d
-                </span>
+                <span style={{ color: "var(--color-text)", fontWeight: 500 }}>{r.current}d</span>
+                <span style={{ color: "var(--color-text-faint)" }}>· best {r.best}d</span>
               </span>
             </div>
           );

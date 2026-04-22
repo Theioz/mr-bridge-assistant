@@ -111,7 +111,13 @@ interface WeekViewProps {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-export default function WeekView({ events, currentDate, view, onSlotClick, onEventClick }: WeekViewProps) {
+export default function WeekView({
+  events,
+  currentDate,
+  view,
+  onSlotClick,
+  onEventClick,
+}: WeekViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Scroll to 7am on mount
@@ -268,10 +274,7 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
       )}
 
       {/* Scrollable time grid */}
-      <div
-        ref={scrollRef}
-        style={{ flex: 1, overflowY: "auto", position: "relative" }}
-      >
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", position: "relative" }}>
         <div
           style={{
             display: "grid",
@@ -370,7 +373,13 @@ export default function WeekView({ events, currentDate, view, onSlotClick, onEve
                       }}
                       style={style}
                     >
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {event.title}
                       </span>
                       {height >= 40 && event.location && (

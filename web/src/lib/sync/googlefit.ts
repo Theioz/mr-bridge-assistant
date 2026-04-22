@@ -56,10 +56,7 @@ async function getGoogleAccessToken(db: SupabaseClient, userId: string): Promise
 // Google Fit API helpers
 // ---------------------------------------------------------------------------
 
-async function fitGet(
-  accessToken: string,
-  endpoint: string,
-): Promise<Record<string, unknown>> {
+async function fitGet(accessToken: string, endpoint: string): Promise<Record<string, unknown>> {
   const res = await fetch(`https://www.googleapis.com/fitness/v1/users/me/${endpoint}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
@@ -97,7 +94,10 @@ export interface GoogleFitSyncResult {
   written: number;
 }
 
-export async function syncGoogleFit(db: SupabaseClient, userId: string): Promise<GoogleFitSyncResult> {
+export async function syncGoogleFit(
+  db: SupabaseClient,
+  userId: string,
+): Promise<GoogleFitSyncResult> {
   const accessToken = await getGoogleAccessToken(db, userId);
 
   // Discover available body datasources
@@ -132,9 +132,7 @@ export async function syncGoogleFit(db: SupabaseClient, userId: string): Promise
 
   const rows: Record<string, unknown>[] = [];
   for (const bucket of (aggResult.bucket as Record<string, unknown>[] | undefined) ?? []) {
-    const dateStr = new Date(parseInt(bucket.startTimeMillis as string))
-      .toISOString()
-      .slice(0, 10);
+    const dateStr = new Date(parseInt(bucket.startTimeMillis as string)).toISOString().slice(0, 10);
 
     // Index points by data type
     const byType: Record<string, { value: { fpVal?: number }[] }[]> = {};

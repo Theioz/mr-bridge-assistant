@@ -16,7 +16,7 @@ interface Props {
 
 export default function HabitsCheckin({ registry, todayLogs, streaks, toggleAction, date }: Props) {
   const [completedMap, setCompletedMap] = useState<Map<string, boolean>>(
-    () => new Map(todayLogs.map((l) => [l.habit_id, l.completed]))
+    () => new Map(todayLogs.map((l) => [l.habit_id, l.completed])),
   );
   const [pendingSet, setPendingSet] = useState<Set<string>>(() => new Set());
 
@@ -107,7 +107,8 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
                       borderRadius: "var(--r-1)",
                       border: done ? "none" : "1px solid var(--color-text-faint)",
                       background: done ? "var(--accent)" : "transparent",
-                      transition: "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
+                      transition:
+                        "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
                     }}
                   >
                     {done && (
@@ -140,9 +141,7 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
                     style={{
                       fontSize: "var(--t-micro)",
                       color:
-                        currentStreak > 0
-                          ? "var(--color-text-muted)"
-                          : "var(--color-text-faint)",
+                        currentStreak > 0 ? "var(--color-text-muted)" : "var(--color-text-faint)",
                       flexShrink: 0,
                     }}
                   >
@@ -154,12 +153,7 @@ export default function HabitsCheckin({ registry, todayLogs, streaks, toggleActi
           })}
         </ul>
       ) : (
-        <EmptyState
-          icon={CheckSquare}
-          paddingY={16}
-          actionHref="/habits"
-          actionLabel="Configure"
-        >
+        <EmptyState icon={CheckSquare} paddingY={16} actionHref="/habits" actionLabel="Configure">
           No habits configured
         </EmptyState>
       )}

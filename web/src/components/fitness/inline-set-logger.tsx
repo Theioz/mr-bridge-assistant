@@ -203,7 +203,12 @@ export function InlineSetLogger({
             const displayWeight = kgToDisplay(s.weight_kg, unit);
             const parts: string[] = [];
             if (displayWeight != null) {
-              const notation = weightNotation === "per_hand" ? " / hand" : weightNotation === "total" ? " total" : "";
+              const notation =
+                weightNotation === "per_hand"
+                  ? " / hand"
+                  : weightNotation === "total"
+                    ? " total"
+                    : "";
               parts.push(`${displayWeight} ${unit}${notation}`);
             }
             if (s.reps != null) parts.push(`× ${s.reps}`);
@@ -228,7 +233,11 @@ export function InlineSetLogger({
                   onClick={() => removeSet(s.id)}
                   disabled={pending}
                   className="ml-auto hover-text-danger cursor-pointer print:hidden"
-                  style={{ color: "var(--color-text-faint)", background: "transparent", border: "none" }}
+                  style={{
+                    color: "var(--color-text-faint)",
+                    background: "transparent",
+                    border: "none",
+                  }}
                   aria-label={`Remove set ${s.set_number}`}
                 >
                   <Trash2 size={11} />
@@ -341,9 +350,7 @@ export function InlineSetLogger({
         </div>
       )}
 
-      {err && (
-        <p style={{ fontSize: 11, color: "var(--color-danger)", marginTop: 4 }}>{err}</p>
-      )}
+      {err && <p style={{ fontSize: 11, color: "var(--color-danger)", marginTop: 4 }}>{err}</p>}
     </div>
   );
 }

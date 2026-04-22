@@ -6,9 +6,9 @@ import { setThemePreference } from "@/lib/theme-actions";
 import type { ThemePreference } from "@/lib/theme";
 
 const OPTIONS: { value: ThemePreference; label: string; desc: string }[] = [
-  { value: "system", label: "Auto",  desc: "Match your device setting" },
-  { value: "light",  label: "Light", desc: "Light mode always" },
-  { value: "dark",   label: "Dark",  desc: "Dark mode always" },
+  { value: "system", label: "Auto", desc: "Match your device setting" },
+  { value: "light", label: "Light", desc: "Light mode always" },
+  { value: "dark", label: "Dark", desc: "Dark mode always" },
 ];
 
 // Hydration flag via an external-store read: getServerSnapshot returns false

@@ -1,0 +1,8 @@
+.next/
+node_modules/
+out/
+build/
+next-env.d.ts
+smoke/test-results/
+smoke/playwright-report/
+package-lock.json

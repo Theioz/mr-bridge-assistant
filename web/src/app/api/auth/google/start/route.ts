@@ -14,7 +14,9 @@ const GOOGLE_SCOPES = [
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -24,7 +26,10 @@ export async function GET() {
   const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI;
   if (!clientId || !clientSecret || !redirectUri) {
     return NextResponse.json(
-      { error: "Google OAuth not configured (missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_OAUTH_REDIRECT_URI)" },
+      {
+        error:
+          "Google OAuth not configured (missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_OAUTH_REDIRECT_URI)",
+      },
       { status: 500 },
     );
   }

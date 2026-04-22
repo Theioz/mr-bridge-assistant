@@ -4,24 +4,37 @@ import type { RecoveryMetrics } from "@/lib/types";
 
 function scoreColor(score: number | null): string {
   if (score == null) return "var(--color-text-muted)";
-  if (score >= 80)   return "var(--color-positive)";
-  if (score >= 60)   return "var(--color-warning)";
+  if (score >= 80) return "var(--color-positive)";
+  if (score >= 60) return "var(--color-warning)";
   return "var(--color-danger)";
 }
 
 function statusText(score: number | null): string {
   if (score == null) return "";
-  if (score >= 85)   return "Recovery optimal — push hard today";
-  if (score >= 70)   return "Recovery good — normal training";
-  if (score >= 55)   return "Recovery moderate — moderate effort";
-  if (score >= 40)   return "Readiness low — consider deload";
+  if (score >= 85) return "Recovery optimal — push hard today";
+  if (score >= 70) return "Recovery good — normal training";
+  if (score >= 55) return "Recovery moderate — moderate effort";
+  if (score >= 40) return "Readiness low — consider deload";
   return "Readiness critical — rest day recommended";
 }
 
 function fmtDate(dateStr: string): string {
   // "2026-04-13" → "Apr 13"
   const [, month, day] = dateStr.split("-");
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${months[parseInt(month) - 1]} ${parseInt(day)}`;
 }
 

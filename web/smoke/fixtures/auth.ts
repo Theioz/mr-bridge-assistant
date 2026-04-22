@@ -8,9 +8,7 @@ type SmokeFixtures = {
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) {
-    throw new Error(
-      `${name} is required for smoke tests. See docs/smoke-testing.md.`,
-    );
+    throw new Error(`${name} is required for smoke tests. See docs/smoke-testing.md.`);
   }
   return v;
 }

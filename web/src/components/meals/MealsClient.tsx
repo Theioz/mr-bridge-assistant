@@ -7,10 +7,9 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { UndoToastProvider, useUndoToast } from "@/components/ui/undo-toast";
 
-const FoodPhotoAnalyzer = dynamic(
-  () => import("@/app/(protected)/meals/FoodPhotoAnalyzer"),
-  { ssr: false }
-);
+const FoodPhotoAnalyzer = dynamic(() => import("@/app/(protected)/meals/FoodPhotoAnalyzer"), {
+  ssr: false,
+});
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -85,16 +84,22 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const MEAL_ORDER: Record<string, number> = {
-  breakfast: 0, lunch: 1, dinner: 2, snack: 3,
+  breakfast: 0,
+  lunch: 1,
+  dinner: 2,
+  snack: 3,
 };
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
-type MealType = typeof MEAL_TYPES[number];
+type MealType = (typeof MEAL_TYPES)[number];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeName(s: string | null | undefined): string {
-  return (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return (s ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -195,20 +200,32 @@ function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
         <div className="flex items-baseline tnum" style={{ gap: "var(--space-2)" }}>
           <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
             {consumed}
-            <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>{unit}</span>
+            <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>
+              {unit}
+            </span>
           </span>
           <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>/</span>
           <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-            {goal}{unit}
+            {goal}
+            {unit}
           </span>
-          <span style={{ fontSize: "var(--t-micro)", fontWeight: 500, color, minWidth: 64, textAlign: "right" }}>
-            {isOver
-              ? `+${Math.abs(remaining)}${unit} over`
-              : `${remaining}${unit} left`}
+          <span
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              color,
+              minWidth: 64,
+              textAlign: "right",
+            }}
+          >
+            {isOver ? `+${Math.abs(remaining)}${unit} over` : `${remaining}${unit} left`}
           </span>
         </div>
       </div>
-      <div className="rounded-full overflow-hidden" style={{ height: 3, background: "var(--rule-soft)" }}>
+      <div
+        className="rounded-full overflow-hidden"
+        style={{ height: 3, background: "var(--rule-soft)" }}
+      >
         <div
           className="h-full"
           style={{
@@ -216,7 +233,8 @@ function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
             transform: `scaleX(${clamped / 100})`,
             transformOrigin: "left center",
             background: color,
-            transition: "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
+            transition:
+              "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
             willChange: "transform",
           }}
         />
@@ -242,7 +260,9 @@ function formatMacroCol(m: MealRow): string | null {
     m.protein_g != null ? `P ${m.protein_g}` : null,
     m.carbs_g != null ? `C ${m.carbs_g}` : null,
     m.fat_g != null ? `F ${m.fat_g}` : null,
-  ].filter(Boolean).join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 // Second line shown under macros in the expanded-row display; legacy rows with
@@ -325,7 +345,10 @@ function MealRowDisplay({ meal, onClick, onRelog, onDelete }: MealRowDisplayProp
       {onRelog && (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onRelog(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRelog();
+          }}
           aria-label="Log again"
           title="Log again"
           className="transition-opacity hover:opacity-70 flex-shrink-0 flex items-center justify-center"
@@ -344,7 +367,10 @@ function MealRowDisplay({ meal, onClick, onRelog, onDelete }: MealRowDisplayProp
       {onDelete && (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           aria-label="Delete meal"
           title="Delete meal"
           className="hover-text-danger transition-opacity flex-shrink-0 flex items-center justify-center"
@@ -404,7 +430,11 @@ function MealRowEdit({
           onChange={(e) => onChange({ ...fields, meal_type: e.target.value })}
           style={{ ...inputStyle, width: "auto", minWidth: 110, flexShrink: 0 }}
         >
-          {MEAL_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+          {MEAL_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
+          ))}
         </select>
         <input
           type="text"
@@ -421,7 +451,9 @@ function MealRowEdit({
             type="number"
             value={fields[field]}
             onChange={(e) => onChange({ ...fields, [field]: e.target.value })}
-            placeholder={{ calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]}
+            placeholder={
+              { calories: "Cal", protein_g: "P(g)", carbs_g: "C(g)", fat_g: "F(g)" }[field]
+            }
             style={{ ...inputStyle, width: 72 }}
           />
         ))}
@@ -506,7 +538,11 @@ function TodayTab({
   function prefillLog(m: MealRow) {
     const name = m.recipes?.name ?? m.notes ?? "";
     setLogDesc(name);
-    setLogMealType((MEAL_TYPES as readonly string[]).includes(m.meal_type) ? (m.meal_type as MealType) : "breakfast");
+    setLogMealType(
+      (MEAL_TYPES as readonly string[]).includes(m.meal_type)
+        ? (m.meal_type as MealType)
+        : "breakfast",
+    );
     setLogCal(m.calories != null ? String(m.calories) : "");
     setLogProtein(m.protein_g != null ? String(m.protein_g) : "");
     setLogCarbs(m.carbs_g != null ? String(m.carbs_g) : "");
@@ -565,7 +601,14 @@ function TodayTab({
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<MealRowEditFields>({
-    notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "", fiber_g: "", sugar_g: "",
+    notes: "",
+    meal_type: "breakfast",
+    calories: "",
+    protein_g: "",
+    carbs_g: "",
+    fat_g: "",
+    fiber_g: "",
+    sugar_g: "",
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -612,7 +655,7 @@ function TodayTab({
     macroGoals.fat !== null;
 
   const sortedMeals = [...todayMeals].sort(
-    (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9)
+    (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9),
   );
 
   async function handleLog() {
@@ -656,8 +699,18 @@ function TodayTab({
         <h2 className="db-section-label">Today&apos;s Macros</h2>
         {hasAnyGoal ? (
           <div>
-            <MacroBar label="Calories" unit=" kcal" consumed={macroTotals.calories} goal={macroGoals.calories} />
-            <MacroBar label="Protein" unit="g" consumed={macroTotals.protein} goal={macroGoals.protein} />
+            <MacroBar
+              label="Calories"
+              unit=" kcal"
+              consumed={macroTotals.calories}
+              goal={macroGoals.calories}
+            />
+            <MacroBar
+              label="Protein"
+              unit="g"
+              consumed={macroTotals.protein}
+              goal={macroGoals.protein}
+            />
             <MacroBar label="Carbs" unit="g" consumed={macroTotals.carbs} goal={macroGoals.carbs} />
             <MacroBar label="Fat" unit="g" consumed={macroTotals.fat} goal={macroGoals.fat} />
             <MacroBar
@@ -673,7 +726,11 @@ function TodayTab({
             No nutrition goals set.{" "}
             <Link
               href="/settings"
-              style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
+              style={{
+                color: "var(--accent-text)",
+                textDecoration: "underline",
+                textUnderlineOffset: 2,
+              }}
             >
               Configure goals in Settings
             </Link>{" "}
@@ -692,10 +749,7 @@ function TodayTab({
         ) : (
           <div>
             {sortedMeals.map((m, i) => (
-              <div
-                key={m.id}
-                style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
-              >
+              <div key={m.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
                 {editingId === m.id ? (
                   <MealRowEdit
                     fields={editFields}
@@ -739,7 +793,9 @@ function TodayTab({
             value={logDesc}
             onChange={(e) => setLogDesc(e.target.value)}
             placeholder="What did you eat?"
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleLog(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) handleLog();
+            }}
             style={{ ...inputStyle, flex: 1 }}
           />
           <button
@@ -753,10 +809,7 @@ function TodayTab({
           </button>
         </div>
 
-        <div
-          className="flex items-center flex-wrap"
-          style={{ gap: "var(--space-4)" }}
-        >
+        <div className="flex items-center flex-wrap" style={{ gap: "var(--space-4)" }}>
           <button
             onClick={() => setMacrosOpen((v) => !v)}
             className="flex items-center transition-opacity active:opacity-70"
@@ -794,7 +847,11 @@ function TodayTab({
             onClick={handleReanalyze}
             disabled={(!logIngredients.trim() && !logDesc.trim()) || reanalyzing}
             className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
-            title={logIngredients.trim() ? "Estimate macros from ingredients" : "Estimate macros from dish name"}
+            title={
+              logIngredients.trim()
+                ? "Estimate macros from ingredients"
+                : "Estimate macros from dish name"
+            }
             style={{
               gap: "var(--space-1)",
               fontSize: "var(--t-micro)",
@@ -811,16 +868,34 @@ function TodayTab({
         </div>
 
         {ingredientsOpen && (
-          <div style={{ marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--rule-soft)" }}>
-            <label style={{ display: "block", fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+          <div
+            style={{
+              marginTop: "var(--space-3)",
+              paddingTop: "var(--space-3)",
+              borderTop: "1px solid var(--rule-soft)",
+            }}
+          >
+            <label
+              style={{
+                display: "block",
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-1)",
+              }}
+            >
               Ingredients or modifications (optional)
             </label>
             <textarea
               value={logIngredients}
               onChange={(e) => setLogIngredients(e.target.value)}
-              placeholder="e.g. &quot;added 4oz chicken&quot; or full list: &quot;6oz salmon, 1 cup rice, 1 tbsp oil&quot;"
+              placeholder='e.g. "added 4oz chicken" or full list: "6oz salmon, 1 cup rice, 1 tbsp oil"'
               rows={3}
-              style={{ ...inputStyle, fontSize: "var(--t-meta)", resize: "vertical", fontFamily: "inherit" }}
+              style={{
+                ...inputStyle,
+                fontSize: "var(--t-meta)",
+                resize: "vertical",
+                fontFamily: "inherit",
+              }}
             />
           </div>
         )}
@@ -837,12 +912,24 @@ function TodayTab({
           >
             {[
               { label: "Cal", value: logCal, setter: setLogCal, mode: "numeric" as const },
-              { label: "P (g)", value: logProtein, setter: setLogProtein, mode: "decimal" as const },
+              {
+                label: "P (g)",
+                value: logProtein,
+                setter: setLogProtein,
+                mode: "decimal" as const,
+              },
               { label: "C (g)", value: logCarbs, setter: setLogCarbs, mode: "decimal" as const },
               { label: "F (g)", value: logFat, setter: setLogFat, mode: "decimal" as const },
             ].map(({ label, value, setter, mode }) => (
               <div key={label}>
-                <label style={{ display: "block", fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "var(--space-1)",
+                  }}
+                >
                   {label}
                 </label>
                 <input
@@ -865,11 +952,12 @@ function TodayTab({
           <h2 className="db-section-label">Recent meals</h2>
           <div>
             {recentMeals.map((m, i) => (
-              <div
-                key={m.id}
-                style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
-              >
-                <MealRowDisplay meal={m} onClick={() => prefillLog(m)} onRelog={() => prefillLog(m)} />
+              <div key={m.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
+                <MealRowDisplay
+                  meal={m}
+                  onClick={() => prefillLog(m)}
+                  onRelog={() => prefillLog(m)}
+                />
               </div>
             ))}
           </div>
@@ -891,7 +979,11 @@ function TodayTab({
           Or ask{" "}
           <Link
             href="/chat"
-            style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
+            style={{
+              color: "var(--accent-text)",
+              textDecoration: "underline",
+              textUnderlineOffset: 2,
+            }}
           >
             Mr. Bridge
           </Link>{" "}
@@ -915,12 +1007,7 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
   const q = query.toLowerCase();
   const filtered = q
     ? recipes.filter((r) => {
-        const haystack = [
-          r.name,
-          r.cuisine,
-          ...(r.tags ?? []),
-          r.ingredients ?? "",
-        ]
+        const haystack = [r.name, r.cuisine, ...(r.tags ?? []), r.ingredients ?? ""]
           .join(" ")
           .toLowerCase();
         return haystack.includes(q);
@@ -995,16 +1082,31 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)" }}>
+                    <p
+                      style={{
+                        fontSize: "var(--t-body)",
+                        fontWeight: 600,
+                        color: "var(--color-text)",
+                      }}
+                    >
                       {r.name}
                     </p>
                     {r.cuisine && (
-                      <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                      <p
+                        style={{
+                          fontSize: "var(--t-micro)",
+                          color: "var(--color-text-muted)",
+                          marginTop: 2,
+                        }}
+                      >
                         {r.cuisine}
                       </p>
                     )}
                     {r.tags && r.tags.length > 0 && (
-                      <div className="flex flex-wrap" style={{ gap: "var(--space-1)", marginTop: "var(--space-2)" }}>
+                      <div
+                        className="flex flex-wrap"
+                        style={{ gap: "var(--space-1)", marginTop: "var(--space-2)" }}
+                      >
                         {r.tags.map((tag) => (
                           <span
                             key={tag}
@@ -1023,9 +1125,15 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                     )}
                   </div>
                   {isExpanded ? (
-                    <ChevronUp size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }} />
+                    <ChevronUp
+                      size={15}
+                      style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }}
+                    />
                   ) : (
-                    <ChevronDown size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }} />
+                    <ChevronDown
+                      size={15}
+                      style={{ color: "var(--color-text-faint)", flexShrink: 0, marginTop: 4 }}
+                    />
                   )}
                 </button>
 
@@ -1037,13 +1145,23 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                     }}
                   >
                     {r.ingredients && (
-                      <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", lineHeight: 1.6, marginBottom: "var(--space-3)" }}>
+                      <p
+                        style={{
+                          fontSize: "var(--t-meta)",
+                          color: "var(--color-text-muted)",
+                          lineHeight: 1.6,
+                          marginBottom: "var(--space-3)",
+                        }}
+                      >
                         {r.ingredients}
                       </p>
                     )}
 
                     {isUsing ? (
-                      <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
+                      <div
+                        className="flex items-center flex-wrap"
+                        style={{ gap: "var(--space-2)" }}
+                      >
                         <select
                           aria-label="Meal type"
                           value={useRecipeMealType}
@@ -1112,7 +1230,9 @@ function PlanTab({
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [error, setError] = useState("");
-  const [logStates, setLogStates] = useState<Record<number, { open: boolean; mealType: MealType; logging: boolean }>>({});
+  const [logStates, setLogStates] = useState<
+    Record<number, { open: boolean; mealType: MealType; logging: boolean }>
+  >({});
 
   async function handleSuggest() {
     if (!ingredients.trim()) return;
@@ -1153,7 +1273,10 @@ function PlanTab({
     return logStates[i] ?? { open: false, mealType: "dinner" as MealType, logging: false };
   }
 
-  function setLogState(i: number, update: Partial<{ open: boolean; mealType: MealType; logging: boolean }>) {
+  function setLogState(
+    i: number,
+    update: Partial<{ open: boolean; mealType: MealType; logging: boolean }>,
+  ) {
     setLogStates((prev) => ({
       ...prev,
       [i]: { ...getLogState(i), ...update },
@@ -1205,8 +1328,7 @@ function PlanTab({
               marginBottom: "var(--space-2)",
             }}
           >
-            Remaining today:{" "}
-            {remainingCal != null && `${Math.max(0, remainingCal)} kcal`}
+            Remaining today: {remainingCal != null && `${Math.max(0, remainingCal)} kcal`}
             {remainingCal != null && remainingProtein != null && " · "}
             {remainingProtein != null && `${Math.max(0, remainingProtein)}g protein`}
           </p>
@@ -1244,7 +1366,13 @@ function PlanTab({
           )}
         </button>
         {error && (
-          <p style={{ fontSize: "var(--t-meta)", color: "var(--color-danger)", marginTop: "var(--space-3)" }}>
+          <p
+            style={{
+              fontSize: "var(--t-meta)",
+              color: "var(--color-danger)",
+              marginTop: "var(--space-3)",
+            }}
+          >
             {error}
           </p>
         )}
@@ -1280,10 +1408,24 @@ function PlanTab({
                       Saved recipe
                     </span>
                   )}
-                  <p style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                  <p
+                    style={{
+                      fontSize: "var(--t-body)",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      marginBottom: "var(--space-1)",
+                    }}
+                  >
                     {s.name}
                   </p>
-                  <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", lineHeight: 1.5, marginBottom: "var(--space-2)" }}>
+                  <p
+                    style={{
+                      fontSize: "var(--t-meta)",
+                      color: "var(--color-text-muted)",
+                      lineHeight: 1.5,
+                      marginBottom: "var(--space-2)",
+                    }}
+                  >
                     {s.description}
                   </p>
                   <div
@@ -1361,23 +1503,35 @@ function PlanTab({
 // Mirrors the SSR computation in app/(protected)/meals/page.tsx so the displayed
 // totals stay in sync as rows are optimistically removed from the client.
 function computeMacroTotals(meals: MealRow[]): MacroTotals {
-  let calories = 0, protein = 0, carbs = 0, fat = 0;
-  let fiberSum = 0, sugarSum = 0, fiberAny = false, sugarAny = false;
+  let calories = 0,
+    protein = 0,
+    carbs = 0,
+    fat = 0;
+  let fiberSum = 0,
+    sugarSum = 0,
+    fiberAny = false,
+    sugarAny = false;
   for (const m of meals) {
     calories += m.calories ?? 0;
-    protein  += m.protein_g ?? 0;
-    carbs    += m.carbs_g ?? 0;
-    fat      += m.fat_g ?? 0;
-    if (m.fiber_g != null) { fiberSum += m.fiber_g; fiberAny = true; }
-    if (m.sugar_g != null) { sugarSum += m.sugar_g; sugarAny = true; }
+    protein += m.protein_g ?? 0;
+    carbs += m.carbs_g ?? 0;
+    fat += m.fat_g ?? 0;
+    if (m.fiber_g != null) {
+      fiberSum += m.fiber_g;
+      fiberAny = true;
+    }
+    if (m.sugar_g != null) {
+      sugarSum += m.sugar_g;
+      sugarAny = true;
+    }
   }
   return {
     calories,
     protein: Math.round(protein),
-    carbs:   Math.round(carbs),
-    fat:     Math.round(fat),
-    fiber:   fiberAny ? Math.round(fiberSum * 10) / 10 : null,
-    sugar:   sugarAny ? Math.round(sugarSum * 10) / 10 : null,
+    carbs: Math.round(carbs),
+    fat: Math.round(fat),
+    fiber: fiberAny ? Math.round(fiberSum * 10) / 10 : null,
+    sugar: sugarAny ? Math.round(sugarSum * 10) / 10 : null,
   };
 }
 
@@ -1391,13 +1545,7 @@ export default function MealsClient(props: Props) {
   );
 }
 
-function MealsClientInner({
-  todayMeals,
-  pastMeals,
-  recipes,
-  macroGoals,
-  macroTotals,
-}: Props) {
+function MealsClientInner({ todayMeals, pastMeals, recipes, macroGoals, macroTotals }: Props) {
   const router = useRouter();
   const toast = useUndoToast();
   const [tab, setTab] = useState<Tab>("today");
@@ -1412,17 +1560,17 @@ function MealsClientInner({
 
   const visibleTodayMeals = useMemo(
     () => todayMeals.filter((m) => !pendingDeletes.has(m.id)),
-    [todayMeals, pendingDeletes]
+    [todayMeals, pendingDeletes],
   );
   const visiblePastMeals = useMemo(
     () => pastMeals.filter((m) => !pendingDeletes.has(m.id)),
-    [pastMeals, pendingDeletes]
+    [pastMeals, pendingDeletes],
   );
   // SSR-computed `macroTotals` is the initial paint; once any row is pending
   // delete, recompute from the visible set so the UI updates immediately.
   const displayedMacroTotals = useMemo<MacroTotals>(
     () => (pendingDeletes.size === 0 ? macroTotals : computeMacroTotals(visibleTodayMeals)),
-    [pendingDeletes.size, macroTotals, visibleTodayMeals]
+    [pendingDeletes.size, macroTotals, visibleTodayMeals],
   );
 
   const removeFromPending = useCallback((id: string) => {
@@ -1456,7 +1604,7 @@ function MealsClientInner({
         removeFromPending(id);
       }
     },
-    [router, removeFromPending]
+    [router, removeFromPending],
   );
 
   const handleDelete = useCallback(
@@ -1484,10 +1632,10 @@ function MealsClientInner({
           }
           removeFromPending(id);
         },
-        5000
+        5000,
       );
     },
-    [toast, commitDelete, removeFromPending]
+    [toast, commitDelete, removeFromPending],
   );
 
   // On unmount (route change / tab close), flush any still-pending deletes so
@@ -1559,7 +1707,8 @@ function MealsClientInner({
                 color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: "none",
                 cursor: "pointer",
-                transition: "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+                transition:
+                  "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
               }}
             >
               {label}
@@ -1626,9 +1775,7 @@ function MealsClientInner({
       {tab === "scanner" && (
         <FoodPhotoAnalyzer onUnsavedItems={(count) => setUnsavedScanCount(count)} />
       )}
-      {tab === "plan" && (
-        <PlanTab macroTotals={displayedMacroTotals} macroGoals={macroGoals} />
-      )}
+      {tab === "plan" && <PlanTab macroTotals={displayedMacroTotals} macroGoals={macroGoals} />}
 
       {/* Past meals — always visible below the tabs */}
       {visiblePastMeals.length > 0 && (
@@ -1648,7 +1795,13 @@ function fmtDate(d: string) {
   });
 }
 
-function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (id: string) => void }) {
+function PastMeals({
+  pastMeals,
+  onDelete,
+}: {
+  pastMeals: MealRow[];
+  onDelete: (id: string) => void;
+}) {
   const router = useRouter();
   const byDate = new Map<string, MealRow[]>();
   for (const meal of pastMeals) {
@@ -1659,7 +1812,14 @@ function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (i
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<MealRowEditFields>({
-    notes: "", meal_type: "breakfast", calories: "", protein_g: "", carbs_g: "", fat_g: "", fiber_g: "", sugar_g: "",
+    notes: "",
+    meal_type: "breakfast",
+    calories: "",
+    protein_g: "",
+    carbs_g: "",
+    fat_g: "",
+    fiber_g: "",
+    sugar_g: "",
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -1701,13 +1861,11 @@ function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (i
 
   return (
     <section style={{ paddingTop: "var(--space-5)", borderTop: "1px solid var(--rule)" }}>
-      <h2 className="db-section-label">
-        Past 6 Days
-      </h2>
+      <h2 className="db-section-label">Past 6 Days</h2>
       <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
         {dates.map((date) => {
           const dayMeals = (byDate.get(date) ?? []).sort(
-            (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9)
+            (a, b) => (MEAL_ORDER[a.meal_type] ?? 9) - (MEAL_ORDER[b.meal_type] ?? 9),
           );
           return (
             <div key={date}>
@@ -1724,10 +1882,7 @@ function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (i
               </p>
               <div>
                 {dayMeals.map((m, i) => (
-                  <div
-                    key={m.id}
-                    style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
-                  >
+                  <div key={m.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
                     {editingId === m.id ? (
                       <MealRowEdit
                         fields={editFields}
@@ -1737,7 +1892,11 @@ function PastMeals({ pastMeals, onDelete }: { pastMeals: MealRow[]; onDelete: (i
                         onCancel={() => setEditingId(null)}
                       />
                     ) : (
-                      <MealRowDisplay meal={m} onClick={() => startEdit(m)} onDelete={() => onDelete(m.id)} />
+                      <MealRowDisplay
+                        meal={m}
+                        onClick={() => startEdit(m)}
+                        onDelete={() => onDelete(m.id)}
+                      />
                     )}
                   </div>
                 ))}

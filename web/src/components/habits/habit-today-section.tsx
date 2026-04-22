@@ -12,7 +12,13 @@ interface Props {
   toggleAction: (habitId: string, date: string, completed: boolean) => Promise<void>;
   archiveAction: (habitId: string) => Promise<void>;
   addAction: (name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
-  updateAction: (id: string, name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
+  updateAction: (
+    id: string,
+    name: string,
+    emoji: string,
+    category: string,
+    iconKey: string,
+  ) => Promise<void>;
 }
 
 export default function HabitTodaySection({
@@ -57,13 +63,12 @@ export default function HabitTodaySection({
 
   return (
     <section>
-      <div
-        className="flex items-center justify-between"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <div className="flex items-center justify-between" style={{ marginBottom: "var(--space-3)" }}>
         <h2 className="db-section-label" style={{ margin: 0 }}>
           Today
-          <span className="meta tnum">· {completed}/{habits.length}</span>
+          <span className="meta tnum">
+            · {completed}/{habits.length}
+          </span>
         </h2>
         <div className="flex items-center" style={{ gap: "var(--space-1)" }}>
           <button
@@ -80,7 +85,8 @@ export default function HabitTodaySection({
               fontSize: "var(--t-micro)",
               minHeight: 44,
               padding: "0 var(--space-3)",
-              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+              transition:
+                "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             Manage
@@ -99,7 +105,8 @@ export default function HabitTodaySection({
               fontSize: "var(--t-micro)",
               minHeight: 44,
               padding: "0 var(--space-3)",
-              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+              transition:
+                "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             + Add

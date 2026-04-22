@@ -277,7 +277,7 @@ Mr. Bridge will sync fitness data, query Supabase, fetch your calendar and Gmail
 
 ```bash
 cd web
-npm install
+npm install   # also installs the pre-commit hook via the prepare script
 npm run dev   # http://localhost:3000
 ```
 

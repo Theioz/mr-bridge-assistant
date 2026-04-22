@@ -1,8 +1,5 @@
 import { test, expect } from "../fixtures/auth";
-import {
-  createSmokeAdminClient,
-  getMessagesForSession,
-} from "../utils/supabase-verify";
+import { createSmokeAdminClient, getMessagesForSession } from "../utils/supabase-verify";
 
 test("chat multi-turn — conversation history is threaded", async ({
   signedInPage,
@@ -21,12 +18,9 @@ test("chat multi-turn — conversation history is threaded", async ({
   await page.getByPlaceholder("Ask Mr. Bridge...").fill("What's 2+2?");
 
   const [turn1Request, turn1Response] = await Promise.all([
-    page.waitForRequest(
-      (req) => req.url().includes("/api/chat") && req.method() === "POST",
-    ),
+    page.waitForRequest((req) => req.url().includes("/api/chat") && req.method() === "POST"),
     page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/chat") && resp.request().method() === "POST",
+      (resp) => resp.url().includes("/api/chat") && resp.request().method() === "POST",
     ),
     sendButton.click(),
   ]);
@@ -46,17 +40,12 @@ test("chat multi-turn — conversation history is threaded", async ({
   await expect(sendButton).toBeVisible({ timeout: 30_000 });
 
   // — Turn 2: "Double that answer" — must resolve to 8 via conversation history —
-  await page
-    .getByPlaceholder("Ask Mr. Bridge...")
-    .fill("Double that answer");
+  await page.getByPlaceholder("Ask Mr. Bridge...").fill("Double that answer");
 
   const [, turn2Response] = await Promise.all([
-    page.waitForRequest(
-      (req) => req.url().includes("/api/chat") && req.method() === "POST",
-    ),
+    page.waitForRequest((req) => req.url().includes("/api/chat") && req.method() === "POST"),
     page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/chat") && resp.request().method() === "POST",
+      (resp) => resp.url().includes("/api/chat") && resp.request().method() === "POST",
     ),
     sendButton.click(),
   ]);
@@ -77,8 +66,5 @@ test("chat multi-turn — conversation history is threaded", async ({
   expect(assistant2.role).toBe("assistant");
   expect(assistant2.content).toMatch(/8/);
 
-  expect(
-    consoleErrors,
-    `console errors during test: ${consoleErrors.join("\n")}`,
-  ).toHaveLength(0);
+  expect(consoleErrors, `console errors during test: ${consoleErrors.join("\n")}`).toHaveLength(0);
 });

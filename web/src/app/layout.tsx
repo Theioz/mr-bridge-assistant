@@ -34,11 +34,7 @@ export const viewport: Viewport = {
   themeColor: "#261C13",
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const themePref = await getServerThemePreference();
   const htmlThemeAttr =
     themePref === "light" || themePref === "dark" ? { "data-theme": themePref } : {};

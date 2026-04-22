@@ -5,10 +5,10 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { JournalEntry } from "@/lib/types";
 
 const PROMPT_LABELS: Record<string, string> = {
-  best_moment:    "Best moment",
-  challenge:      "Challenge",
-  small_gratitude:"Small gratitude",
-  energy_check:   "Energy & drain",
+  best_moment: "Best moment",
+  challenge: "Challenge",
+  small_gratitude: "Small gratitude",
+  energy_check: "Energy & drain",
   tomorrow_focus: "Tomorrow's focus",
 };
 
@@ -46,23 +46,21 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
 
   if (entries.length === 0) {
     return (
-      <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>
-        No entries yet.
-      </p>
+      <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-faint)" }}>No entries yet.</p>
     );
   }
 
   return (
     <div>
       {entries.map((entry, i) => {
-        const isOpen    = expanded.has(entry.id);
+        const isOpen = expanded.has(entry.id);
         const isPreviewOpen = previewExpanded.has(entry.id);
-        const isToday   = today && entry.date === today;
-        const date      = new Date(entry.date + "T00:00:00");
+        const isToday = today && entry.date === today;
+        const date = new Date(entry.date + "T00:00:00");
         const dateLabel = date.toLocaleDateString("en-US", {
           weekday: "short",
-          month:   "short",
-          day:     "numeric",
+          month: "short",
+          day: "numeric",
         });
         const yearLabel = date.toLocaleDateString("en-US", { year: "numeric" });
 
@@ -74,7 +72,7 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
           "";
 
         const filledPrompts = Object.entries(entry.responses).filter(([, v]) => v?.trim());
-        const hasFreeWrite  = !!entry.free_write?.trim();
+        const hasFreeWrite = !!entry.free_write?.trim();
         const canExpandPreview = preview.length > PREVIEW_EXPAND_THRESHOLD;
 
         const previewClampStyle: React.CSSProperties = isPreviewOpen
@@ -170,9 +168,7 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
                     gap: "var(--space-1)",
                   }}
                 >
-                  <span style={previewClampStyle}>
-                    {preview || "No responses"}
-                  </span>
+                  <span style={previewClampStyle}>{preview || "No responses"}</span>
                   {canExpandPreview && (
                     <button
                       onClick={() => togglePreview(entry.id)}
@@ -251,10 +247,7 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
 
                 {filledPrompts.map(([slug, value]) => (
                   <section key={slug}>
-                    <h3
-                      className="db-section-label"
-                      style={{ margin: "0 0 var(--space-2)" }}
-                    >
+                    <h3 className="db-section-label" style={{ margin: "0 0 var(--space-2)" }}>
                       {PROMPT_LABELS[slug] ?? slug}
                     </h3>
                     <p
@@ -277,10 +270,7 @@ export default function JournalHistory({ entries, today, onEdit }: Props) {
                       borderTop: "1px solid var(--rule-soft)",
                     }}
                   >
-                    <h3
-                      className="db-section-label"
-                      style={{ margin: "0 0 var(--space-2)" }}
-                    >
+                    <h3 className="db-section-label" style={{ margin: "0 0 var(--space-2)" }}>
                       Free write
                     </h3>
                     <p

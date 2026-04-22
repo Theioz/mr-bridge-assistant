@@ -58,9 +58,7 @@ export function useSyncAll({ refreshStocks, refreshSports }: Options = {}) {
       setErrors(newErrors);
       setState(anyFailed ? "error" : "done");
       if (!anyFailed) {
-        setSyncedAt(
-          new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        );
+        setSyncedAt(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
       }
       router.refresh();
     } catch {

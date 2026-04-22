@@ -3,9 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) {
-    throw new Error(
-      `${name} is required for smoke verification. See docs/smoke-testing.md.`,
-    );
+    throw new Error(`${name} is required for smoke verification. See docs/smoke-testing.md.`);
   }
   return v;
 }

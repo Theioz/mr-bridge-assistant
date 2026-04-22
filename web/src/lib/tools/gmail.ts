@@ -63,8 +63,12 @@ export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
       execute: async ({ query, max_results = 5 }) => {
         if (isDemo) {
           const q = query.toLowerCase();
-          const mockEmails = DEMO_EMAILS.filter((e) =>
-            !q || e.subject.toLowerCase().includes(q.split(" ")[0]) || q.includes("unread") || q.includes("subject:")
+          const mockEmails = DEMO_EMAILS.filter(
+            (e) =>
+              !q ||
+              e.subject.toLowerCase().includes(q.split(" ")[0]) ||
+              q.includes("unread") ||
+              q.includes("subject:"),
           ).slice(0, Math.min(max_results, 5));
           return { results: mockEmails };
         }
@@ -83,7 +87,7 @@ export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
 
           const getHeader = (
             headers: { name?: string | null; value?: string | null }[],
-            name: string
+            name: string,
           ) => headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
 
           const summaries = await Promise.all(
@@ -101,7 +105,7 @@ export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
                 subject: getHeader(headers, "Subject") || "(No subject)",
                 date: getHeader(headers, "Date"),
               };
-            })
+            }),
           );
 
           return { results: summaries };
@@ -128,7 +132,14 @@ export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
         if (isDemo) {
           const email = DEMO_EMAILS.find((e) => e.id === message_id);
           if (!email) return { error: "Email not found" };
-          return { id: message_id, from: email.from, subject: email.subject, date: email.date, body: email.body ?? email.subject, truncated: false };
+          return {
+            id: message_id,
+            from: email.from,
+            subject: email.subject,
+            date: email.date,
+            body: email.body ?? email.subject,
+            truncated: false,
+          };
         }
         try {
           const auth = await getGoogleAuthClient({ db: supabase, userId });
@@ -172,14 +183,19 @@ export function buildGmailTools({ supabase, userId, isDemo }: ToolContext) {
             body = findBody(payload.parts as Part[], "text/plain");
             if (!body) {
               const html = findBody(payload.parts as Part[], "text/html");
-              if (html) body = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+              if (html)
+                body = html
+                  .replace(/<[^>]+>/g, " ")
+                  .replace(/\s+/g, " ")
+                  .trim();
             }
           }
 
           const isTruncated = body ? body.length > 4000 : false;
           const bodyText = body
             ? isTruncated
-              ? body.slice(0, 4000) + `\n\n[...email truncated — ${body.length - 4000} more characters not shown]`
+              ? body.slice(0, 4000) +
+                `\n\n[...email truncated — ${body.length - 4000} more characters not shown]`
               : body
             : null;
 

@@ -14,12 +14,7 @@ interface Props {
   bodyFatGoal: number | null;
 }
 
-export function BodyCompTrends({
-  data,
-  windowKey,
-  weightGoal,
-  bodyFatGoal,
-}: Props) {
+export function BodyCompTrends({ data, windowKey, weightGoal, bodyFatGoal }: Props) {
   const today = todayString();
 
   const weightPoints = data
@@ -37,8 +32,7 @@ export function BodyCompTrends({
   const weightLatest = weightPoints[weightPoints.length - 1] ?? null;
   const bfLatest = bfPoints[bfPoints.length - 1] ?? null;
 
-  const weightTodayIndex =
-    weightLatest?.date === today ? weightValues.length - 1 : -1;
+  const weightTodayIndex = weightLatest?.date === today ? weightValues.length - 1 : -1;
   const bfTodayIndex = bfLatest?.date === today ? bfValues.length - 1 : -1;
 
   const windowLabel = windowKey.toUpperCase();
@@ -52,8 +46,8 @@ export function BodyCompTrends({
         diff > 0
           ? `+${diff.toFixed(1)} vs goal`
           : diff < -0.05
-          ? `${diff.toFixed(1)} vs goal`
-          : "at goal"
+            ? `${diff.toFixed(1)} vs goal`
+            : "at goal",
       );
     }
     return parts.join(" · ");
@@ -68,25 +62,24 @@ export function BodyCompTrends({
         diff > 0
           ? `+${diff.toFixed(1)} vs goal`
           : diff < -0.05
-          ? `${diff.toFixed(1)} vs goal`
-          : "at goal"
+            ? `${diff.toFixed(1)} vs goal`
+            : "at goal",
       );
     }
     return parts.join(" · ");
   }
 
-  const weightRef = weightGoal != null && weightGoal > 0
-    ? [{ y: weightGoal, label: `Goal ${weightGoal} lb`, dashed: true }]
-    : [];
-  const bfRef = bodyFatGoal != null && bodyFatGoal > 0
-    ? [{ y: bodyFatGoal, label: `Goal ${bodyFatGoal}%`, dashed: true }]
-    : [];
+  const weightRef =
+    weightGoal != null && weightGoal > 0
+      ? [{ y: weightGoal, label: `Goal ${weightGoal} lb`, dashed: true }]
+      : [];
+  const bfRef =
+    bodyFatGoal != null && bodyFatGoal > 0
+      ? [{ y: bodyFatGoal, label: `Goal ${bodyFatGoal}%`, dashed: true }]
+      : [];
 
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-6)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-6)", minWidth: 0 }}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2
           style={{
@@ -113,10 +106,7 @@ export function BodyCompTrends({
         </span>
       </div>
 
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-7)" }}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--space-7)" }}>
         <ChartFrame
           label={`Weight · ${windowLabel}`}
           value={weightMeta()}
@@ -133,9 +123,7 @@ export function BodyCompTrends({
               formatValue={(v) => `${v.toFixed(1)} lb`}
               ariaLabel={`Weight ${windowLabel}`}
               endpointRight={
-                weightTodayIndex >= 0
-                  ? "Today"
-                  : weightLabels[weightLabels.length - 1]
+                weightTodayIndex >= 0 ? "Today" : weightLabels[weightLabels.length - 1]
               }
             />
           )}
@@ -156,9 +144,7 @@ export function BodyCompTrends({
               refLines={bfRef}
               formatValue={(v) => `${v.toFixed(1)}%`}
               ariaLabel={`Body fat ${windowLabel}`}
-              endpointRight={
-                bfTodayIndex >= 0 ? "Today" : bfLabels[bfLabels.length - 1]
-              }
+              endpointRight={bfTodayIndex >= 0 ? "Today" : bfLabels[bfLabels.length - 1]}
             />
           )}
         </ChartFrame>

@@ -13,16 +13,34 @@ export interface WeatherData {
 }
 
 const WMO_CONDITIONS: Record<number, string> = {
-  0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
-  45: "Fog", 48: "Icy Fog",
-  51: "Light Drizzle", 53: "Moderate Drizzle", 55: "Dense Drizzle",
-  56: "Light Freezing Drizzle", 57: "Heavy Freezing Drizzle",
-  61: "Light Rain", 63: "Moderate Rain", 65: "Heavy Rain",
-  66: "Light Freezing Rain", 67: "Heavy Freezing Rain",
-  71: "Light Snow", 73: "Moderate Snow", 75: "Heavy Snow", 77: "Snow Grains",
-  80: "Light Showers", 81: "Moderate Showers", 82: "Heavy Showers",
-  85: "Light Snow Showers", 86: "Heavy Snow Showers",
-  95: "Thunderstorm", 96: "Thunderstorm w/ Light Hail", 99: "Thunderstorm w/ Heavy Hail",
+  0: "Clear",
+  1: "Mainly Clear",
+  2: "Partly Cloudy",
+  3: "Overcast",
+  45: "Fog",
+  48: "Icy Fog",
+  51: "Light Drizzle",
+  53: "Moderate Drizzle",
+  55: "Dense Drizzle",
+  56: "Light Freezing Drizzle",
+  57: "Heavy Freezing Drizzle",
+  61: "Light Rain",
+  63: "Moderate Rain",
+  65: "Heavy Rain",
+  66: "Light Freezing Rain",
+  67: "Heavy Freezing Rain",
+  71: "Light Snow",
+  73: "Moderate Snow",
+  75: "Heavy Snow",
+  77: "Snow Grains",
+  80: "Light Showers",
+  81: "Moderate Showers",
+  82: "Heavy Showers",
+  85: "Light Snow Showers",
+  86: "Heavy Snow Showers",
+  95: "Thunderstorm",
+  96: "Thunderstorm w/ Light Hail",
+  99: "Thunderstorm w/ Heavy Hail",
 };
 
 async function geocode(query: string): Promise<{ lat: number; lon: number; label: string } | null> {
@@ -30,7 +48,15 @@ async function geocode(query: string): Promise<{ lat: number; lon: number; label
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
     const res = await fetch(url, { next: { revalidate: 86400 } }); // cache 24h
     const data = await res.json();
-    return data.results as Array<{ latitude: number; longitude: number; name: string; admin1?: string; country_code?: string }> | undefined;
+    return data.results as
+      | Array<{
+          latitude: number;
+          longitude: number;
+          name: string;
+          admin1?: string;
+          country_code?: string;
+        }>
+      | undefined;
   };
 
   let results = await tryFetch(query);
@@ -48,13 +74,18 @@ async function geocode(query: string): Promise<{ lat: number; lon: number; label
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { data: profileRows } = await supabase.from("profile").select("key,value").eq("user_id", user.id);
+    const { data: profileRows } = await supabase
+      .from("profile")
+      .select("key,value")
+      .eq("user_id", user.id);
     const profile: Record<string, string> = {};
     for (const row of profileRows ?? []) profile[row.key] = row.value;
 

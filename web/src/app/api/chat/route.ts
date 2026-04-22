@@ -53,7 +53,10 @@ function extractTextFromParts(message: UIMessage): string {
     .join("");
 }
 
-function selectModel(messages: UIMessage[], modelOverride?: "haiku" | "sonnet" | "auto"): "haiku" | "sonnet" {
+function selectModel(
+  messages: UIMessage[],
+  modelOverride?: "haiku" | "sonnet" | "auto",
+): "haiku" | "sonnet" {
   if (modelOverride === "haiku") return "haiku";
   if (modelOverride === "sonnet") return "sonnet";
 
@@ -71,25 +74,71 @@ function selectModel(messages: UIMessage[], modelOverride?: "haiku" | "sonnet" |
 
   // Gate 3: complex keywords
   const complexPatterns = [
-    "analyze", "analysis", "recommend", "should i", "what should",
-    "plan", "strategy", "help me", "best way", "optimize", "review",
-    "compare", "versus", " vs ", "summarize", "summary", "trend",
-    "progress", "what do you think", "advice", "suggest", "improve",
-    "breakdown", "fitness goal", "meal plan", "workout plan",
-    "schedule strategy", "is it worth", "explain why",
-    "set my goal", "save my goal", "update my goal", "set my target",
-    "save that", "save these", "write that to", "lock that in",
+    "analyze",
+    "analysis",
+    "recommend",
+    "should i",
+    "what should",
+    "plan",
+    "strategy",
+    "help me",
+    "best way",
+    "optimize",
+    "review",
+    "compare",
+    "versus",
+    " vs ",
+    "summarize",
+    "summary",
+    "trend",
+    "progress",
+    "what do you think",
+    "advice",
+    "suggest",
+    "improve",
+    "breakdown",
+    "fitness goal",
+    "meal plan",
+    "workout plan",
+    "schedule strategy",
+    "is it worth",
+    "explain why",
+    "set my goal",
+    "save my goal",
+    "update my goal",
+    "set my target",
+    "save that",
+    "save these",
+    "write that to",
+    "lock that in",
   ];
   if (complexPatterns.some((p) => msg.includes(p))) return "sonnet";
 
   // Gate 4: simple command patterns
   const simplePatterns = [
-    /add task/, /create task/, /new task/, /complete task/,
-    /mark.{0,20}done/, /mark.{0,20}complete/, /finish task/,
-    /log habit/, /log.{0,10}meal/, /had.{0,30}for (breakfast|lunch|dinner|snack)/,
-    /create event/, /add event/, /schedule.{0,20}at \d/, /book.{0,20}at \d/,
-    /show.{0,10}tasks/, /list.{0,10}tasks/, /get.{0,10}tasks/, /what.{0,10}tasks/,
-    /check habits/, /show habits/, /get recipes/, /find recipes/, /what.{0,20}recipes/,
+    /add task/,
+    /create task/,
+    /new task/,
+    /complete task/,
+    /mark.{0,20}done/,
+    /mark.{0,20}complete/,
+    /finish task/,
+    /log habit/,
+    /log.{0,10}meal/,
+    /had.{0,30}for (breakfast|lunch|dinner|snack)/,
+    /create event/,
+    /add event/,
+    /schedule.{0,20}at \d/,
+    /book.{0,20}at \d/,
+    /show.{0,10}tasks/,
+    /list.{0,10}tasks/,
+    /get.{0,10}tasks/,
+    /what.{0,10}tasks/,
+    /check habits/,
+    /show habits/,
+    /get recipes/,
+    /find recipes/,
+    /what.{0,20}recipes/,
     /my habits today/,
     /what.{0,20}(eat|ate|had).{0,20}today/,
     /today.{0,20}meals/,
@@ -240,7 +289,7 @@ function isToolResultOk(result: unknown): boolean {
 
 function synthesizeFallbackSummary(
   steps: CompletedToolStep[],
-  flags: { hitStepCap: boolean; budgetExceeded: boolean; aborted: boolean }
+  flags: { hitStepCap: boolean; budgetExceeded: boolean; aborted: boolean },
 ): string {
   const succeeded = steps.filter((s) => s.ok && TOOL_PHRASING[s.toolName]);
   const failed = steps.filter((s) => !s.ok && TOOL_PHRASING[s.toolName]);
@@ -276,7 +325,7 @@ function synthesizeFallbackSummary(
     : flags.budgetExceeded
       ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
       : flags.hitStepCap
-        ? " (Hit my 20-step turn limit — this task has more work remaining. Reply **\"continue\"** and I'll pick up where I left off.)"
+        ? ' (Hit my 20-step turn limit — this task has more work remaining. Reply **"continue"** and I\'ll pick up where I left off.)'
         : "";
   return body + reason;
 }
@@ -331,7 +380,11 @@ function withTrailingCacheBreakpoint<T extends Record<string, unknown>>(tools: T
 }
 
 export async function POST(req: Request) {
-  const { messages, sessionId, model: modelOverride } = await req.json() as {
+  const {
+    messages,
+    sessionId,
+    model: modelOverride,
+  } = (await req.json()) as {
     messages: UIMessage[];
     sessionId?: string;
     model?: "haiku" | "sonnet" | "auto";
@@ -340,7 +393,9 @@ export async function POST(req: Request) {
 
   // Resolve the authenticated user (needed for per-user data scoping)
   const serverClient = await createClient();
-  const { data: { user } } = await serverClient.auth.getUser();
+  const {
+    data: { user },
+  } = await serverClient.auth.getUser();
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
@@ -397,8 +452,13 @@ export async function POST(req: Request) {
       // Upsert the session — creates it if it doesn't exist yet (lazy session creation
       // for new chats whose UUID was generated client-side before any DB write).
       await supabase.from("chat_sessions").upsert(
-        { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
-        { onConflict: "id" }
+        {
+          id: sessionId,
+          user_id: userId,
+          device: "web",
+          last_active_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
       );
 
       // Dedup guard: skip insert if an identical user message was persisted in the
@@ -522,19 +582,20 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   // NOT break out reasoning into outputTokens.reasoning (always undefined for
   // the Anthropic provider — see convert-anthropic-messages-usage.ts), so we
   // measure thinking impact via outputTokens + durationMs deltas.
-  const thinkingEnabled =
-    modelTier === "sonnet" && process.env.ENABLE_THINKING === "1";
+  const thinkingEnabled = modelTier === "sonnet" && process.env.ENABLE_THINKING === "1";
 
   // System prompt shape (#340). Demo path stays a plain string for Groq.
   // Real-user path splits into two system messages: the static prefix carries
   // an Anthropic ephemeral cacheControl marker so its ~1.4k tokens + tool
   // schemas above it are cached (~5 min TTL); the dynamic block (date + name)
   // follows uncached so cache hits don't invalidate each turn.
-  const systemValue: string | Array<{
-    role: "system";
-    content: string;
-    providerOptions?: { anthropic?: { cacheControl: { type: "ephemeral" } } };
-  }> = isDemo
+  const systemValue:
+    | string
+    | Array<{
+        role: "system";
+        content: string;
+        providerOptions?: { anthropic?: { cacheControl: { type: "ephemeral" } } };
+      }> = isDemo
     ? demoSystemPrompt
     : [
         {
@@ -560,7 +621,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   const turnAbort = new AbortController();
   const deadlineTimer = setTimeout(() => {
     deadlineExceeded = true;
-    console.warn(`[chat] turn deadline exceeded session=${sessionId} ms=${TURN_DEADLINE_MS} — aborting turn so onFinish can run`);
+    console.warn(
+      `[chat] turn deadline exceeded session=${sessionId} ms=${TURN_DEADLINE_MS} — aborting turn so onFinish can run`,
+    );
     turnAbort.abort();
   }, TURN_DEADLINE_MS);
 
@@ -662,9 +725,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       for (const call of allCalls) {
         const result = resultByCallId.get(call.toolCallId);
         const stepOk = result === undefined ? false : isToolResultOk(result);
-        const stepError = result && typeof result === "object" && "error" in result
-          ? String((result as { error?: unknown }).error)
-          : undefined;
+        const stepError =
+          result && typeof result === "object" && "error" in result
+            ? String((result as { error?: unknown }).error)
+            : undefined;
         completedSteps.push({ toolName: call.toolName, ok: stepOk, error: stepError });
       }
       const failedToolCount = completedSteps.filter((s) => !s.ok).length;
@@ -690,9 +754,9 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
 
       console.log(
         `[chat] turn complete session=${sessionId} steps=${stepCount}/${MAX_STEPS} ` +
-        `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
-        `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} deadlineExceeded=${deadlineExceeded} ` +
-        `synthesized=${synthesized} toolFailures=${failedToolCount}/${completedSteps.length}`
+          `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
+          `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} deadlineExceeded=${deadlineExceeded} ` +
+          `synthesized=${synthesized} toolFailures=${failedToolCount}/${completedSteps.length}`,
       );
 
       // #340: structured per-turn cache-usage log. `isDemo` on Groq reports no
@@ -700,10 +764,10 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       // "cacheControl breakpoint limit") so silent degradation doesn't hide.
       console.log(
         `[chat] cache session=${sessionId} isDemo=${isDemo} ` +
-        `inputTokens=${totalUsage?.inputTokens ?? 0} outputTokens=${totalUsage?.outputTokens ?? 0} ` +
-        `cacheRead=${cacheReadTokens} cacheWrite=${cacheWriteTokens} noCache=${noCacheTokens} ` +
-        `reasoningParts=${reasoningParts} reasoningChars=${reasoningChars} thinkingEnabled=${thinkingEnabled} ` +
-        `warnings=${allWarnings.length === 0 ? "[]" : JSON.stringify(allWarnings)}`
+          `inputTokens=${totalUsage?.inputTokens ?? 0} outputTokens=${totalUsage?.outputTokens ?? 0} ` +
+          `cacheRead=${cacheReadTokens} cacheWrite=${cacheWriteTokens} noCache=${noCacheTokens} ` +
+          `reasoningParts=${reasoningParts} reasoningChars=${reasoningChars} thinkingEnabled=${thinkingEnabled} ` +
+          `warnings=${allWarnings.length === 0 ? "[]" : JSON.stringify(allWarnings)}`,
       );
 
       // #342: assistant-message persistence moved to
@@ -742,8 +806,13 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       try {
         // Update session last_active_at to reflect completed turn.
         await supabase.from("chat_sessions").upsert(
-          { id: sessionId, user_id: userId, device: "web", last_active_at: new Date().toISOString() },
-          { onConflict: "id" }
+          {
+            id: sessionId,
+            user_id: userId,
+            device: "web",
+            last_active_at: new Date().toISOString(),
+          },
+          { onConflict: "id" },
         );
 
         // Derive next position so the assistant message sorts after the user message.
@@ -761,9 +830,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         // for round-trip rendering. Reasoning parts are stripped — #339 owns
         // reasoning persistence; this PR keeps it ephemeral, matching the
         // sendReasoning:false posture above.
-        const partsToPersist = responseMessage.parts.filter(
-          (p) => p.type !== "reasoning"
-        );
+        const partsToPersist = responseMessage.parts.filter((p) => p.type !== "reasoning");
 
         const { error: insertError } = await supabase.from("chat_messages").insert({
           session_id: sessionId,

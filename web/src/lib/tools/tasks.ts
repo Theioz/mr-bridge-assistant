@@ -30,7 +30,8 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
     }),
 
     add_task: tool({
-      description: "Add a new task or subtask to the tasks table. To add an item to a list (e.g. shopping list, grocery list), first call get_tasks to find the parent task ID, then call add_task with parent_id set.",
+      description:
+        "Add a new task or subtask to the tasks table. To add an item to a list (e.g. shopping list, grocery list), first call get_tasks to find the parent task ID, then call add_task with parent_id set.",
       inputSchema: jsonSchema<{
         title: string;
         priority?: "high" | "medium" | "low";
@@ -48,8 +49,15 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             description: "Task priority. Omit for subtasks.",
           },
           category: { type: "string", description: "Task category." },
-          due_date: { type: "string", description: "Due date in YYYY-MM-DD format. Omit for subtasks." },
-          parent_id: { type: "string", description: "Parent task UUID. Set this to add a subtask/list item under an existing task." },
+          due_date: {
+            type: "string",
+            description: "Due date in YYYY-MM-DD format. Omit for subtasks.",
+          },
+          parent_id: {
+            type: "string",
+            description:
+              "Parent task UUID. Set this to add a subtask/list item under an existing task.",
+          },
         },
       }),
       execute: async ({ title, priority, category, due_date, parent_id }) => {
@@ -110,9 +118,12 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
           .update({ status: "completed", completed_at: new Date().toISOString() })
           .eq("id", id);
         if (userId) q = q.eq("user_id", userId);
-        const { data, error: updateError } = await q.select("id, title, status, completed_at").maybeSingle();
+        const { data, error: updateError } = await q
+          .select("id, title, status, completed_at")
+          .maybeSingle();
         if (updateError) return err(updateError.message);
-        if (!data) return err(`No active task found with id ${id} for this user — nothing was changed.`);
+        if (!data)
+          return err(`No active task found with id ${id} for this user — nothing was changed.`);
         return ok({ task: data });
       },
     }),

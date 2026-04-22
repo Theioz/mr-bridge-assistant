@@ -144,26 +144,27 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
           const isError = part.state === "output-error";
           const inFlight = !isDone && !isError;
 
-          const preview = part.state === "input-available" ? previewFor(toolName, part.input) : null;
+          const preview =
+            part.state === "input-available" ? previewFor(toolName, part.input) : null;
           const label = isError
             ? `${verb} failed`
             : isDone
-            ? verb
-            : preview
-            ? `${verb} ${preview}…`
-            : `${verb}…`;
+              ? verb
+              : preview
+                ? `${verb} ${preview}…`
+                : `${verb}…`;
 
           const borderColor = isError
             ? "var(--color-danger)"
             : inFlight
-            ? "var(--accent)"
-            : "var(--rule-soft)";
+              ? "var(--accent)"
+              : "var(--rule-soft)";
 
           const textColor = isError
             ? "var(--color-danger)"
             : isDone
-            ? "var(--color-text-faint)"
-            : "var(--color-text)";
+              ? "var(--color-text-faint)"
+              : "var(--color-text)";
 
           return (
             <span

@@ -16,7 +16,10 @@ interface PolygonBar {
 }
 
 class RateLimitError extends Error {
-  constructor() { super("Polygon rate limit"); this.name = "RateLimitError"; }
+  constructor() {
+    super("Polygon rate limit");
+    this.name = "RateLimitError";
+  }
 }
 
 async function polygonGet(path: string, apiKey: string): Promise<Record<string, unknown> | null> {
@@ -50,36 +53,38 @@ export async function syncStocks(
   const rows = await Promise.all(
     tickers.map(async (ticker) => {
       try {
-      const [prevData, rangeData] = await Promise.all([
-        polygonGet(`/v2/aggs/ticker/${ticker}/prev`, apiKey),
-        polygonGet(`/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}`, apiKey),
-      ]);
+        const [prevData, rangeData] = await Promise.all([
+          polygonGet(`/v2/aggs/ticker/${ticker}/prev`, apiKey),
+          polygonGet(`/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}`, apiKey),
+        ]);
 
-      const prevBar = (prevData?.results as PolygonBar[] | undefined)?.[0] ?? null;
-      const price = prevBar?.c ?? null;
-      const changeAbs = prevBar != null ? prevBar.c - prevBar.o : null;
-      const changePct = prevBar != null && prevBar.o !== 0
-        ? ((prevBar.c - prevBar.o) / prevBar.o) * 100
-        : null;
+        const prevBar = (prevData?.results as PolygonBar[] | undefined)?.[0] ?? null;
+        const price = prevBar?.c ?? null;
+        const changeAbs = prevBar != null ? prevBar.c - prevBar.o : null;
+        const changePct =
+          prevBar != null && prevBar.o !== 0 ? ((prevBar.c - prevBar.o) / prevBar.o) * 100 : null;
 
-      const rangeBars = (rangeData?.results as PolygonBar[] | undefined) ?? [];
-      // Keep last 30 trading days (~6 weeks of context)
-      const sparkline = rangeBars.slice(-30).map((bar) => ({
-        date: new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(new Date(bar.t)),
-        close: bar.c,
-      }));
+        const rangeBars = (rangeData?.results as PolygonBar[] | undefined) ?? [];
+        // Keep last 30 trading days (~6 weeks of context)
+        const sparkline = rangeBars.slice(-30).map((bar) => ({
+          date: new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(new Date(bar.t)),
+          close: bar.c,
+        }));
 
-      return {
-        user_id: userId,
-        ticker,
-        price,
-        change_abs: changeAbs,
-        change_pct: changePct,
-        sparkline: sparkline.length > 0 ? sparkline : null,
-        fetched_at: new Date().toISOString(),
-      };
+        return {
+          user_id: userId,
+          ticker,
+          price,
+          change_abs: changeAbs,
+          change_pct: changePct,
+          sparkline: sparkline.length > 0 ? sparkline : null,
+          fetched_at: new Date().toISOString(),
+        };
       } catch (e) {
-        if (e instanceof RateLimitError) { rateLimited = true; return null; }
+        if (e instanceof RateLimitError) {
+          rateLimited = true;
+          return null;
+        }
         throw e;
       }
     }),

@@ -26,11 +26,16 @@ export async function POST(req: Request) {
 
   const validTypes = ["breakfast", "lunch", "dinner", "snack"];
   if (!body.meal_type || !validTypes.includes(body.meal_type)) {
-    return Response.json({ error: "meal_type must be breakfast, lunch, dinner, or snack" }, { status: 400 });
+    return Response.json(
+      { error: "meal_type must be breakfast, lunch, dinner, or snack" },
+      { status: 400 },
+    );
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const count = typeof body.count === "number" && body.count > 1 ? Math.round(body.count) : 1;
@@ -51,11 +56,7 @@ export async function POST(req: Request) {
   };
 
   if (count === 1) {
-    const { data, error } = await supabase
-      .from("meal_log")
-      .insert(rowBase)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("meal_log").insert(rowBase).select().single();
 
     if (error) {
       console.error("[meals/log] Supabase error:", error);
@@ -104,18 +105,20 @@ export async function PATCH(req: Request) {
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const updates: Record<string, unknown> = {};
-  if (body.notes     !== undefined) updates.notes      = body.notes;
-  if (body.meal_type !== undefined) updates.meal_type  = body.meal_type;
-  if (body.calories  !== undefined) updates.calories   = body.calories;
-  if (body.protein_g !== undefined) updates.protein_g  = body.protein_g;
-  if (body.carbs_g   !== undefined) updates.carbs_g    = body.carbs_g;
-  if (body.fat_g     !== undefined) updates.fat_g      = body.fat_g;
-  if (body.fiber_g   !== undefined) updates.fiber_g    = body.fiber_g;
-  if (body.sugar_g   !== undefined) updates.sugar_g    = body.sugar_g;
+  if (body.notes !== undefined) updates.notes = body.notes;
+  if (body.meal_type !== undefined) updates.meal_type = body.meal_type;
+  if (body.calories !== undefined) updates.calories = body.calories;
+  if (body.protein_g !== undefined) updates.protein_g = body.protein_g;
+  if (body.carbs_g !== undefined) updates.carbs_g = body.carbs_g;
+  if (body.fat_g !== undefined) updates.fat_g = body.fat_g;
+  if (body.fiber_g !== undefined) updates.fiber_g = body.fiber_g;
+  if (body.sugar_g !== undefined) updates.sugar_g = body.sugar_g;
 
   const { data, error } = await supabase
     .from("meal_log")
@@ -144,7 +147,9 @@ export async function DELETE(req: Request) {
   if (!body.id) return Response.json({ error: "id is required" }, { status: 400 });
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
@@ -156,6 +161,6 @@ export async function DELETE(req: Request) {
     .maybeSingle();
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  if (!data)  return Response.json({ error: "Not found" }, { status: 404 });
+  if (!data) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json({ ok: true });
 }

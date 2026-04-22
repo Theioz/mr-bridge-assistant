@@ -33,7 +33,15 @@ async function espnGet<T>(url: string): Promise<T | null> {
 type RawTeamsResponse = {
   sports: {
     leagues: {
-      teams: { team: { id: string; displayName: string; abbreviation?: string; color?: string; logos?: { href: string }[] } }[];
+      teams: {
+        team: {
+          id: string;
+          displayName: string;
+          abbreviation?: string;
+          color?: string;
+          logos?: { href: string }[];
+        };
+      }[];
     }[];
   }[];
 };
@@ -43,7 +51,13 @@ type RawCompetitor = {
   homeAway?: "home" | "away";
   winner?: boolean;
   score?: string | { value?: number; displayValue?: string };
-  team?: { id: string; displayName: string; abbreviation?: string; logo?: string; logos?: { href: string }[] };
+  team?: {
+    id: string;
+    displayName: string;
+    abbreviation?: string;
+    logo?: string;
+    logos?: { href: string }[];
+  };
   athlete?: { displayName: string };
 };
 
@@ -106,7 +120,9 @@ function findStandingEntry(
   root: RawStandingNode,
   teamId: string,
 ): { entry: RawStandingEntry; group: string } | null {
-  const stack: { node: RawStandingNode; group: string }[] = [{ node: root, group: root.name ?? "" }];
+  const stack: { node: RawStandingNode; group: string }[] = [
+    { node: root, group: root.name ?? "" },
+  ];
   while (stack.length) {
     const { node, group } = stack.pop()!;
     if (node.standings?.entries) {
@@ -179,7 +195,12 @@ function toRaceGame(e: RawEvent): Game {
     opponent_badge: null,
     home_away: "home", // suppressed in UI when league=F1
     start_time: e.date,
-    status: c?.status.type.state === "in" ? "in_progress" : c?.status.type.completed ? "final" : "scheduled",
+    status:
+      c?.status.type.state === "in"
+        ? "in_progress"
+        : c?.status.type.completed
+          ? "final"
+          : "scheduled",
     score: null,
     result: null,
   };
@@ -208,9 +229,7 @@ export const ESPN: SportsProvider = {
   async searchTeams(query: string): Promise<Team[]> {
     const q = query.toLowerCase();
     const all = await fetchAllTeams();
-    return all
-      .filter((t) => t.name.toLowerCase().includes(q))
-      .slice(0, 20);
+    return all.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 20);
   },
 
   async getUpcoming({ team_id, league_id }, limit = 3): Promise<Game[]> {
@@ -228,9 +247,10 @@ export const ESPN: SportsProvider = {
     if (isF1(league_id)) {
       // F1: find the Constructor Standings group
       const groups = json.children ?? [];
-      const constructors = groups.find((g) =>
-        (g.name ?? "").toLowerCase().includes("constructor") ||
-        (g.name ?? "").toLowerCase().includes("manufacturer"),
+      const constructors = groups.find(
+        (g) =>
+          (g.name ?? "").toLowerCase().includes("constructor") ||
+          (g.name ?? "").toLowerCase().includes("manufacturer"),
       );
       if (!constructors?.standings?.entries) return null;
       const entry = constructors.standings.entries.find((e) => e.team.id === team_id);
@@ -254,7 +274,10 @@ export const ESPN: SportsProvider = {
     const ties = statValue(entry.stats, "ties");
     const points = statValue(entry.stats, "points");
     const pct = statValue(entry.stats, "winPercent");
-    const rank = statValue(entry.stats, "playoffSeed") ?? statValue(entry.stats, "rank") ?? statValue(entry.stats, "divisionRank");
+    const rank =
+      statValue(entry.stats, "playoffSeed") ??
+      statValue(entry.stats, "rank") ??
+      statValue(entry.stats, "divisionRank");
 
     return {
       rank: rank != null ? Math.round(rank) : null,
@@ -308,7 +331,9 @@ export async function espnGetUpcoming(
     const json = await espnGet<{ events: RawEvent[] | null }>(
       `${SITE_BASE}/sports/racing/f1/scoreboard?dates=${currentSeason(league_id)}`,
     );
-    const events = (json?.events ?? []).filter((e) => e.competitions?.[0]?.status.type.state !== "post");
+    const events = (json?.events ?? []).filter(
+      (e) => e.competitions?.[0]?.status.type.state !== "post",
+    );
     return events
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, limit)
@@ -344,7 +369,9 @@ export async function espnGetRecent(
     const json = await espnGet<{ events: RawEvent[] | null }>(
       `${SITE_BASE}/sports/racing/f1/scoreboard?dates=${currentSeason(league_id)}`,
     );
-    const events = (json?.events ?? []).filter((e) => e.competitions?.[0]?.status.type.state === "post");
+    const events = (json?.events ?? []).filter(
+      (e) => e.competitions?.[0]?.status.type.state === "post",
+    );
     return events
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, limit)

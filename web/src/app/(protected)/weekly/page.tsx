@@ -45,11 +45,7 @@ function deltaText(latest: number | null, prior: number | null, decimals = 1): s
   return `${sign}${diff.toFixed(decimals)}`;
 }
 
-function deltaClass(
-  latest: number | null,
-  prior: number | null,
-  higherIsBetter: boolean
-): string {
+function deltaClass(latest: number | null, prior: number | null, higherIsBetter: boolean): string {
   if (latest == null || prior == null) return "delta-flat";
   const diff = latest - prior;
   if (Math.abs(diff) < 0.0001) return "delta-flat";
@@ -83,10 +79,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      className="flex flex-col"
-      style={{ minWidth: 0, height: PANEL_HEIGHT }}
-    >
+    <section className="flex flex-col" style={{ minWidth: 0, height: PANEL_HEIGHT }}>
       <h2 className="db-section-label" style={{ flexShrink: 0 }}>
         {title}
         {meta && <span className="meta">{meta}</span>}
@@ -113,7 +106,7 @@ export default async function WeeklyPage() {
   const supabase = await createClient();
   const today = todayString();
   const weekStart = daysAgoString(6); // inclusive: 7 days ending today
-  const last7Days = getLast7Days();   // [oldest, ..., today]
+  const last7Days = getLast7Days(); // [oldest, ..., today]
 
   const [
     habitRegistryRes,
@@ -144,10 +137,7 @@ export default async function WeeklyPage() {
       .eq("status", "completed")
       .not("completed_at", "is", null)
       .gte("completed_at", `${weekStart}T00:00:00`),
-    supabase
-      .from("tasks")
-      .select("id,title,priority,status,due_date")
-      .eq("status", "active"),
+    supabase.from("tasks").select("id,title,priority,status,due_date").eq("status", "active"),
     supabase
       .from("workout_sessions")
       .select("date,activity,duration_mins,calories")
@@ -185,10 +175,17 @@ export default async function WeeklyPage() {
 
   // ── Habits ────────────────────────────────────────────────────────────────
 
-  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
-  const weekHabits    = (weekHabitsRes.data ?? []) as { habit_id: string; date: string; completed: boolean }[];
-  const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
-  const habitStreaks  = computeStreaks(allCompleted, today);
+  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<
+    HabitRegistry,
+    "id" | "name" | "emoji" | "category" | "icon_key"
+  >[];
+  const weekHabits = (weekHabitsRes.data ?? []) as {
+    habit_id: string;
+    date: string;
+    completed: boolean;
+  }[];
+  const allCompleted = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
+  const habitStreaks = computeStreaks(allCompleted, today);
 
   const habitCompletedDates = new Map<string, Set<string>>();
   for (const { habit_id, date, completed } of weekHabits) {
@@ -211,40 +208,61 @@ export default async function WeeklyPage() {
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
-  type CompletedTask = { id: string; title: string; priority: string | null; completed_at: string | null };
-  type ActiveTask = { id: string; title: string; priority: string | null; status: string; due_date: string | null };
+  type CompletedTask = {
+    id: string;
+    title: string;
+    priority: string | null;
+    completed_at: string | null;
+  };
+  type ActiveTask = {
+    id: string;
+    title: string;
+    priority: string | null;
+    status: string;
+    due_date: string | null;
+  };
 
   const completedTasks = (completedTasksRes.data ?? []) as CompletedTask[];
-  const activeTasks    = (activeTasksRes.data ?? []) as ActiveTask[];
-  const overdueTasks   = activeTasks.filter((t) => t.due_date != null && t.due_date < today);
+  const activeTasks = (activeTasksRes.data ?? []) as ActiveTask[];
+  const overdueTasks = activeTasks.filter((t) => t.due_date != null && t.due_date < today);
 
   // ── Workouts ──────────────────────────────────────────────────────────────
 
-  const allWorkouts    = (workoutsRes.data ?? []) as Pick<WorkoutSession, "date" | "activity" | "duration_mins" | "calories">[];
-  const workouts       = allWorkouts.filter((w) => !/walk/i.test(w.activity));
-  const walkWorkouts   = allWorkouts.filter((w) => /walk/i.test(w.activity));
-  const totalDuration  = workouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
-  const totalCalories  = workouts.reduce((s, w) => s + (w.calories ?? 0), 0);
-  const walkDuration   = walkWorkouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
+  const allWorkouts = (workoutsRes.data ?? []) as Pick<
+    WorkoutSession,
+    "date" | "activity" | "duration_mins" | "calories"
+  >[];
+  const workouts = allWorkouts.filter((w) => !/walk/i.test(w.activity));
+  const walkWorkouts = allWorkouts.filter((w) => /walk/i.test(w.activity));
+  const totalDuration = workouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
+  const totalCalories = workouts.reduce((s, w) => s + (w.calories ?? 0), 0);
+  const walkDuration = walkWorkouts.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
 
   // ── Recovery ─────────────────────────────────────────────────────────────
 
-  const recoveryRows = (recoveryRes.data ?? []) as Pick<RecoveryMetrics, "date" | "readiness" | "sleep_score" | "avg_hrv">[];
-  const avgReadiness  = avg(recoveryRows.map((r) => r.readiness));
-  const avgSleep      = avg(recoveryRows.map((r) => r.sleep_score));
-  const avgHrv        = avg(recoveryRows.map((r) => r.avg_hrv));
+  const recoveryRows = (recoveryRes.data ?? []) as Pick<
+    RecoveryMetrics,
+    "date" | "readiness" | "sleep_score" | "avg_hrv"
+  >[];
+  const avgReadiness = avg(recoveryRows.map((r) => r.readiness));
+  const avgSleep = avg(recoveryRows.map((r) => r.sleep_score));
+  const avgHrv = avg(recoveryRows.map((r) => r.avg_hrv));
   const recoveryByDate = new Map(recoveryRows.map((r) => [r.date, r]));
 
   // ── Body composition ──────────────────────────────────────────────────────
 
   type FitnessPoint = Pick<FitnessLog, "date" | "weight_lb" | "body_fat_pct">;
-  const fitnessLatest  = ((fitnessLatestRes.data ?? [])[0] ?? null) as FitnessPoint | null;
+  const fitnessLatest = ((fitnessLatestRes.data ?? [])[0] ?? null) as FitnessPoint | null;
   const fitnessWeekAgo = ((fitnessWeekAgoRes.data ?? [])[0] ?? null) as FitnessPoint | null;
 
-  const weightDiff   = fitnessLatest?.weight_lb != null && fitnessWeekAgo?.weight_lb != null
-    ? fitnessLatest.weight_lb - fitnessWeekAgo.weight_lb : null;
-  const bodyFatDiff  = fitnessLatest?.body_fat_pct != null && fitnessWeekAgo?.body_fat_pct != null
-    ? fitnessLatest.body_fat_pct - fitnessWeekAgo.body_fat_pct : null;
+  const weightDiff =
+    fitnessLatest?.weight_lb != null && fitnessWeekAgo?.weight_lb != null
+      ? fitnessLatest.weight_lb - fitnessWeekAgo.weight_lb
+      : null;
+  const bodyFatDiff =
+    fitnessLatest?.body_fat_pct != null && fitnessWeekAgo?.body_fat_pct != null
+      ? fitnessLatest.body_fat_pct - fitnessWeekAgo.body_fat_pct
+      : null;
 
   // ── Journal ───────────────────────────────────────────────────────────────
 
@@ -279,19 +297,21 @@ export default async function WeeklyPage() {
   const tdFaint: React.CSSProperties = { ...tdBase, color: "var(--color-text-faint)" };
 
   // Training meta
-  const trainingMeta = allWorkouts.length === 0
-    ? " · none logged"
-    : ` · ${workouts.length} session${workouts.length === 1 ? "" : "s"}${
-        totalDuration > 0 ? ` · ${fmtDuration(totalDuration)}` : ""
-      }${totalCalories > 0 ? ` · ${Math.round(totalCalories).toLocaleString()} kcal` : ""}`;
+  const trainingMeta =
+    allWorkouts.length === 0
+      ? " · none logged"
+      : ` · ${workouts.length} session${workouts.length === 1 ? "" : "s"}${
+          totalDuration > 0 ? ` · ${fmtDuration(totalDuration)}` : ""
+        }${totalCalories > 0 ? ` · ${Math.round(totalCalories).toLocaleString()} kcal` : ""}`;
 
-  const recoveryMeta = recoveryRows.length === 0
-    ? " · no data"
-    : ` · ${recoveryRows.length} day${recoveryRows.length === 1 ? "" : "s"}${
-        avgReadiness != null ? ` · readiness ${fmtNum(avgReadiness)}` : ""
-      }${avgSleep != null ? ` · sleep ${fmtNum(avgSleep)}` : ""}${
-        avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""
-      }`;
+  const recoveryMeta =
+    recoveryRows.length === 0
+      ? " · no data"
+      : ` · ${recoveryRows.length} day${recoveryRows.length === 1 ? "" : "s"}${
+          avgReadiness != null ? ` · readiness ${fmtNum(avgReadiness)}` : ""
+        }${avgSleep != null ? ` · sleep ${fmtNum(avgSleep)}` : ""}${
+          avgHrv != null ? ` · HRV ${fmtNum(avgHrv)}ms` : ""
+        }`;
 
   const rowStyle: React.CSSProperties = {
     gap: "var(--space-7)",
@@ -301,10 +321,7 @@ export default async function WeeklyPage() {
   const rowStyleLast: React.CSSProperties = { gap: "var(--space-7)" };
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: "var(--space-7)" }}
-    >
+    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header>
         <h1
@@ -332,10 +349,7 @@ export default async function WeeklyPage() {
       </header>
 
       {/* ── Row 1: Habits + Tasks ───────────────────────────────────── */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={rowStyle}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
         <Panel
           title="Habits"
           meta={
@@ -465,13 +479,13 @@ export default async function WeeklyPage() {
                           fontSize: "var(--t-micro)",
                         }}
                       >
-                        <span
-                          style={{ color: "var(--color-positive)", flexShrink: 0 }}
-                          aria-hidden
-                        >
+                        <span style={{ color: "var(--color-positive)", flexShrink: 0 }} aria-hidden>
                           ✓
                         </span>
-                        <span className="flex-1 truncate" style={{ color: "var(--color-text-muted)" }}>
+                        <span
+                          className="flex-1 truncate"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
                           {t.title}
                         </span>
                       </li>
@@ -521,7 +535,9 @@ export default async function WeeklyPage() {
                           />
                           <span
                             className="flex-1 truncate"
-                            style={{ color: overdue ? "var(--color-text)" : "var(--color-text-muted)" }}
+                            style={{
+                              color: overdue ? "var(--color-text)" : "var(--color-text-muted)",
+                            }}
                           >
                             {t.title}
                           </span>
@@ -551,10 +567,7 @@ export default async function WeeklyPage() {
       </div>
 
       {/* ── Row 2: Training + Recovery ──────────────────────────────── */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={rowStyle}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
         <Panel title="Training" meta={trainingMeta}>
           {allWorkouts.length === 0 ? (
             <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
@@ -581,19 +594,19 @@ export default async function WeeklyPage() {
                         <td className="tnum" style={tdMuted}>
                           {fmtDate(w.date)}
                         </td>
-                        <td style={{ ...tdBase, textTransform: "capitalize", wordBreak: "break-word" }}>
+                        <td
+                          style={{
+                            ...tdBase,
+                            textTransform: "capitalize",
+                            wordBreak: "break-word",
+                          }}
+                        >
                           {w.activity}
                         </td>
-                        <td
-                          className="tnum"
-                          style={{ ...tdMuted, textAlign: "right" }}
-                        >
+                        <td className="tnum" style={{ ...tdMuted, textAlign: "right" }}>
                           {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
                         </td>
-                        <td
-                          className="tnum"
-                          style={{ ...tdMuted, textAlign: "right" }}
-                        >
+                        <td className="tnum" style={{ ...tdMuted, textAlign: "right" }}>
                           {w.calories != null ? Math.round(w.calories).toLocaleString() : "—"}
                         </td>
                       </tr>
@@ -627,7 +640,13 @@ export default async function WeeklyPage() {
                           <td className="tnum" style={{ ...tdFaint, width: "5.5rem" }}>
                             {fmtDate(w.date)}
                           </td>
-                          <td style={{ ...tdMuted, textTransform: "capitalize", wordBreak: "break-word" }}>
+                          <td
+                            style={{
+                              ...tdMuted,
+                              textTransform: "capitalize",
+                              wordBreak: "break-word",
+                            }}
+                          >
                             {w.activity}
                           </td>
                           <td
@@ -697,7 +716,10 @@ export default async function WeeklyPage() {
                           style={{
                             ...tdBase,
                             textAlign: "right",
-                            color: r?.readiness != null ? "var(--color-text)" : "var(--color-text-faint)",
+                            color:
+                              r?.readiness != null
+                                ? "var(--color-text)"
+                                : "var(--color-text-faint)",
                           }}
                         >
                           {r?.readiness != null ? r.readiness : "—"}
@@ -707,7 +729,10 @@ export default async function WeeklyPage() {
                           style={{
                             ...tdBase,
                             textAlign: "right",
-                            color: r?.sleep_score != null ? "var(--color-text)" : "var(--color-text-faint)",
+                            color:
+                              r?.sleep_score != null
+                                ? "var(--color-text)"
+                                : "var(--color-text-faint)",
                           }}
                         >
                           {r?.sleep_score != null ? r.sleep_score : "—"}
@@ -717,7 +742,8 @@ export default async function WeeklyPage() {
                           style={{
                             ...tdBase,
                             textAlign: "right",
-                            color: r?.avg_hrv != null ? "var(--color-text)" : "var(--color-text-faint)",
+                            color:
+                              r?.avg_hrv != null ? "var(--color-text)" : "var(--color-text-faint)",
                           }}
                         >
                           {r?.avg_hrv != null ? Math.round(r.avg_hrv) : "—"}
@@ -733,10 +759,7 @@ export default async function WeeklyPage() {
       </div>
 
       {/* ── Row 3: Body composition + Journal ───────────────────────── */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={rowStyleLast}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyleLast}>
         <Panel
           title="Body composition"
           meta={fitnessLatest ? ` · ${fmtDate(fitnessLatest.date)}` : " · no data"}
@@ -764,10 +787,7 @@ export default async function WeeklyPage() {
                         {fmtNum(fitnessLatest.weight_lb, 1)}{" "}
                         <span style={{ color: "var(--color-text-faint)" }}>lb</span>
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdFaint, textAlign: "right" }}
-                      >
+                      <td className="tnum" style={{ ...tdFaint, textAlign: "right" }}>
                         {fitnessWeekAgo?.weight_lb != null
                           ? `${fmtNum(fitnessWeekAgo.weight_lb, 1)} lb`
                           : "—"}
@@ -776,13 +796,13 @@ export default async function WeeklyPage() {
                         className={`tnum ${deltaClass(
                           fitnessLatest.weight_lb ?? null,
                           fitnessWeekAgo?.weight_lb ?? null,
-                          false
+                          false,
                         )}`}
                         style={{ ...tdBase, textAlign: "right" }}
                       >
                         {deltaText(
                           fitnessLatest.weight_lb ?? null,
-                          fitnessWeekAgo?.weight_lb ?? null
+                          fitnessWeekAgo?.weight_lb ?? null,
                         )}
                         {weightDiff != null ? " lb" : ""}
                       </td>
@@ -793,10 +813,7 @@ export default async function WeeklyPage() {
                         {fmtNum(fitnessLatest.body_fat_pct, 1)}{" "}
                         <span style={{ color: "var(--color-text-faint)" }}>%</span>
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdFaint, textAlign: "right" }}
-                      >
+                      <td className="tnum" style={{ ...tdFaint, textAlign: "right" }}>
                         {fitnessWeekAgo?.body_fat_pct != null
                           ? `${fmtNum(fitnessWeekAgo.body_fat_pct, 1)}%`
                           : "—"}
@@ -805,13 +822,13 @@ export default async function WeeklyPage() {
                         className={`tnum ${deltaClass(
                           fitnessLatest.body_fat_pct ?? null,
                           fitnessWeekAgo?.body_fat_pct ?? null,
-                          false
+                          false,
                         )}`}
                         style={{ ...tdBase, textAlign: "right" }}
                       >
                         {deltaText(
                           fitnessLatest.body_fat_pct ?? null,
-                          fitnessWeekAgo?.body_fat_pct ?? null
+                          fitnessWeekAgo?.body_fat_pct ?? null,
                         )}
                         {bodyFatDiff != null ? "%" : ""}
                       </td>
@@ -841,10 +858,7 @@ export default async function WeeklyPage() {
             journalMissed > 0 ? ` · ${journalMissed} missed` : ""
           }`}
         >
-          <div
-            className="flex items-baseline"
-            style={{ gap: "var(--space-4)" }}
-          >
+          <div className="flex items-baseline" style={{ gap: "var(--space-4)" }}>
             <span
               className="tnum font-heading"
               style={{
@@ -867,12 +881,12 @@ export default async function WeeklyPage() {
                 {journalCount === 7
                   ? "Full week of entries."
                   : journalCount >= 5
-                  ? "Strong consistency."
-                  : journalCount >= 3
-                  ? "Halfway there."
-                  : journalCount > 0
-                  ? "Room to build."
-                  : "Nothing logged."}
+                    ? "Strong consistency."
+                    : journalCount >= 3
+                      ? "Halfway there."
+                      : journalCount > 0
+                        ? "Room to build."
+                        : "Nothing logged."}
               </p>
               <p
                 className="tnum"

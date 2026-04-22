@@ -18,22 +18,22 @@
 
 Inspired by Linear/Raycast — deep navy-black base, indigo primary, semantic health colors.
 
-| Role | Hex | CSS Variable | Usage |
-|------|-----|--------------|-------|
-| Background | `#0A0B0F` | `--color-bg` | Page background |
-| Surface | `#111318` | `--color-surface` | Cards, panels |
-| Surface Raised | `#181B24` | `--color-surface-raised` | Dropdowns, popovers |
-| Border | `#1E2130` | `--color-border` | All borders |
-| Border Subtle | `#161925` | `--color-border-subtle` | Dividers |
-| Primary | `#6366F1` | `--color-primary` | Accent, links, focus rings |
-| Primary Dim | `#6366F120` | `--color-primary-dim` | Focus glow, selected bg |
-| Positive | `#10B981` | `--color-positive` | Health gains, streaks, up-trends |
-| Warning | `#F59E0B` | `--color-warning` | Low readiness, missed habits |
-| Danger | `#EF4444` | `--color-danger` | Critical readiness, declining HRV |
-| Info | `#38BDF8` | `--color-info` | Neutral data, sleep stages |
-| Text | `#E2E8F0` | `--color-text` | Primary text |
-| Text Muted | `#64748B` | `--color-text-muted` | Labels, secondary info |
-| Text Faint | `#334155` | `--color-text-faint` | Placeholders, disabled |
+| Role           | Hex         | CSS Variable             | Usage                             |
+| -------------- | ----------- | ------------------------ | --------------------------------- |
+| Background     | `#0A0B0F`   | `--color-bg`             | Page background                   |
+| Surface        | `#111318`   | `--color-surface`        | Cards, panels                     |
+| Surface Raised | `#181B24`   | `--color-surface-raised` | Dropdowns, popovers               |
+| Border         | `#1E2130`   | `--color-border`         | All borders                       |
+| Border Subtle  | `#161925`   | `--color-border-subtle`  | Dividers                          |
+| Primary        | `#6366F1`   | `--color-primary`        | Accent, links, focus rings        |
+| Primary Dim    | `#6366F120` | `--color-primary-dim`    | Focus glow, selected bg           |
+| Positive       | `#10B981`   | `--color-positive`       | Health gains, streaks, up-trends  |
+| Warning        | `#F59E0B`   | `--color-warning`        | Low readiness, missed habits      |
+| Danger         | `#EF4444`   | `--color-danger`         | Critical readiness, declining HRV |
+| Info           | `#38BDF8`   | `--color-info`           | Neutral data, sleep stages        |
+| Text           | `#E2E8F0`   | `--color-text`           | Primary text                      |
+| Text Muted     | `#64748B`   | `--color-text-muted`     | Labels, secondary info            |
+| Text Faint     | `#334155`   | `--color-text-faint`     | Placeholders, disabled            |
 
 **Data visualization sequence** (use in order for multi-series charts):
 `#6366F1` → `#10B981` → `#38BDF8` → `#F59E0B` → `#EF4444` → `#A78BFA`
@@ -48,8 +48,9 @@ Inspired by Linear/Raycast — deep navy-black base, indigo primary, semantic he
 - **Mood:** Clean, professional, information-dense, neutral
 
 **CSS Import:**
+
 ```css
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");
 ```
 
 **Type Scale:**
@@ -70,14 +71,14 @@ Inspired by Linear/Raycast — deep navy-black base, indigo primary, semantic he
 
 ### Spacing Variables
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` | Tight gaps, icon padding |
-| `--space-sm` | `8px` | Inline spacing, tag gaps |
-| `--space-md` | `16px` | Card inner padding |
-| `--space-lg` | `24px` | Section padding, card grid gap |
-| `--space-xl` | `32px` | Large gaps between sections |
-| `--space-2xl` | `48px` | Page-level margins |
+| Token         | Value  | Usage                          |
+| ------------- | ------ | ------------------------------ |
+| `--space-xs`  | `4px`  | Tight gaps, icon padding       |
+| `--space-sm`  | `8px`  | Inline spacing, tag gaps       |
+| `--space-md`  | `16px` | Card inner padding             |
+| `--space-lg`  | `24px` | Section padding, card grid gap |
+| `--space-xl`  | `32px` | Large gaps between sections    |
+| `--space-2xl` | `48px` | Page-level margins             |
 
 ---
 
@@ -85,12 +86,12 @@ Inspired by Linear/Raycast — deep navy-black base, indigo primary, semantic he
 
 All shadows use dark-mode-appropriate opacity on black (not white).
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 3px rgba(0,0,0,0.4)` | Subtle lift |
-| `--shadow-md` | `0 4px 12px rgba(0,0,0,0.5)` | Cards |
-| `--shadow-lg` | `0 8px 24px rgba(0,0,0,0.6)` | Modals, dropdowns |
-| `--shadow-glow` | `0 0 0 3px var(--color-primary-dim)` | Focus rings |
+| Level           | Value                                | Usage             |
+| --------------- | ------------------------------------ | ----------------- |
+| `--shadow-sm`   | `0 1px 3px rgba(0,0,0,0.4)`          | Subtle lift       |
+| `--shadow-md`   | `0 4px 12px rgba(0,0,0,0.5)`         | Cards             |
+| `--shadow-lg`   | `0 8px 24px rgba(0,0,0,0.6)`         | Modals, dropdowns |
+| `--shadow-glow` | `0 0 0 3px var(--color-primary-dim)` | Focus rings       |
 
 ---
 
@@ -101,7 +102,7 @@ All shadows use dark-mode-appropriate opacity on black (not white).
 ```css
 /* Primary */
 .btn-primary {
-  background: #6366F1;
+  background: #6366f1;
   color: white;
   padding: 10px 20px;
   border-radius: 8px;
@@ -110,14 +111,19 @@ All shadows use dark-mode-appropriate opacity on black (not white).
   transition: all 200ms ease;
   cursor: pointer;
 }
-.btn-primary:hover { background: #4F52D9; }
-.btn-primary:focus-visible { box-shadow: var(--shadow-glow); outline: none; }
+.btn-primary:hover {
+  background: #4f52d9;
+}
+.btn-primary:focus-visible {
+  box-shadow: var(--shadow-glow);
+  outline: none;
+}
 
 /* Secondary / Ghost */
 .btn-secondary {
   background: transparent;
-  color: #E2E8F0;
-  border: 1px solid #1E2130;
+  color: #e2e8f0;
+  border: 1px solid #1e2130;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -125,7 +131,10 @@ All shadows use dark-mode-appropriate opacity on black (not white).
   transition: all 200ms ease;
   cursor: pointer;
 }
-.btn-secondary:hover { background: #181B24; border-color: #2A2F45; }
+.btn-secondary:hover {
+  background: #181b24;
+  border-color: #2a2f45;
+}
 ```
 
 ### Cards
@@ -133,24 +142,26 @@ All shadows use dark-mode-appropriate opacity on black (not white).
 ```css
 .card {
   background: #111318;
-  border: 1px solid #1E2130;
+  border: 1px solid #1e2130;
   border-radius: 12px;
   padding: 20px 24px;
   transition: border-color 200ms ease;
 }
-.card:hover { border-color: #2A2F45; }
+.card:hover {
+  border-color: #2a2f45;
+}
 
 /* Metric card — large stat callout */
 .card-metric .metric-value {
   font-size: 32px;
   font-weight: 700;
-  font-family: 'DM Sans', sans-serif;
-  color: #E2E8F0;
+  font-family: "DM Sans", sans-serif;
+  color: #e2e8f0;
   line-height: 1;
 }
 .card-metric .metric-label {
   font-size: 12px;
-  color: #64748B;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 4px;
@@ -160,9 +171,15 @@ All shadows use dark-mode-appropriate opacity on black (not white).
   font-weight: 500;
   margin-top: 8px;
 }
-.metric-delta.up { color: #10B981; }
-.metric-delta.down { color: #EF4444; }
-.metric-delta.neutral { color: #64748B; }
+.metric-delta.up {
+  color: #10b981;
+}
+.metric-delta.down {
+  color: #ef4444;
+}
+.metric-delta.neutral {
+  color: #64748b;
+}
 ```
 
 ### Inputs
@@ -171,18 +188,20 @@ All shadows use dark-mode-appropriate opacity on black (not white).
 .input {
   padding: 10px 14px;
   background: #111318;
-  border: 1px solid #1E2130;
+  border: 1px solid #1e2130;
   border-radius: 8px;
   font-size: 14px;
-  color: #E2E8F0;
+  color: #e2e8f0;
   transition: border-color 200ms ease;
   width: 100%;
 }
-.input::placeholder { color: #334155; }
+.input::placeholder {
+  color: #334155;
+}
 .input:focus {
-  border-color: #6366F1;
+  border-color: #6366f1;
   outline: none;
-  box-shadow: 0 0 0 3px #6366F120;
+  box-shadow: 0 0 0 3px #6366f120;
 }
 ```
 
@@ -195,7 +214,7 @@ All shadows use dark-mode-appropriate opacity on black (not white).
 }
 .modal {
   background: #111318;
-  border: 1px solid #1E2130;
+  border: 1px solid #1e2130;
   border-radius: 16px;
   padding: 28px 32px;
   box-shadow: var(--shadow-lg);
@@ -209,8 +228,8 @@ All shadows use dark-mode-appropriate opacity on black (not white).
 ```css
 .sidebar {
   width: 240px;
-  background: #0A0B0F;
-  border-right: 1px solid #1E2130;
+  background: #0a0b0f;
+  border-right: 1px solid #1e2130;
   padding: 16px 12px;
   position: fixed;
   height: 100vh;
@@ -224,12 +243,18 @@ All shadows use dark-mode-appropriate opacity on black (not white).
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #64748B;
+  color: #64748b;
   cursor: pointer;
   transition: all 150ms ease;
 }
-.nav-item:hover { background: #111318; color: #E2E8F0; }
-.nav-item.active { background: #6366F120; color: #6366F1; }
+.nav-item:hover {
+  background: #111318;
+  color: #e2e8f0;
+}
+.nav-item.active {
+  background: #6366f120;
+  color: #6366f1;
+}
 ```
 
 ---
@@ -242,67 +267,67 @@ The app has Recharts installed. Use these chart types per data source.
 
 ```tsx
 const CHART_COLORS = {
-  primary: '#6366F1',
-  positive: '#10B981',
-  info: '#38BDF8',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  purple: '#A78BFA',
-}
+  primary: "#6366F1",
+  positive: "#10B981",
+  info: "#38BDF8",
+  warning: "#F59E0B",
+  danger: "#EF4444",
+  purple: "#A78BFA",
+};
 
 const chartDefaults = {
-  backgroundColor: 'transparent',
-  gridColor: '#1E2130',
-  axisColor: '#334155',
-  labelColor: '#64748B',
-  tooltipBg: '#181B24',
-  tooltipBorder: '#2A2F45',
-}
+  backgroundColor: "transparent",
+  gridColor: "#1E2130",
+  axisColor: "#334155",
+  labelColor: "#64748B",
+  tooltipBg: "#181B24",
+  tooltipBorder: "#2A2F45",
+};
 ```
 
 ### Charts by Data Source
 
 #### Body Composition (`fitness_log` table)
 
-| Metric | Chart Type | Color | Notes |
-|--------|-----------|-------|-------|
+| Metric       | Chart Type  | Color     | Notes                                           |
+| ------------ | ----------- | --------- | ----------------------------------------------- |
 | Weight trend | `LineChart` | `#6366F1` | 30/90-day window, reference line at goal weight |
-| Body fat % | `AreaChart` | `#10B981` | Gradient fill from color to transparent |
-| Muscle mass | `AreaChart` | `#38BDF8` | Overlay with body fat for context |
-| BMI | `LineChart` | `#A78BFA` | Show healthy range band (18.5–24.9) |
+| Body fat %   | `AreaChart` | `#10B981` | Gradient fill from color to transparent         |
+| Muscle mass  | `AreaChart` | `#38BDF8` | Overlay with body fat for context               |
+| BMI          | `LineChart` | `#A78BFA` | Show healthy range band (18.5–24.9)             |
 
 #### Recovery (`recovery_metrics` table — Oura)
 
-| Metric | Chart Type | Color | Notes |
-|--------|-----------|-------|-------|
-| Readiness score | `RadialBarChart` or gauge | Dynamic | Green ≥70, Amber 50–69, Red <50 |
-| HRV trend | `AreaChart` | `#10B981` | 7/14-day, highlight declining stretches in `#EF4444` |
-| Resting HR | `LineChart` | `#38BDF8` | Lower is better — invert visual emphasis |
-| Sleep total | `BarChart` | `#6366F1` | Stack: Deep `#6366F1`, REM `#A78BFA`, Light `#38BDF8` |
-| Sleep score | `LineChart` | `#10B981` | Reference line at 70 |
+| Metric          | Chart Type                | Color     | Notes                                                 |
+| --------------- | ------------------------- | --------- | ----------------------------------------------------- |
+| Readiness score | `RadialBarChart` or gauge | Dynamic   | Green ≥70, Amber 50–69, Red <50                       |
+| HRV trend       | `AreaChart`               | `#10B981` | 7/14-day, highlight declining stretches in `#EF4444`  |
+| Resting HR      | `LineChart`               | `#38BDF8` | Lower is better — invert visual emphasis              |
+| Sleep total     | `BarChart`                | `#6366F1` | Stack: Deep `#6366F1`, REM `#A78BFA`, Light `#38BDF8` |
+| Sleep score     | `LineChart`               | `#10B981` | Reference line at 70                                  |
 
 #### Workouts (`workout_sessions` table — Fitbit)
 
-| Metric | Chart Type | Color | Notes |
-|--------|-----------|-------|-------|
-| Weekly frequency | `BarChart` | `#6366F1` | 7-bar rolling week |
-| Calories burned | `BarChart` | `#F59E0B` | Stack by activity type if available |
-| Active minutes | `AreaChart` | `#10B981` | Cumulative daily view |
+| Metric           | Chart Type  | Color     | Notes                               |
+| ---------------- | ----------- | --------- | ----------------------------------- |
+| Weekly frequency | `BarChart`  | `#6366F1` | 7-bar rolling week                  |
+| Calories burned  | `BarChart`  | `#F59E0B` | Stack by activity type if available |
+| Active minutes   | `AreaChart` | `#10B981` | Cumulative daily view               |
 
 #### Habits (`habits` + `habit_registry` tables)
 
-| Metric | Chart Type | Color | Notes |
-|--------|-----------|-------|-------|
-| Completion heatmap | Custom grid (7×N) | `#10B981` | GitHub-style, muted for missed |
-| Streak per habit | Horizontal `BarChart` | `#6366F1` | Sorted by streak length |
-| Weekly rate | `RadialBarChart` | Dynamic | Per-habit completion % |
+| Metric             | Chart Type            | Color     | Notes                          |
+| ------------------ | --------------------- | --------- | ------------------------------ |
+| Completion heatmap | Custom grid (7×N)     | `#10B981` | GitHub-style, muted for missed |
+| Streak per habit   | Horizontal `BarChart` | `#6366F1` | Sorted by streak length        |
+| Weekly rate        | `RadialBarChart`      | Dynamic   | Per-habit completion %         |
 
 #### Meals / Nutrition (`meal_log` + `recipes` tables)
 
-| Metric | Chart Type | Color | Notes |
-|--------|-----------|-------|-------|
-| Macro split | `PieChart` | Sequence | Protein `#10B981`, Carbs `#6366F1`, Fat `#F59E0B` |
-| Calories per day | `BarChart` | `#38BDF8` | Reference line at goal |
+| Metric           | Chart Type | Color     | Notes                                             |
+| ---------------- | ---------- | --------- | ------------------------------------------------- |
+| Macro split      | `PieChart` | Sequence  | Protein `#10B981`, Carbs `#6366F1`, Fat `#F59E0B` |
+| Calories per day | `BarChart` | `#38BDF8` | Reference line at goal                            |
 
 ### Recharts Global Config
 
@@ -337,6 +362,7 @@ const chartDefaults = {
 **Style:** Dark Professional Dashboard (Linear/Raycast-inspired)
 
 **Key Effects:**
+
 - Text glow: `text-shadow: var(--text-glow)` on `.font-heading` — dark mode only (`0 0 12px rgba(248,250,252,0.3)`; light: `none`)
 - Transitions: 150–200ms ease for interactive elements
 - Hover: border-color shift, no layout-shifting transforms

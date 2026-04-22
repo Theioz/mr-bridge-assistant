@@ -18,7 +18,13 @@ function deltaColor(delta: number, healthPositiveIsDown: boolean): string {
   return "var(--color-danger)";
 }
 
-function DeltaIcon({ delta, healthPositiveIsDown }: { delta: number; healthPositiveIsDown: boolean }) {
+function DeltaIcon({
+  delta,
+  healthPositiveIsDown,
+}: {
+  delta: number;
+  healthPositiveIsDown: boolean;
+}) {
   if (delta === 0) return <Minus size={13} />;
   const isPositive = healthPositiveIsDown ? delta < 0 : delta > 0;
   return isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />;
@@ -39,7 +45,8 @@ export function MetricCard({
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
-        transition: "border-color var(--motion-base) var(--ease-out-quart), box-shadow var(--motion-base) var(--ease-out-quart), transform var(--motion-base) var(--ease-out-quart)",
+        transition:
+          "border-color var(--motion-base) var(--ease-out-quart), box-shadow var(--motion-base) var(--ease-out-quart), transform var(--motion-base) var(--ease-out-quart)",
       }}
     >
       <p

@@ -26,23 +26,23 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
-  { href: "/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/fitness",       label: "Fitness",       icon: Activity },
-  { href: "/habits",        label: "Habits",        icon: CheckSquare },
-  { href: "/tasks",         label: "Tasks",         icon: ListTodo },
-  { href: "/weekly",        label: "Weekly",        icon: BarChart2 },
-  { href: "/calendar",      label: "Calendar",      icon: CalendarDays },
-  { href: "/journal",       label: "Journal",       icon: BookOpen },
-  { href: "/meals",         label: "Meals",         icon: UtensilsCrossed },
-  { href: "/chat",          label: "Chat",          icon: MessageSquare },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/fitness", label: "Fitness", icon: Activity },
+  { href: "/habits", label: "Habits", icon: CheckSquare },
+  { href: "/tasks", label: "Tasks", icon: ListTodo },
+  { href: "/weekly", label: "Weekly", icon: BarChart2 },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/meals", label: "Meals", icon: UtensilsCrossed },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings",      label: "Settings",      icon: Settings },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 // 4 primary tabs always visible; the rest live in the More sheet
 const PRIMARY_HREFS = ["/dashboard", "/habits", "/tasks", "/chat"];
 const MOBILE_PRIMARY = NAV_ITEMS.filter((item) => PRIMARY_HREFS.includes(item.href));
-const MOBILE_MORE    = NAV_ITEMS.filter((item) => !PRIMARY_HREFS.includes(item.href));
+const MOBILE_MORE = NAV_ITEMS.filter((item) => !PRIMARY_HREFS.includes(item.href));
 
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/";

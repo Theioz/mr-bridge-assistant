@@ -30,135 +30,135 @@
      header size used across the revamped dashboard; heavier sections reach
      for `--t-h1`, a single `--t-display` marks the hero metric only. */
   --t-display: clamp(3.25rem, 4.5vw + 1.25rem, 4.5rem);
-  --t-h1:      clamp(1.5rem, 1.2vw + 1.1rem, 1.875rem);
-  --t-h2:      1.0625rem;
-  --t-body:    1rem;
-  --t-meta:    0.9375rem;
-  --t-micro:   0.8125rem;
+  --t-h1: clamp(1.5rem, 1.2vw + 1.1rem, 1.875rem);
+  --t-h2: 1.0625rem;
+  --t-body: 1rem;
+  --t-meta: 0.9375rem;
+  --t-micro: 0.8125rem;
 
   /* Chart primitives — referenced by SVG sparklines and Recharts adapters.
      Values resolve dynamically through the theme-scoped neutral + accent. */
-  --chart-stroke:          1.5px;
-  --chart-stroke-thin:     1px;
-  --chart-color-primary:   var(--color-text);
-  --chart-color-baseline:  var(--rule);
-  --chart-color-today:     var(--accent);
-  --chart-color-faint:     var(--color-text-faint);
+  --chart-stroke: 1.5px;
+  --chart-stroke-thin: 1px;
+  --chart-color-primary: var(--color-text);
+  --chart-color-baseline: var(--rule);
+  --chart-color-today: var(--accent);
+  --chart-color-faint: var(--color-text-faint);
 }
 
 /* ─── Dark palette (default) ──────────────────────────────────────────── */
 :root,
 :root[data-theme="dark"] {
-  --color-bg:             oklch(15.5% 0.012 var(--hue));
-  --color-surface:        oklch(19% 0.015 var(--hue));
+  --color-bg: oklch(15.5% 0.012 var(--hue));
+  --color-surface: oklch(19% 0.015 var(--hue));
   --color-surface-raised: oklch(22% 0.017 var(--hue));
-  --color-border:         oklch(28% 0.013 var(--hue));
-  --color-border-subtle:  oklch(24% 0.013 var(--hue));
+  --color-border: oklch(28% 0.013 var(--hue));
+  --color-border-subtle: oklch(24% 0.013 var(--hue));
 
-  --color-text:           oklch(95% 0.006 var(--hue));
+  --color-text: oklch(95% 0.006 var(--hue));
   /* Muted + faint tiers lifted one more step so text reads cleanly on the
      watercolor canvas (dashboard "yesterday" prefix, weekly closed-task
      titles, history previews, etc.). */
-  --color-text-muted:     oklch(78% 0.012 var(--hue));
-  --color-text-faint:     oklch(72% 0.014 var(--hue));
+  --color-text-muted: oklch(78% 0.012 var(--hue));
+  --color-text-faint: oklch(72% 0.014 var(--hue));
 
   /* Single accent — muted amber. Focus rings, today markers,
      attention-required items. Primary/secondary/CTA alias to it: the
      design spec calls for one accent, not three. */
-  --accent:               oklch(74% 0.14 70);
-  --accent-text:          var(--accent);
-  --accent-soft:          oklch(28% 0.05 70);
-  --color-primary:        var(--accent);
-  --color-primary-dim:    oklch(74% 0.14 70 / 0.18);
-  --color-secondary:      var(--accent);
-  --color-cta:            var(--accent);
-  --color-cta-subtle:         oklch(74% 0.14 70 / 0.15);
-  --color-cta-subtle-strong:  oklch(74% 0.14 70 / 0.40);
-  --color-warning:        var(--accent);
-  --warning-subtle:           oklch(74% 0.14 70 / 0.08);
-  --warning-subtle-strong:    oklch(74% 0.14 70 / 0.16);
-  --color-amber:              oklch(74% 0.14 70);
+  --accent: oklch(74% 0.14 70);
+  --accent-text: var(--accent);
+  --accent-soft: oklch(28% 0.05 70);
+  --color-primary: var(--accent);
+  --color-primary-dim: oklch(74% 0.14 70 / 0.18);
+  --color-secondary: var(--accent);
+  --color-cta: var(--accent);
+  --color-cta-subtle: oklch(74% 0.14 70 / 0.15);
+  --color-cta-subtle-strong: oklch(74% 0.14 70 / 0.4);
+  --color-warning: var(--accent);
+  --warning-subtle: oklch(74% 0.14 70 / 0.08);
+  --warning-subtle-strong: oklch(74% 0.14 70 / 0.16);
+  --color-amber: oklch(74% 0.14 70);
 
   /* Status */
-  --color-positive:               oklch(72% 0.15 155);
-  --color-positive-subtle:        oklch(72% 0.15 155 / 0.15);
-  --color-positive-subtle-strong: oklch(72% 0.15 155 / 0.30);
-  --color-positive-light:         oklch(78% 0.14 155);
-  --color-positive-lighter:       oklch(84% 0.12 155);
-  --color-positive-lightest:      oklch(90% 0.10 155);
-  --color-danger:                 oklch(70% 0.18 28);
-  --color-danger-subtle:          oklch(70% 0.18 28 / 0.18);
-  --color-info:                   oklch(72% 0.12 230);
+  --color-positive: oklch(72% 0.15 155);
+  --color-positive-subtle: oklch(72% 0.15 155 / 0.15);
+  --color-positive-subtle-strong: oklch(72% 0.15 155 / 0.3);
+  --color-positive-light: oklch(78% 0.14 155);
+  --color-positive-lighter: oklch(84% 0.12 155);
+  --color-positive-lightest: oklch(90% 0.1 155);
+  --color-danger: oklch(70% 0.18 28);
+  --color-danger-subtle: oklch(70% 0.18 28 / 0.18);
+  --color-info: oklch(72% 0.12 230);
 
   /* Hairline rules (alias to border — new components prefer `--rule`). */
-  --rule:                 var(--color-border);
-  --rule-soft:            var(--color-border-subtle);
+  --rule: var(--color-border);
+  --rule-soft: var(--color-border-subtle);
 
-  --color-text-on-cta:    oklch(18% 0.015 var(--hue));
+  --color-text-on-cta: oklch(18% 0.015 var(--hue));
 
-  --overlay-scrim:        oklch(0% 0 0 / 0.6);
-  --hover-subtle:         oklch(100% 0 0 / 0.04);
+  --overlay-scrim: oklch(0% 0 0 / 0.6);
+  --hover-subtle: oklch(100% 0 0 / 0.04);
 
-  --color-skeleton:       var(--color-surface-raised);
+  --color-skeleton: var(--color-surface-raised);
 
-  --shadow-sm:   0 1px 3px oklch(0% 0 0 / 0.4);
-  --shadow-md:   0 4px 12px oklch(0% 0 0 / 0.5);
-  --shadow-lg:   0 8px 24px oklch(0% 0 0 / 0.6);
+  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.4);
+  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.5);
+  --shadow-lg: 0 8px 24px oklch(0% 0 0 / 0.6);
   --shadow-glow: 0 0 0 3px var(--color-primary-dim);
 }
 
 /* ─── Light palette ───────────────────────────────────────────────────── */
 :root[data-theme="light"] {
-  --color-bg:             oklch(98.5% 0.005 var(--hue));
-  --color-surface:        oklch(96.5% 0.008 var(--hue));
+  --color-bg: oklch(98.5% 0.005 var(--hue));
+  --color-surface: oklch(96.5% 0.008 var(--hue));
   --color-surface-raised: oklch(94% 0.011 var(--hue));
-  --color-border:         oklch(88% 0.010 var(--hue));
-  --color-border-subtle:  oklch(92% 0.008 var(--hue));
+  --color-border: oklch(88% 0.01 var(--hue));
+  --color-border-subtle: oklch(92% 0.008 var(--hue));
 
   /* Three-tier ink. Darkened across the board so light-mode text reads
      as decisively as dark-mode does — 22/45/52%L felt washed on
      paper-toned 98.5%L canvas. Muted + faint deepened one more step so
      text reads cleanly on the watercolor canvas. */
-  --color-text:           oklch(16% 0.020 var(--hue));
-  --color-text-muted:     oklch(30% 0.017 var(--hue));
-  --color-text-faint:     oklch(38% 0.014 var(--hue));
+  --color-text: oklch(16% 0.02 var(--hue));
+  --color-text-muted: oklch(30% 0.017 var(--hue));
+  --color-text-faint: oklch(38% 0.014 var(--hue));
 
-  --accent:               oklch(62% 0.13 65);
-  --accent-text:          oklch(45% 0.13 65);
-  --accent-soft:          oklch(94% 0.04 65);
-  --color-primary:        var(--accent);
-  --color-primary-dim:    oklch(62% 0.13 65 / 0.12);
-  --color-secondary:      var(--accent);
-  --color-cta:            var(--accent);
-  --color-cta-subtle:         oklch(62% 0.13 65 / 0.18);
-  --color-cta-subtle-strong:  oklch(62% 0.13 65 / 0.45);
-  --color-warning:        var(--accent);
-  --warning-subtle:           oklch(62% 0.13 65 / 0.08);
-  --warning-subtle-strong:    oklch(62% 0.13 65 / 0.14);
+  --accent: oklch(62% 0.13 65);
+  --accent-text: oklch(45% 0.13 65);
+  --accent-soft: oklch(94% 0.04 65);
+  --color-primary: var(--accent);
+  --color-primary-dim: oklch(62% 0.13 65 / 0.12);
+  --color-secondary: var(--accent);
+  --color-cta: var(--accent);
+  --color-cta-subtle: oklch(62% 0.13 65 / 0.18);
+  --color-cta-subtle-strong: oklch(62% 0.13 65 / 0.45);
+  --color-warning: var(--accent);
+  --warning-subtle: oklch(62% 0.13 65 / 0.08);
+  --warning-subtle-strong: oklch(62% 0.13 65 / 0.14);
 
-  --color-positive:               oklch(55% 0.11 155);
-  --color-positive-subtle:        oklch(55% 0.11 155 / 0.12);
+  --color-positive: oklch(55% 0.11 155);
+  --color-positive-subtle: oklch(55% 0.11 155 / 0.12);
   --color-positive-subtle-strong: oklch(55% 0.11 155 / 0.24);
-  --color-positive-light:         oklch(65% 0.13 155);
-  --color-positive-lighter:       oklch(72% 0.12 155);
-  --color-positive-lightest:      oklch(82% 0.11 155);
-  --color-danger:                 oklch(58% 0.16 28);
-  --color-danger-subtle:          oklch(58% 0.16 28 / 0.10);
-  --color-info:                   oklch(52% 0.14 230);
+  --color-positive-light: oklch(65% 0.13 155);
+  --color-positive-lighter: oklch(72% 0.12 155);
+  --color-positive-lightest: oklch(82% 0.11 155);
+  --color-danger: oklch(58% 0.16 28);
+  --color-danger-subtle: oklch(58% 0.16 28 / 0.1);
+  --color-info: oklch(52% 0.14 230);
 
-  --rule:                 var(--color-border);
-  --rule-soft:            var(--color-border-subtle);
+  --rule: var(--color-border);
+  --rule-soft: var(--color-border-subtle);
 
-  --color-text-on-cta:    oklch(16% 0.020 var(--hue));
+  --color-text-on-cta: oklch(16% 0.02 var(--hue));
 
-  --overlay-scrim:        oklch(22% 0.018 var(--hue) / 0.4);
-  --hover-subtle:         oklch(22% 0.018 var(--hue) / 0.04);
+  --overlay-scrim: oklch(22% 0.018 var(--hue) / 0.4);
+  --hover-subtle: oklch(22% 0.018 var(--hue) / 0.04);
 
-  --color-skeleton:       oklch(92% 0.008 var(--hue));
+  --color-skeleton: oklch(92% 0.008 var(--hue));
 
-  --shadow-sm:   0 1px 2px oklch(22% 0.018 var(--hue) / 0.06);
-  --shadow-md:   0 4px 6px oklch(22% 0.018 var(--hue) / 0.08);
-  --shadow-lg:   0 10px 15px oklch(22% 0.018 var(--hue) / 0.10);
+  --shadow-sm: 0 1px 2px oklch(22% 0.018 var(--hue) / 0.06);
+  --shadow-md: 0 4px 6px oklch(22% 0.018 var(--hue) / 0.08);
+  --shadow-lg: 0 10px 15px oklch(22% 0.018 var(--hue) / 0.1);
   --shadow-glow: 0 0 0 3px var(--color-primary-dim);
 }
 
@@ -178,7 +178,7 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'ss01', 'cv11';
+  font-feature-settings: "ss01", "cv11";
   position: relative;
   isolation: isolate;
   overflow-x: hidden;
@@ -191,7 +191,7 @@ body {
 /* Tabular numerals — opt-in utility for numeric stacks. */
 .tnum {
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
+  font-feature-settings: "tnum";
 }
 
 /* Reading column for sentence content. */
@@ -259,13 +259,17 @@ body {
 /* ─── Scroll fade mask (bottom fade for truncated lists) ─────────────── */
 .scroll-fade-mask {
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
-          mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
 }
 
 /* ─── Skeleton shimmer ────────────────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 .skeleton {
@@ -284,13 +288,27 @@ body {
 /* Used where base color/background is set via inline style; !important is
    required to win against the inline declaration. Pair with a
    `transition-colors` / `transition-opacity` class for smooth 150ms changes. */
-.hover-text-brighten:hover { color: var(--color-text) !important; }
-.hover-text-danger:hover   { color: var(--color-danger) !important; }
-.hover-bg-subtle:hover     { background: var(--hover-subtle) !important; }
-.hover-bg-border:hover     { background: var(--color-border) !important; }
-.hover-bg-raised:hover     { background: var(--color-surface-raised) !important; }
-.hover-text-muted:hover    { color: var(--color-text-muted) !important; }
-.hover-border-strong:hover { border-color: var(--color-text-faint) !important; }
+.hover-text-brighten:hover {
+  color: var(--color-text) !important;
+}
+.hover-text-danger:hover {
+  color: var(--color-danger) !important;
+}
+.hover-bg-subtle:hover {
+  background: var(--hover-subtle) !important;
+}
+.hover-bg-border:hover {
+  background: var(--color-border) !important;
+}
+.hover-bg-raised:hover {
+  background: var(--color-surface-raised) !important;
+}
+.hover-text-muted:hover {
+  color: var(--color-text-muted) !important;
+}
+.hover-border-strong:hover {
+  border-color: var(--color-text-faint) !important;
+}
 
 /* ─── Input focus ring ───────────────────────────────────────────────── */
 .input-focus-ring:focus {
@@ -326,7 +344,9 @@ body {
 }
 
 /* Card hover lift — MASTER.md spec. */
-.card-lift { will-change: transform; }
+.card-lift {
+  will-change: transform;
+}
 .card-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
@@ -338,7 +358,9 @@ body {
   padding: var(--space-7) 0 var(--space-5);
   border-bottom: 1px solid var(--rule-soft);
 }
-.db-section:last-of-type { border-bottom: none; }
+.db-section:last-of-type {
+  border-bottom: none;
+}
 
 .db-section-label {
   font-family: var(--font-display), system-ui, sans-serif;
@@ -357,9 +379,18 @@ body {
 }
 
 /* Deltas — colored by semantic better/worse, not direction. */
-.delta-good { color: var(--color-positive); font-variant-numeric: tabular-nums; }
-.delta-bad  { color: var(--color-danger);   font-variant-numeric: tabular-nums; }
-.delta-flat { color: var(--color-text-faint); font-variant-numeric: tabular-nums; }
+.delta-good {
+  color: var(--color-positive);
+  font-variant-numeric: tabular-nums;
+}
+.delta-bad {
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+.delta-flat {
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
 
 /* Hairline list rows (tasks, inbox, schedule, reference). */
 .db-row {
@@ -369,7 +400,9 @@ body {
   border-top: 1px solid var(--rule-soft);
   align-items: baseline;
 }
-.db-row:first-child { border-top: none; }
+.db-row:first-child {
+  border-top: none;
+}
 
 /* Mini-chart SVG primitive, used by Sparkline. */
 .mini-chart {
@@ -397,17 +430,36 @@ body {
     transform: translateY(6px);
     animation: rise var(--motion-slow) var(--ease-out-quart) forwards;
   }
-  [data-reveal][data-stagger="0"] { animation-delay: 0ms; }
-  [data-reveal][data-stagger="1"] { animation-delay: 60ms; }
-  [data-reveal][data-stagger="2"] { animation-delay: 120ms; }
-  [data-reveal][data-stagger="3"] { animation-delay: 180ms; }
-  [data-reveal][data-stagger="4"] { animation-delay: 240ms; }
-  [data-reveal][data-stagger="5"] { animation-delay: 300ms; }
-  [data-reveal][data-stagger="6"] { animation-delay: 360ms; }
-  [data-reveal][data-stagger="7"] { animation-delay: 420ms; }
+  [data-reveal][data-stagger="0"] {
+    animation-delay: 0ms;
+  }
+  [data-reveal][data-stagger="1"] {
+    animation-delay: 60ms;
+  }
+  [data-reveal][data-stagger="2"] {
+    animation-delay: 120ms;
+  }
+  [data-reveal][data-stagger="3"] {
+    animation-delay: 180ms;
+  }
+  [data-reveal][data-stagger="4"] {
+    animation-delay: 240ms;
+  }
+  [data-reveal][data-stagger="5"] {
+    animation-delay: 300ms;
+  }
+  [data-reveal][data-stagger="6"] {
+    animation-delay: 360ms;
+  }
+  [data-reveal][data-stagger="7"] {
+    animation-delay: 420ms;
+  }
 }
 @keyframes rise {
-  to { opacity: 1; transform: none; }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ─── Typing indicator (chat streaming cursor) ────────────────────────── */
@@ -415,8 +467,14 @@ body {
    alternative to a bounce utility. Dots fade in sequence; the cascade comes
    from per-dot animation-delay on the JSX. */
 @keyframes typing-dot-pulse {
-  0%, 60%, 100% { opacity: 0.25; }
-  30% { opacity: 1; }
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
 }
 .typing-dot-pulse {
   /* 1.2s loop lets the three staggered dots read as a cascading wave; ease
@@ -426,10 +484,23 @@ body {
 
 /* ─── Rest timer completion pulse ────────────────────────────────────── */
 @keyframes rest-timer-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  25%      { opacity: 0.55; transform: scale(1.03); }
-  50%      { opacity: 1; transform: scale(1); }
-  75%      { opacity: 0.55; transform: scale(1.03); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.55;
+    transform: scale(1.03);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 0.55;
+    transform: scale(1.03);
+  }
 }
 .rest-timer-done {
   animation: rest-timer-pulse 0.6s ease-in-out 3;
@@ -464,49 +535,51 @@ body {
   :root,
   :root[data-theme="dark"],
   :root[data-theme="light"] {
-    --color-bg:             #FFFFFF;
-    --color-surface:        #FFFFFF;
-    --color-surface-raised: #FFFFFF;
-    --color-border:         #CBD5E1;
-    --color-border-subtle:  #E2E8F0;
-    --color-text:           #0F172A;
-    --color-text-muted:     #334155;
-    --color-text-faint:     #475569;
-    --color-primary:        #B45309;
-    --color-primary-dim:    transparent;
-    --color-secondary:      #B45309;
-    --color-cta:            #B45309;
-    --color-positive:       #047857;
-    --color-warning:        #B45309;
-    --color-danger:         #B91C1C;
-    --color-info:           #0369A1;
-    --color-text-on-cta:    #FFFFFF;
-    --color-skeleton:       #F1F5F9;
-    --hover-subtle:         transparent;
-    --warning-subtle:       transparent;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-raised: #ffffff;
+    --color-border: #cbd5e1;
+    --color-border-subtle: #e2e8f0;
+    --color-text: #0f172a;
+    --color-text-muted: #334155;
+    --color-text-faint: #475569;
+    --color-primary: #b45309;
+    --color-primary-dim: transparent;
+    --color-secondary: #b45309;
+    --color-cta: #b45309;
+    --color-positive: #047857;
+    --color-warning: #b45309;
+    --color-danger: #b91c1c;
+    --color-info: #0369a1;
+    --color-text-on-cta: #ffffff;
+    --color-skeleton: #f1f5f9;
+    --hover-subtle: transparent;
+    --warning-subtle: transparent;
     --warning-subtle-strong: transparent;
-    --color-danger-subtle:  transparent;
+    --color-danger-subtle: transparent;
     --color-positive-subtle: transparent;
     --color-positive-subtle-strong: transparent;
-    --color-cta-subtle:     transparent;
+    --color-cta-subtle: transparent;
     --color-cta-subtle-strong: transparent;
-    --overlay-scrim:        transparent;
-    --shadow-sm:            none;
-    --shadow-md:            none;
-    --shadow-lg:            none;
-    --shadow-glow:          none;
-    --accent:               #B45309;
-    --accent-soft:          transparent;
-    --rule:                 #CBD5E1;
-    --rule-soft:            #E2E8F0;
+    --overlay-scrim: transparent;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-glow: none;
+    --accent: #b45309;
+    --accent-soft: transparent;
+    --rule: #cbd5e1;
+    --rule-soft: #e2e8f0;
   }
 
-  @page { margin: 1.5cm; }
+  @page {
+    margin: 1.5cm;
+  }
 
   html,
   body {
-    background: #FFFFFF !important;
-    color: #0F172A !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
   }
 
   *,
@@ -523,9 +596,13 @@ body {
   }
 
   /* Global chrome */
-  nav { display: none !important; }
+  nav {
+    display: none !important;
+  }
   .ambient-grain,
-  .ambient-watercolor { display: none !important; }
+  .ambient-watercolor {
+    display: none !important;
+  }
 
   /* Reset main content so the sidebar margin doesn't push content off-page */
   main {
@@ -542,7 +619,9 @@ body {
     height: auto !important;
   }
 
-  ::-webkit-scrollbar { display: none !important; }
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
 
   /* Single-column stacking — grids collapse in print */
   .grid {
@@ -558,7 +637,7 @@ body {
 
   .skeleton {
     animation: none !important;
-    background: #F1F5F9 !important;
+    background: #f1f5f9 !important;
   }
 
   a[href] {
@@ -581,7 +660,7 @@ body {
     height: auto !important;
     padding: 0 !important;
     overflow: visible !important;
-    color: #0F172A !important;
+    color: #0f172a !important;
     line-height: 1.7 !important;
   }
 
@@ -592,7 +671,7 @@ body {
   }
   [data-print-message] {
     background: transparent !important;
-    color: #0F172A !important;
+    color: #0f172a !important;
     border: none !important;
     border-radius: 0 !important;
     max-width: 100% !important;
@@ -603,12 +682,12 @@ body {
   [data-print-message="user"]::before {
     content: "You: ";
     font-weight: 600;
-    color: #0F172A;
+    color: #0f172a;
   }
   [data-print-message="assistant"]::before {
     content: "Mr. Bridge: ";
     font-weight: 600;
-    color: #1E40AF;
+    color: #1e40af;
   }
   [data-print-message-root] > span[aria-hidden] {
     opacity: 1 !important;

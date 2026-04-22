@@ -23,14 +23,19 @@ interface WorkoutExercise {
 function buildCalendarDescription(
   warmup: WorkoutExercise[],
   workout: WorkoutExercise[],
-  cooldown: WorkoutExercise[]
+  cooldown: WorkoutExercise[],
 ): string {
   const fmt = (ex: WorkoutExercise) => {
     const parts = [ex.exercise];
     if (ex.sets) parts.push(`${ex.sets} sets`);
     if (ex.reps) parts.push(`× ${ex.reps}`);
     if (ex.weight_lbs) {
-      const notation = ex.weight_notation === "per_hand" ? " / hand" : ex.weight_notation === "total" ? " total" : "";
+      const notation =
+        ex.weight_notation === "per_hand"
+          ? " / hand"
+          : ex.weight_notation === "total"
+            ? " total"
+            : "";
       parts.push(`@ ${ex.weight_lbs} lbs${notation}`);
     }
     return parts.join(" ");
@@ -46,7 +51,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
     ),
   ]);
 }
@@ -54,7 +59,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
   return {
     get_workout_plan: tool({
-      description: "Fetch the workout plan for the current Mon–Sun week. No parameters. Call this before making any adjustment or suggestion to the user's workout program.",
+      description:
+        "Fetch the workout plan for the current Mon–Sun week. No parameters. Call this before making any adjustment or suggestion to the user's workout program.",
       inputSchema: jsonSchema<Record<string, never>>({
         type: "object",
         properties: {},
@@ -68,7 +74,9 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         const sunday = addDays(monday, 6);
         const { data, error } = await supabase
           .from("workout_plans")
-          .select("id, date, name, warmup, workout, cooldown, notes, status, cancel_reason, cancelled_at, calendar_event_id, created_at, updated_at")
+          .select(
+            "id, date, name, warmup, workout, cooldown, notes, status, cancel_reason, cancelled_at, calendar_event_id, created_at, updated_at",
+          )
           .eq("user_id", userId)
           .gte("date", monday)
           .lte("date", sunday)
@@ -79,7 +87,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
     }),
 
     assign_workout: tool({
-      description: "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool. For each exercise, default weight_notation to 'per_hand' if the exercise name contains 'dumbbell', 'db', or 'single-arm' (case-insensitive); otherwise 'total'. Populate description (1-3 sentences on how to perform the movement) and tips (2-4 short form cues, muscles targeted, or common mistakes) for every exercise so the UI can show technique guidance on expand.",
+      description:
+        "Assign or replace one day's workout plan. Upserts to workout_plans and optionally creates/updates the matching Google Calendar event. Pre-flight required when update_calendar is true: (1) ask the user what time their workout will be if start_time is unknown, (2) call list_calendar_events for the target date, check for time overlaps and duplicate Workout titles, surface any conflicts to the user, and get confirmation before calling this tool. For each exercise, default weight_notation to 'per_hand' if the exercise name contains 'dumbbell', 'db', or 'single-arm' (case-insensitive); otherwise 'total'. Populate description (1-3 sentences on how to perform the movement) and tips (2-4 short form cues, muscles targeted, or common mistakes) for every exercise so the UI can show technique guidance on expand.",
       inputSchema: jsonSchema<{
         date: string;
         name?: string;
@@ -96,7 +105,11 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         required: ["date", "warmup", "workout", "cooldown"],
         properties: {
           date: { type: "string", description: "Date in YYYY-MM-DD format." },
-          name: { type: "string", description: "Workout name shown on the fitness page card, e.g. 'Push Day', 'Pull Day', 'Legs'." },
+          name: {
+            type: "string",
+            description:
+              "Workout name shown on the fitness page card, e.g. 'Push Day', 'Pull Day', 'Legs'.",
+          },
           warmup: {
             type: "array",
             description: "Warm-up exercises.",
@@ -109,10 +122,22 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
-                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
+                weight_notation: {
+                  type: "string",
+                  enum: ["per_hand", "total"],
+                  description:
+                    "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise.",
+                },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
-                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
-                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
+                description: {
+                  type: "string",
+                  description: "1-3 sentences on how to perform the movement.",
+                },
+                tips: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "2-4 short form cues, muscles targeted, or common mistakes.",
+                },
               },
             },
           },
@@ -128,10 +153,22 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
-                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
+                weight_notation: {
+                  type: "string",
+                  enum: ["per_hand", "total"],
+                  description:
+                    "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise.",
+                },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
-                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
-                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
+                description: {
+                  type: "string",
+                  description: "1-3 sentences on how to perform the movement.",
+                },
+                tips: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "2-4 short form cues, muscles targeted, or common mistakes.",
+                },
               },
             },
           },
@@ -147,21 +184,49 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 sets: { type: "number", description: "Number of sets." },
                 reps: { type: "string", description: "Rep scheme, e.g. '8-10' or '30 sec'." },
                 weight_lbs: { type: "number", description: "Working weight in lbs." },
-                weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise." },
+                weight_notation: {
+                  type: "string",
+                  enum: ["per_hand", "total"],
+                  description:
+                    "Whether the weight is per hand (dumbbell) or total. Default 'per_hand' for dumbbell/db/single-arm exercises, 'total' otherwise.",
+                },
                 notes: { type: "string", description: "Optional notes on form, tempo, etc." },
-                description: { type: "string", description: "1-3 sentences on how to perform the movement." },
-                tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
+                description: {
+                  type: "string",
+                  description: "1-3 sentences on how to perform the movement.",
+                },
+                tips: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "2-4 short form cues, muscles targeted, or common mistakes.",
+                },
               },
             },
           },
           notes: { type: "string", description: "Optional plan notes." },
           start_time: { type: "string", description: "Workout start time in HH:MM (24h) format." },
-          end_time: { type: "string", description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour." },
-          update_calendar: { type: "boolean", description: "Create/update a Google Calendar event. Default true." },
+          end_time: {
+            type: "string",
+            description: "Workout end time in HH:MM (24h) format. Defaults to start_time + 1 hour.",
+          },
+          update_calendar: {
+            type: "boolean",
+            description: "Create/update a Google Calendar event. Default true.",
+          },
         },
       }),
       strict: STRICT_TOOLS.assign_workout,
-      execute: async ({ date, name, warmup, workout, cooldown, notes, start_time, end_time, update_calendar = true }) => {
+      execute: async ({
+        date,
+        name,
+        warmup,
+        workout,
+        cooldown,
+        notes,
+        start_time,
+        end_time,
+        update_calendar = true,
+      }) => {
         if (!userId) return err("Not authenticated");
         if (isDemo) return ok({ demo: true, note: "Demo mode — plan not saved." });
 
@@ -176,21 +241,31 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           }
           return err(
             `Proposed weights exceed available inventory. ` +
-            `Violations: ${validation.violations.map((v) => `${v.exercise} (${v.requested_weight} lbs requested, max ${v.max_available} lbs available for ${v.equipment_type})`).join("; ")}. ` +
-            `Call get_user_equipment to see the full inventory and re-propose within these limits.`
+              `Violations: ${validation.violations.map((v) => `${v.exercise} (${v.requested_weight} lbs requested, max ${v.max_available} lbs available for ${v.equipment_type})`).join("; ")}. ` +
+              `Call get_user_equipment to see the full inventory and re-propose within these limits.`,
           );
         }
 
         const { data: upserted, error: upsertError } = await supabase
           .from("workout_plans")
           .upsert(
-            { user_id: userId, date, name: name ?? null, warmup, workout, cooldown, notes: notes ?? null, updated_at: new Date().toISOString() },
-            { onConflict: "user_id,date" }
+            {
+              user_id: userId,
+              date,
+              name: name ?? null,
+              warmup,
+              workout,
+              cooldown,
+              notes: notes ?? null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,date" },
           )
           .select()
           .single();
         if (upsertError) return err(upsertError.message);
-        if (!upserted) return err("Workout plan upsert returned no row — plan may not have been saved.");
+        if (!upserted)
+          return err("Workout plan upsert returned no row — plan may not have been saved.");
 
         if (!update_calendar) {
           return ok({ plan: upserted, calendar_synced: false });
@@ -206,10 +281,12 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           let startObj: object;
           let endObj: object;
           if (start_time) {
-            const computedEnd = end_time ?? (() => {
-              const [h, m] = start_time.split(":").map(Number);
-              return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-            })();
+            const computedEnd =
+              end_time ??
+              (() => {
+                const [h, m] = start_time.split(":").map(Number);
+                return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+              })();
             startObj = { dateTime: `${date}T${start_time}:00`, timeZone: tz };
             endObj = { dateTime: `${date}T${computedEnd}:00`, timeZone: tz };
           } else {
@@ -226,7 +303,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 requestBody: { summary: title, description, start: startObj, end: endObj },
               }),
               8000,
-              "calendar patch"
+              "calendar patch",
             );
           } else {
             const res = await withTimeout(
@@ -235,7 +312,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 requestBody: { summary: title, start: startObj, end: endObj, description },
               }),
               8000,
-              "calendar insert"
+              "calendar insert",
             );
             eventId = res.data.id ?? null;
             await supabase
@@ -259,33 +336,60 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
     }),
 
     update_workout_exercise: tool({
-      description: "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description. Supports renaming/swapping the exercise via updates.exercise.",
+      description:
+        "Patch a single exercise in one phase of an existing workout plan. Fetches the row, finds the exercise by name (case-insensitive), merges the updates, upserts back, and refreshes the calendar event description. Supports renaming/swapping the exercise via updates.exercise.",
       inputSchema: jsonSchema<{
         date: string;
         phase: "warmup" | "workout" | "cooldown";
         exercise_name: string;
-        updates: { exercise?: string; sets?: number; reps?: string; weight_lbs?: number; weight_notation?: "per_hand" | "total"; notes?: string };
+        updates: {
+          exercise?: string;
+          sets?: number;
+          reps?: string;
+          weight_lbs?: number;
+          weight_notation?: "per_hand" | "total";
+          notes?: string;
+        };
       }>({
         type: "object",
         additionalProperties: false,
         required: ["date", "phase", "exercise_name", "updates"],
         properties: {
           date: { type: "string", description: "YYYY-MM-DD date of the plan to edit." },
-          phase: { type: "string", enum: ["warmup", "workout", "cooldown"], description: "Which phase the exercise is in." },
-          exercise_name: { type: "string", description: "Existing exercise name to match (case-insensitive)." },
+          phase: {
+            type: "string",
+            enum: ["warmup", "workout", "cooldown"],
+            description: "Which phase the exercise is in.",
+          },
+          exercise_name: {
+            type: "string",
+            description: "Existing exercise name to match (case-insensitive).",
+          },
           updates: {
             type: "object",
             additionalProperties: false,
-            description: "Fields to merge into the matched exercise object. Use `exercise` to rename/swap.",
+            description:
+              "Fields to merge into the matched exercise object. Use `exercise` to rename/swap.",
             properties: {
               exercise: { type: "string", description: "New exercise name (for swaps/renames)." },
               sets: { type: "number" },
               reps: { type: "string" },
               weight_lbs: { type: "number" },
-              weight_notation: { type: "string", enum: ["per_hand", "total"], description: "Whether the weight is per hand or total." },
+              weight_notation: {
+                type: "string",
+                enum: ["per_hand", "total"],
+                description: "Whether the weight is per hand or total.",
+              },
               notes: { type: "string" },
-              description: { type: "string", description: "1-3 sentences on how to perform the movement." },
-              tips: { type: "array", items: { type: "string" }, description: "2-4 short form cues, muscles targeted, or common mistakes." },
+              description: {
+                type: "string",
+                description: "1-3 sentences on how to perform the movement.",
+              },
+              tips: {
+                type: "array",
+                items: { type: "string" },
+                description: "2-4 short form cues, muscles targeted, or common mistakes.",
+              },
             },
           },
         },
@@ -300,13 +404,15 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           const validation = await validateWeights({
             supabase,
             userId,
-            exercises: [{ exercise: updates.exercise ?? exercise_name, weight_lbs: updates.weight_lbs }],
+            exercises: [
+              { exercise: updates.exercise ?? exercise_name, weight_lbs: updates.weight_lbs },
+            ],
           });
           if (!validation.valid) {
             const v = validation.violations[0];
             return err(
               `Cannot set ${v.exercise} to ${v.requested_weight} lbs — max available ${v.equipment_type} is ${v.max_available} lbs. ` +
-              `Call get_user_equipment to see the full inventory.`
+                `Call get_user_equipment to see the full inventory.`,
             );
           }
         }
@@ -326,12 +432,14 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           const existingNames = arr.map((e) => e.exercise);
           return err(
             `Exercise "${exercise_name}" not found in ${phase}. ` +
-            `Current ${phase} exercises: ${existingNames.length ? existingNames.join(", ") : "(empty)"}. ` +
-            `Suggest one of these, or propose adding a new exercise — do not invent names.`
+              `Current ${phase} exercises: ${existingNames.length ? existingNames.join(", ") : "(empty)"}. ` +
+              `Suggest one of these, or propose adding a new exercise — do not invent names.`,
           );
         }
         if (!updates || Object.keys(updates).length === 0) {
-          return err("No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes.");
+          return err(
+            "No fields provided to update. Specify at least one of: exercise, sets, reps, weight_lbs, notes.",
+          );
         }
         const expectedExercise = { ...arr[idx], ...updates };
         arr[idx] = expectedExercise;
@@ -344,7 +452,8 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           .select()
           .single();
         if (upErr) return err(upErr.message);
-        if (!updated) return err("Workout plan update returned no row — change may not have been saved.");
+        if (!updated)
+          return err("Workout plan update returned no row — change may not have been saved.");
 
         // Read-after-write verification (#319 / #239 pattern): re-read the row
         // and confirm the matched exercise actually contains the requested
@@ -363,7 +472,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           return err(
             `Workout plan update returned but the row read-back doesn't show the change: ${fieldChecks
               .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-              .join(", ")}`
+              .join(", ")}`,
           );
         }
 
@@ -373,7 +482,11 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
           try {
             const auth = await getGoogleAuthClient({ db: supabase, userId });
             const calendar = google.calendar({ version: "v3", auth });
-            const description = buildCalendarDescription(updated.warmup, updated.workout, updated.cooldown);
+            const description = buildCalendarDescription(
+              updated.warmup,
+              updated.workout,
+              updated.cooldown,
+            );
             await withTimeout(
               calendar.events.patch({
                 calendarId: "primary",
@@ -381,16 +494,21 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
                 requestBody: { description },
               }),
               8000,
-              "calendar patch"
+              "calendar patch",
             );
             calendar_synced = true;
           } catch (calErr) {
             calendar_synced = false;
-            calendar_error = calErr instanceof Error ? calErr.message : "Calendar description sync failed";
+            calendar_error =
+              calErr instanceof Error ? calErr.message : "Calendar description sync failed";
           }
         }
 
-        return ok({ plan: updated, calendar_synced, ...(calendar_error ? { calendar_error } : {}) });
+        return ok({
+          plan: updated,
+          calendar_synced,
+          ...(calendar_error ? { calendar_error } : {}),
+        });
       },
     }),
 
@@ -402,8 +520,14 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         additionalProperties: false,
         required: ["date"],
         properties: {
-          date: { type: "string", description: "Date of the workout to cancel in YYYY-MM-DD format." },
-          reason: { type: "string", description: "Optional reason for cancellation (e.g. 'sick', 'schedule conflict')." },
+          date: {
+            type: "string",
+            description: "Date of the workout to cancel in YYYY-MM-DD format.",
+          },
+          reason: {
+            type: "string",
+            description: "Optional reason for cancellation (e.g. 'sick', 'schedule conflict').",
+          },
         },
       }),
       execute: async ({ date, reason }) => {
@@ -421,7 +545,10 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         additionalProperties: false,
         required: ["from_date", "to_date"],
         properties: {
-          from_date: { type: "string", description: "Date of the workout to move in YYYY-MM-DD format." },
+          from_date: {
+            type: "string",
+            description: "Date of the workout to move in YYYY-MM-DD format.",
+          },
           to_date: { type: "string", description: "Target date in YYYY-MM-DD format." },
           reason: { type: "string", description: "Optional reason for rescheduling." },
         },
@@ -434,13 +561,15 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
     }),
 
     get_workout_history: tool({
-      description: "Fetch logged strength-session performance (actual sets/reps/weights/RPE/notes) for progression analysis. Returns recent sessions scoped to the user, with per-set detail. Use this before suggesting progression for any exercise. Weights are returned in kg canonically — call get_profile for the user's weight_unit preference before reporting numbers.",
+      description:
+        "Fetch logged strength-session performance (actual sets/reps/weights/RPE/notes) for progression analysis. Returns recent sessions scoped to the user, with per-set detail. Use this before suggesting progression for any exercise. Weights are returned in kg canonically — call get_profile for the user's weight_unit preference before reporting numbers.",
       inputSchema: jsonSchema<{ exercise_name?: string; days?: number }>({
         type: "object",
         properties: {
           exercise_name: {
             type: "string",
-            description: "Optional exercise name (case-insensitive partial match). Omit to get the full recent history across all exercises.",
+            description:
+              "Optional exercise name (case-insensitive partial match). Omit to get the full recent history across all exercises.",
           },
           days: {
             type: "number",
@@ -450,12 +579,15 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       execute: async ({ exercise_name, days = 30 }) => {
         if (!userId) return { error: "Not authenticated" };
-        if (isDemo) return { demo: true, note: "Demo mode — no real strength history.", sessions: [] };
+        if (isDemo)
+          return { demo: true, note: "Demo mode — no real strength history.", sessions: [] };
 
         const sinceStr = daysAgoString(Math.max(1, Math.round(days)));
         const { data: sessions, error } = await supabase
           .from("strength_sessions")
-          .select("id, performed_on, started_at, completed_at, perceived_effort, notes, sets:strength_session_sets(exercise_name, exercise_order, set_number, weight_kg, reps, rpe, notes)")
+          .select(
+            "id, performed_on, started_at, completed_at, perceived_effort, notes, sets:strength_session_sets(exercise_name, exercise_order, set_number, weight_kg, reps, rpe, notes)",
+          )
           .eq("user_id", userId)
           .gte("performed_on", sinceStr)
           .order("performed_on", { ascending: false })
@@ -487,7 +619,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
               .map((s) => ({
                 ...s,
                 sets: s.sets.filter((set) =>
-                  set.exercise_name.toLowerCase().includes(exercise_name.toLowerCase())
+                  set.exercise_name.toLowerCase().includes(exercise_name.toLowerCase()),
                 ),
               }))
               .filter((s) => s.sets.length > 0)
@@ -510,7 +642,7 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
               .sort((a, b) =>
                 a.exercise_order !== b.exercise_order
                   ? a.exercise_order - b.exercise_order
-                  : a.set_number - b.set_number
+                  : a.set_number - b.set_number,
               ),
           })),
         };

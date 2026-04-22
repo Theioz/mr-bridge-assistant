@@ -1,8 +1,5 @@
 import { test, expect } from "../fixtures/auth";
-import {
-  createSmokeAdminClient,
-  getMessagesForSession,
-} from "../utils/supabase-verify";
+import { createSmokeAdminClient, getMessagesForSession } from "../utils/supabase-verify";
 
 test("chat — send, receive, persist", async ({ signedInPage, consoleErrors }) => {
   const page = signedInPage;
@@ -34,12 +31,9 @@ test("chat — send, receive, persist", async ({ signedInPage, consoleErrors }) 
   const sendButton = page.getByRole("button", { name: "Send" });
 
   const [chatRequest, chatResponse] = await Promise.all([
-    page.waitForRequest(
-      (req) => req.url().includes("/api/chat") && req.method() === "POST",
-    ),
+    page.waitForRequest((req) => req.url().includes("/api/chat") && req.method() === "POST"),
     page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/chat") && resp.request().method() === "POST",
+      (resp) => resp.url().includes("/api/chat") && resp.request().method() === "POST",
     ),
     sendButton.click(),
   ]);
@@ -62,9 +56,7 @@ test("chat — send, receive, persist", async ({ signedInPage, consoleErrors }) 
   // The assistant bubble exists in the DOM (sanity check). Precise text
   // matching happens against the DB row below — the markdown renderer has
   // edge cases where a short answer produces a list-marker-only DOM.
-  const assistantBubble = page
-    .locator('[data-print-message="assistant"]')
-    .last();
+  const assistantBubble = page.locator('[data-print-message="assistant"]').last();
   await expect(assistantBubble).toBeVisible();
 
   // DB is authoritative — bypass RLS with a service-role client and check
@@ -80,6 +72,5 @@ test("chat — send, receive, persist", async ({ signedInPage, consoleErrors }) 
   expect(assistantRow.content.length).toBeGreaterThan(0);
   expect(assistantRow.content).toMatch(/hello/i);
 
-  expect(consoleErrors, `console errors during turn: ${consoleErrors.join("\n")}`)
-    .toHaveLength(0);
+  expect(consoleErrors, `console errors during turn: ${consoleErrors.join("\n")}`).toHaveLength(0);
 });

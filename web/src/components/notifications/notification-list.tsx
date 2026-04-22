@@ -6,11 +6,11 @@ import EmptyState from "@/components/dashboard/empty-state";
 import type { Notification } from "@/app/(protected)/notifications/page";
 
 const TYPE_FILTERS = [
-  { key: "all",       label: "All" },
+  { key: "all", label: "All" },
   { key: "hrv_alert", label: "HRV" },
-  { key: "weather",   label: "Weather" },
-  { key: "task_due",  label: "Tasks" },
-  { key: "birthday",  label: "Birthday" },
+  { key: "weather", label: "Weather" },
+  { key: "task_due", label: "Tasks" },
+  { key: "birthday", label: "Birthday" },
 ] as const;
 
 type FilterKey = (typeof TYPE_FILTERS)[number]["key"];
@@ -18,11 +18,16 @@ type FilterKey = (typeof TYPE_FILTERS)[number]["key"];
 function typeIcon(type: string) {
   const shared = { color: "var(--color-text-faint)", flexShrink: 0 } as const;
   switch (type) {
-    case "hrv_alert": return <Activity size={14} style={shared} aria-hidden />;
-    case "weather":   return <CloudRain size={14} style={shared} aria-hidden />;
-    case "task_due":  return <CheckSquare size={14} style={shared} aria-hidden />;
-    case "birthday":  return <Cake size={14} style={shared} aria-hidden />;
-    default:          return <Bell size={14} style={shared} aria-hidden />;
+    case "hrv_alert":
+      return <Activity size={14} style={shared} aria-hidden />;
+    case "weather":
+      return <CloudRain size={14} style={shared} aria-hidden />;
+    case "task_due":
+      return <CheckSquare size={14} style={shared} aria-hidden />;
+    case "birthday":
+      return <Cake size={14} style={shared} aria-hidden />;
+    default:
+      return <Bell size={14} style={shared} aria-hidden />;
   }
 }
 
@@ -57,9 +62,7 @@ export default function NotificationList({ notifications, markAllAsReadAction }:
   const [pending, startTransition] = useTransition();
   const [markError, setMarkError] = useState<string | null>(null);
 
-  const visible = filter === "all"
-    ? notifications
-    : notifications.filter((n) => n.type === filter);
+  const visible = filter === "all" ? notifications : notifications.filter((n) => n.type === filter);
 
   const unreadVisible = visible.filter((n) => n.isUnread).length;
 
@@ -102,7 +105,8 @@ export default function NotificationList({ notifications, markAllAsReadAction }:
                 border: active ? "1px solid var(--accent)" : "1px solid var(--rule)",
                 borderRadius: "var(--r-1)",
                 cursor: "pointer",
-                transition: "border-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+                transition:
+                  "border-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
               }}
               className={active ? undefined : "hover-border-strong"}
             >

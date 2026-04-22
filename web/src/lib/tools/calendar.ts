@@ -12,31 +12,183 @@ function makeDemo() {
   const d = (n: number) => addDays(t, n);
   return [
     // Today
-    { title: "Morning run",         start: `${d(0)}T06:30:00`, end: `${d(0)}T07:15:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
-    { title: "Team standup",        start: `${d(0)}T09:00:00`, end: `${d(0)}T09:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
-    { title: "Async standup",       start: `${d(0)}T09:00:00`, end: `${d(0)}T09:15:00`, allDay: false, calendar: "Work",      calendarType: "other",   location: null },
-    { title: "Lunch w/ Priya",      start: `${d(0)}T12:30:00`, end: `${d(0)}T13:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Tartine Manufactory" },
-    { title: "Gym — push day",      start: `${d(0)}T18:00:00`, end: `${d(0)}T19:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Equinox SoMa" },
+    {
+      title: "Morning run",
+      start: `${d(0)}T06:30:00`,
+      end: `${d(0)}T07:15:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: null,
+    },
+    {
+      title: "Team standup",
+      start: `${d(0)}T09:00:00`,
+      end: `${d(0)}T09:30:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Google Meet",
+    },
+    {
+      title: "Async standup",
+      start: `${d(0)}T09:00:00`,
+      end: `${d(0)}T09:15:00`,
+      allDay: false,
+      calendar: "Work",
+      calendarType: "other",
+      location: null,
+    },
+    {
+      title: "Lunch w/ Priya",
+      start: `${d(0)}T12:30:00`,
+      end: `${d(0)}T13:30:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Tartine Manufactory",
+    },
+    {
+      title: "Gym — push day",
+      start: `${d(0)}T18:00:00`,
+      end: `${d(0)}T19:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Equinox SoMa",
+    },
     // Yesterday
-    { title: "Doctor appointment",  start: `${d(-1)}T10:00:00`, end: `${d(-1)}T10:45:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "UCSF Medical Center" },
-    { title: "Coffee w/ Marcus",    start: `${d(-1)}T15:00:00`, end: `${d(-1)}T16:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Sightglass Coffee" },
+    {
+      title: "Doctor appointment",
+      start: `${d(-1)}T10:00:00`,
+      end: `${d(-1)}T10:45:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "UCSF Medical Center",
+    },
+    {
+      title: "Coffee w/ Marcus",
+      start: `${d(-1)}T15:00:00`,
+      end: `${d(-1)}T16:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Sightglass Coffee",
+    },
     // Tomorrow
-    { title: "Product review",      start: `${d(1)}T10:00:00`, end: `${d(1)}T11:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
-    { title: "1:1 with Sarah",      start: `${d(1)}T14:00:00`, end: `${d(1)}T14:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
+    {
+      title: "Product review",
+      start: `${d(1)}T10:00:00`,
+      end: `${d(1)}T11:30:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Google Meet",
+    },
+    {
+      title: "1:1 with Sarah",
+      start: `${d(1)}T14:00:00`,
+      end: `${d(1)}T14:30:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: null,
+    },
     // Day +2
-    { title: "Design sync",         start: `${d(2)}T11:00:00`, end: `${d(2)}T12:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Zoom" },
-    { title: "Evening yoga",        start: `${d(2)}T19:00:00`, end: `${d(2)}T20:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "CorePower Yoga" },
+    {
+      title: "Design sync",
+      start: `${d(2)}T11:00:00`,
+      end: `${d(2)}T12:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Zoom",
+    },
+    {
+      title: "Evening yoga",
+      start: `${d(2)}T19:00:00`,
+      end: `${d(2)}T20:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "CorePower Yoga",
+    },
     // All-day
-    { title: "Team offsite",        start: d(3), end: d(5),  allDay: true,  calendar: "Alex Chen", calendarType: "primary",  location: null },
-    { title: "Memorial Day",        start: d(6), end: d(6),  allDay: true,  calendar: "US Holidays", calendarType: "holiday", location: null },
-    { title: "Marcus's birthday",   start: d(4), end: d(4),  allDay: true,  calendar: "Contacts",  calendarType: "birthday", location: null },
+    {
+      title: "Team offsite",
+      start: d(3),
+      end: d(5),
+      allDay: true,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: null,
+    },
+    {
+      title: "Memorial Day",
+      start: d(6),
+      end: d(6),
+      allDay: true,
+      calendar: "US Holidays",
+      calendarType: "holiday",
+      location: null,
+    },
+    {
+      title: "Marcus's birthday",
+      start: d(4),
+      end: d(4),
+      allDay: true,
+      calendar: "Contacts",
+      calendarType: "birthday",
+      location: null,
+    },
     // Next week
-    { title: "Quarterly planning",  start: `${d(7)}T09:00:00`, end: `${d(7)}T12:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Office — Mission St" },
-    { title: "Flight to NYC",       start: `${d(8)}T06:00:00`, end: `${d(8)}T14:30:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "SFO → JFK" },
-    { title: "Conference day 1",    start: `${d(9)}T09:00:00`, end: `${d(9)}T18:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Javits Center, NYC" },
+    {
+      title: "Quarterly planning",
+      start: `${d(7)}T09:00:00`,
+      end: `${d(7)}T12:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Office — Mission St",
+    },
+    {
+      title: "Flight to NYC",
+      start: `${d(8)}T06:00:00`,
+      end: `${d(8)}T14:30:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "SFO → JFK",
+    },
+    {
+      title: "Conference day 1",
+      start: `${d(9)}T09:00:00`,
+      end: `${d(9)}T18:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Javits Center, NYC",
+    },
     // Last week
-    { title: "Sprint retro",        start: `${d(-5)}T14:00:00`, end: `${d(-5)}T15:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: "Google Meet" },
-    { title: "Weekly review",       start: `${d(-7)}T10:00:00`, end: `${d(-7)}T11:00:00`, allDay: false, calendar: "Alex Chen", calendarType: "primary", location: null },
+    {
+      title: "Sprint retro",
+      start: `${d(-5)}T14:00:00`,
+      end: `${d(-5)}T15:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: "Google Meet",
+    },
+    {
+      title: "Weekly review",
+      start: `${d(-7)}T10:00:00`,
+      end: `${d(-7)}T11:00:00`,
+      allDay: false,
+      calendar: "Alex Chen",
+      calendarType: "primary",
+      location: null,
+    },
   ];
 }
 
@@ -65,7 +217,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           const startDate = date ?? todayString();
           const endDate = addDays(startDate, Math.max(1, days) - 1);
           const filtered = DEMO_CALENDAR_EVENTS.filter(
-            (e) => e.start.slice(0, 10) >= startDate && e.start.slice(0, 10) <= endDate
+            (e) => e.start.slice(0, 10) >= startDate && e.start.slice(0, 10) <= endDate,
           );
           return { events: filtered, count: filtered.length };
         }
@@ -78,9 +230,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
 
           const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
           const excluded = await getExcludedCalendarIds(supabase, userId);
-          const calendars = (calListRes.data.items ?? []).filter(
-            (c) => !excluded.has(c.id ?? ""),
-          );
+          const calendars = (calListRes.data.items ?? []).filter((c) => !excluded.has(c.id ?? ""));
 
           const allEventArrays = await Promise.all(
             calendars.map(async (cal) => {
@@ -97,10 +247,10 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
               const calendarType = cal.primary
                 ? "primary"
                 : calNameLower.includes("birthday") || calNameLower.includes("contact")
-                ? "birthday"
-                : calNameLower.includes("holiday")
-                ? "holiday"
-                : "other";
+                  ? "birthday"
+                  : calNameLower.includes("holiday")
+                    ? "holiday"
+                    : "other";
 
               return (res.data.items ?? [])
                 .filter((e) => {
@@ -119,16 +269,17 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
                   calendarType,
                   location: e.location ?? null,
                 }));
-            })
+            }),
           );
 
-          const events = allEventArrays
-            .flat()
-            .sort((a, b) => a.start.localeCompare(b.start));
+          const events = allEventArrays.flat().sort((a, b) => a.start.localeCompare(b.start));
 
           return { events, count: events.length };
         } catch (caughtErr) {
-          return { error: caughtErr instanceof Error ? caughtErr.message : "Failed to list calendar events" };
+          return {
+            error:
+              caughtErr instanceof Error ? caughtErr.message : "Failed to list calendar events",
+          };
         }
       },
     }),
@@ -168,7 +319,15 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
         },
       }),
       strict: STRICT_TOOLS.create_calendar_event,
-      execute: async ({ title, date, start_time, end_time, location, description, all_day = false }) => {
+      execute: async ({
+        title,
+        date,
+        start_time,
+        end_time,
+        location,
+        description,
+        all_day = false,
+      }) => {
         if (isDemo) {
           return ok({
             id: `demo-${Date.now()}`,
@@ -183,7 +342,9 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             return err(`date must be YYYY-MM-DD, got: "${date}"`);
           }
           if (!all_day && !start_time) {
-            return err("start_time is required for timed events. Use all_day: true for all-day events.");
+            return err(
+              "start_time is required for timed events. Use all_day: true for all-day events.",
+            );
           }
 
           const auth = await getGoogleAuthClient({ db: supabase, userId });
@@ -220,7 +381,8 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             calendarId: "primary",
             requestBody: eventBody,
           });
-          if (!res.data.id) return err("Google returned no event id — create may not have persisted.");
+          if (!res.data.id)
+            return err("Google returned no event id — create may not have persisted.");
 
           // Read-after-write verification (#319): confirm the event Google
           // actually stored matches what we asked for. Catches wrong-target /
@@ -231,7 +393,7 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           const expectedStart = all_day ? date : `${date}T${start_time}:00`;
           if (!verifiedStart?.startsWith(expectedStart.slice(0, all_day ? 10 : 16))) {
             return err(
-              `Calendar accepted the create but a follow-up read shows start=${verifiedStart}, expected to start with ${expectedStart}. The event may not be where you wanted it.`
+              `Calendar accepted the create but a follow-up read shows start=${verifiedStart}, expected to start with ${expectedStart}. The event may not be where you wanted it.`,
             );
           }
 
@@ -244,7 +406,9 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             verified: { start: verifiedStart, end: verifiedEnd },
           });
         } catch (caughtErr) {
-          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to create calendar event");
+          return err(
+            caughtErr instanceof Error ? caughtErr.message : "Failed to create calendar event",
+          );
         }
       },
     }),
@@ -274,22 +438,27 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
           try {
             const verify = await calendar.events.get({ calendarId: "primary", eventId });
             if (verify.data.status !== "cancelled") {
-              return err(`Calendar accepted the delete but a follow-up read still shows status=${verify.data.status}. The event may not be deleted.`);
+              return err(
+                `Calendar accepted the delete but a follow-up read still shows status=${verify.data.status}. The event may not be deleted.`,
+              );
             }
           } catch (verifyErr) {
             // 404/410 on get-after-delete means the event is gone — that's success.
-            const status = (verifyErr as { code?: number; response?: { status?: number } }).code
-              ?? (verifyErr as { response?: { status?: number } }).response?.status;
+            const status =
+              (verifyErr as { code?: number; response?: { status?: number } }).code ??
+              (verifyErr as { response?: { status?: number } }).response?.status;
             if (status !== 404 && status !== 410) {
               return err(
-                `Calendar accepted the delete but verification failed: ${verifyErr instanceof Error ? verifyErr.message : "unknown error"}`
+                `Calendar accepted the delete but verification failed: ${verifyErr instanceof Error ? verifyErr.message : "unknown error"}`,
               );
             }
           }
 
           return ok({ eventId });
         } catch (caughtErr) {
-          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to delete calendar event");
+          return err(
+            caughtErr instanceof Error ? caughtErr.message : "Failed to delete calendar event",
+          );
         }
       },
     }),
@@ -311,7 +480,11 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
         properties: {
           eventId: { type: "string", description: "The eventId from list_calendar_events." },
           summary: { type: "string", description: "New event title." },
-          start: { type: "string", description: "New start as RFC3339 dateTime (e.g. 2026-04-15T09:00:00) or date (YYYY-MM-DD) for all-day." },
+          start: {
+            type: "string",
+            description:
+              "New start as RFC3339 dateTime (e.g. 2026-04-15T09:00:00) or date (YYYY-MM-DD) for all-day.",
+          },
           end: { type: "string", description: "New end as RFC3339 dateTime or date." },
           location: { type: "string", description: "New location string." },
           description: { type: "string", description: "New description/notes." },
@@ -362,21 +535,27 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             const verifiedStart = verify.data.start?.dateTime ?? verify.data.start?.date ?? "";
             const expectedPrefix = /T/.test(start) ? start.slice(0, 16) : start;
             if (!verifiedStart.startsWith(expectedPrefix)) {
-              mismatches.push(`start expected to begin with "${expectedPrefix}", got "${verifiedStart}"`);
+              mismatches.push(
+                `start expected to begin with "${expectedPrefix}", got "${verifiedStart}"`,
+              );
             }
           }
           if (end !== undefined) {
             const verifiedEnd = verify.data.end?.dateTime ?? verify.data.end?.date ?? "";
             const expectedPrefix = /T/.test(end) ? end.slice(0, 16) : end;
             if (!verifiedEnd.startsWith(expectedPrefix)) {
-              mismatches.push(`end expected to begin with "${expectedPrefix}", got "${verifiedEnd}"`);
+              mismatches.push(
+                `end expected to begin with "${expectedPrefix}", got "${verifiedEnd}"`,
+              );
             }
           }
           if (location !== undefined && verify.data.location !== location) {
             mismatches.push(`location expected "${location}", got "${verify.data.location}"`);
           }
           if (mismatches.length > 0) {
-            return err(`Calendar accepted the update but a follow-up read shows it didn't take: ${mismatches.join("; ")}`);
+            return err(
+              `Calendar accepted the update but a follow-up read shows it didn't take: ${mismatches.join("; ")}`,
+            );
           }
 
           return ok({
@@ -388,7 +567,9 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
             verified: true,
           });
         } catch (caughtErr) {
-          return err(caughtErr instanceof Error ? caughtErr.message : "Failed to update calendar event");
+          return err(
+            caughtErr instanceof Error ? caughtErr.message : "Failed to update calendar event",
+          );
         }
       },
     }),

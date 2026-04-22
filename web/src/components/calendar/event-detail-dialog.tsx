@@ -23,9 +23,21 @@ function formatDateTime(event: CalendarRangeEvent): string {
   }
   const start = new Date(event.start);
   const end = new Date(event.end);
-  const datePart = start.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  const startTime = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-  const endTime = end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const datePart = start.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const startTime = start.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const endTime = end.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
   return `${datePart} · ${startTime} – ${endTime}`;
 }
 
@@ -138,13 +150,26 @@ export default function EventDetailDialog({
           </div>
 
           {/* Body */}
-          <div style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          <div
+            style={{
+              padding: "var(--space-4)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
             {/* Date/time */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)" }}>
               {event.allDay ? (
-                <Calendar size={14} style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }} />
+                <Calendar
+                  size={14}
+                  style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }}
+                />
               ) : (
-                <Clock size={14} style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }} />
+                <Clock
+                  size={14}
+                  style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }}
+                />
               )}
               <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                 {formatDateTime(event)}
@@ -154,7 +179,10 @@ export default function EventDetailDialog({
             {/* Location */}
             {event.location && (
               <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                <MapPin size={14} style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }} />
+                <MapPin
+                  size={14}
+                  style={{ color: "var(--color-text-faint)", marginTop: 2, flexShrink: 0 }}
+                />
                 <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                   {event.location}
                 </span>
@@ -222,7 +250,9 @@ export default function EventDetailDialog({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "var(--space-2)",
-                background: confirmDelete ? "oklch(30% 0.08 25 / 0.5)" : "var(--color-surface-raised)",
+                background: confirmDelete
+                  ? "oklch(30% 0.08 25 / 0.5)"
+                  : "var(--color-surface-raised)",
                 border: `1px solid ${confirmDelete ? "oklch(55% 0.18 25)" : "var(--color-border)"}`,
                 borderRadius: "var(--r-2)",
                 color: confirmDelete ? "oklch(75% 0.15 25)" : "var(--color-text-muted)",

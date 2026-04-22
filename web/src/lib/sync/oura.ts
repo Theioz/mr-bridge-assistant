@@ -51,7 +51,11 @@ export interface OuraSyncResult {
   updated: number;
 }
 
-export async function syncOura(db: SupabaseClient, userId: string, days = 3): Promise<OuraSyncResult> {
+export async function syncOura(
+  db: SupabaseClient,
+  userId: string,
+  days = 3,
+): Promise<OuraSyncResult> {
   const integration = await loadIntegration(db, userId, "oura");
   const token = integration?.refreshToken;
   if (!token) throw new Error("Oura not connected — add a Personal Access Token in Settings");
@@ -94,8 +98,10 @@ export async function syncOura(db: SupabaseClient, userId: string, days = 3): Pr
       awake_hrs: secsToHrs(d.awake_time as number),
       avg_hrv: d.average_hrv != null ? Math.round(d.average_hrv as number) : null,
       resting_hr: (d.lowest_heart_rate as number) ?? null,
-      avg_hr_sleep: d.average_heart_rate != null ? Math.round(d.average_heart_rate as number) : null,
-      avg_breath: d.average_breath != null ? Math.round((d.average_breath as number) * 10) / 10 : null,
+      avg_hr_sleep:
+        d.average_heart_rate != null ? Math.round(d.average_heart_rate as number) : null,
+      avg_breath:
+        d.average_breath != null ? Math.round((d.average_breath as number) * 10) / 10 : null,
       efficiency: (d.efficiency as number) ?? null,
       latency_mins: secsToMins(d.latency as number),
       restless_periods: (d.restless_periods as number) ?? null,

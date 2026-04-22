@@ -32,7 +32,9 @@ interface ScanChatBody {
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: ScanChatBody;
@@ -49,14 +51,18 @@ export async function POST(req: Request) {
 Style: Direct, structured, high-density. No filler, no emojis.
 
 Current scan items (${scanItems.length}):
-${scanItems.map((i) => {
-  const extras = [
-    i.fiber_g !== null ? `${i.fiber_g}g fiber` : null,
-    i.sugar_g !== null ? `${i.sugar_g}g sugar` : null,
-  ].filter(Boolean).join(", ");
-  const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
-  return extras ? `${base}, ${extras}` : base;
-}).join("\n")}
+${scanItems
+  .map((i) => {
+    const extras = [
+      i.fiber_g !== null ? `${i.fiber_g}g fiber` : null,
+      i.sugar_g !== null ? `${i.sugar_g}g sugar` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
+    return extras ? `${base}, ${extras}` : base;
+  })
+  .join("\n")}
 Default meal type: ${mealType}
 
 You can log the scanned meal on the user's behalf by calling the log_meal_from_scan tool. Use it when the user expresses intent to log ("log it", "save this", "add this to today", etc.). You must NOT call the tool without an explicit log intent.
@@ -89,10 +95,19 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
         properties: {
           items: {
             type: "array",
-            description: "The final item list to log — use the scan items as-is, or adjusted per conversation.",
+            description:
+              "The final item list to log — use the scan items as-is, or adjusted per conversation.",
             items: {
               type: "object",
-              required: ["label", "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "sugar_g"],
+              required: [
+                "label",
+                "calories",
+                "protein_g",
+                "carbs_g",
+                "fat_g",
+                "fiber_g",
+                "sugar_g",
+              ],
               properties: {
                 label: { type: "string" },
                 calories: { type: "number" },
@@ -110,7 +125,8 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
           },
           notes: {
             type: "string",
-            description: "Optional short label for the meal row (defaults to concatenated item names).",
+            description:
+              "Optional short label for the meal row (defaults to concatenated item names).",
           },
         },
       }),
@@ -134,7 +150,7 @@ Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that
             fat_g: 0,
             fiber_g: null as number | null,
             sugar_g: null as number | null,
-          }
+          },
         );
         return {
           kind: "log_meal_proposal",

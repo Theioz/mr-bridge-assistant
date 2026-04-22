@@ -18,14 +18,12 @@ const SuggestionsSchema = z.object({
         protein_g: z.number().describe("Estimated protein in grams"),
         carbs_g: z.number().describe("Estimated carbohydrates in grams"),
         fat_g: z.number().describe("Estimated fat in grams"),
-        isSaved: z
-          .boolean()
-          .describe("true if this matches a saved recipe in the user's library"),
+        isSaved: z.boolean().describe("true if this matches a saved recipe in the user's library"),
         recipeId: z
           .string()
           .optional()
           .describe("UUID of the matching saved recipe, if isSaved is true"),
-      })
+      }),
     )
     .describe("2–3 meal suggestions (return between 1 and 3 items)"),
 });
@@ -108,18 +106,13 @@ export async function POST(req: Request) {
       body.goals.carbs_g != null
         ? Math.max(0, body.goals.carbs_g - body.todayMacros.carbs_g)
         : null,
-    fat_g:
-      body.goals.fat_g != null
-        ? Math.max(0, body.goals.fat_g - body.todayMacros.fat_g)
-        : null,
+    fat_g: body.goals.fat_g != null ? Math.max(0, body.goals.fat_g - body.todayMacros.fat_g) : null,
   };
 
   // Saved recipe summary for the prompt
   const savedSummary =
     savedRecipes && savedRecipes.length > 0
-      ? savedRecipes
-          .map((r) => `- ${r.name} (id: ${r.id}): ${r.ingredients ?? ""}`)
-          .join("\n")
+      ? savedRecipes.map((r) => `- ${r.name} (id: ${r.id}): ${r.ingredients ?? ""}`).join("\n")
       : "None";
 
   const instructions =
@@ -164,7 +157,7 @@ INSTRUCTIONS:
     console.error("[meals/suggest] Claude error:", err);
     return Response.json(
       { error: err instanceof Error ? err.message : "Failed to generate suggestions" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

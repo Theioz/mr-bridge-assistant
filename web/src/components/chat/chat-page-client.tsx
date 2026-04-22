@@ -116,7 +116,7 @@ function ChatPageClientInner({
   initialOldestPosition = null,
 }: Props) {
   const [activeSessionId, setActiveSessionId] = useState<string>(
-    initialSessionId ?? newSessionId()
+    initialSessionId ?? newSessionId(),
   );
   const [activeMessages, setActiveMessages] = useState<UIMessage[]>(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -182,17 +182,15 @@ function ChatPageClientInner({
         // SSR already loaded messages for initialSessionId; skip the refetch when it matches.
         // activeSessionId here is the mount-time value — acceptable because this init effect
         // runs once and any user-driven session switch during the in-flight fetch is rare.
-        if (
-          mostRecent &&
-          mostRecent.id !== activeSessionId &&
-          mostRecent.id !== initialSessionId
-        ) {
+        if (mostRecent && mostRecent.id !== activeSessionId && mostRecent.id !== initialSessionId) {
           setLoadingSession(true);
           try {
             const msgRes = await fetch(`/api/chat/sessions/${mostRecent.id}`);
             if (msgRes.ok) {
               const msgData = await msgRes.json();
-              const msgs: UIMessage[] = (msgData.messages as SessionMessageRow[]).map(hydrateMessage);
+              const msgs: UIMessage[] = (msgData.messages as SessionMessageRow[]).map(
+                hydrateMessage,
+              );
               setActiveSessionId(mostRecent.id);
               setActiveMessages(msgs);
               setHasMore(msgData.hasMore ?? false);
@@ -293,7 +291,7 @@ function ChatPageClientInner({
     setLoadingMore(true);
     try {
       const res = await fetch(
-        `/api/chat/sessions/${activeSessionId}?before=${oldestPosition}&limit=20`
+        `/api/chat/sessions/${activeSessionId}?before=${oldestPosition}&limit=20`,
       );
       const data = await res.json();
       const older: UIMessage[] = (data.messages as SessionMessageRow[]).map(hydrateMessage);
@@ -330,7 +328,7 @@ function ChatPageClientInner({
         // non-fatal
       }
     },
-    [fetchSessions, activeSessionId]
+    [fetchSessions, activeSessionId],
   );
 
   const handleArchiveSession = useCallback(
@@ -340,13 +338,11 @@ function ChatPageClientInner({
 
       const nowIso = new Date().toISOString();
       setAllSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: nowIso } : s))
+        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: nowIso } : s)),
       );
 
       if (activeSessionId === sessionId) {
-        const nextActive = allSessions.find(
-          (s) => !s.deleted_at && s.id !== sessionId
-        );
+        const nextActive = allSessions.find((s) => !s.deleted_at && s.id !== sessionId);
         if (nextActive) {
           await loadSession(nextActive.id);
         } else {
@@ -364,20 +360,20 @@ function ChatPageClientInner({
         "Chat archived",
         () => {
           setAllSessions((prev) =>
-            prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+            prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s)),
           );
           fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" }).catch(() => {});
         },
-        10000
+        10000,
       );
     },
-    [allSessions, activeSessionId, loadSession, handleNewChat, toast]
+    [allSessions, activeSessionId, loadSession, handleNewChat, toast],
   );
 
   const handleRestoreSession = useCallback(
     async (sessionId: string) => {
       setAllSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s))
+        prev.map((s) => (s.id === sessionId ? { ...s, deleted_at: null } : s)),
       );
       try {
         const res = await fetch(`/api/chat/sessions/${sessionId}/restore`, { method: "POST" });
@@ -386,7 +382,7 @@ function ChatPageClientInner({
         // non-fatal
       }
     },
-    [fetchSessions]
+    [fetchSessions],
   );
 
   return (
@@ -445,10 +441,7 @@ function ChatPageClientInner({
       </div>
 
       {/* Content row: sidebar + chat */}
-      <div
-        className="flex items-stretch flex-1 min-h-0"
-        style={{ gap: "var(--space-5)" }}
-      >
+      <div className="flex items-stretch flex-1 min-h-0" style={{ gap: "var(--space-5)" }}>
         <div className="hidden lg:block print:hidden">
           <SessionSidebar
             sessions={sessions}
@@ -484,14 +477,8 @@ function ChatPageClientInner({
                     alignItems: i % 2 ? "flex-end" : "flex-start",
                   }}
                 >
-                  <div
-                    className="skeleton"
-                    style={{ width: `${w}%`, height: 14 }}
-                  />
-                  <div
-                    className="skeleton"
-                    style={{ width: `${w - 20}%`, height: 14 }}
-                  />
+                  <div className="skeleton" style={{ width: `${w}%`, height: 14 }} />
+                  <div className="skeleton" style={{ width: `${w - 20}%`, height: 14 }} />
                 </div>
               ))}
             </div>

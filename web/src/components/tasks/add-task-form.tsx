@@ -8,16 +8,16 @@ interface Props {
 }
 
 const PRIORITIES = [
-  { key: "high",   label: "High",   color: "var(--accent)" },
+  { key: "high", label: "High", color: "var(--accent)" },
   { key: "medium", label: "Medium", color: "var(--color-text-muted)" },
-  { key: "low",    label: "Low",    color: "var(--color-text-faint)" },
+  { key: "low", label: "Low", color: "var(--color-text-faint)" },
 ] as const;
 
 export default function AddTaskForm({ addAction }: Props) {
-  const [title, setTitle]          = useState("");
-  const [priority, setPriority]    = useState<"high" | "medium" | "low">("medium");
-  const [dueDate, setDueDate]      = useState("");
-  const [error, setError]          = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
+  const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -27,7 +27,10 @@ export default function AddTaskForm({ addAction }: Props) {
     setError(null);
     startTransition(async () => {
       const result = await addAction(title.trim(), priority, dueDate);
-      if (result.error) { setError(result.error); return; }
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       setTitle("");
       setPriority("medium");
       setDueDate("");
@@ -57,7 +60,9 @@ export default function AddTaskForm({ addAction }: Props) {
           ref={inputRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+          }}
           placeholder="Add a task…"
           className="flex-1 bg-transparent focus:outline-none min-w-0"
           style={{
@@ -68,7 +73,11 @@ export default function AddTaskForm({ addAction }: Props) {
         />
 
         {/* Priority dot selector */}
-        <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }} title="Priority">
+        <div
+          className="flex items-center flex-shrink-0"
+          style={{ gap: "var(--space-1)" }}
+          title="Priority"
+        >
           {PRIORITIES.map(({ key, label, color }) => (
             <button
               key={key}

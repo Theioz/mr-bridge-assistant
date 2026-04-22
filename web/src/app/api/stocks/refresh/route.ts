@@ -4,7 +4,9 @@ import { syncStocks } from "@/lib/sync/stocks";
 
 export async function POST() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -16,9 +18,7 @@ export async function POST() {
     .eq("key", "stock_watchlist")
     .single();
 
-  const tickers: string[] = profileRow?.value
-    ? (JSON.parse(profileRow.value) as string[])
-    : [];
+  const tickers: string[] = profileRow?.value ? (JSON.parse(profileRow.value) as string[]) : [];
 
   if (tickers.length === 0) {
     return NextResponse.json({ updated: 0 });

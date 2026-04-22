@@ -86,8 +86,7 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
                 strokeLinecap="round"
                 transform={`rotate(-90 ${cx} ${cx})`}
                 style={{
-                  transition:
-                    "stroke-dashoffset var(--motion-slow) var(--ease-out-quart)",
+                  transition: "stroke-dashoffset var(--motion-slow) var(--ease-out-quart)",
                 }}
               />
             )}
@@ -156,7 +155,8 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
                   color: h.days === 7 ? "var(--color-text)" : "var(--color-text-muted)",
                 }}
               >
-                {h.days}<span style={{ color: "var(--color-text-faint)" }}>/7</span>
+                {h.days}
+                <span style={{ color: "var(--color-text-faint)" }}>/7</span>
               </span>
             </li>
           ))}

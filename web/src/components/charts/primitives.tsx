@@ -30,10 +30,7 @@ const SERVER_FALLBACK_WIDTH = 600;
 
 // ── Utilities ─────────────────────────────────────────────────────────────
 
-function useChartWidth(): [
-  (el: HTMLDivElement | null) => void,
-  number,
-] {
+function useChartWidth(): [(el: HTMLDivElement | null) => void, number] {
   const [width, setWidth] = useState<number>(SERVER_FALLBACK_WIDTH);
   const elRef = useRef<HTMLDivElement | null>(null);
   const roRef = useRef<ResizeObserver | null>(null);
@@ -115,19 +112,9 @@ interface ChartFrameProps {
   children: React.ReactNode;
 }
 
-export function ChartFrame({
-  label,
-  meta,
-  value,
-  action,
-  note,
-  children,
-}: ChartFrameProps) {
+export function ChartFrame({ label, meta, value, action, note, children }: ChartFrameProps) {
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-3)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <div className="flex items-baseline gap-2 min-w-0">
           <h3
@@ -185,13 +172,7 @@ export function ChartFrame({
   );
 }
 
-export function EndpointLabels({
-  left,
-  right,
-}: {
-  left: string;
-  right: string;
-}) {
+export function EndpointLabels({ left, right }: { left: string; right: string }) {
   return (
     <div
       className="flex items-baseline justify-between tnum"
@@ -276,13 +257,7 @@ interface HoverLabelProps {
   chartHeight: number;
 }
 
-function HoverLabel({
-  anchorX,
-  anchorY,
-  lines,
-  chartWidth,
-  chartHeight,
-}: HoverLabelProps) {
+function HoverLabel({ anchorX, anchorY, lines, chartWidth, chartHeight }: HoverLabelProps) {
   const fontSize = 11;
   const lineGap = 3;
   const padX = 8;
@@ -290,10 +265,7 @@ function HoverLabel({
   const charW = 6.3; // decent estimate for 11px tabular text
 
   const maxLineLen = Math.max(...lines.map((l) => l.length));
-  const w = Math.min(
-    Math.max(48, maxLineLen * charW + padX * 2),
-    Math.min(240, chartWidth - 4)
-  );
+  const w = Math.min(Math.max(48, maxLineLen * charW + padX * 2), Math.min(240, chartWidth - 4));
   const h = lines.length * fontSize + (lines.length - 1) * lineGap + padY * 2;
 
   const gap = 10;
@@ -307,7 +279,10 @@ function HoverLabel({
   if (rectX + w > chartWidth - 2) rectX = chartWidth - 2 - w;
 
   return (
-    <g pointerEvents="none" style={{ transition: "opacity var(--motion-fast) var(--ease-out-quart)" }}>
+    <g
+      pointerEvents="none"
+      style={{ transition: "opacity var(--motion-fast) var(--ease-out-quart)" }}
+    >
       <rect
         x={rectX}
         y={rectY}
@@ -352,11 +327,13 @@ interface TrendLineProps {
   ariaLabel: string;
   endpointLeft?: string;
   endpointRight?: string;
-  onHoverChange?: (info: {
-    index: number;
-    value: number | null;
-    label: string;
-  } | null) => void;
+  onHoverChange?: (
+    info: {
+      index: number;
+      value: number | null;
+      label: string;
+    } | null,
+  ) => void;
   yDomain?: [number, number];
   /** If true, render a soft area fill under the line. */
   fill?: boolean;
@@ -457,10 +434,8 @@ export function TrendLine({
     }
   }
 
-  const todayI =
-    todayIndex === -1 ? values.length - 1 : todayIndex ?? -1;
-  const todayValue =
-    todayI >= 0 && todayI < values.length ? values[todayI] : null;
+  const todayI = todayIndex === -1 ? values.length - 1 : (todayIndex ?? -1);
+  const todayValue = todayI >= 0 && todayI < values.length ? values[todayI] : null;
 
   const hoverValue = hover ? values[hover.index] : null;
 
@@ -516,12 +491,7 @@ export function TrendLine({
           {/* area fill */}
           {fill &&
             areaSegments.map((d, i) => (
-              <path
-                key={i}
-                d={d}
-                fill="var(--chart-color-primary)"
-                fillOpacity={0.08}
-              />
+              <path key={i} d={d} fill="var(--chart-color-primary)" fillOpacity={0.08} />
             ))}
 
           {/* primary stroke */}
@@ -549,12 +519,7 @@ export function TrendLine({
                 strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
               />
-              <circle
-                cx={hover.x}
-                cy={yAt(hoverValue)}
-                r={2.5}
-                fill="var(--color-text)"
-              />
+              <circle cx={hover.x} cy={yAt(hoverValue)} r={2.5} fill="var(--color-text)" />
               <HoverLabel
                 anchorX={hover.x}
                 anchorY={yAt(hoverValue)}
@@ -575,29 +540,17 @@ export function TrendLine({
                 fill="var(--chart-color-today)"
                 fillOpacity={0.18}
               />
-              <circle
-                cx={xAt(todayI)}
-                cy={yAt(todayValue)}
-                r={3}
-                fill="var(--chart-color-today)"
-              />
+              <circle cx={xAt(todayI)} cy={yAt(todayValue)} r={3} fill="var(--chart-color-today)" />
             </g>
           )}
 
           {/* native tooltips at every data point (no-JS fallback for screen readers) */}
           {values.map((v, i) =>
             v == null ? null : (
-              <circle
-                key={i}
-                cx={xAt(i)}
-                cy={yAt(v)}
-                r={10}
-                fill="transparent"
-                pointerEvents="all"
-              >
+              <circle key={i} cx={xAt(i)} cy={yAt(v)} r={10} fill="transparent" pointerEvents="all">
                 <title>{`${labels[i]} — ${formatValue(v)}`}</title>
               </circle>
-            )
+            ),
           )}
         </svg>
       </div>
@@ -653,7 +606,7 @@ export function StackedBars({
   const max = Math.max(
     1,
     ...totals.filter((v): v is number => v != null),
-    ...refLines.map((r) => r.y).filter((v): v is number => v != null)
+    ...refLines.map((r) => r.y).filter((v): v is number => v != null),
   );
   const padTop = 14;
   const padBottom = 4;
@@ -661,7 +614,7 @@ export function StackedBars({
   const innerH = Math.max(1, height - padTop - padBottom);
   const innerW = Math.max(1, width - padX * 2);
   const n = labels.length;
-  const gap = n > 1 ? Math.max(2, innerW * 0.08 / n) : 2;
+  const gap = n > 1 ? Math.max(2, (innerW * 0.08) / n) : 2;
   const barWidth = n > 0 ? Math.max(2, (innerW - gap * (n - 1)) / n) : 0;
 
   function xAt(i: number): number {
@@ -671,12 +624,11 @@ export function StackedBars({
     return (v / max) * innerH;
   }
 
-  const todayI = todayIndex === -1 ? n - 1 : todayIndex ?? -1;
+  const todayI = todayIndex === -1 ? n - 1 : (todayIndex ?? -1);
   const barCenters = labels.map((_, i) => xAt(i) + barWidth / 2);
   const { hover, onMove, onLeave } = useHoverCursor(barCenters);
   const hoverTotal = hover ? totals[hover.index] : null;
-  const hoverBarTop =
-    hoverTotal != null ? padTop + innerH - hFor(hoverTotal) : padTop;
+  const hoverBarTop = hoverTotal != null ? padTop + innerH - hFor(hoverTotal) : padTop;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
@@ -742,11 +694,9 @@ export function StackedBars({
                   height={h}
                   fill="var(--chart-color-primary)"
                   fillOpacity={
-                    isHovered
-                      ? Math.min(1, (opacities[si] ?? 0.4) + 0.15)
-                      : opacities[si] ?? 0.4
+                    isHovered ? Math.min(1, (opacities[si] ?? 0.4) + 0.15) : (opacities[si] ?? 0.4)
                   }
-                />
+                />,
               );
             });
             const isToday = i === todayI;
@@ -776,9 +726,7 @@ export function StackedBars({
                   <title>
                     {`${lab} — ${formatTotal(total)}${stacks
                       .map((s) =>
-                        s.values[i] != null
-                          ? ` · ${s.name} ${s.values[i]!.toFixed(1)}`
-                          : ""
+                        s.values[i] != null ? ` · ${s.name} ${s.values[i]!.toFixed(1)}` : "",
                       )
                       .join("")}`}
                   </title>
@@ -797,7 +745,7 @@ export function StackedBars({
                   .map((s) =>
                     s.values[hover.index] != null
                       ? `${s.name} ${s.values[hover.index]!.toFixed(1)}`
-                      : null
+                      : null,
                   )
                   .filter((v): v is string => !!v)
                   .join(" · "),
@@ -852,10 +800,7 @@ export function BarSeries({
   const [yMin, yMax] = useMemo(() => {
     if (yDomain) return yDomain;
     if (numeric.length === 0) return [0, 1];
-    const withRef = [
-      ...numeric,
-      ...refLines.map((r) => r.y).filter((v): v is number => v != null),
-    ];
+    const withRef = [...numeric, ...refLines.map((r) => r.y).filter((v): v is number => v != null)];
     const max = Math.max(...withRef);
     return [0, max * 1.1];
   }, [numeric, refLines, yDomain]);
@@ -866,7 +811,7 @@ export function BarSeries({
   const innerH = Math.max(1, height - padTop - padBottom);
   const innerW = Math.max(1, width - padX * 2);
   const n = labels.length;
-  const gap = n > 1 ? Math.max(1.5, innerW * 0.08 / n) : 1.5;
+  const gap = n > 1 ? Math.max(1.5, (innerW * 0.08) / n) : 1.5;
   const barWidth = n > 0 ? Math.max(2, (innerW - gap * (n - 1)) / n) : 0;
 
   function xAt(i: number): number {
@@ -877,7 +822,7 @@ export function BarSeries({
     return ((v - yMin) / span) * innerH;
   }
 
-  const todayI = todayIndex === -1 ? n - 1 : todayIndex ?? -1;
+  const todayI = todayIndex === -1 ? n - 1 : (todayIndex ?? -1);
 
   const barCenters = labels.map((_, i) => xAt(i) + barWidth / 2);
   const { hover, onMove, onLeave } = useHoverCursor(barCenters);

@@ -35,7 +35,7 @@ const PROMPTS: {
   },
 ];
 
-type Tab        = "reflect" | "freewrite";
+type Tab = "reflect" | "freewrite";
 type SaveStatus = "idle" | "saving" | "saved";
 
 interface Props {
@@ -45,7 +45,7 @@ interface Props {
   saveAction: (
     date: string,
     responses: JournalResponses,
-    freeWrite: string
+    freeWrite: string,
   ) => Promise<{ error?: string }>;
   onSubmit?: () => void;
 }
@@ -57,16 +57,16 @@ export default function JournalEditor({
   saveAction,
   onSubmit,
 }: Props) {
-  const [tab, setTab]               = useState<Tab>("reflect");
-  const [responses, setResponses]   = useState<JournalResponses>(initialResponses);
-  const [freeWrite, setFreeWrite]   = useState(initialFreeWrite);
+  const [tab, setTab] = useState<Tab>("reflect");
+  const [responses, setResponses] = useState<JournalResponses>(initialResponses);
+  const [freeWrite, setFreeWrite] = useState(initialFreeWrite);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [, startTransition]         = useTransition();
+  const [, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filledCount = PROMPTS.filter((p) => responses[p.slug]?.trim()).length;
-  const wordCount   = freeWrite.trim().split(/\s+/).filter(Boolean).length;
-  const isEmpty     = Object.values(responses).every((v) => !v?.trim()) && !freeWrite.trim();
+  const wordCount = freeWrite.trim().split(/\s+/).filter(Boolean).length;
+  const isEmpty = Object.values(responses).every((v) => !v?.trim()) && !freeWrite.trim();
 
   const triggerSave = useCallback(
     (r: JournalResponses, fw: string) => {
@@ -77,7 +77,7 @@ export default function JournalEditor({
         setTimeout(() => setSaveStatus("idle"), 2000);
       });
     },
-    [date, saveAction]
+    [date, saveAction],
   );
 
   function scheduleAutoSave(r: JournalResponses, fw: string) {
@@ -109,7 +109,9 @@ export default function JournalEditor({
 
   // Clear debounce on unmount
   useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   return (
@@ -124,10 +126,14 @@ export default function JournalEditor({
           marginBottom: "var(--space-5)",
         }}
       >
-        <div role="tablist" aria-label="Journal mode" style={{ display: "flex", gap: "var(--space-5)" }}>
+        <div
+          role="tablist"
+          aria-label="Journal mode"
+          style={{ display: "flex", gap: "var(--space-5)" }}
+        >
           {(
             [
-              ["reflect",   "Reflect"   ],
+              ["reflect", "Reflect"],
               ["freewrite", "Free Write"],
             ] as [Tab, string][]
           ).map(([t, label]) => {
@@ -150,9 +156,7 @@ export default function JournalEditor({
                   color: isActive ? "var(--accent-text)" : "var(--color-text-faint)",
                   background: "transparent",
                   border: "none",
-                  borderBottom: isActive
-                    ? "2px solid var(--accent)"
-                    : "2px solid transparent",
+                  borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
                   marginBottom: -1,
                   transitionDuration: "var(--motion-fast)",
                   transitionTimingFunction: "var(--ease-out-quart)",
@@ -198,9 +202,7 @@ export default function JournalEditor({
                   width: 6,
                   height: 6,
                   borderRadius: "9999px",
-                  background: responses[p.slug]?.trim()
-                    ? "var(--accent)"
-                    : "var(--rule)",
+                  background: responses[p.slug]?.trim() ? "var(--accent)" : "var(--rule)",
                   transitionDuration: "var(--motion-fast)",
                   transitionTimingFunction: "var(--ease-out-quart)",
                 }}

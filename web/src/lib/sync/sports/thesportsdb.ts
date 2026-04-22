@@ -100,9 +100,16 @@ function currentSeason(league: string): string {
   const m = now.getUTCMonth() + 1;
   const upper = league.toUpperCase();
   // Cross-year leagues — split season string "YYYY-YYYY"
-  if (upper.includes("NBA") || upper.includes("NHL") || upper.includes("NFL") ||
-      upper.includes("PREMIER") || upper.includes("LIGA") || upper.includes("BUNDES") ||
-      upper.includes("SERIE A") || upper.includes("LIGUE 1")) {
+  if (
+    upper.includes("NBA") ||
+    upper.includes("NHL") ||
+    upper.includes("NFL") ||
+    upper.includes("PREMIER") ||
+    upper.includes("LIGA") ||
+    upper.includes("BUNDES") ||
+    upper.includes("SERIE A") ||
+    upper.includes("LIGUE 1")
+  ) {
     // Most start ~Aug-Oct, end ~Apr-Jun
     if (m >= 7) return `${y}-${y + 1}`;
     return `${y - 1}-${y}`;
@@ -169,9 +176,7 @@ export const TheSportsDB: SportsProvider = {
         const ties = row.intDraw != null ? parseInt(row.intDraw, 10) : null;
         const points = row.intPoints != null ? parseInt(row.intPoints, 10) : null;
         const games = wins + losses + (ties ?? 0);
-        const pct = games > 0 && (points == null || ties == null)
-          ? wins / games
-          : null;
+        const pct = games > 0 && (points == null || ties == null) ? wins / games : null;
         return {
           rank: row.intRank != null ? parseInt(row.intRank, 10) : null,
           group: row.strGroup ?? row.strDivision ?? league,

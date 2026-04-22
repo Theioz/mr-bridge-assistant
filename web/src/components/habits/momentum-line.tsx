@@ -34,7 +34,7 @@ export function MomentumLine({ habits, allCompleted, today }: Props) {
   const activeCount = habits.length;
 
   const distinctDaysIn30 = Array.from(completedDates).filter(
-    (d) => d >= oldestInWindow && d <= today
+    (d) => d >= oldestInWindow && d <= today,
   ).length;
 
   if (activeCount === 0 || distinctDaysIn30 < ROLL_DAYS) {
@@ -78,17 +78,12 @@ export function MomentumLine({ habits, allCompleted, today }: Props) {
   const avgRounded = Math.round(trailingAvg);
 
   return (
-    <ChartFrame
-      label="Momentum · 30D"
-      value={`today ${todayRate}% · avg ${avgRounded}%`}
-    >
+    <ChartFrame label="Momentum · 30D" value={`today ${todayRate}% · avg ${avgRounded}%`}>
       <TrendLine
         values={values}
         labels={labels}
         todayIndex={values.length - 1}
-        refLines={[
-          { y: trailingAvg, label: `avg ${avgRounded}%`, dashed: true },
-        ]}
+        refLines={[{ y: trailingAvg, label: `avg ${avgRounded}%`, dashed: true }]}
         formatValue={(v) => `${Math.round(v)}%`}
         ariaLabel="Habit momentum — rolling 7-day completion rate, last 30 days"
         endpointRight="Today"

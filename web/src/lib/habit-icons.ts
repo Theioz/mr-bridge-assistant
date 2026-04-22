@@ -41,7 +41,7 @@ export const HABIT_ICON_OPTIONS: readonly HabitIconOption[] = [
 ] as const;
 
 const ICON_BY_KEY: Record<string, LucideIcon> = Object.fromEntries(
-  HABIT_ICON_OPTIONS.map((o) => [o.key, o.icon])
+  HABIT_ICON_OPTIONS.map((o) => [o.key, o.icon]),
 );
 
 export function isValidIconKey(key: string | null | undefined): boolean {
@@ -73,7 +73,7 @@ const NAME_KEYWORDS: Array<[RegExp, LucideIcon]> = [
 ];
 
 export function getHabitIcon(
-  habit: Pick<HabitRegistry, "name" | "category"> & { icon_key?: string | null }
+  habit: Pick<HabitRegistry, "name" | "category"> & { icon_key?: string | null },
 ): LucideIcon {
   if (habit.icon_key && ICON_BY_KEY[habit.icon_key]) {
     return ICON_BY_KEY[habit.icon_key];

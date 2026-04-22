@@ -115,9 +115,24 @@ interface SuggestedMacros {
 type GoalMode = "lose" | "maintain" | "build";
 
 const GOAL_MODES: { key: GoalMode; label: string; multiplier: number; description: string }[] = [
-  { key: "lose",     label: "Lose",     multiplier: 12, description: "12× goal weight — deficit for fat loss" },
-  { key: "maintain", label: "Maintain", multiplier: 15, description: "15× goal weight — neutral, hold current composition" },
-  { key: "build",    label: "Build",    multiplier: 17, description: "17× goal weight — surplus for muscle gain" },
+  {
+    key: "lose",
+    label: "Lose",
+    multiplier: 12,
+    description: "12× goal weight — deficit for fat loss",
+  },
+  {
+    key: "maintain",
+    label: "Maintain",
+    multiplier: 15,
+    description: "15× goal weight — neutral, hold current composition",
+  },
+  {
+    key: "build",
+    label: "Build",
+    multiplier: 17,
+    description: "17× goal weight — surplus for muscle gain",
+  },
 ];
 
 const PROTEIN_OPTIONS: { value: number; label: string }[] = [
@@ -132,10 +147,10 @@ function suggestMacros(
   proteinPerLb: number,
 ): SuggestedMacros {
   const calories = Math.round(weightGoal * calMultiplier);
-  const protein  = Math.round(weightGoal * proteinPerLb);
-  const fat      = Math.round((calories * 0.25) / 9);
-  const carbs    = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
-  const fiber    = 30;
+  const protein = Math.round(weightGoal * proteinPerLb);
+  const fat = Math.round((calories * 0.25) / 9);
+  const carbs = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
+  const fiber = 30;
   return { calories, protein, carbs, fat, fiber };
 }
 
@@ -204,26 +219,26 @@ function SuggestedNutritionCallout({
 }) {
   const weightGoal = parseFloat(values["weight_goal_lbs"] ?? "");
 
-  const [mode, setMode]                 = useState<GoalMode>("lose");
+  const [mode, setMode] = useState<GoalMode>("lose");
   const [proteinPerLb, setProteinPerLb] = useState(1.0);
-  const [applied, setApplied]           = useState(false);
-  const [isPending, startTransition]    = useTransition();
+  const [applied, setApplied] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [isDismissPending, startDismissTransition] = useTransition();
 
   if (!weightGoal || isNaN(weightGoal)) return null;
   if (values["nutrition_suggestion_dismissed"] === "true") return null;
 
   const calMultiplier = GOAL_MODES.find((m) => m.key === mode)!.multiplier;
-  const suggested     = suggestMacros(weightGoal, calMultiplier, proteinPerLb);
+  const suggested = suggestMacros(weightGoal, calMultiplier, proteinPerLb);
 
   function applyAll() {
     startTransition(async () => {
       await Promise.all([
         updateAction("calorie_goal", String(suggested.calories)),
         updateAction("protein_goal", String(suggested.protein)),
-        updateAction("carbs_goal",   String(suggested.carbs)),
-        updateAction("fat_goal",     String(suggested.fat)),
-        updateAction("fiber_goal",   String(suggested.fiber)),
+        updateAction("carbs_goal", String(suggested.carbs)),
+        updateAction("fat_goal", String(suggested.fat)),
+        updateAction("fiber_goal", String(suggested.fiber)),
       ]);
       setApplied(true);
       setTimeout(() => setApplied(false), 2500);
@@ -283,7 +298,10 @@ function SuggestedNutritionCallout({
         <PillGroup
           options={GOAL_MODES.map((m) => ({ value: m.key, label: m.label }))}
           value={mode}
-          onChange={(v) => { setMode(v); setApplied(false); }}
+          onChange={(v) => {
+            setMode(v);
+            setApplied(false);
+          }}
           ariaLabel="Goal mode"
         />
 
@@ -301,7 +319,10 @@ function SuggestedNutritionCallout({
         <PillGroup
           options={PROTEIN_OPTIONS}
           value={proteinPerLb}
-          onChange={(v) => { setProteinPerLb(v); setApplied(false); }}
+          onChange={(v) => {
+            setProteinPerLb(v);
+            setApplied(false);
+          }}
           ariaLabel="Protein per pound"
         />
       </div>
@@ -312,7 +333,8 @@ function SuggestedNutritionCallout({
             className="tnum"
             style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
           >
-            {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs · {suggested.fat} g fat · {suggested.fiber} g fiber
+            {suggested.calories} kcal · {suggested.protein} g protein · {suggested.carbs} g carbs ·{" "}
+            {suggested.fat} g fat · {suggested.fiber} g fiber
           </p>
           <p
             style={{
@@ -321,7 +343,8 @@ function SuggestedNutritionCallout({
               marginTop: "var(--space-1)",
             }}
           >
-            {activeMode.description} · protein {proteinPerLb} g/lb · fat 25% of calories · carbs fill remainder
+            {activeMode.description} · protein {proteinPerLb} g/lb · fat 25% of calories · carbs
+            fill remainder
           </p>
           <p
             style={{
@@ -358,7 +381,9 @@ function SuggestedNutritionCallout({
           {isPending ? (
             <Loader2 size={12} className="animate-spin" />
           ) : applied ? (
-            <><Check size={12} /> Applied</>
+            <>
+              <Check size={12} /> Applied
+            </>
           ) : (
             "Apply"
           )}
@@ -448,7 +473,10 @@ function FieldRow({
         <input
           id={`field-${field.key}`}
           value={value}
-          onChange={(e) => { setValue(e.target.value); setSaved(false); }}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+          }}
           placeholder={field.placeholder}
           className="flex-1 focus:outline-none input-focus-ring"
           style={{
@@ -461,7 +489,9 @@ function FieldRow({
             minHeight: 44,
             transition: "border-color var(--motion-fast) var(--ease-out-quart)",
           }}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+          }}
         />
         <button
           onClick={handleSave}
@@ -492,7 +522,9 @@ function FieldRow({
           {isPending ? (
             <Loader2 size={14} className="animate-spin" />
           ) : saved ? (
-            <><Check size={14} /> Saved</>
+            <>
+              <Check size={14} /> Saved
+            </>
           ) : (
             "Save"
           )}
@@ -506,7 +538,11 @@ function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Prom
   const [isPending, startTransition] = useTransition();
   return (
     <button
-      onClick={() => startTransition(async () => { await deleteAction("nutrition_suggestion_dismissed"); })}
+      onClick={() =>
+        startTransition(async () => {
+          await deleteAction("nutrition_suggestion_dismissed");
+        })
+      }
       disabled={isPending}
       className="cursor-pointer disabled:opacity-40"
       style={{
@@ -517,7 +553,11 @@ function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Prom
         padding: 0,
       }}
     >
-      {isPending ? <Loader2 size={11} className="animate-spin inline" /> : "Recalculate suggested macros"}
+      {isPending ? (
+        <Loader2 size={11} className="animate-spin inline" />
+      ) : (
+        "Recalculate suggested macros"
+      )}
     </button>
   );
 }

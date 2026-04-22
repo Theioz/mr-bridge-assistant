@@ -22,9 +22,9 @@ const USER_DATA_DIR = path.resolve("smoke/test-results/.perf-userdata");
 const BASELINES_PATH = path.resolve("smoke/perf/baselines.json");
 
 const THRESHOLDS = {
-  cls: 0.1,     // unitless
-  lcp: 2_500,   // ms
-  tbt: 200,     // ms — INP proxy
+  cls: 0.1, // unitless
+  lcp: 2_500, // ms
+  tbt: 200, // ms — INP proxy
 } as const;
 
 type MetricKey = keyof typeof THRESHOLDS;
@@ -60,7 +60,13 @@ const ROUTES = [
   "/login",
 ] as const;
 
-type RouteMetrics = { cls: number; lcp: number; tbt: number; status: "pass" | "fail"; breaches: string[] };
+type RouteMetrics = {
+  cls: number;
+  lcp: number;
+  tbt: number;
+  status: "pass" | "fail";
+  breaches: string[];
+};
 type RouteSummary = { path: string; mobile: RouteMetrics; desktop: RouteMetrics };
 
 function loadEnvFile(filename: string): void {
@@ -73,7 +79,10 @@ function loadEnvFile(filename: string): void {
     const [, key, rawValue] = match;
     if (process.env[key] !== undefined) continue;
     let value = rawValue.trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
     process.env[key] = value;
@@ -125,7 +134,10 @@ async function warmRoutes(context: BrowserContext): Promise<void> {
   const page = await context.newPage();
   for (const routePath of ROUTES) {
     try {
-      await page.goto(`${BASE_URL}${routePath}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.goto(`${BASE_URL}${routePath}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      });
     } catch {
       // Warm-up failures shouldn't abort the whole run — Lighthouse itself
       // surfaces the problem more clearly than a goto timeout.
@@ -178,9 +190,10 @@ function checkThresholds(
     if (value < effective) return;
     const threshold = THRESHOLDS[key];
     const base = baseline[key];
-    const gate = base !== undefined && base > threshold
-      ? `baseline ${fmt(base)}${unit}`
-      : `${fmt(threshold)}${unit}`;
+    const gate =
+      base !== undefined && base > threshold
+        ? `baseline ${fmt(base)}${unit}`
+        : `${fmt(threshold)}${unit}`;
     breaches.push(`${key.toUpperCase()} ${fmt(value)}${unit} >= ${gate}`);
   };
   check("cls", m.cls, (v) => v.toFixed(3), "");
@@ -204,7 +217,11 @@ function reportSlug(routePath: string, preset: Preset): string {
   return `${safe}-${preset}`;
 }
 
-async function runRoutePreset(routePath: string, preset: Preset, baselines: Baselines): Promise<RouteMetrics> {
+async function runRoutePreset(
+  routePath: string,
+  preset: Preset,
+  baselines: Baselines,
+): Promise<RouteMetrics> {
   const url = `${BASE_URL}${routePath}`;
   const samples: { cls: number; lcp: number; tbt: number }[] = [];
   let lastLhr: LHResult | undefined;
@@ -222,7 +239,10 @@ async function runRoutePreset(routePath: string, preset: Preset, baselines: Base
     // Write the last run's HTML report — sufficient as an artifact; the
     // median is in summary.json.
     const html = generateReport(lastLhr, "html");
-    fs.writeFileSync(path.join(REPORT_DIR, `${reportSlug(routePath, preset)}.html`), html as string);
+    fs.writeFileSync(
+      path.join(REPORT_DIR, `${reportSlug(routePath, preset)}.html`),
+      html as string,
+    );
   }
   return { ...metrics, ...checkThresholds(metrics, routePath, preset, baselines) };
 }
@@ -234,12 +254,22 @@ function renderTable(summary: { routes: RouteSummary[]; overallStatus: "pass" | 
   });
   const fails = summary.routes
     .flatMap((r) => [
-      ...(r.mobile.status === "fail" ? [`  ${r.path} mobile: ${r.mobile.breaches.join(", ")}`] : []),
-      ...(r.desktop.status === "fail" ? [`  ${r.path} desktop: ${r.desktop.breaches.join(", ")}`] : []),
+      ...(r.mobile.status === "fail"
+        ? [`  ${r.path} mobile: ${r.mobile.breaches.join(", ")}`]
+        : []),
+      ...(r.desktop.status === "fail"
+        ? [`  ${r.path} desktop: ${r.desktop.breaches.join(", ")}`]
+        : []),
     ])
     .join("\n");
   const header = `\nLighthouse perf sweep — thresholds: CLS < ${THRESHOLDS.cls}, LCP < ${THRESHOLDS.lcp}ms, TBT < ${THRESHOLDS.tbt}ms (INP proxy)`;
-  return [header, ...rows, "", fails ? `Failures:\n${fails}` : "All routes within threshold.", ""].join("\n");
+  return [
+    header,
+    ...rows,
+    "",
+    fails ? `Failures:\n${fails}` : "All routes within threshold.",
+    "",
+  ].join("\n");
 }
 
 async function main(): Promise<void> {
@@ -271,7 +301,11 @@ async function main(): Promise<void> {
       const desktop = await runRoutePreset(routePath, "desktop", baselines);
       results.push({ path: routePath, mobile, desktop });
     }
-    const overallStatus = results.every((r) => r.mobile.status === "pass" && r.desktop.status === "pass") ? "pass" : "fail";
+    const overallStatus = results.every(
+      (r) => r.mobile.status === "pass" && r.desktop.status === "pass",
+    )
+      ? "pass"
+      : "fail";
     const summary = {
       runAt: new Date().toISOString(),
       durationSec: Math.round((Date.now() - started) / 1000),

@@ -12,8 +12,7 @@ const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 } as const;
 export default function TasksSummary({ tasks }: Props) {
   const topTasks = [...tasks].sort(
     (a, b) =>
-      (PRIORITY_ORDER[a.priority ?? "low"] ?? 2) -
-      (PRIORITY_ORDER[b.priority ?? "low"] ?? 2)
+      (PRIORITY_ORDER[a.priority ?? "low"] ?? 2) - (PRIORITY_ORDER[b.priority ?? "low"] ?? 2),
   );
 
   return (
@@ -81,7 +80,9 @@ export default function TasksSummary({ tasks }: Props) {
           })}
         </ul>
       ) : (
-        <EmptyState icon={ListTodo} paddingY={16}>No active tasks</EmptyState>
+        <EmptyState icon={ListTodo} paddingY={16}>
+          No active tasks
+        </EmptyState>
       )}
     </section>
   );

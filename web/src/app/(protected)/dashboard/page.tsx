@@ -27,12 +27,21 @@ import { SportsCard } from "@/components/dashboard/sports-card";
 import { WindowSelector } from "@/components/ui/window-selector";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
-import type { HabitLog, HabitRegistry, RecoveryMetrics, Task, StocksCache, SportsCache } from "@/lib/types";
+import type {
+  HabitLog,
+  HabitRegistry,
+  RecoveryMetrics,
+  Task,
+  StocksCache,
+  SportsCache,
+} from "@/lib/types";
 
 async function refreshStocks(): Promise<{ rateLimited: boolean }> {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { rateLimited: false };
 
   const { data: profileRow } = await supabase
@@ -42,9 +51,7 @@ async function refreshStocks(): Promise<{ rateLimited: boolean }> {
     .eq("key", "stock_watchlist")
     .single();
 
-  const tickers: string[] = profileRow?.value
-    ? (JSON.parse(profileRow.value) as string[])
-    : [];
+  const tickers: string[] = profileRow?.value ? (JSON.parse(profileRow.value) as string[]) : [];
 
   let rateLimited = false;
   if (tickers.length > 0) {
@@ -59,7 +66,9 @@ async function refreshStocks(): Promise<{ rateLimited: boolean }> {
 async function refreshSports() {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
 
   const { data: profileRow } = await supabase
@@ -83,11 +92,16 @@ async function refreshSports() {
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase
     .from("habits")
-    .upsert({ user_id: user.id, habit_id: habitId, date, completed }, { onConflict: "habit_id,date" });
+    .upsert(
+      { user_id: user.id, habit_id: habitId, date, completed },
+      { onConflict: "habit_id,date" },
+    );
   revalidatePath("/dashboard");
 }
 
@@ -159,18 +173,9 @@ export default async function DashboardPage() {
       .is("parent_id", null)
       .eq("status", "active")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("stocks_cache")
-      .select("*")
-      .order("ticker", { ascending: true }),
-    supabase
-      .from("sports_cache")
-      .select("*"),
-    supabase
-      .from("profile")
-      .select("value")
-      .eq("key", "sports_favorites")
-      .maybeSingle(),
+    supabase.from("stocks_cache").select("*").order("ticker", { ascending: true }),
+    supabase.from("sports_cache").select("*"),
+    supabase.from("profile").select("value").eq("key", "sports_favorites").maybeSingle(),
   ]);
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
@@ -183,17 +188,24 @@ export default async function DashboardPage() {
       : null;
   const recoveryTrends = (recoveryTrendsRes.data ?? []) as RecoveryMetrics[];
 
-  const fitnessData = (fitnessTrendRes.data ?? []) as { date: string; weight_lb: number | null; body_fat_pct: number | null }[];
+  const fitnessData = (fitnessTrendRes.data ?? []) as {
+    date: string;
+    weight_lb: number | null;
+    body_fat_pct: number | null;
+  }[];
 
-  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<HabitRegistry, "id" | "name" | "emoji" | "category" | "icon_key">[];
-  const todayLogs     = (todayHabitsRes.data ?? []) as HabitLog[];
-  const allCompleted  = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
-  const habitStreaks  = computeStreaks(allCompleted, today);
+  const habitRegistry = (habitRegistryRes.data ?? []) as Pick<
+    HabitRegistry,
+    "id" | "name" | "emoji" | "category" | "icon_key"
+  >[];
+  const todayLogs = (todayHabitsRes.data ?? []) as HabitLog[];
+  const allCompleted = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
+  const habitStreaks = computeStreaks(allCompleted, today);
 
   const tasks = ((tasksRes.data ?? []) as Task[]).sort(
     (a, b) =>
-      ({ high: 0, medium: 1, low: 2 }[a.priority ?? "low"] ?? 2) -
-      ({ high: 0, medium: 1, low: 2 }[b.priority ?? "low"] ?? 2)
+      (({ high: 0, medium: 1, low: 2 })[a.priority ?? "low"] ?? 2) -
+      ({ high: 0, medium: 1, low: 2 }[b.priority ?? "low"] ?? 2),
   );
 
   const stocksRows = (stocksRes.data ?? []) as StocksCache[];
@@ -218,18 +230,20 @@ export default async function DashboardPage() {
   const weeklyActiveCalGoal = goalNum("weekly_active_cal_goal");
 
   const hour = parseInt(
-    new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: USER_TZ })
+    new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: USER_TZ }),
   );
   const timeOfDay = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
-  const greeting  = userName ? `${timeOfDay}, ${userName}` : `Good ${timeOfDay}`;
+  const greeting = userName ? `${timeOfDay}, ${userName}` : `Good ${timeOfDay}`;
 
   const dateStr = new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric", timeZone: USER_TZ,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: USER_TZ,
   });
 
   return (
     <div className="space-y-6 print:flex print:flex-col">
-
       {/* ── Masthead: brand + date + window selector + refresh (desktop) ── */}
       <div className="print:order-1" data-reveal data-stagger="0">
         <DashboardMasthead
@@ -356,7 +370,6 @@ export default async function DashboardPage() {
           refreshAction={refreshSports}
         />
       </div>
-
     </div>
   );
 }
