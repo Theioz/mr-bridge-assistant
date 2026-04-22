@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { ChevronDown, ChevronRight, Trophy } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { SportsCache } from "@/lib/types";
@@ -111,7 +112,7 @@ function TeamLogo({
 }) {
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={name}
         width={24}

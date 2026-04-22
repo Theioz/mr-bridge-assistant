@@ -20,7 +20,7 @@ import {
 } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
-import { lastSyncStatus, type SyncStatus } from "@/lib/sync/log";
+import { lastSyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
 async function updateProfile(key: string, value: string) {

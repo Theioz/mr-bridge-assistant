@@ -90,7 +90,7 @@ export function FitnessClient({
   bodyFatGoal,
   windowKey,
   days,
-  weekCount,
+  weekCount: _weekCount,
   exercisePRs,
   prCount,
   restTimerEnabled,

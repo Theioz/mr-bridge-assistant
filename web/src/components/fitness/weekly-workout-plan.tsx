@@ -97,7 +97,13 @@ interface ExerciseRowProps {
   };
 }
 
-function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: ExerciseRowProps) {
+function ExerciseRow({
+  ex,
+  unit: _unit,
+  exercisePR,
+  restTimerEnabled,
+  loggerContext,
+}: ExerciseRowProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const setsStr = ex.sets ? `${ex.sets} sets` : null;
   const repsStr = ex.reps ? `× ${ex.reps}` : null;
