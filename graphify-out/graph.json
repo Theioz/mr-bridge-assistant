@@ -7109,9 +7109,9 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/check_birthday_notif.py",
       "source_location": "L62",
-      "id": "check_birthday_notif_rationale_62",
       "community": 1,
-      "norm_label": "return (timemin, timemax) rfc3339 strings spanning today in utc."
+      "norm_label": "return (timemin, timemax) rfc3339 strings spanning today in utc.",
+      "id": "check_birthday_notif_rationale_62"
     },
     {
       "label": "run-syncs.py",
@@ -16545,8 +16545,8 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/check_birthday_notif.py",
       "source_location": "L35",
       "weight": 1.0,
-      "_src": "check_birthday_notif_get_credentials",
-      "_tgt": "supabase_get_client",
+      "_src": "supabase_get_client",
+      "_tgt": "check_birthday_notif_get_credentials",
       "source": "supabase_get_client",
       "target": "check_birthday_notif_get_credentials"
     },
@@ -16737,8 +16737,8 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/check_birthday_notif.py",
       "source_location": "L36",
       "weight": 1.0,
-      "_src": "check_birthday_notif_get_credentials",
-      "_tgt": "supabase_get_owner_user_id",
+      "_src": "supabase_get_owner_user_id",
+      "_tgt": "check_birthday_notif_get_credentials",
       "source": "supabase_get_owner_user_id",
       "target": "check_birthday_notif_get_credentials"
     },
@@ -17829,8 +17829,8 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/check_birthday_notif.py",
       "source_location": "L37",
       "weight": 1.0,
-      "_src": "check_birthday_notif_get_credentials",
-      "_tgt": "integrations_load_integration",
+      "_src": "integrations_load_integration",
+      "_tgt": "check_birthday_notif_get_credentials",
       "source": "integrations_load_integration",
       "target": "check_birthday_notif_get_credentials"
     },
