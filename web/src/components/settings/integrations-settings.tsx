@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatRelative } from "@/lib/relative-time";
+import type { SyncStatus } from "@/lib/sync/log";
 
 interface Integration {
   connectedAt: string;
@@ -10,11 +12,14 @@ interface Integration {
 interface IntegrationsSettingsProps {
   googleIntegration: Integration | null;
   disconnectAction: () => Promise<void>;
+  googleLastSync: SyncStatus | null;
   ouraIntegration: Integration | null;
   saveOuraTokenAction: (pat: string) => Promise<void>;
   disconnectOuraAction: () => Promise<void>;
+  ouraLastSync: SyncStatus | null;
   fitbitIntegration: Integration | null;
   disconnectFitbitAction: () => Promise<void>;
+  fitbitLastSync: SyncStatus | null;
   errorParam?: string;
 }
 
@@ -53,6 +58,62 @@ function scopeSummary(scopes: string[]): string {
   if (scopes.some((s) => s.includes("gmail"))) labels.push("Gmail");
   if (scopes.some((s) => s.includes("fitness"))) labels.push("Fitness");
   return labels.length ? labels.join(", ") : "Google";
+}
+
+function syncLabel(sync: SyncStatus | null): React.ReactElement {
+  if (!sync) {
+    return <span style={{ color: "var(--color-text-muted)" }}>Never synced</span>;
+  }
+  const rel = formatRelative(sync.syncedAt);
+  if (sync.status === "ok") {
+    return <span>Synced {rel}</span>;
+  }
+  return <span style={{ color: "var(--color-danger)" }}>Failed {rel}</span>;
+}
+
+interface SyncNowButtonProps {
+  endpoint: "/api/sync/oura" | "/api/sync/fitbit";
+  onDone: (s: SyncStatus) => void;
+}
+
+function SyncNowButton({ endpoint, onDone }: SyncNowButtonProps) {
+  const [pending, setPending] = useState(false);
+
+  async function handleSync() {
+    setPending(true);
+    try {
+      const res = await fetch(endpoint, { method: "POST" });
+      onDone({ syncedAt: new Date().toISOString(), status: res.ok ? "ok" : "error" });
+    } catch {
+      onDone({ syncedAt: new Date().toISOString(), status: "error" });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={handleSync}
+      style={{
+        fontFamily: "var(--font-body), system-ui, sans-serif",
+        fontSize: "var(--t-micro)",
+        fontWeight: 500,
+        color: "var(--color-text-muted)",
+        background: "transparent",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-1)",
+        padding: "0 var(--space-3)",
+        minHeight: 36,
+        cursor: pending ? "wait" : "pointer",
+        opacity: pending ? 0.5 : 1,
+        transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+      }}
+    >
+      {pending ? "Syncing…" : "Sync Now"}
+    </button>
+  );
 }
 
 const rowStyle: React.CSSProperties = {
@@ -136,11 +197,14 @@ function connectLinkStyle(): React.CSSProperties {
 export function IntegrationsSettings({
   googleIntegration,
   disconnectAction,
+  googleLastSync,
   ouraIntegration,
   saveOuraTokenAction,
   disconnectOuraAction,
+  ouraLastSync,
   fitbitIntegration,
   disconnectFitbitAction,
+  fitbitLastSync,
   errorParam,
 }: IntegrationsSettingsProps) {
   const [googlePending, startGoogleTransition] = useTransition();
@@ -149,6 +213,8 @@ export function IntegrationsSettings({
   const [ouraExpanded, setOuraExpanded] = useState(false);
   const [ouraToken, setOuraToken] = useState("");
   const [ouraSaving, setOuraSaving] = useState(false);
+  const [ouraSync, setOuraSync] = useState<SyncStatus | null>(ouraLastSync ?? null);
+  const [fitbitSync, setFitbitSync] = useState<SyncStatus | null>(fitbitLastSync ?? null);
 
   const errorMsg = errorParam ? ERROR_MESSAGES[errorParam] : null;
 
@@ -196,11 +262,18 @@ export function IntegrationsSettings({
       <div style={rowStyle}>
         <div style={labelColStyle}>
           <span style={nameStyle}>Google</span>
-          <span style={descStyle}>
-            {googleIntegration
-              ? `Connected ${formatConnectedDate(googleIntegration.connectedAt)} · ${scopeSummary(googleIntegration.scopes)}`
-              : "Calendar, Gmail, and Fitness"}
-          </span>
+          {googleIntegration ? (
+            <>
+              <span style={descStyle}>
+                {`Connected ${formatConnectedDate(googleIntegration.connectedAt)} · ${scopeSummary(googleIntegration.scopes)}`}
+              </span>
+              <span style={{ ...descStyle, marginTop: "var(--space-1)" }}>
+                {syncLabel(googleLastSync)}
+              </span>
+            </>
+          ) : (
+            <span style={descStyle}>Calendar, Gmail, and Fitness</span>
+          )}
         </div>
 
         <div style={actionColStyle}>
@@ -237,17 +310,25 @@ export function IntegrationsSettings({
         >
           <div style={labelColStyle}>
             <span style={nameStyle}>Oura</span>
-            <span style={descStyle}>
-              {ouraIntegration
-                ? `Connected ${formatConnectedDate(ouraIntegration.connectedAt)} · Sleep, readiness, HRV`
-                : "Ring data — sleep, readiness, HRV"}
-            </span>
+            {ouraIntegration ? (
+              <>
+                <span style={descStyle}>
+                  {`Connected ${formatConnectedDate(ouraIntegration.connectedAt)} · Sleep, readiness, HRV`}
+                </span>
+                <span style={{ ...descStyle, marginTop: "var(--space-1)" }}>
+                  {syncLabel(ouraSync)}
+                </span>
+              </>
+            ) : (
+              <span style={descStyle}>Ring data — sleep, readiness, HRV</span>
+            )}
           </div>
 
           <div style={actionColStyle}>
             {ouraIntegration ? (
               <>
                 <span style={connectedBadgeStyle}>Connected</span>
+                <SyncNowButton endpoint="/api/sync/oura" onDone={setOuraSync} />
                 <button
                   type="button"
                   disabled={ouraPending}
@@ -337,17 +418,25 @@ export function IntegrationsSettings({
       <div style={{ paddingTop: "var(--space-4)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-4)" }}>
         <div style={labelColStyle}>
           <span style={nameStyle}>Fitbit</span>
-          <span style={descStyle}>
-            {fitbitIntegration
-              ? `Connected ${formatConnectedDate(fitbitIntegration.connectedAt)} · Activities, weight, heart rate`
-              : "Activities, weight, heart rate"}
-          </span>
+          {fitbitIntegration ? (
+            <>
+              <span style={descStyle}>
+                {`Connected ${formatConnectedDate(fitbitIntegration.connectedAt)} · Activities, weight, heart rate`}
+              </span>
+              <span style={{ ...descStyle, marginTop: "var(--space-1)" }}>
+                {syncLabel(fitbitSync)}
+              </span>
+            </>
+          ) : (
+            <span style={descStyle}>Activities, weight, heart rate</span>
+          )}
         </div>
 
         <div style={actionColStyle}>
           {fitbitIntegration ? (
             <>
               <span style={connectedBadgeStyle}>Connected</span>
+              <SyncNowButton endpoint="/api/sync/fitbit" onDone={setFitbitSync} />
               <button
                 type="button"
                 disabled={fitbitPending}

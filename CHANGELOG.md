@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Per-provider last-sync timestamp and Sync Now button in Integrations settings (#422).**
+  - Each connected provider (Google, Oura, Fitbit) now shows when data was last pulled — "Synced 3h ago", "Never synced", or "Failed 12m ago" (in danger color for error/partial status).
+  - Oura and Fitbit rows include a Sync Now button that POSTs to the existing `/api/sync/{oura,fitbit}` routes, shows a "Syncing…" spinner, and updates the timestamp optimistically on completion.
+  - Google shows the last `google_fit` sync timestamp but no Sync Now button (cron-only).
+  - Sync Now button is absent when a provider is disconnected.
+
+### Fixed
+- **`logSync()` was writing to a non-existent column `rows_written`; corrected to `records_written`.**
+  Previously every web-triggered sync silently failed to write its sync_log row (supabase-js returns an error object rather than throwing, and the return value was ignored). This meant the Sync Now timestamps above would never update. The Python sync scripts already used the correct column name.
+
 ### Fixed
 - **Graphify extractor — eliminate false god nodes from Next.js route handlers and method-call noise (#429).**
   - Route handler collision: Next.js App Router requires `GET`, `POST`, `DELETE`, etc. as named exports in `route.ts` files. All such files share the stem `"route"`, so the extractor was collapsing all same-verb handlers into one node (`GET` = 98 edges, `POST` = 48 edges, `DELETE` = 21 edges). Fixed by namespacing these exports using their file path: IDs are now unique per route file and labels read `GET@chat/route.ts` instead of bare `GET()`.
