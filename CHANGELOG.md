@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **Graphify extractor — eliminate false god nodes from Next.js route handlers and method-call noise (#429).**
+  - Route handler collision: Next.js App Router requires `GET`, `POST`, `DELETE`, etc. as named exports in `route.ts` files. All such files share the stem `"route"`, so the extractor was collapsing all same-verb handlers into one node (`GET` = 98 edges, `POST` = 48 edges, `DELETE` = 21 edges). Fixed by namespacing these exports using their file path: IDs are now unique per route file and labels read `GET@chat/route.ts` instead of bare `GET()`.
+  - Member-call noise: `round()` (35 edges) and `select()` (39 edges) were built-in/third-party method calls (`Math.round`, Supabase `.select`) that falsely resolved to user-defined functions with the same name. Fixed by tracking a `is_member_call` flag through the call extractor and suppressing cross-file resolution for a curated list of stdlib/third-party method names.
+  - Cross-language noise: Python `round()` (direct built-in call) was resolving to TypeScript's `units.ts:round()`. Fixed by blocking cross-language callee resolution (Python caller → TypeScript target, etc.).
+  - Result: `GET`, `POST`, `DELETE`, `select()`, `round()` all eliminated from god nodes. `createClient()` correctly surfaces as #1 real hub at 71 edges.
+
 ### Changed
 - **Renamed bare `get()` helpers in sports sync files to domain-scoped names (#404).**
   - `get<T>()` in `web/src/lib/sync/sports/thesportsdb.ts` renamed to `sportsDbGet<T>()`.
