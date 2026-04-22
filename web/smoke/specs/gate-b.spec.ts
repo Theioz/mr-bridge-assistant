@@ -94,7 +94,7 @@ test.describe("theme-switch — SSR match after reload", () => {
     { label: "Auto", next: "Light" },
   ];
 
-  for (const { label, next } of THEMES) {
+  for (const { label, next: _next } of THEMES) {
     test(`set ${label} → reload → SSR matches client`, async ({ signedInPage: page }) => {
       await page.goto("/settings");
       await page.locator("h1").first().waitFor({ timeout: 20_000 });

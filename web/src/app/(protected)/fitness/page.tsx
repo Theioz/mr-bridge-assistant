@@ -112,7 +112,6 @@ export default async function FitnessPage() {
     .filter((w) => w.date >= mondayStr && w.date <= sundayStr)
     .map((w) => w.date);
 
-  const workouts = allWorkouts.filter((w) => !/walk/i.test(w.activity));
   const walkSessions = allWorkouts.filter((w) => /walk/i.test(w.activity));
   const weekStart = daysAgoString(6);
   const walksThisWeek = walkSessions.filter((w) => w.date >= weekStart);

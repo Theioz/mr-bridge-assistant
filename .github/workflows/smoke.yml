@@ -24,6 +24,7 @@ jobs:
       run:
         working-directory: web
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       # Smoke-only vars (fixture + supabase-verify admin client)
       SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
       SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
@@ -80,6 +81,7 @@ jobs:
       run:
         working-directory: web
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
       SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
       SMOKE_SUPABASE_SERVICE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
