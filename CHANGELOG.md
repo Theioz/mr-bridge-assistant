@@ -23,6 +23,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   - Sync Now button is absent when a provider is disconnected.
 
 ### Fixed
+- **Birthday notification script now reads Google refresh token from `user_integrations` (#409).** `scripts/check_birthday_notif.py` was reading `GOOGLE_REFRESH_TOKEN` from `.env`, which was revoked after the multi-tenant OAuth migration in #390/#396. `get_credentials()` now calls `load_integration(client, user_id, "google")` from `_integrations.py`, consistent with all other sync scripts. Note: if the stored Google token was not originally authorized with `calendar.readonly` scope, reconnecting Google in Settings (with calendar access) is required for notifications to fire.
+
 - **Non-owner accounts redirected to /login when opening /settings (#424).** The protected layout was running a redundant `supabase.auth.getUser()` + `redirect("/login")` check on every render, duplicating the auth gate already enforced by `proxy.ts`. On `/settings` (the only `force-dynamic` protected route that always hits the server fresh), the layout's network-backed `getUser()` raced the proxy's cookie refresh and observed a null user, firing the guard for any non-owner Supabase Auth user including the smoke test account. The redundant check is removed; auth enforcement now lives exclusively in `proxy.ts` where session cookies can be correctly refreshed and persisted.
 
 - **`logSync()` was writing to a non-existent column `rows_written`; corrected to `records_written`.**
