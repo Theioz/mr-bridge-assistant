@@ -23,7 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client, get_owner_user_id, log_notification
+from _supabase import get_client, get_owner_user_id
+from _notifications import log_notification
 from fetch_weather import fetch_weather
 
 NOTIFY_SCRIPT    = ROOT / "scripts" / "notify.sh"

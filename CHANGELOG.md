@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Refactored
+- **Split `scripts/_supabase.py` god module into focused helpers (#402).** Notification logging extracted into `scripts/_notifications.py`; HTTP retry and sync_log writes extracted into `scripts/_sync_log.py`. `_supabase.py` now contains only `get_client`, `get_owner_user_id`, and `upsert`. Seven callers updated to import from the correct module; ten callers required no changes.
+
 ### Changed
 - **Settings page reorganized into tabbed navigation (#434).** Replaces the single long-scroll layout with five named tabs — Profile, Fitness, Integrations, Watchlists, Appearance. Active tab persists to `?tab=` URL param for deep-link and back-navigation support. Default tab on first load is Profile. Each tab fetches only the Supabase data its sections require (e.g. the Integrations tab is the only one that invokes `loadIntegration` and `lastSyncStatus`). No changes to any individual settings section component.
 

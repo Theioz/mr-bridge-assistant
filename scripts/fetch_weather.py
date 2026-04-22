@@ -28,7 +28,8 @@ from typing import Any
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client, get_owner_user_id, urlopen_with_retry
+from _supabase import get_client, get_owner_user_id
+from _sync_log import urlopen_with_retry
 
 # WMO Weather Interpretation Code → human-readable condition
 WMO_CONDITIONS: dict[int, str] = {

@@ -15,7 +15,8 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _supabase import get_client, get_owner_user_id, log_sync
+from _supabase import get_client, get_owner_user_id
+from _sync_log import log_sync
 
 HABIT_ALIASES = {
     "floss": "Floss",
