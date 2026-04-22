@@ -43,7 +43,6 @@ def get_credentials() -> Credentials:
         client_id=os.environ["GOOGLE_CLIENT_ID"],
         client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
         token_uri="https://oauth2.googleapis.com/token",
-        scopes=["https://www.googleapis.com/auth/calendar.readonly"],
     )
     creds.refresh(Request())
     return creds
