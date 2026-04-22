@@ -50,7 +50,7 @@ export function SettingsTabs({ activeTab }: Props) {
                 minHeight: 44,
                 fontSize: "var(--t-meta)",
                 fontWeight: active ? 600 : 400,
-                color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                color: active ? "var(--color-text)" : "var(--color-text-muted)",
                 borderBottom: active ? "2px solid var(--color-primary)" : "2px solid transparent",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
