@@ -23,6 +23,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import { lastSyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
+import { SettingsTabs, isSettingsTab, type SettingsTab } from "@/components/settings/settings-tabs";
 
 async function updateProfile(key: string, value: string) {
   "use server";
@@ -175,58 +176,44 @@ async function disconnectFitbit() {
   revalidatePath("/settings");
 }
 
-async function SettingsContent({ params }: { params: Record<string, string> }) {
+async function SettingsContent({
+  params,
+  activeTab,
+}: {
+  params: Record<string, string>;
+  activeTab: SettingsTab;
+}) {
+  if (activeTab === "appearance") {
+    return <AppearanceSettings />;
+  }
+
   const supabase = await createClient();
   const db = createServiceClient();
 
-  // Wave 1 — profile, equipment, and getUser run in parallel (none depend on each other).
-  const [
-    { data },
-    { data: equipmentData },
-    {
+  if (activeTab === "integrations") {
+    // Wave 1 — only need the authenticated user
+    const {
       data: { user },
-    },
-  ] = await Promise.all([
-    supabase.from("profile").select("key,value"),
-    supabase
-      .from("user_equipment")
-      .select("id,equipment_type,weight_lbs,resistance_level,count,notes")
-      .order("equipment_type"),
-    supabase.auth.getUser(),
-  ]);
+    } = await supabase.auth.getUser();
 
-  const values: Record<string, string> = {};
-  for (const row of data ?? []) {
-    values[row.key] = row.value;
-  }
+    // Wave 2 — all integration loads and sync statuses in parallel
+    const [
+      googleIntegration,
+      ouraIntegration,
+      fitbitIntegration,
+      googleLastSync,
+      ouraLastSync,
+      fitbitLastSync,
+    ] = await Promise.all([
+      user ? loadIntegration(db, user.id, "google").catch((): null => null) : Promise.resolve(null),
+      user ? loadIntegration(db, user.id, "oura").catch((): null => null) : Promise.resolve(null),
+      user ? loadIntegration(db, user.id, "fitbit").catch((): null => null) : Promise.resolve(null),
+      lastSyncStatus(db, "google_fit").catch((): null => null),
+      lastSyncStatus(db, "oura").catch((): null => null),
+      lastSyncStatus(db, "fitbit").catch((): null => null),
+    ]);
 
-  const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
-  const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
-
-  // Wave 2 — integration loads (need user.id) + sync status checks run together.
-  const [
-    googleIntegration,
-    ouraIntegration,
-    fitbitIntegration,
-    googleLastSync,
-    ouraLastSync,
-    fitbitLastSync,
-  ] = await Promise.all([
-    user ? loadIntegration(db, user.id, "google").catch((): null => null) : Promise.resolve(null),
-    user ? loadIntegration(db, user.id, "oura").catch((): null => null) : Promise.resolve(null),
-    user ? loadIntegration(db, user.id, "fitbit").catch((): null => null) : Promise.resolve(null),
-    lastSyncStatus(db, "google_fit").catch((): null => null),
-    lastSyncStatus(db, "oura").catch((): null => null),
-    lastSyncStatus(db, "fitbit").catch((): null => null),
-  ]);
-
-  return (
-    <>
-      <FitnessSettings
-        restTimerEnabled={values["rest_timer_enabled"] !== "0"}
-        updateAction={updateProfile}
-      />
-
+    return (
       <IntegrationsSettings
         googleIntegration={googleIntegration}
         disconnectAction={disconnectGoogle}
@@ -240,21 +227,68 @@ async function SettingsContent({ params }: { params: Record<string, string> }) {
         fitbitLastSync={fitbitLastSync}
         errorParam={params.error}
       />
+    );
+  }
 
+  // profile, fitness, watchlists — all need the profile table
+  const profilePromise = supabase.from("profile").select("key,value");
+  const equipmentPromise =
+    activeTab === "fitness"
+      ? supabase
+          .from("user_equipment")
+          .select("id,equipment_type,weight_lbs,resistance_level,count,notes")
+          .order("equipment_type")
+      : Promise.resolve({
+          data: [] as {
+            id: string;
+            equipment_type: string;
+            weight_lbs: number | null;
+            resistance_level: string | null;
+            count: number;
+            notes: string | null;
+          }[],
+        });
+
+  const [{ data }, { data: equipmentData }] = await Promise.all([profilePromise, equipmentPromise]);
+
+  const values: Record<string, string> = {};
+  for (const row of data ?? []) {
+    values[row.key] = row.value;
+  }
+
+  if (activeTab === "profile") {
+    return (
       <ProfileForm values={values} updateAction={updateProfile} deleteAction={deleteProfile} />
+    );
+  }
 
-      <EquipmentSettings
-        items={equipmentData ?? []}
-        addAction={addEquipment}
-        removeAction={removeEquipment}
-      />
+  if (activeTab === "fitness") {
+    return (
+      <>
+        <FitnessSettings
+          restTimerEnabled={values["rest_timer_enabled"] !== "0"}
+          updateAction={updateProfile}
+        />
+        <EquipmentSettings
+          items={equipmentData ?? []}
+          addAction={addEquipment}
+          removeAction={removeEquipment}
+        />
+      </>
+    );
+  }
 
+  // activeTab === "watchlists"
+  const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
+  const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
+
+  return (
+    <>
       <WatchlistSettings
         watchlist={watchlist}
         saveAction={saveWatchlist}
         hasApiKey={!!process.env.POLYGON_API_KEY}
       />
-
       <SportsSettings favorites={sportsFavorites} saveAction={saveSportsFavorites} />
     </>
   );
@@ -266,6 +300,7 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const params = await searchParams;
+  const activeTab: SettingsTab = isSettingsTab(params.tab) ? params.tab : "profile";
 
   return (
     <div className="max-w-2xl">
@@ -289,10 +324,10 @@ export default async function SettingsPage({
         </p>
       </header>
 
-      <AppearanceSettings />
+      <SettingsTabs activeTab={activeTab} />
 
       <Suspense fallback={<div style={{ minHeight: 400 }} />}>
-        <SettingsContent params={params} />
+        <SettingsContent activeTab={activeTab} params={params} />
       </Suspense>
     </div>
   );
