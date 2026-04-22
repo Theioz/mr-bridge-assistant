@@ -54,7 +54,10 @@ function sumNullable(items: ScanItem[], field: "fiber_g" | "sugar_g"): number | 
   let any = false;
   for (const it of items) {
     const v = it[field];
-    if (v !== null && v !== undefined) { sum += v; any = true; }
+    if (v !== null && v !== undefined) {
+      sum += v;
+      any = true;
+    }
   }
   return any ? sum : null;
 }
@@ -106,11 +109,18 @@ function MacroLine({ item }: { item: ScanItem }) {
   const showNutrients = item.fiber_g !== null || item.sugar_g !== null;
   return (
     <div className="flex flex-col" style={{ gap: 2 }}>
-      <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-        {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P · {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
+      <span
+        className="tnum"
+        style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+      >
+        {Math.round(item.calories)} cal · {Math.round(item.protein_g)}g P ·{" "}
+        {Math.round(item.carbs_g)}g C · {Math.round(item.fat_g)}g F
       </span>
       {showNutrients && (
-        <span className="tnum" style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+        <span
+          className="tnum"
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+        >
           Fiber {roundOrDash(item.fiber_g, 1)}g · Sugar {roundOrDash(item.sugar_g, 1)}g
         </span>
       )}
@@ -226,7 +236,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       carbs_g: acc.carbs_g + item.carbs_g,
       fat_g: acc.fat_g + item.fat_g,
     }),
-    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
   // Nutrient totals are null when no item reports a value, so we render "—" instead of "0".
   const combinedFiber = sumNullable(items, "fiber_g");
@@ -293,7 +303,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             else reject(new Error("Compression failed"));
           },
           "image/jpeg",
-          0.85
+          0.85,
         );
       };
       img.onerror = () => {
@@ -404,15 +414,19 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           if (item.id !== id) return item;
           return {
             ...item,
-            label:     item.labelManuallyEdited    ? item.label     : (data.food_name ?? item.label),
-            calories:  item.caloriesManuallyEdited ? item.calories  : (data.calories  ?? item.calories),
-            protein_g: item.proteinManuallyEdited  ? item.protein_g : (data.protein_g ?? item.protein_g),
-            carbs_g:   item.carbsManuallyEdited    ? item.carbs_g   : (data.carbs_g   ?? item.carbs_g),
-            fat_g:     item.fatManuallyEdited      ? item.fat_g     : (data.fat_g     ?? item.fat_g),
-            fiber_g:   item.fiberManuallyEdited    ? item.fiber_g   : (data.fiber_g ?? null),
-            sugar_g:   item.sugarManuallyEdited    ? item.sugar_g   : (data.sugar_g ?? null),
+            label: item.labelManuallyEdited ? item.label : (data.food_name ?? item.label),
+            calories: item.caloriesManuallyEdited
+              ? item.calories
+              : (data.calories ?? item.calories),
+            protein_g: item.proteinManuallyEdited
+              ? item.protein_g
+              : (data.protein_g ?? item.protein_g),
+            carbs_g: item.carbsManuallyEdited ? item.carbs_g : (data.carbs_g ?? item.carbs_g),
+            fat_g: item.fatManuallyEdited ? item.fat_g : (data.fat_g ?? item.fat_g),
+            fiber_g: item.fiberManuallyEdited ? item.fiber_g : (data.fiber_g ?? null),
+            sugar_g: item.sugarManuallyEdited ? item.sugar_g : (data.sugar_g ?? null),
           };
-        })
+        }),
       );
     } catch {
       // non-fatal — keep existing values
@@ -523,7 +537,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         return extras.length ? `${base}, ${extras.join(", ")}` : base;
       })
       .join("\n");
-    const combinedLine = `Combined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g P, ${Math.round(combined.carbs_g)}g C, ${Math.round(combined.fat_g)}g fat` +
+    const combinedLine =
+      `Combined: ${Math.round(combined.calories)} cal, ${Math.round(combined.protein_g)}g P, ${Math.round(combined.carbs_g)}g C, ${Math.round(combined.fat_g)}g fat` +
       (combinedFiber !== null ? `, ${roundOrDash(combinedFiber, 1)}g fiber` : "") +
       (combinedSugar !== null ? `, ${roundOrDash(combinedSugar, 1)}g sugar` : "");
     return `--- Scanned nutrition data ---\n${lines}\n${combinedLine}`;
@@ -557,7 +572,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               border: "none",
               cursor: "pointer",
               whiteSpace: "nowrap",
-              transition: "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+              transition:
+                "background-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
           >
             {opt === "food" ? "Food Photo" : "Nutrition Label"}
@@ -576,8 +592,21 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       {ModeToggle}
 
       {/* Hidden file inputs — camera and library */}
-      <input ref={cameraInputRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
-      <input ref={libraryInputRef} type="file" accept="image/*"                        className="hidden" onChange={handleFileChange} />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <input
+        ref={libraryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       {/* ── LOADING overlay ─────────────────────────────────────────────── */}
       {scanPhase === "loading" && (
@@ -593,7 +622,11 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             fontSize: "var(--t-meta)",
           }}
         >
-          <Loader2 size={15} className="animate-spin" style={{ color: "var(--accent)", flexShrink: 0 }} />
+          <Loader2
+            size={15}
+            className="animate-spin"
+            style={{ color: "var(--accent)", flexShrink: 0 }}
+          />
           Analyzing…
         </div>
       )}
@@ -612,7 +645,11 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         >
           <div
             className="flex items-start"
-            style={{ gap: "var(--space-2)", color: "var(--color-danger)", fontSize: "var(--t-meta)" }}
+            style={{
+              gap: "var(--space-2)",
+              color: "var(--color-danger)",
+              fontSize: "var(--t-meta)",
+            }}
           >
             <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{errorMsg}</span>
@@ -625,7 +662,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 cameraInputRef.current?.click();
               }}
               className="flex items-center transition-opacity active:opacity-70"
-              style={{ ...ctaStyle, gap: "var(--space-1)", fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
+              style={{
+                ...ctaStyle,
+                gap: "var(--space-1)",
+                fontSize: "var(--t-micro)",
+                padding: "var(--space-2) var(--space-3)",
+              }}
             >
               <Camera size={13} />
               Camera
@@ -637,7 +679,12 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 libraryInputRef.current?.click();
               }}
               className="flex items-center transition-opacity active:opacity-70"
-              style={{ ...ghostStyle, gap: "var(--space-1)", fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
+              style={{
+                ...ghostStyle,
+                gap: "var(--space-1)",
+                fontSize: "var(--t-micro)",
+                padding: "var(--space-2) var(--space-3)",
+              }}
             >
               <ImageIcon size={13} />
               From Library
@@ -648,7 +695,11 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 setScanPhase("manual");
               }}
               className="transition-opacity active:opacity-70"
-              style={{ ...ghostStyle, fontSize: "var(--t-micro)", padding: "var(--space-2) var(--space-3)" }}
+              style={{
+                ...ghostStyle,
+                fontSize: "var(--t-micro)",
+                padding: "var(--space-2) var(--space-3)",
+              }}
             >
               Enter manually
             </button>
@@ -668,7 +719,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             borderBottom: "1px solid var(--rule-soft)",
           }}
         >
-          <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Enter nutrition manually</p>
+          <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
+            Enter nutrition manually
+          </p>
           <input
             type="text"
             placeholder="Name (e.g. Greek Yogurt)"
@@ -684,7 +737,14 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               { label: "Fat (g)", value: manualFat, set: setManualFat },
             ].map(({ label, value, set }) => (
               <div key={label}>
-                <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block", marginBottom: "var(--space-1)" }}>
+                <label
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-muted)",
+                    display: "block",
+                    marginBottom: "var(--space-1)",
+                  }}
+                >
                   {label}
                 </label>
                 <input
@@ -732,7 +792,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             borderRadius: "var(--r-2)",
           }}
         >
-          <p style={{ fontSize: "var(--t-body)", color: "var(--color-text-muted)", textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: "var(--t-body)",
+              color: "var(--color-text-muted)",
+              textAlign: "center",
+            }}
+          >
             Scan a nutrition label or food photo to get started.
           </p>
           <div className="flex flex-wrap justify-center" style={{ gap: "var(--space-2)" }}>
@@ -783,12 +849,21 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               >
                 <div className="flex items-start" style={{ gap: "var(--space-2)" }}>
                   <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
-                    <span style={{ fontSize: "var(--t-body)", fontWeight: 600, color: "var(--color-text)" }}>
+                    <span
+                      style={{
+                        fontSize: "var(--t-body)",
+                        fontWeight: 600,
+                        color: "var(--color-text)",
+                      }}
+                    >
                       {item.label}
                     </span>
                     <MacroLine item={item} />
                   </div>
-                  <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }}>
+                  <div
+                    className="flex items-center flex-shrink-0"
+                    style={{ gap: "var(--space-1)" }}
+                  >
                     <button
                       onClick={() => setExpandedItemId(expanded ? null : item.id)}
                       className="flex items-center transition-opacity active:opacity-70"
@@ -826,10 +901,20 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
                 {/* Expand: editable macros + fiber/sugar + optional ingredients + re-estimate */}
                 {expanded && (
-                  <div className="flex flex-col" style={{ marginTop: "var(--space-3)", gap: "var(--space-3)" }}>
+                  <div
+                    className="flex flex-col"
+                    style={{ marginTop: "var(--space-3)", gap: "var(--space-3)" }}
+                  >
                     {/* Dish name */}
                     <div>
-                      <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block", marginBottom: "var(--space-1)" }}>
+                      <label
+                        style={{
+                          fontSize: "var(--t-micro)",
+                          color: "var(--color-text-muted)",
+                          display: "block",
+                          marginBottom: "var(--space-1)",
+                        }}
+                      >
                         Dish name
                       </label>
                       <input
@@ -848,34 +933,46 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                         label="Calories"
                         value={item.calories}
                         integer
-                        onChange={(v) => updateItem(item.id, { calories: v ?? 0, caloriesManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { calories: v ?? 0, caloriesManuallyEdited: true })
+                        }
                       />
                       <MacroInput
                         label="Protein (g)"
                         value={item.protein_g}
-                        onChange={(v) => updateItem(item.id, { protein_g: v ?? 0, proteinManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { protein_g: v ?? 0, proteinManuallyEdited: true })
+                        }
                       />
                       <MacroInput
                         label="Carbs (g)"
                         value={item.carbs_g}
-                        onChange={(v) => updateItem(item.id, { carbs_g: v ?? 0, carbsManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { carbs_g: v ?? 0, carbsManuallyEdited: true })
+                        }
                       />
                       <MacroInput
                         label="Fat (g)"
                         value={item.fat_g}
-                        onChange={(v) => updateItem(item.id, { fat_g: v ?? 0, fatManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { fat_g: v ?? 0, fatManuallyEdited: true })
+                        }
                       />
                       <MacroInput
                         label="Fiber (g)"
                         value={item.fiber_g}
                         nullable
-                        onChange={(v) => updateItem(item.id, { fiber_g: v, fiberManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { fiber_g: v, fiberManuallyEdited: true })
+                        }
                       />
                       <MacroInput
                         label="Sugar (g)"
                         value={item.sugar_g}
                         nullable
-                        onChange={(v) => updateItem(item.id, { sugar_g: v, sugarManuallyEdited: true })}
+                        onChange={(v) =>
+                          updateItem(item.id, { sugar_g: v, sugarManuallyEdited: true })
+                        }
                       />
                     </div>
 
@@ -884,7 +981,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                       const derived = item.protein_g * 4 + item.carbs_g * 4 + item.fat_g * 9;
                       if (derived <= 0) return null;
                       const drift = Math.abs(item.calories - derived) / derived;
-                      if (drift <= 0.10) return null;
+                      if (drift <= 0.1) return null;
                       return (
                         <div
                           className="flex items-start"
@@ -898,11 +995,14 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                           }}
                           role="status"
                         >
-                          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1, color: "var(--color-danger)" }} />
+                          <AlertCircle
+                            size={13}
+                            style={{ flexShrink: 0, marginTop: 1, color: "var(--color-danger)" }}
+                          />
                           <span>
-                            Calories don&apos;t match macros — derived {Math.round(derived)} kcal from{" "}
-                            P{Math.round(item.protein_g)} · C{Math.round(item.carbs_g)} · F{Math.round(item.fat_g)}.
-                            You can log anyway.
+                            Calories don&apos;t match macros — derived {Math.round(derived)} kcal
+                            from P{Math.round(item.protein_g)} · C{Math.round(item.carbs_g)} · F
+                            {Math.round(item.fat_g)}. You can log anyway.
                           </span>
                         </div>
                       );
@@ -911,7 +1011,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     {/* Ingredients / re-estimate — food-photo mode only */}
                     {item.mode === "food" && (
                       <div className="flex flex-col" style={{ gap: "var(--space-2)" }}>
-                        <label style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", display: "block" }}>
+                        <label
+                          style={{
+                            fontSize: "var(--t-micro)",
+                            color: "var(--color-text-muted)",
+                            display: "block",
+                          }}
+                        >
                           Ingredients
                         </label>
                         <textarea
@@ -919,9 +1025,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                           rows={3}
                           autoComplete="off"
                           autoCorrect="off"
-                          onChange={(e) =>
-                            updateItem(item.id, { ingredients: e.target.value })
-                          }
+                          onChange={(e) => updateItem(item.id, { ingredients: e.target.value })}
                           style={{
                             ...inputStyle,
                             resize: "none",
@@ -940,13 +1044,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                             padding: "var(--space-1) 0",
                             background: "none",
                             border: "none",
-                            cursor: (reestimatingId === item.id || !item.ingredients?.trim()) ? "default" : "pointer",
+                            cursor:
+                              reestimatingId === item.id || !item.ingredients?.trim()
+                                ? "default"
+                                : "pointer",
                             alignSelf: "flex-start",
                           }}
                         >
-                          {reestimatingId === item.id
-                            ? <Loader2 size={13} className="animate-spin" />
-                            : <RefreshCw size={13} />}
+                          {reestimatingId === item.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={13} />
+                          )}
                           Re-estimate macros
                         </button>
                       </div>
@@ -1010,10 +1119,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           >
             <span style={{ color: "var(--color-text-muted)" }}>Combined: </span>
             <span className="tnum" style={{ color: "var(--color-text)", fontWeight: 600 }}>
-              {Math.round(combined.calories)} cal · {Math.round(combined.protein_g)}g P · {Math.round(combined.carbs_g)}g C · {Math.round(combined.fat_g)}g F
+              {Math.round(combined.calories)} cal · {Math.round(combined.protein_g)}g P ·{" "}
+              {Math.round(combined.carbs_g)}g C · {Math.round(combined.fat_g)}g F
             </span>
             {(combinedFiber !== null || combinedSugar !== null) && (
-              <div className="tnum" style={{ marginTop: 2, fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+              <div
+                className="tnum"
+                style={{
+                  marginTop: 2,
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                }}
+              >
                 Fiber {roundOrDash(combinedFiber, 1)}g · Sugar {roundOrDash(combinedSugar, 1)}g
               </div>
             )}
@@ -1051,13 +1168,23 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           {errorMsg && scanPhase === "idle" && (
             <div
               className="flex items-center"
-              style={{ gap: "var(--space-2)", color: "var(--color-danger)", fontSize: "var(--t-meta)" }}
+              style={{
+                gap: "var(--space-2)",
+                color: "var(--color-danger)",
+                fontSize: "var(--t-meta)",
+              }}
             >
               <AlertCircle size={14} />
               {errorMsg}
               <button
                 onClick={() => setErrorMsg("")}
-                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit" }}
+                style={{
+                  marginLeft: "auto",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "inherit",
+                }}
               >
                 <X size={13} />
               </button>
@@ -1088,7 +1215,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               className="transition-opacity active:opacity-70"
               style={{
                 background: activeSheet === "mealprep" ? "var(--accent)" : "transparent",
-                color: activeSheet === "mealprep" ? "var(--color-text-on-cta)" : "var(--color-text)",
+                color:
+                  activeSheet === "mealprep" ? "var(--color-text-on-cta)" : "var(--color-text)",
                 border: "1px solid var(--rule)",
                 borderRadius: "var(--r-2)",
                 fontSize: "var(--t-meta)",
@@ -1127,7 +1255,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 borderTop: "1px solid var(--rule-soft)",
               }}
             >
-              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Log as meal</p>
+              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
+                Log as meal
+              </p>
 
               {/* Meal type */}
               <div className="flex flex-wrap" style={{ gap: "var(--space-1)" }}>
@@ -1138,7 +1268,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     style={{
                       ...pillBtnBase,
                       background: logMealType === t ? "var(--accent)" : "transparent",
-                      color: logMealType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+                      color:
+                        logMealType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                       borderColor: logMealType === t ? "var(--accent)" : "var(--rule)",
                     }}
                   >
@@ -1149,7 +1280,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
               {/* Servings */}
               <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
-                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+                <label
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   Servings
                 </label>
                 <input
@@ -1162,9 +1299,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
               </div>
 
               {/* Preview */}
-              <div className="tnum" style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
+              <div
+                className="tnum"
+                style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}
+              >
                 <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
-                  {Math.round(combined.calories * s)} cal · {Math.round(combined.protein_g * s * 10) / 10}g P · {Math.round(combined.carbs_g * s * 10) / 10}g C · {Math.round(combined.fat_g * s * 10) / 10}g F
+                  {Math.round(combined.calories * s)} cal ·{" "}
+                  {Math.round(combined.protein_g * s * 10) / 10}g P ·{" "}
+                  {Math.round(combined.carbs_g * s * 10) / 10}g C ·{" "}
+                  {Math.round(combined.fat_g * s * 10) / 10}g F
                 </span>
               </div>
 
@@ -1197,10 +1340,19 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 borderTop: "1px solid var(--rule-soft)",
               }}
             >
-              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>Meal prep</p>
+              <p style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
+                Meal prep
+              </p>
 
               <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
-                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+                <label
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                    flex: 1,
+                  }}
+                >
                   Total batch makes
                 </label>
                 <input
@@ -1210,11 +1362,26 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   onChange={(e) => setBatchServings(e.target.value)}
                   style={{ ...inputStyle, width: 72 }}
                 />
-                <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>servings</span>
+                <span
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  servings
+                </span>
               </div>
 
               <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
-                <label style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap", flex: 1 }}>
+                <label
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                    flex: 1,
+                  }}
+                >
                   Splitting into
                 </label>
                 <input
@@ -1224,14 +1391,25 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                   onChange={(e) => setContainers(e.target.value)}
                   style={{ ...inputStyle, width: 72 }}
                 />
-                <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>containers</span>
+                <span
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  containers
+                </span>
               </div>
 
               {/* Per-container preview */}
               <div style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                 Per container:{" "}
                 <span className="tnum" style={{ color: "var(--color-text)", fontWeight: 600 }}>
-                  {Math.round(combined.calories / n)} cal · {Math.round((combined.protein_g / n) * 10) / 10}g P · {Math.round((combined.carbs_g / n) * 10) / 10}g C · {Math.round((combined.fat_g / n) * 10) / 10}g F
+                  {Math.round(combined.calories / n)} cal ·{" "}
+                  {Math.round((combined.protein_g / n) * 10) / 10}g P ·{" "}
+                  {Math.round((combined.carbs_g / n) * 10) / 10}g C ·{" "}
+                  {Math.round((combined.fat_g / n) * 10) / 10}g F
                 </span>
               </div>
 
@@ -1244,7 +1422,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                     style={{
                       ...pillBtnBase,
                       background: mealPrepType === t ? "var(--accent)" : "transparent",
-                      color: mealPrepType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+                      color:
+                        mealPrepType === t ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                       borderColor: mealPrepType === t ? "var(--accent)" : "var(--rule)",
                     }}
                   >

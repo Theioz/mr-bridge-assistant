@@ -5,7 +5,9 @@ export type ThemePreference = "system" | "light" | "dark";
 export async function getServerThemePreference(): Promise<ThemePreference> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return "system";
     const { data } = await supabase
       .from("profile")

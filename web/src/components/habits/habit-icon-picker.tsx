@@ -12,8 +12,7 @@ export default function HabitIconPicker({ value, onChange }: Props) {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const labelKey = hoveredKey ?? value;
-  const labelText =
-    HABIT_ICON_OPTIONS.find((o) => o.key === labelKey)?.label ?? "";
+  const labelText = HABIT_ICON_OPTIONS.find((o) => o.key === labelKey)?.label ?? "";
 
   return (
     <div
@@ -46,21 +45,15 @@ export default function HabitIconPicker({ value, onChange }: Props) {
               aria-label={label}
               onClick={() => onChange(key)}
               onMouseEnter={() => setHoveredKey(key)}
-              onMouseLeave={() =>
-                setHoveredKey((prev) => (prev === key ? null : prev))
-              }
+              onMouseLeave={() => setHoveredKey((prev) => (prev === key ? null : prev))}
               onFocus={() => setHoveredKey(key)}
-              onBlur={() =>
-                setHoveredKey((prev) => (prev === key ? null : prev))
-              }
+              onBlur={() => setHoveredKey((prev) => (prev === key ? null : prev))}
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: "var(--r-1)",
                 background: selected ? "var(--accent)" : "transparent",
-                color: selected
-                  ? "var(--color-text-on-cta)"
-                  : "var(--color-text-muted)",
+                color: selected ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                 border: "none",
                 cursor: "pointer",
                 display: "flex",

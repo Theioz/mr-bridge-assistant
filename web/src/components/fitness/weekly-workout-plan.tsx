@@ -62,7 +62,6 @@ function fmtWeekRange(days: DaySlot[]): string {
   return `${fmtShortDate(days[0].date)} – ${fmtShortDate(days[6].date)}`;
 }
 
-
 function isRecentPR(achievedAt: string | null): boolean {
   if (!achievedAt) return false;
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -108,8 +107,13 @@ function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: 
 
   const recentPRAchievedAt =
     exercisePR != null
-      ? (([exercisePR.weight_pr_achieved_at ?? null, exercisePR.rep_pr_achieved_at ?? null, exercisePR.volume_pr_achieved_at ?? null] as (string | null)[])
-          .find(isRecentPR) ?? null)
+      ? ((
+          [
+            exercisePR.weight_pr_achieved_at ?? null,
+            exercisePR.rep_pr_achieved_at ?? null,
+            exercisePR.volume_pr_achieved_at ?? null,
+          ] as (string | null)[]
+        ).find(isRecentPR) ?? null)
       : null;
   const showPRChip = recentPRAchievedAt != null;
 
@@ -150,7 +154,7 @@ function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: 
               {[setsStr, repsStr].filter(Boolean).join(" ")}
               {hasWeight && (
                 <>
-                  {(setsStr || repsStr) ? " @ " : "@ "}
+                  {setsStr || repsStr ? " @ " : "@ "}
                   {ex.weight_lbs} lbs
                   {notation && (
                     <span style={{ color: "var(--color-text-faint)" }}>
@@ -240,7 +244,6 @@ function ExerciseRow({ ex, unit, exercisePR, restTimerEnabled, loggerContext }: 
   );
 }
 
-
 interface PhaseSectionProps {
   label: string;
   exercises: WorkoutExercise[];
@@ -256,7 +259,14 @@ interface PhaseSectionProps {
   };
 }
 
-function PhaseSection({ label, exercises, unit, prsByExercise, restTimerEnabled, loggerBase }: PhaseSectionProps) {
+function PhaseSection({
+  label,
+  exercises,
+  unit,
+  prsByExercise,
+  restTimerEnabled,
+  loggerBase,
+}: PhaseSectionProps) {
   if (exercises.length === 0) return null;
   return (
     <div style={{ marginBottom: "var(--space-4)" }}>
@@ -280,8 +290,7 @@ function PhaseSection({ label, exercises, unit, prsByExercise, restTimerEnabled,
               date: loggerBase.date,
               workoutPlanId: loggerBase.workoutPlanId,
               exerciseOrder: loggerBase.orderOffset + i,
-              setsForThisExercise:
-                loggerBase.setsByExercise.get(ex.exercise.toLowerCase()) ?? [],
+              setsForThisExercise: loggerBase.setsByExercise.get(ex.exercise.toLowerCase()) ?? [],
               unit: loggerBase.unit,
             }
           : undefined;
@@ -337,7 +346,8 @@ export function WeeklyWorkoutPlan({
 
   function handleCancel(date: string, planName: string | null) {
     const label = planName ?? "this workout";
-    if (!window.confirm(`Cancel ${label} on ${date}? This will also delete the calendar event.`)) return;
+    if (!window.confirm(`Cancel ${label} on ${date}? This will also delete the calendar event.`))
+      return;
     setCancellingDates((prev) => new Set(prev).add(date));
     startTransition(async () => {
       await cancelAction?.(date);
@@ -352,10 +362,7 @@ export function WeeklyWorkoutPlan({
   if (days.length === 0) return null;
 
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-4)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-4)", minWidth: 0 }}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2
           style={{

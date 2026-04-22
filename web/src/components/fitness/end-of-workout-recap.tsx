@@ -97,7 +97,8 @@ export function EndOfWorkoutRecap({
             marginBottom: 4,
           }}
         >
-          Perceived effort <span style={{ color: "var(--color-text-faint)" }}>(1 easy — 10 max)</span>
+          Perceived effort{" "}
+          <span style={{ color: "var(--color-text-faint)" }}>(1 easy — 10 max)</span>
         </label>
         <div className="flex items-center gap-1.5 print:hidden" style={{ flexWrap: "wrap" }}>
           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
@@ -139,7 +140,8 @@ export function EndOfWorkoutRecap({
             marginBottom: 4,
           }}
         >
-          Notes <span style={{ color: "var(--color-text-faint)" }}>(optional — how did it feel?)</span>
+          Notes{" "}
+          <span style={{ color: "var(--color-text-faint)" }}>(optional — how did it feel?)</span>
         </label>
         <textarea
           id={`recap-notes-${sessionId}`}
@@ -190,9 +192,7 @@ export function EndOfWorkoutRecap({
         )}
       </div>
 
-      {err && (
-        <p style={{ fontSize: 11, color: "var(--color-danger)", marginTop: 6 }}>{err}</p>
-      )}
+      {err && <p style={{ fontSize: 11, color: "var(--color-danger)", marginTop: 6 }}>{err}</p>}
     </div>
   );
 }

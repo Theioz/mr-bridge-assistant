@@ -40,7 +40,12 @@ interface LogMealProposal {
 type ChatMessage =
   | { role: "user"; kind: "text"; content: string }
   | { role: "assistant"; kind: "text"; content: string }
-  | { role: "assistant"; kind: "proposal"; proposal: LogMealProposal; status: "pending" | "logging" | "logged" | "cancelled" };
+  | {
+      role: "assistant";
+      kind: "proposal";
+      proposal: LogMealProposal;
+      status: "pending" | "logging" | "logged" | "cancelled";
+    };
 
 const inputStyle = {
   background: "var(--color-bg)",
@@ -153,7 +158,11 @@ export default function InlineMealChat({
                   return [...prev, { role: "assistant", kind: "text", content: assistantText }];
                 }
                 const copy = prev.slice();
-                copy[textMessageIndex] = { role: "assistant", kind: "text", content: assistantText };
+                copy[textMessageIndex] = {
+                  role: "assistant",
+                  kind: "text",
+                  content: assistantText,
+                };
                 return copy;
               });
             } catch {
@@ -268,7 +277,13 @@ export default function InlineMealChat({
         </span>
         <button
           onClick={onClose}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: 4 }}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-muted)",
+            padding: 4,
+          }}
         >
           <X size={15} />
         </button>
@@ -284,7 +299,10 @@ export default function InlineMealChat({
         {messages.map((m, i) => {
           if (m.kind === "text") {
             return (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                key={i}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className="rounded-2xl px-3 py-2"
                   style={{
@@ -321,17 +339,36 @@ export default function InlineMealChat({
               >
                 <div
                   className="flex items-center justify-between"
-                  style={{ fontSize: 12, color: "var(--color-text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text-muted)",
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
                 >
                   <span>Log proposal · {p.meal_type}</span>
                   {status === "logged" && (
-                    <span className="flex items-center" style={{ gap: 4, color: "var(--color-positive)", textTransform: "none", letterSpacing: 0 }}>
+                    <span
+                      className="flex items-center"
+                      style={{
+                        gap: 4,
+                        color: "var(--color-positive)",
+                        textTransform: "none",
+                        letterSpacing: 0,
+                      }}
+                    >
                       <CheckCircle size={13} />
                       Logged
                     </span>
                   )}
                   {status === "cancelled" && (
-                    <span style={{ color: "var(--color-text-faint)", textTransform: "none", letterSpacing: 0 }}>
+                    <span
+                      style={{
+                        color: "var(--color-text-faint)",
+                        textTransform: "none",
+                        letterSpacing: 0,
+                      }}
+                    >
                       Cancelled
                     </span>
                   )}
@@ -343,9 +380,15 @@ export default function InlineMealChat({
                       className="flex items-baseline"
                       style={{ gap: "var(--space-2)", fontSize: 13, color: "var(--color-text)" }}
                     >
-                      <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>{it.label}</span>
-                      <span className="tnum" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                        {Math.round(it.calories)} cal · P{Math.round(it.protein_g)} · C{Math.round(it.carbs_g)} · F{Math.round(it.fat_g)}
+                      <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>
+                        {it.label}
+                      </span>
+                      <span
+                        className="tnum"
+                        style={{ fontSize: 12, color: "var(--color-text-muted)" }}
+                      >
+                        {Math.round(it.calories)} cal · P{Math.round(it.protein_g)} · C
+                        {Math.round(it.carbs_g)} · F{Math.round(it.fat_g)}
                       </span>
                     </div>
                   ))}
@@ -359,9 +402,9 @@ export default function InlineMealChat({
                     borderTop: "1px solid var(--color-border)",
                   }}
                 >
-                  <strong>Total:</strong>{" "}
-                  {Math.round(p.totals.calories)} cal · {Math.round(p.totals.protein_g)}g P ·{" "}
-                  {Math.round(p.totals.carbs_g)}g C · {Math.round(p.totals.fat_g)}g F
+                  <strong>Total:</strong> {Math.round(p.totals.calories)} cal ·{" "}
+                  {Math.round(p.totals.protein_g)}g P · {Math.round(p.totals.carbs_g)}g C ·{" "}
+                  {Math.round(p.totals.fat_g)}g F
                   {(p.totals.fiber_g !== null || p.totals.sugar_g !== null) && (
                     <div style={{ color: "var(--color-text-muted)", marginTop: 2 }}>
                       Fiber {dashOr(p.totals.fiber_g)}g · Sugar {dashOr(p.totals.sugar_g)}g
@@ -369,7 +412,10 @@ export default function InlineMealChat({
                   )}
                 </div>
                 {status === "pending" && (
-                  <div className="flex" style={{ gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                  <div
+                    className="flex"
+                    style={{ gap: "var(--space-2)", marginTop: "var(--space-1)" }}
+                  >
                     <button
                       onClick={() => confirmProposal(i)}
                       className="transition-opacity active:opacity-70"
@@ -435,7 +481,7 @@ export default function InlineMealChat({
               sendMessage(input);
             }
           }}
-          placeholder="Ask, or say &quot;log it&quot;…"
+          placeholder='Ask, or say "log it"…'
           disabled={isLoading}
           style={{ ...inputStyle, flex: 1, fontSize: 14 }}
         />

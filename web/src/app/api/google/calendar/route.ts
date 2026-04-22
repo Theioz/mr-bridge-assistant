@@ -14,7 +14,10 @@ export interface CalendarEvent {
   isBirthday: boolean;
 }
 
-function formatTime(dateTimeStr: string | null | undefined, dateStr: string | null | undefined): string {
+function formatTime(
+  dateTimeStr: string | null | undefined,
+  dateStr: string | null | undefined,
+): string {
   if (!dateTimeStr && dateStr) return "All day";
   if (!dateTimeStr) return "";
   const d = new Date(dateTimeStr);
@@ -27,15 +30,44 @@ function formatTime(dateTimeStr: string | null | undefined, dateStr: string | nu
 }
 
 const DEMO_EVENTS: CalendarEvent[] = [
-  { time: "6:30 AM",  title: "Morning run",    calendarName: "Alex Chen", isPrimary: true, isBirthday: false },
-  { time: "9:00 AM",  title: "Team standup",   calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Google Meet" },
-  { time: "12:30 PM", title: "Lunch w/ Priya", calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Tartine Manufactory" },
-  { time: "6:00 PM",  title: "Gym — push day", calendarName: "Alex Chen", isPrimary: true, isBirthday: false, location: "Equinox SoMa" },
+  {
+    time: "6:30 AM",
+    title: "Morning run",
+    calendarName: "Alex Chen",
+    isPrimary: true,
+    isBirthday: false,
+  },
+  {
+    time: "9:00 AM",
+    title: "Team standup",
+    calendarName: "Alex Chen",
+    isPrimary: true,
+    isBirthday: false,
+    location: "Google Meet",
+  },
+  {
+    time: "12:30 PM",
+    title: "Lunch w/ Priya",
+    calendarName: "Alex Chen",
+    isPrimary: true,
+    isBirthday: false,
+    location: "Tartine Manufactory",
+  },
+  {
+    time: "6:00 PM",
+    title: "Gym — push day",
+    calendarName: "Alex Chen",
+    isPrimary: true,
+    isBirthday: false,
+    location: "Equinox SoMa",
+  },
 ];
 
 export async function GET() {
   const serverClient = await createClient();
-  const { data: { user } } = await serverClient.auth.getUser();
+  const {
+    data: { user },
+  } = await serverClient.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -54,9 +86,7 @@ export async function GET() {
     // List all calendars so events from shared/secondary accounts are included
     const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
     const excluded = await getExcludedCalendarIds(serverClient, user.id);
-    const calendars = (calListRes.data.items ?? []).filter(
-      (c) => !excluded.has(c.id ?? ""),
-    );
+    const calendars = (calListRes.data.items ?? []).filter((c) => !excluded.has(c.id ?? ""));
 
     const allEventArrays = await Promise.all(
       calendars.map(async (cal) => {
@@ -75,8 +105,7 @@ export async function GET() {
           .map((e) => {
             const title = e.summary ?? "(No title)";
             const isBirthday =
-              /'s birthday\b/i.test(title) ||
-              calName.toLowerCase().includes("birthday");
+              /'s birthday\b/i.test(title) || calName.toLowerCase().includes("birthday");
             return {
               time: formatTime(e.start?.dateTime, e.start?.date),
               title,
@@ -87,7 +116,7 @@ export async function GET() {
               ...(e.location ? { location: e.location } : {}),
             };
           });
-      })
+      }),
     );
 
     const events: CalendarEvent[] = allEventArrays

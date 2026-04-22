@@ -30,7 +30,7 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
     let valid = true;
     try {
       const res = await fetch(`/api/stocks/validate?ticker=${encodeURIComponent(symbol)}`);
-      const json = await res.json() as { valid: boolean };
+      const json = (await res.json()) as { valid: boolean };
       valid = json.valid;
     } catch {
       // Network error — allow add
@@ -103,18 +103,16 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
         }}
       >
         <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
-          <Plus
-            size={16}
-            style={{ color: "var(--accent)", flexShrink: 0 }}
-            aria-hidden
-          />
+          <Plus size={16} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden />
           <input
             value={input}
             onChange={(e) => {
               setInput(e.target.value.toUpperCase());
               setError(null);
             }}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAdd();
+            }}
             placeholder="Add a ticker (e.g. AAPL)"
             maxLength={12}
             className="flex-1 bg-transparent focus:outline-none min-w-0"
@@ -147,11 +145,7 @@ export function WatchlistSettings({ watchlist, saveAction, hasApiKey }: Props) {
               transition: "opacity var(--motion-fast) var(--ease-out-quart)",
             }}
           >
-            {addBusy ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              "Add"
-            )}
+            {addBusy ? <Loader2 size={14} className="animate-spin" /> : "Add"}
           </button>
         </div>
         {error && (

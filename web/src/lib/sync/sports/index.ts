@@ -32,7 +32,13 @@ export async function syncSports(
 ): Promise<SportsSyncResult> {
   const provider = getSportsProvider();
   const failed: SportsSyncResult["failed"] = [];
-  const rows: { user_id: string; team_id: string; league: string; data: SportsCacheData; fetched_at: string }[] = [];
+  const rows: {
+    user_id: string;
+    team_id: string;
+    league: string;
+    data: SportsCacheData;
+    fetched_at: string;
+  }[] = [];
 
   for (const fav of favorites) {
     try {
@@ -68,14 +74,13 @@ export async function syncSports(
     .select("id,team_id,league")
     .eq("user_id", userId);
   const orphanIds = (existing ?? [])
-    .filter((r: { id: string; team_id: string; league: string }) => !keep.has(`${r.team_id}|${r.league}`))
+    .filter(
+      (r: { id: string; team_id: string; league: string }) => !keep.has(`${r.team_id}|${r.league}`),
+    )
     .map((r: { id: string }) => r.id);
   let removed = 0;
   if (orphanIds.length > 0) {
-    const { count } = await db
-      .from("sports_cache")
-      .delete({ count: "exact" })
-      .in("id", orphanIds);
+    const { count } = await db.from("sports_cache").delete({ count: "exact" }).in("id", orphanIds);
     removed = count ?? 0;
   }
 

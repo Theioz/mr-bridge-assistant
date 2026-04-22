@@ -13,11 +13,17 @@ import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
 import type { Task } from "@/lib/types";
 
-async function addTask(title: string, priority: string, dueDate: string): Promise<{ error?: string }> {
+async function addTask(
+  title: string,
+  priority: string,
+  dueDate: string,
+): Promise<{ error?: string }> {
   "use server";
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
     const { error } = await supabase.from("tasks").insert({
       user_id: user.id,
@@ -74,7 +80,7 @@ async function archiveTask(taskId: string): Promise<{ error?: string }> {
 
 async function updateTask(
   taskId: string,
-  fields: { title?: string; due_date?: string | null; priority?: string | null }
+  fields: { title?: string; due_date?: string | null; priority?: string | null },
 ): Promise<{ error?: string }> {
   "use server";
   try {
@@ -93,7 +99,9 @@ async function addSubtask(parentId: string, title: string): Promise<{ error?: st
   "use server";
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
     const { error } = await supabase.from("tasks").insert({
       user_id: user.id,
@@ -187,9 +195,11 @@ export default async function TasksPage() {
       .eq("status", "active"),
   ]);
 
-  if (activeResult.error)    console.error("[tasks] active query error:", activeResult.error.message);
-  if (completedResult.error) console.error("[tasks] completed query error:", completedResult.error.message);
-  if (subtasksResult.error)  console.error("[tasks] subtasks query error:", subtasksResult.error.message);
+  if (activeResult.error) console.error("[tasks] active query error:", activeResult.error.message);
+  if (completedResult.error)
+    console.error("[tasks] completed query error:", completedResult.error.message);
+  if (subtasksResult.error)
+    console.error("[tasks] subtasks query error:", subtasksResult.error.message);
 
   const subtasksByParent = new Map<string, Task[]>();
   for (const s of (subtasksResult.data ?? []) as Task[]) {
@@ -203,20 +213,22 @@ export default async function TasksPage() {
     .map((t) => ({ ...t, subtasks: subtasksByParent.get(t.id) ?? [] }))
     .sort(
       (a, b) =>
-        (priorityOrder[a.priority ?? "low"] ?? 2) -
-        (priorityOrder[b.priority ?? "low"] ?? 2)
+        (priorityOrder[a.priority ?? "low"] ?? 2) - (priorityOrder[b.priority ?? "low"] ?? 2),
     );
   const completedTasks = (completedResult.data ?? []) as Task[];
 
-  const high   = tasks.filter((t) => t.priority === "high");
+  const high = tasks.filter((t) => t.priority === "high");
   const medium = tasks.filter((t) => t.priority === "medium");
-  const low    = tasks.filter((t) => t.priority === "low" || !t.priority);
+  const low = tasks.filter((t) => t.priority === "low" || !t.priority);
 
   return (
     <div className="max-w-2xl">
       {/* Header */}
       <div style={{ marginBottom: "var(--space-5)" }}>
-        <h1 className="font-heading font-semibold" style={{ fontSize: 24, color: "var(--color-text)" }}>
+        <h1
+          className="font-heading font-semibold"
+          style={{ fontSize: 24, color: "var(--color-text)" }}
+        >
           Tasks
         </h1>
         <p
@@ -235,9 +247,9 @@ export default async function TasksPage() {
       {tasks.length > 0 && (
         <div>
           {[
-            { label: "High",   items: high },
+            { label: "High", items: high },
             { label: "Medium", items: medium },
-            { label: "Low",    items: low },
+            { label: "Low", items: low },
           ].map(({ label, items }) =>
             items.length > 0 ? (
               <section
@@ -267,7 +279,7 @@ export default async function TasksPage() {
                   ))}
                 </div>
               </section>
-            ) : null
+            ) : null,
           )}
         </div>
       )}

@@ -54,7 +54,12 @@ function rangeForView(view: View, current: Date): { timeMin: string; timeMax: st
 
 function headerLabel(view: View, current: Date): string {
   if (view === "day") {
-    return current.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    return current.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   }
   if (view === "week") {
     const s = startOfWeek(current);
@@ -126,7 +131,9 @@ export default function CalendarView() {
       .catch(() => {
         if (!cancelled) setEvents([]);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [view, current, refreshKey]);
 
   function changeView(v: View) {

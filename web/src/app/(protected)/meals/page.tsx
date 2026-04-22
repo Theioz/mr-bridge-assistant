@@ -3,7 +3,12 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgoString, todayString } from "@/lib/timezone";
-import MealsClient, { type MealRow, type RecipeRow, type MacroGoals, type MacroTotals } from "@/components/meals/MealsClient";
+import MealsClient, {
+  type MealRow,
+  type RecipeRow,
+  type MacroGoals,
+  type MacroTotals,
+} from "@/components/meals/MealsClient";
 
 export const metadata: Metadata = {
   title: "Meals",
@@ -13,13 +18,17 @@ export const metadata: Metadata = {
 export default async function MealsPage() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const userId = user?.id;
 
   const [{ data: mealsData }, { data: recipesData }, { data: profileData }] = await Promise.all([
     supabase
       .from("meal_log")
-      .select("id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, recipes(name)")
+      .select(
+        "id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, recipes(name)",
+      )
       .gte("date", daysAgoString(6))
       .order("date", { ascending: false })
       .order("meal_type", { ascending: true }),
@@ -80,7 +89,10 @@ export default async function MealsPage() {
   return (
     <div className="max-w-2xl">
       <div style={{ marginBottom: "var(--space-5)" }}>
-        <h1 className="font-heading font-semibold" style={{ fontSize: "var(--t-h1)", color: "var(--color-text)" }}>
+        <h1
+          className="font-heading font-semibold"
+          style={{ fontSize: "var(--t-h1)", color: "var(--color-text)" }}
+        >
           Meals
         </h1>
         <p

@@ -43,7 +43,8 @@ export function ThemeToggle() {
         background: "transparent",
         color: "var(--color-text-muted)",
         border: "1px solid var(--color-border)",
-        transition: "color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
+        transition:
+          "color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)",
       }}
     >
       <Icon size={15} />

@@ -2,11 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 
-export default async function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,10 +13,7 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div
-      className="flex min-h-screen"
-      style={{ color: "var(--color-text)" }}
-    >
+    <div className="flex min-h-screen" style={{ color: "var(--color-text)" }}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg"

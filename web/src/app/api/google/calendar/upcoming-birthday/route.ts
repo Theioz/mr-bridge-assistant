@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface UpcomingBirthday {
   name: string;
-  date: string;       // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
   daysUntil: number;
 }
 
@@ -32,7 +32,9 @@ function personName(title: string): string {
 }
 
 /** Parse YYYY-MM-DD or ISO dateTime, return just the date portion as YYYY-MM-DD. */
-function parseEventDate(event: { start?: { date?: string | null; dateTime?: string | null } }): string | null {
+function parseEventDate(event: {
+  start?: { date?: string | null; dateTime?: string | null };
+}): string | null {
   const d = event.start?.date ?? event.start?.dateTime;
   if (!d) return null;
   return d.slice(0, 10);
@@ -40,7 +42,9 @@ function parseEventDate(event: { start?: { date?: string | null; dateTime?: stri
 
 export async function GET() {
   const serverClient = await createClient();
-  const { data: { user } } = await serverClient.auth.getUser();
+  const {
+    data: { user },
+  } = await serverClient.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -61,14 +65,14 @@ export async function GET() {
     const timeMin = `${today}T00:00:00${offset}`;
 
     const lookaheadDate = new Date(Date.now() + 60 * 86_400_000);
-    const lookaheadStr = new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(lookaheadDate);
+    const lookaheadStr = new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(
+      lookaheadDate,
+    );
     const timeMax = `${lookaheadStr}T23:59:59${offset}`;
 
     const calListRes = await calendar.calendarList.list({ minAccessRole: "reader" });
     const excluded = await getExcludedCalendarIds(serverClient, user.id);
-    const calendars = (calListRes.data.items ?? []).filter(
-      (c) => !excluded.has(c.id ?? ""),
-    );
+    const calendars = (calListRes.data.items ?? []).filter((c) => !excluded.has(c.id ?? ""));
 
     const candidates: UpcomingBirthday[] = [];
 
@@ -91,14 +95,14 @@ export async function GET() {
             const dateStr = parseEventDate(e);
             if (!dateStr) continue;
             const daysUntil = Math.round(
-              (new Date(dateStr).getTime() - new Date(today).getTime()) / 86_400_000
+              (new Date(dateStr).getTime() - new Date(today).getTime()) / 86_400_000,
             );
             candidates.push({ name: personName(title), date: dateStr, daysUntil });
           }
         } catch {
           // non-accessible calendar — skip
         }
-      })
+      }),
     );
 
     if (candidates.length === 0) {

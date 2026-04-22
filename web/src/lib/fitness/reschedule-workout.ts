@@ -35,7 +35,9 @@ export async function rescheduleWorkout({
   if (fetchErr) return err(fetchErr.message);
   if (!source) return err(`No workout plan found for ${from_date}.`);
   if (source.status !== "planned") {
-    return err(`Cannot reschedule a workout with status "${source.status}". Only 'planned' workouts can be rescheduled.`);
+    return err(
+      `Cannot reschedule a workout with status "${source.status}". Only 'planned' workouts can be rescheduled.`,
+    );
   }
 
   // Reject if a non-cancelled plan already exists at target date
@@ -46,7 +48,9 @@ export async function rescheduleWorkout({
     .eq("date", to_date)
     .single();
   if (targetExisting && targetExisting.status !== "cancelled") {
-    return err(`A workout already exists for ${to_date} (status: ${targetExisting.status}). Cancel or reschedule it first.`);
+    return err(
+      `A workout already exists for ${to_date} (status: ${targetExisting.status}). Cancel or reschedule it first.`,
+    );
   }
 
   // Insert new plan at target date (upsert handles the cancelled-row case)
@@ -66,7 +70,7 @@ export async function rescheduleWorkout({
         cancelled_at: null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id,date" }
+      { onConflict: "user_id,date" },
     )
     .select()
     .single();
@@ -90,7 +94,9 @@ export async function rescheduleWorkout({
     .single();
   if (cancelErr) return err(`New plan created but failed to cancel source: ${cancelErr.message}`);
   if (!cancelledSource || cancelledSource.status !== "cancelled") {
-    return err(`New plan created but source cancel read-back failed — check ${from_date} manually.`);
+    return err(
+      `New plan created but source cancel read-back failed — check ${from_date} manually.`,
+    );
   }
 
   // Move calendar event to new date if one exists

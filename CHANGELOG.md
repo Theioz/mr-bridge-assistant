@@ -8,6 +8,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Pre-commit hook via husky + lint-staged (#354).** ESLint (--fix) and Prettier run on staged files before every local commit. All four token guards (hover handlers, hardcoded white, color-mix(), raw hex) also run via `scripts/lint-tokens.sh` so local behaviour matches CI. The hook is non-interactive and bypassed cleanly by `git commit --no-verify`. Installed automatically on `cd web && npm install`.
+- **Prettier code-formatting with explicit config (#355).** `printWidth: 100`, `trailingComma: "all"` (all other defaults kept). `eslint-config-prettier` added as the last entry in `web/eslint.config.mjs` to disable conflicting stylistic ESLint rules. CI enforces formatting via `npm run format:check` added to the `eslint` workflow job. Use `cd web && npm run format` to reformat locally.
+
+### Changed
+- **Resolved token-lint scope question (#357).** `scripts/lint-tokens.sh` stays as a separate CI bash script — ESLint cannot natively scan `.css` files (Guards 2–3 cover `color-mix()` and `color:"white"` in CSS), so folding into ESLint would add a plugin dependency without reducing the tool count. Decision documented in the script header.
+
 - **Per-provider last-sync timestamp and Sync Now button in Integrations settings (#422).**
   - Each connected provider (Google, Oura, Fitbit) now shows when data was last pulled — "Synced 3h ago", "Never synced", or "Failed 12m ago" (in danger color for error/partial status).
   - Oura and Fitbit rows include a Sync Now button that POSTs to the existing `/api/sync/{oura,fitbit}` routes, shows a "Syncing…" spinner, and updates the timestamp optimistically on completion.

@@ -33,14 +33,19 @@ export async function POST(req: Request) {
     return Response.json({ error: "exercise_name is required" }, { status: 400 });
   }
   if (!Number.isFinite(body.exercise_order) || !Number.isFinite(body.set_number)) {
-    return Response.json({ error: "exercise_order and set_number must be numbers" }, { status: 400 });
+    return Response.json(
+      { error: "exercise_order and set_number must be numbers" },
+      { status: 400 },
+    );
   }
   if (body.rpe != null && (body.rpe < 1 || body.rpe > 10)) {
     return Response.json({ error: "rpe must be between 1 and 10" }, { status: 400 });
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const performedOn = body.performed_on ?? todayString();
@@ -71,7 +76,10 @@ export async function POST(req: Request) {
       .select("id")
       .single();
     if (createErr || !created) {
-      return Response.json({ error: createErr?.message ?? "failed to create session" }, { status: 500 });
+      return Response.json(
+        { error: createErr?.message ?? "failed to create session" },
+        { status: 500 },
+      );
     }
     sessionId = created.id;
   }
@@ -112,7 +120,9 @@ export async function PATCH(req: Request) {
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const updates: Record<string, unknown> = {
@@ -144,13 +154,12 @@ export async function DELETE(req: Request) {
   if (!setId) return Response.json({ error: "set_id query param is required" }, { status: 400 });
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase
-    .from("strength_session_sets")
-    .delete()
-    .eq("id", setId);
+  const { error } = await supabase.from("strength_session_sets").delete().eq("id", setId);
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });

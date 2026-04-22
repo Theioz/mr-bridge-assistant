@@ -34,9 +34,17 @@ export function buildFitnessTools({ supabase, userId }: ToolContext) {
           .select("date, avg_hrv, resting_hr, sleep_score, readiness, source")
           .order("date", { ascending: false })
           .limit(1);
-        if (userId) { bodyQ = bodyQ.eq("user_id", userId); workQ = workQ.eq("user_id", userId); recQ = recQ.eq("user_id", userId); }
+        if (userId) {
+          bodyQ = bodyQ.eq("user_id", userId);
+          workQ = workQ.eq("user_id", userId);
+          recQ = recQ.eq("user_id", userId);
+        }
 
-        const [bodyCompResult, workoutsResult, recoveryResult] = await Promise.all([bodyQ, workQ, recQ]);
+        const [bodyCompResult, workoutsResult, recoveryResult] = await Promise.all([
+          bodyQ,
+          workQ,
+          recQ,
+        ]);
 
         return {
           body_composition: bodyCompResult.data ?? [],

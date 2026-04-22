@@ -37,7 +37,8 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
           transform: `scaleX(${clamped / 100})`,
           transformOrigin: "left center",
           background: color,
-          transition: "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
+          transition:
+            "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
           willChange: "transform",
         }}
       />
@@ -61,9 +62,7 @@ function MacroRow({ macro }: { macro: Macro }) {
         <div className="flex items-baseline gap-1.5">
           <span style={{ fontSize: 13, color: "var(--color-text)" }}>
             {macro.consumed}
-            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>
-              {macro.unit}
-            </span>
+            <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>{macro.unit}</span>
           </span>
           <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/</span>
           <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
@@ -126,13 +125,31 @@ export default async function MacroSummaryCard() {
       carbs_g: acc.carbs_g + (row.carbs_g ?? 0),
       fat_g: acc.fat_g + (row.fat_g ?? 0),
     }),
-    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
 
   const macros: Macro[] = [
-    { key: "calories", label: "Calories", unit: " kcal", consumed: totals.calories, goal: calorieGoal },
-    { key: "protein", label: "Protein", unit: "g", consumed: Math.round(totals.protein_g), goal: proteinGoal },
-    { key: "carbs", label: "Carbs", unit: "g", consumed: Math.round(totals.carbs_g), goal: carbsGoal },
+    {
+      key: "calories",
+      label: "Calories",
+      unit: " kcal",
+      consumed: totals.calories,
+      goal: calorieGoal,
+    },
+    {
+      key: "protein",
+      label: "Protein",
+      unit: "g",
+      consumed: Math.round(totals.protein_g),
+      goal: proteinGoal,
+    },
+    {
+      key: "carbs",
+      label: "Carbs",
+      unit: "g",
+      consumed: Math.round(totals.carbs_g),
+      goal: carbsGoal,
+    },
     { key: "fat", label: "Fat", unit: "g", consumed: Math.round(totals.fat_g), goal: fatGoal },
   ];
 
@@ -142,7 +159,8 @@ export default async function MacroSummaryCard() {
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
-        transition: "border-color var(--motion-base) var(--ease-out-quart), box-shadow var(--motion-base) var(--ease-out-quart), transform var(--motion-base) var(--ease-out-quart)",
+        transition:
+          "border-color var(--motion-base) var(--ease-out-quart), box-shadow var(--motion-base) var(--ease-out-quart), transform var(--motion-base) var(--ease-out-quart)",
       }}
     >
       <p
@@ -157,21 +175,21 @@ export default async function MacroSummaryCard() {
           No nutrition goals set.{" "}
           <Link
             href="/settings"
-            style={{ color: "var(--accent-text)", textDecoration: "underline", textUnderlineOffset: 2 }}
+            style={{
+              color: "var(--accent-text)",
+              textDecoration: "underline",
+              textUnderlineOffset: 2,
+            }}
           >
             Configure goals in Settings
           </Link>{" "}
           to track progress here.
         </p>
       ) : !hasData ? (
-        <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>
-          No macro data yet today
-        </p>
+        <p style={{ fontSize: 14, color: "var(--color-text-faint)" }}>No macro data yet today</p>
       ) : (
         <div className="space-y-4">
-          {macros.map((m) =>
-            m.goal !== null ? <MacroRow key={m.key} macro={m} /> : null
-          )}
+          {macros.map((m) => (m.goal !== null ? <MacroRow key={m.key} macro={m} /> : null))}
         </div>
       )}
     </div>

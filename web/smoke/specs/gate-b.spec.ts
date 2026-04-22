@@ -154,7 +154,9 @@ test.describe("touch targets — 375px", () => {
     }
   });
 
-  test("header theme-toggle button ≥ 32px (design spec) — desktop sidebar", async ({ signedInPage: page }) => {
+  test("header theme-toggle button ≥ 32px (design spec) — desktop sidebar", async ({
+    signedInPage: page,
+  }) => {
     // ThemeToggle is in the desktop sidebar (hidden lg:flex) — visible at ≥1024px,
     // and in the mobile "More" bottom sheet at <1024px (requires sheet open to access).
     // Test at 1024px where it's directly visible.
@@ -179,7 +181,9 @@ test.describe("touch targets — 375px", () => {
 
     // WindowSelector is hidden on mobile (hidden lg:block) — confirm it is NOT rendered
     // (regression guard: if it leaks into mobile it overflows)
-    const selector = page.locator("[data-testid='window-selector'], [aria-label*='window' i], [aria-label*='Window' i]");
+    const selector = page.locator(
+      "[data-testid='window-selector'], [aria-label*='window' i], [aria-label*='Window' i]",
+    );
     const count = await selector.count();
     if (count > 0) {
       const visible = await selector.first().isVisible();
@@ -202,10 +206,9 @@ test.describe("regression #258 — mobile dashboard header at 375px", () => {
     await expect(masthead).toBeVisible();
     const mastheadBox = await masthead.boundingBox();
     const vpWidth = MOBILE_VP.width;
-    expect(
-      mastheadBox!.width,
-      "Masthead wider than viewport at 375px",
-    ).toBeLessThanOrEqual(vpWidth);
+    expect(mastheadBox!.width, "Masthead wider than viewport at 375px").toBeLessThanOrEqual(
+      vpWidth,
+    );
 
     // "Mr. Bridge" brand text visible in the main-content masthead.
     // Scope to <main> so we don't match the Nav sidebar's "Mr. Bridge" span
@@ -223,7 +226,10 @@ test.describe("regression #259 — sports card vertical stacking", () => {
     // The sports/scores section uses grid-cols-1 at mobile, lg:grid-cols-2 at desktop.
     // Verify there is no horizontal scroll (proxy for no side-by-side overflow).
     const overflow = await hasNoHorizontalOverflow(page);
-    expect(overflow, "Dashboard has horizontal scroll at 375px (sports card may not be stacking)").toBe(true);
+    expect(
+      overflow,
+      "Dashboard has horizontal scroll at 375px (sports card may not be stacking)",
+    ).toBe(true);
   });
 });
 

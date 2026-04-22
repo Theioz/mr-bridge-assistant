@@ -10,21 +10,25 @@ self.addEventListener("install", () => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
 function isCacheableStatic(url) {
   if (url.origin === self.location.origin) {
-    return url.pathname.startsWith("/_next/static/") ||
-           url.pathname === "/icon.svg" ||
-           url.pathname.startsWith("/icon-") ||
-           url.pathname === "/manifest.json";
+    return (
+      url.pathname.startsWith("/_next/static/") ||
+      url.pathname === "/icon.svg" ||
+      url.pathname.startsWith("/icon-") ||
+      url.pathname === "/manifest.json"
+    );
   }
-  return url.origin === "https://fonts.googleapis.com" ||
-         url.origin === "https://fonts.gstatic.com";
+  return (
+    url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com"
+  );
 }
 
 self.addEventListener("fetch", (event) => {
@@ -48,6 +52,6 @@ self.addEventListener("fetch", (event) => {
         if (cached) return cached;
         throw err;
       }
-    })
+    }),
   );
 });

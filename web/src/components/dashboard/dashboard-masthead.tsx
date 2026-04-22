@@ -43,10 +43,7 @@ export default function DashboardMasthead({
           <WindowSelector current={windowKey} />
         </div>
         <div className="print:hidden">
-          <MastheadRefresh
-            refreshStocks={refreshStocks}
-            refreshSports={refreshSports}
-          />
+          <MastheadRefresh refreshStocks={refreshStocks} refreshSports={refreshSports} />
         </div>
       </div>
     </header>

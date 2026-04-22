@@ -80,9 +80,7 @@ export function FitnessSettings({ restTimerEnabled, updateAction }: Props) {
             color: "var(--color-text-faint)",
           }}
         >
-          {restTimerEnabled
-            ? "Auto-starts after each logged set"
-            : "Rest timer disabled"}
+          {restTimerEnabled ? "Auto-starts after each logged set" : "Rest timer disabled"}
         </span>
       </div>
     </section>

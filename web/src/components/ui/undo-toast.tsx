@@ -28,22 +28,22 @@ export function UndoToastProvider({ children }: { children: React.ReactNode }) {
     setToast(null);
   }, []);
 
-  const show = useCallback(
-    (message: string, onUndo: () => void, durationMs = 5000) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      const id = ++idRef.current;
-      setToast({ id, message, onUndo, durationMs });
-      timerRef.current = setTimeout(() => {
-        setToast((t) => (t && t.id === id ? null : t));
-        timerRef.current = null;
-      }, durationMs);
-    },
-    []
-  );
-
-  useEffect(() => () => {
+  const show = useCallback((message: string, onUndo: () => void, durationMs = 5000) => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    const id = ++idRef.current;
+    setToast({ id, message, onUndo, durationMs });
+    timerRef.current = setTimeout(() => {
+      setToast((t) => (t && t.id === id ? null : t));
+      timerRef.current = null;
+    }, durationMs);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   return (
     <ToastContext.Provider value={{ show }}>

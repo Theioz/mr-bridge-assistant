@@ -1,0 +1,3 @@
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+(cd "$REPO_ROOT/web" && npx lint-staged)
+bash "$REPO_ROOT/scripts/lint-tokens.sh"

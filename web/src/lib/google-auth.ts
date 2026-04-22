@@ -13,13 +13,7 @@ export class GoogleNotConnectedError extends Error {
  * Returns an OAuth2 client authenticated with the user's stored refresh token.
  * Throws GoogleNotConnectedError if no DB row exists for this user.
  */
-export async function getGoogleAuthClient({
-  db,
-  userId,
-}: {
-  db: SupabaseClient;
-  userId: string;
-}) {
+export async function getGoogleAuthClient({ db, userId }: { db: SupabaseClient; userId: string }) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {

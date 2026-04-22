@@ -6,7 +6,8 @@ import type { ToolContext } from "./_context";
 export function buildHabitsTools({ supabase, userId }: ToolContext) {
   return {
     get_habits_today: tool({
-      description: "Get all active habits and their completion status for today (or a specified date).",
+      description:
+        "Get all active habits and their completion status for today (or a specified date).",
       inputSchema: jsonSchema<{ date?: string }>({
         type: "object",
         properties: {
@@ -15,22 +16,35 @@ export function buildHabitsTools({ supabase, userId }: ToolContext) {
       }),
       execute: async ({ date }) => {
         const targetDate = date ?? todayString();
-        let regQ = supabase.from("habit_registry").select("id, name, emoji, category").eq("active", true);
-        let logQ = supabase.from("habits").select("habit_id, completed, notes").eq("date", targetDate);
-        if (userId) { regQ = regQ.eq("user_id", userId); logQ = logQ.eq("user_id", userId); }
+        let regQ = supabase
+          .from("habit_registry")
+          .select("id, name, emoji, category")
+          .eq("active", true);
+        let logQ = supabase
+          .from("habits")
+          .select("habit_id, completed, notes")
+          .eq("date", targetDate);
+        if (userId) {
+          regQ = regQ.eq("user_id", userId);
+          logQ = logQ.eq("user_id", userId);
+        }
         const [registryResult, logsResult] = await Promise.all([regQ, logQ]);
         if (registryResult.error) return { error: registryResult.error.message };
         const logMap = new Map(
-          (logsResult.data ?? []).map((l: { habit_id: string; completed: boolean; notes: string | null }) => [l.habit_id, l])
+          (logsResult.data ?? []).map(
+            (l: { habit_id: string; completed: boolean; notes: string | null }) => [l.habit_id, l],
+          ),
         );
-        return (registryResult.data ?? []).map((h: { id: string; name: string; emoji: string | null; category: string | null }) => ({
-          id: h.id,
-          name: h.name,
-          emoji: h.emoji,
-          category: h.category,
-          completed: logMap.get(h.id)?.completed ?? false,
-          notes: logMap.get(h.id)?.notes ?? null,
-        }));
+        return (registryResult.data ?? []).map(
+          (h: { id: string; name: string; emoji: string | null; category: string | null }) => ({
+            id: h.id,
+            name: h.name,
+            emoji: h.emoji,
+            category: h.category,
+            completed: logMap.get(h.id)?.completed ?? false,
+            notes: logMap.get(h.id)?.notes ?? null,
+          }),
+        );
       },
     }),
 
@@ -71,22 +85,28 @@ export function buildHabitsTools({ supabase, userId }: ToolContext) {
           const activeNames = (active ?? []).map((h: { name: string }) => h.name);
           return err(
             `No active habit matching "${name}" found. ` +
-            `User's actual active habits: ${activeNames.length ? activeNames.join(", ") : "(none)"}. ` +
-            `Suggest one of these, or propose creating a new habit — do not invent names.`
+              `User's actual active habits: ${activeNames.length ? activeNames.join(", ") : "(none)"}. ` +
+              `Suggest one of these, or propose creating a new habit — do not invent names.`,
           );
         }
         const habit = habits[0];
         const { data, error: upsertError } = await supabase
           .from("habits")
           .upsert(
-            { user_id: userId, habit_id: habit.id, date: targetDate, completed: true, notes: notes ?? null },
+            {
+              user_id: userId,
+              habit_id: habit.id,
+              date: targetDate,
+              completed: true,
+              notes: notes ?? null,
+            },
             // Migration 20260417000001 rekeyed the unique constraint from
             // (habit_id, date) to (user_id, habit_id, date). The other two
             // call sites were updated (seed_demo.py, cron/reset-demo) — this
             // one was missed, so every chat log_habit has been failing with
             // "no unique or exclusion constraint matching..." since that
             // migration landed.
-            { onConflict: "user_id,habit_id,date" }
+            { onConflict: "user_id,habit_id,date" },
           )
           .select("habit_id, date, completed, notes")
           .single();

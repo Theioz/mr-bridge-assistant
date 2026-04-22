@@ -41,7 +41,12 @@ interface MonthViewProps {
   onEventClick: (event: CalendarRangeEvent) => void;
 }
 
-export default function MonthView({ events, currentDate, onSlotClick, onEventClick }: MonthViewProps) {
+export default function MonthView({
+  events,
+  currentDate,
+  onSlotClick,
+  onEventClick,
+}: MonthViewProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const days = buildMonthGrid(year, month);
@@ -71,7 +76,9 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
           const key = isoDate(day);
           const isCurrentMonth = day.getMonth() === month;
           const isToday = key === todayStr;
-          const dayEvents = (eventsByDate[key] ?? []).sort((a, b) => a.start.localeCompare(b.start));
+          const dayEvents = (eventsByDate[key] ?? []).sort((a, b) =>
+            a.start.localeCompare(b.start),
+          );
           const visible = dayEvents.slice(0, MAX_VISIBLE);
           const overflow = dayEvents.length - MAX_VISIBLE;
           const dow = idx % 7; // 0=Sun … 6=Sat
@@ -155,7 +162,10 @@ export default function MonthView({ events, currentDate, onSlotClick, onEventCli
                   >
                     {!e.allDay && (
                       <span style={{ opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>
-                        {new Date(e.start).toLocaleTimeString("en-US", { hour: "numeric", hour12: true }).replace(" AM", "a").replace(" PM", "p")}{" "}
+                        {new Date(e.start)
+                          .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
+                          .replace(" AM", "a")
+                          .replace(" PM", "p")}{" "}
                       </span>
                     )}
                     {e.title}

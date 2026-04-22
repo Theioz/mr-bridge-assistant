@@ -123,7 +123,7 @@ export interface Recipe {
 export interface MealLog {
   id: string;
   date: string;
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack' | null;
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack" | null;
   recipe_id: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;

@@ -54,7 +54,7 @@ export async function POST() {
           exercise: z.string(),
           description: z.string(),
           tips: z.array(z.string()),
-        })
+        }),
       ),
     }),
     prompt:

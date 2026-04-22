@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { WorkoutSession } from "@/lib/types";
 
 interface Props {
@@ -46,17 +40,8 @@ function calcEndTime(startTime: string | null, durationMins: number | null): str
   return `${h12}:${String(endM).padStart(2, "0")} ${ampm}`;
 }
 
-function SortIcon({
-  col,
-  sortKey,
-  dir,
-}: {
-  col: SortKey;
-  sortKey: SortKey;
-  dir: SortDir;
-}) {
-  if (col !== sortKey)
-    return <ChevronsUpDown size={12} style={{ opacity: 0.3 }} />;
+function SortIcon({ col, sortKey, dir }: { col: SortKey; sortKey: SortKey; dir: SortDir }) {
+  if (col !== sortKey) return <ChevronsUpDown size={12} style={{ opacity: 0.3 }} />;
   return dir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
 }
 
@@ -76,15 +61,10 @@ export function WorkoutHistoryTable({ workouts }: Props) {
     setPage(0);
   }
 
-  const activityTypes = [
-    "All",
-    ...Array.from(new Set(workouts.map((w) => w.activity))).sort(),
-  ];
+  const activityTypes = ["All", ...Array.from(new Set(workouts.map((w) => w.activity))).sort()];
 
   const filtered =
-    activityFilter === "All"
-      ? workouts
-      : workouts.filter((w) => w.activity === activityFilter);
+    activityFilter === "All" ? workouts : workouts.filter((w) => w.activity === activityFilter);
 
   const sorted = [...filtered].sort((a, b) => {
     const av = a[sortKey] ?? "";
@@ -121,10 +101,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
   };
 
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-3)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2
           style={{
@@ -176,9 +153,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                     padding: "0 var(--space-3)",
                     borderRadius: "var(--r-1)",
                     background: active ? "var(--accent)" : "transparent",
-                    color: active
-                      ? "var(--color-text-on-cta)"
-                      : "var(--color-text-muted)",
+                    color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
                     border: `1px solid ${active ? "var(--accent)" : "var(--rule)"}`,
                     textTransform: "capitalize",
                     transition:
@@ -192,10 +167,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
           </div>
 
           <div className="overflow-x-auto">
-            <table
-              className="w-full"
-              style={{ borderCollapse: "collapse", minWidth: 700 }}
-            >
+            <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 700 }}>
               <thead>
                 <tr>
                   {(
@@ -214,9 +186,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                     >
                       <span className="flex items-center gap-1">
                         {label}
-                        {sortable && (
-                          <SortIcon col={key} sortKey={sortKey} dir={sortDir} />
-                        )}
+                        {sortable && <SortIcon col={key} sortKey={sortKey} dir={sortDir} />}
                       </span>
                     </th>
                   ))}
@@ -231,7 +201,10 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                   return (
                     <tr key={i}>
                       <td style={{ ...tdBase, color: "var(--color-text-muted)" }}>
-                        <div className="tnum" style={{ paddingBottom: hrZones ? 6 : "var(--space-2)" }}>
+                        <div
+                          className="tnum"
+                          style={{ paddingBottom: hrZones ? 6 : "var(--space-2)" }}
+                        >
                           {fmtDate(w.date)}
                         </div>
                         {hrZones && (
@@ -262,34 +235,19 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                           <div style={{ paddingBottom: "var(--space-2)", paddingTop: 2 }} />
                         )}
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
-                      >
+                      <td className="tnum" style={{ ...tdBase, color: "var(--color-text-muted)" }}>
                         {w.duration_mins != null ? `${w.duration_mins}m` : "—"}
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
-                      >
+                      <td className="tnum" style={{ ...tdBase, color: "var(--color-text-muted)" }}>
                         {w.calories != null ? `${w.calories}` : "—"}
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
-                      >
+                      <td className="tnum" style={{ ...tdBase, color: "var(--color-text-muted)" }}>
                         {w.avg_hr != null ? `${w.avg_hr} bpm` : "—"}
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
-                      >
+                      <td className="tnum" style={{ ...tdBase, color: "var(--color-text-muted)" }}>
                         {fmtTime(w.start_time)}
                       </td>
-                      <td
-                        className="tnum"
-                        style={{ ...tdBase, color: "var(--color-text-muted)" }}
-                      >
+                      <td className="tnum" style={{ ...tdBase, color: "var(--color-text-muted)" }}>
                         {calcEndTime(w.start_time, w.duration_mins)}
                       </td>
                       <td style={tdBase}>
@@ -336,8 +294,7 @@ export function WorkoutHistoryTable({ workouts }: Props) {
                   color: "var(--color-text-muted)",
                 }}
               >
-                {page * PAGE_SIZE + 1}–
-                {Math.min((page + 1) * PAGE_SIZE, sorted.length)} of{" "}
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of{" "}
                 {sorted.length} · Page {page + 1} of {totalPages}
               </span>
               <div className="flex" style={{ gap: "var(--space-2)" }}>

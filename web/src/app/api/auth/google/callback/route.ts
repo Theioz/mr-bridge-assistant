@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
 
   // Require authenticated user
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
   }
@@ -67,9 +69,7 @@ export async function GET(req: NextRequest) {
       scopes: grantedScopes,
     });
   } catch {
-    return NextResponse.redirect(
-      new URL("/settings?error=google_store", req.nextUrl.origin),
-    );
+    return NextResponse.redirect(new URL("/settings?error=google_store", req.nextUrl.origin));
   }
 
   return NextResponse.redirect(new URL(SETTINGS_URL, req.nextUrl.origin));

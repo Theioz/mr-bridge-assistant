@@ -69,9 +69,7 @@ export default function SessionSidebar({
     >
       <div
         style={{
-          padding: expanded
-            ? "var(--space-2) var(--space-3) 0"
-            : "var(--space-2) var(--space-1) 0",
+          padding: expanded ? "var(--space-2) var(--space-3) 0" : "var(--space-2) var(--space-1) 0",
           display: "flex",
           justifyContent: expanded ? "flex-end" : "center",
         }}
@@ -179,11 +177,7 @@ export default function SessionSidebar({
 
               {archivedExpanded &&
                 archivedSessions.map((s) => (
-                  <ArchivedRow
-                    key={`${s.id}-${timeTick}`}
-                    session={s}
-                    onRestore={onRestore}
-                  />
+                  <ArchivedRow key={`${s.id}-${timeTick}`} session={s} onRestore={onRestore} />
                 ))}
             </>
           )}
@@ -257,10 +251,7 @@ function SessionRow({
     transition: rowTransition,
   };
   return (
-    <div
-      className={`group/row ${active ? "" : "hover-bg-subtle"}`}
-      style={rowStyle}
-    >
+    <div className={`group/row ${active ? "" : "hover-bg-subtle"}`} style={rowStyle}>
       {active && (
         <span
           aria-hidden

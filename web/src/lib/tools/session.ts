@@ -9,11 +9,15 @@ import type { ToolContext } from "./_context";
 export function buildSessionTools({ supabase, sessionId }: ToolContext) {
   return {
     get_session_history: tool({
-      description: "Fetch earlier messages from this chat session. Use when the user references something said earlier that isn't in the current context window. Always ask the user before calling: \"Should I pull earlier messages from this session for more context?\"",
+      description:
+        'Fetch earlier messages from this chat session. Use when the user references something said earlier that isn\'t in the current context window. Always ask the user before calling: "Should I pull earlier messages from this session for more context?"',
       inputSchema: jsonSchema<{ limit?: number }>({
         type: "object",
         properties: {
-          limit: { type: "number", description: "How many messages to fetch (max 40). Defaults to 20." },
+          limit: {
+            type: "number",
+            description: "How many messages to fetch (max 40). Defaults to 20.",
+          },
         },
       }),
       execute: async ({ limit = 20 }) => {

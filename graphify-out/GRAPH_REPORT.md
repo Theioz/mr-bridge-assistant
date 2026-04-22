@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-21)
 
 ## Corpus Check
-- 228 files · ~582,963 words
+- 228 files · ~583,454 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 857 nodes · 1053 edges · 141 communities detected
-- Extraction: 80% EXTRACTED · 20% INFERRED · 0% AMBIGUOUS · INFERRED: 214 edges (avg confidence: 0.8)
+- 859 nodes · 1058 edges · 139 communities detected
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 217 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -149,11 +149,9 @@
 - [[_COMMUNITY_Community 136|Community 136]]
 - [[_COMMUNITY_Community 137|Community 137]]
 - [[_COMMUNITY_Community 138|Community 138]]
-- [[_COMMUNITY_Community 139|Community 139]]
-- [[_COMMUNITY_Community 140|Community 140]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `createClient()` - 71 edges
+1. `createClient()` - 72 edges
 2. `POST@chat/route.ts` - 20 edges
 3. `todayString()` - 20 edges
 4. `main()` - 19 edges
@@ -169,22 +167,22 @@
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/server.ts
 - `todayString()` --calls--> `makeDemo()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/timezone.ts → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/tools/calendar.ts
+- `ProtectedLayout()` --calls--> `createClient()`  [INFERRED]
+  /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/layout.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/server.ts
 - `saveJournalEntry()` --calls--> `createClient()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/journal/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/server.ts
 - `updateProfile()` --calls--> `createClient()`  [INFERRED]
-  /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/settings/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/server.ts
-- `deleteProfile()` --calls--> `createClient()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/settings/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/server.ts
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (65): backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), lastSyncAgeSecs(), addEquipment(), addHabit(), addSubtask() (+57 more)
+Nodes (66): backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), ProtectedLayout(), lastSyncAgeSecs(), addEquipment(), addHabit() (+58 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
-Nodes (36): getISOWeekKey(), getISOWeekLabel(), latestLabel(), getExcludedCalendarIds(), fmtTime(), ouraGet(), secsToHrs(), secsToMins() (+28 more)
+Nodes (36): getISOWeekKey(), getISOWeekLabel(), latestLabel(), formatDate(), getExcludedCalendarIds(), MomentumLine(), fmtTime(), ouraGet() (+28 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.05
@@ -243,7 +241,7 @@ Cohesion: 0.26
 Nodes (12): discover_body_datasources(), existing_dates(), fetch_body_composition(), fit_get(), fit_post(), get_credentials(), main(), print_probe() (+4 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (0): 
 
 ### Community 17 - "Community 17"
@@ -255,92 +253,92 @@ Cohesion: 0.22
 Nodes (0): 
 
 ### Community 19 - "Community 19"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (0): 
 
 ### Community 20 - "Community 20"
 Cohesion: 0.29
-Nodes (0): 
+Nodes (2): fmtShortDate(), fmtWeekRange()
 
 ### Community 21 - "Community 21"
 Cohesion: 0.29
 Nodes (0): 
 
 ### Community 22 - "Community 22"
-Cohesion: 0.33
-Nodes (2): clearLongPress(), handleTouchStart()
-
-### Community 23 - "Community 23"
-Cohesion: 0.33
-Nodes (2): datePreview(), formatShortDate()
-
-### Community 24 - "Community 24"
 Cohesion: 0.29
 Nodes (0): 
 
+### Community 23 - "Community 23"
+Cohesion: 0.33
+Nodes (2): clearLongPress(), handleTouchStart()
+
+### Community 24 - "Community 24"
+Cohesion: 0.33
+Nodes (2): datePreview(), formatShortDate()
+
 ### Community 25 - "Community 25"
+Cohesion: 0.29
+Nodes (0): 
+
+### Community 26 - "Community 26"
 Cohesion: 0.38
 Nodes (4): apiKey(), sportsDbGet(), startTime(), toGame()
 
-### Community 26 - "Community 26"
+### Community 27 - "Community 27"
 Cohesion: 0.47
 Nodes (3): confirmProposal(), dashOr(), round()
 
-### Community 27 - "Community 27"
+### Community 28 - "Community 28"
 Cohesion: 0.47
 Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
 
-### Community 28 - "Community 28"
+### Community 29 - "Community 29"
 Cohesion: 0.47
 Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
 
-### Community 29 - "Community 29"
+### Community 30 - "Community 30"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 30 - "Community 30"
+### Community 31 - "Community 31"
 Cohesion: 0.4
 Nodes (2): getSnapshot(), readColors()
 
-### Community 31 - "Community 31"
+### Community 32 - "Community 32"
 Cohesion: 0.6
 Nodes (5): existing_dates(), find_col(), insert_rows_after_table(), main(), parse_date()
 
-### Community 32 - "Community 32"
+### Community 33 - "Community 33"
 Cohesion: 0.5
 Nodes (3): async(), load(), onVisibility()
 
-### Community 33 - "Community 33"
+### Community 34 - "Community 34"
 Cohesion: 0.6
 Nodes (3): handleFreeWriteChange(), handleResponseChange(), scheduleAutoSave()
 
-### Community 34 - "Community 34"
+### Community 35 - "Community 35"
 Cohesion: 0.4
 Nodes (0): 
-
-### Community 35 - "Community 35"
-Cohesion: 0.5
-Nodes (2): formatItem(), titleCase()
 
 ### Community 36 - "Community 36"
-Cohesion: 0.4
-Nodes (0): 
+Cohesion: 0.5
+Nodes (2): formatItem(), titleCase()
 
 ### Community 37 - "Community 37"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
 ### Community 38 - "Community 38"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 39 - "Community 39"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.83
 Nodes (3): handleDemoLogin(), handleSubmit(), signIn()
+
+### Community 40 - "Community 40"
+Cohesion: 0.5
+Nodes (0): 
 
 ### Community 41 - "Community 41"
 Cohesion: 0.5
@@ -734,14 +732,6 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 139 - "Community 139"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 140 - "Community 140"
-Cohesion: 1.0
-Nodes (0): 
-
 ## Knowledge Gaps
 - **55 isolated node(s):** `GET@callback/route.ts`, `GET@validate/route.ts`, `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.` (+50 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -783,57 +773,57 @@ Nodes (0):
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 78`** (2 nodes): `handleSubmit()`, `event-modal.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (2 nodes): `Sparkline()`, `sparkline.tsx`
+- **Thin community `Community 79`** (2 nodes): `SessionSheet()`, `session-sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
+- **Thin community `Community 80`** (2 nodes): `Sparkline()`, `sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (2 nodes): `EmptyState()`, `empty-state.tsx`
+- **Thin community `Community 81`** (2 nodes): `DashboardGreeting()`, `dashboard-greeting.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
+- **Thin community `Community 82`** (2 nodes): `EmptyState()`, `empty-state.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
+- **Thin community `Community 83`** (2 nodes): `formatDisplayDate()`, `upcoming-birthday.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (2 nodes): `watchlist-widget.tsx`, `Sparkline()`
+- **Thin community `Community 84`** (2 nodes): `parseTimeToMinutes()`, `schedule-today.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (2 nodes): `handleToggle()`, `habits-checkin.tsx`
+- **Thin community `Community 85`** (2 nodes): `watchlist-widget.tsx`, `Sparkline()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
+- **Thin community `Community 86`** (2 nodes): `handleToggle()`, `habits-checkin.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
+- **Thin community `Community 87`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
+- **Thin community `Community 88`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
+- **Thin community `Community 89`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (2 nodes): `window.ts`, `getWindow()`
+- **Thin community `Community 90`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (2 nodes): `createClient()`, `client.ts`
+- **Thin community `Community 91`** (2 nodes): `window.ts`, `getWindow()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (1 nodes): `postcss.config.mjs`
+- **Thin community `Community 92`** (2 nodes): `createClient()`, `client.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (1 nodes): `next-env.d.ts`
+- **Thin community `Community 93`** (1 nodes): `postcss.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (1 nodes): `eslint.config.mjs`
+- **Thin community `Community 94`** (1 nodes): `next-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (1 nodes): `next.config.ts`
+- **Thin community `Community 95`** (1 nodes): `eslint.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (1 nodes): `calendar-smoke.spec.ts`
+- **Thin community `Community 96`** (1 nodes): `next.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
+- **Thin community `Community 97`** (1 nodes): `calendar-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (1 nodes): `a11y.spec.ts`
+- **Thin community `Community 98`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (1 nodes): `calendar-mutate-smoke.spec.ts`
+- **Thin community `Community 99`** (1 nodes): `a11y.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (1 nodes): `chat.spec.ts`
+- **Thin community `Community 100`** (1 nodes): `calendar-mutate-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (1 nodes): `generate-pwa-icons.mjs`
+- **Thin community `Community 101`** (1 nodes): `chat.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (1 nodes): `layout.tsx`
+- **Thin community `Community 102`** (1 nodes): `generate-pwa-icons.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (1 nodes): `error.tsx`
+- **Thin community `Community 103`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (1 nodes): `layout.tsx`
+- **Thin community `Community 104`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 105`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -867,58 +857,54 @@ Nodes (0):
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 120`** (1 nodes): `completed-tasks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `session-sheet.tsx`
+- **Thin community `Community 121`** (1 nodes): `slash-command-menu.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `slash-command-menu.tsx`
+- **Thin community `Community 122`** (1 nodes): `session-sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `session-sidebar.tsx`
+- **Thin community `Community 123`** (1 nodes): `radial-completion.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `radial-completion.tsx`
+- **Thin community `Community 124`** (1 nodes): `longest-chain-badges.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `longest-chain-badges.tsx`
+- **Thin community `Community 125`** (1 nodes): `habit-icon-picker.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `habit-icon-picker.tsx`
+- **Thin community `Community 126`** (1 nodes): `dashboard-masthead.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `momentum-line.tsx`
+- **Thin community `Community 127`** (1 nodes): `dashboard-briefing.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `dashboard-masthead.tsx`
+- **Thin community `Community 128`** (1 nodes): `tasks-summary.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `dashboard-briefing.tsx`
+- **Thin community `Community 129`** (1 nodes): `important-emails.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `tasks-summary.tsx`
+- **Thin community `Community 130`** (1 nodes): `FitnessClient.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `important-emails.tsx`
+- **Thin community `Community 131`** (1 nodes): `recent-sessions-list.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (1 nodes): `FitnessClient.tsx`
+- **Thin community `Community 132`** (1 nodes): `exercise-sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `recent-sessions-list.tsx`
+- **Thin community `Community 133`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `exercise-sparkline.tsx`
+- **Thin community `Community 134`** (1 nodes): `calendar-types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `types.ts`
+- **Thin community `Community 135`** (1 nodes): `_strict.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `calendar-types.ts`
+- **Thin community `Community 136`** (1 nodes): `_context.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `_strict.ts`
+- **Thin community `Community 137`** (1 nodes): `provider.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `_context.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `provider.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `config.py`
+- **Thin community `Community 138`** (1 nodes): `config.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Community 0` to `Community 32`, `Community 1`, `Community 4`, `Community 8`, `Community 40`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Community 0` to `Community 1`, `Community 33`, `Community 4`, `Community 39`, `Community 8`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Why does `todayString()` connect `Community 1` to `Community 0`, `Community 8`, `Community 4`, `Community 9`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 1`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `get_client()` connect `Community 2` to `Community 3`, `Community 5`, `Community 7`, `Community 15`, `Community 17`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Are the 70 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `saveJournalEntry()`) actually correct?**
-  _`createClient()` has 70 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 71 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `ProtectedLayout()`) actually correct?**
+  _`createClient()` has 71 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 15 inferred relationships involving `POST@chat/route.ts` (e.g. with `createClient()` and `createServiceClient()`) actually correct?**
   _`POST@chat/route.ts` has 15 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 17 inferred relationships involving `todayString()` (e.g. with `POST@strength-sessions/route.ts` and `POST@chat/route.ts`) actually correct?**

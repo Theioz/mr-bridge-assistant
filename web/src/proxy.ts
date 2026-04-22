@@ -13,16 +13,14 @@ export async function proxy(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setAll: (cookiesToSet: { name: string; value: string; options?: any }[]) => {
           // Must update both request and response cookies for token rotation to work
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           );
         },
       },
-    }
+    },
   );
 
   // Refresh the session — do not remove this call

@@ -22,12 +22,17 @@ import { getWindow } from "@/lib/window";
 async function toggleHabit(habitId: string, date: string, completed: boolean) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   if (completed) {
     const { error } = await supabase
       .from("habits")
-      .upsert({ user_id: user.id, habit_id: habitId, date, completed: true }, { onConflict: "user_id,habit_id,date" });
+      .upsert(
+        { user_id: user.id, habit_id: habitId, date, completed: true },
+        { onConflict: "user_id,habit_id,date" },
+      );
     if (error) throw new Error(error.message);
   } else {
     const { error } = await supabase
@@ -45,7 +50,9 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
 async function addHabit(name: string, emoji: string, category: string, iconKey: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from("habit_registry").insert({
     user_id: user.id,
@@ -65,10 +72,18 @@ async function archiveHabit(habitId: string) {
   revalidatePath("/dashboard");
 }
 
-async function updateHabit(id: string, name: string, emoji: string, category: string, iconKey: string) {
+async function updateHabit(
+  id: string,
+  name: string,
+  emoji: string,
+  category: string,
+  iconKey: string,
+) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase
     .from("habit_registry")
@@ -93,7 +108,12 @@ export default async function HabitsPage() {
 
   const [registryResult, todayLogsResult, historyLogsResult, allCompletedResult, weekLogsResult] =
     await Promise.all([
-      supabase.from("habit_registry").select("*").eq("active", true).order("category").order("name"),
+      supabase
+        .from("habit_registry")
+        .select("*")
+        .eq("active", true)
+        .order("category")
+        .order("name"),
       supabase.from("habits").select("*").eq("date", today),
       supabase
         .from("habits")
@@ -105,11 +125,7 @@ export default async function HabitsPage() {
         .select("habit_id,date")
         .eq("completed", true)
         .order("date", { ascending: false }),
-      supabase
-        .from("habits")
-        .select("*")
-        .gte("date", daysAgoString(6))
-        .lte("date", today),
+      supabase.from("habits").select("*").gte("date", daysAgoString(6)).lte("date", today),
     ]);
 
   const habits = (registryResult.data ?? []) as HabitRegistry[];
@@ -150,7 +166,9 @@ export default async function HabitsPage() {
       </div>
 
       {/* Today's habits — hairline rows, no card shell */}
-      <section style={{ paddingBottom: "var(--space-6)", borderBottom: "1px solid var(--rule-soft)" }}>
+      <section
+        style={{ paddingBottom: "var(--space-6)", borderBottom: "1px solid var(--rule-soft)" }}
+      >
         <HabitTodaySection
           habits={habits}
           todayLogs={todayLogs}

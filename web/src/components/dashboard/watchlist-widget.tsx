@@ -58,11 +58,14 @@ function isStocksStale(latest: string | null): boolean {
   const ageMs = Date.now() - new Date(latest).getTime();
   const nyParts = new Date().toLocaleString("en-US", {
     timeZone: "America/New_York",
-    weekday: "short", hour: "numeric", minute: "2-digit", hour12: false,
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: false,
   });
   const isWeekday = !/^Sat|^Sun/.test(nyParts);
   const [, hh, mm] = nyParts.match(/(\d{1,2}):(\d{2})/) ?? [];
-  const minutesSinceMidnight = (parseInt(hh ?? "0", 10) * 60) + parseInt(mm ?? "0", 10);
+  const minutesSinceMidnight = parseInt(hh ?? "0", 10) * 60 + parseInt(mm ?? "0", 10);
   const marketOpen = isWeekday && minutesSinceMidnight >= 570 && minutesSinceMidnight < 960;
   return ageMs > (marketOpen ? 60 * 60 * 1000 : 12 * 60 * 60 * 1000);
 }
@@ -102,7 +105,10 @@ function TickerRow({ row }: { row: StocksCache }) {
       >
         {row.ticker}
       </span>
-      <span className="watchlist-spark" style={{ height: 20, minWidth: 60, display: "flex", alignItems: "center" }}>
+      <span
+        className="watchlist-spark"
+        style={{ height: 20, minWidth: 60, display: "flex", alignItems: "center" }}
+      >
         <Sparkline points={sparkData} />
       </span>
       <span className="tnum" style={{ textAlign: "right", minWidth: 110 }}>

@@ -55,16 +55,16 @@ export default function ImportantEmails() {
                     hour12: true,
                   });
                   if (sameDay) return t;
-                  return d.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" });
+                  return d.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "numeric",
+                    day: "numeric",
+                  });
                 })()
               : null;
 
             return (
-              <li
-                key={i}
-                className="db-row"
-                style={{ gridTemplateColumns: "12px 1fr auto" }}
-              >
+              <li key={i} className="db-row" style={{ gridTemplateColumns: "12px 1fr auto" }}>
                 <span
                   aria-hidden
                   style={{

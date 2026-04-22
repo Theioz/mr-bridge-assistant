@@ -8,10 +8,7 @@ export default function Loading() {
         </span>
       </div>
       {/* Input bar */}
-      <div
-        className="skeleton"
-        style={{ height: 44, width: "100%", borderRadius: "var(--r-2)" }}
-      />
+      <div className="skeleton" style={{ height: 44, width: "100%", borderRadius: "var(--r-2)" }} />
     </div>
   );
 }

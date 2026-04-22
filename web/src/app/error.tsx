@@ -29,8 +29,8 @@ export default function GlobalError({
           Something went wrong
         </h1>
         <p style={{ fontSize: 14, color: "var(--color-text-muted)", marginBottom: 20 }}>
-          An unexpected error interrupted this page. You can try again — if it keeps
-          happening, reload or sign out and back in.
+          An unexpected error interrupted this page. You can try again — if it keeps happening,
+          reload or sign out and back in.
         </p>
         <button
           onClick={reset}

@@ -12,7 +12,13 @@ interface Props {
   date: string;
   manageMode?: boolean;
   archiveAction?: (habitId: string) => Promise<void>;
-  updateAction?: (id: string, name: string, emoji: string, category: string, iconKey: string) => Promise<void>;
+  updateAction?: (
+    id: string,
+    name: string,
+    emoji: string,
+    category: string,
+    iconKey: string,
+  ) => Promise<void>;
 }
 
 export default function HabitToggle({

@@ -3,12 +3,7 @@
 import type { RecoveryMetrics } from "@/lib/types";
 import { formatDate } from "@/lib/chart-utils";
 import { addDays, todayString } from "@/lib/timezone";
-import {
-  BarSeries,
-  ChartFrame,
-  StackedBars,
-  TrendLine,
-} from "@/components/charts/primitives";
+import { BarSeries, ChartFrame, StackedBars, TrendLine } from "@/components/charts/primitives";
 
 interface Props {
   /** Rows ordered ascending by date, windowed to ≥ 30 days back. */
@@ -26,10 +21,7 @@ function hoursToHm(h: number): string {
   return m > 0 ? `${hi}h ${m}m` : `${hi}h`;
 }
 
-function numberFromMeta(
-  meta: Record<string, unknown> | null,
-  key: string
-): number | null {
+function numberFromMeta(meta: Record<string, unknown> | null, key: string): number | null {
   if (!meta) return null;
   const v = meta[key];
   if (typeof v === "number" && !Number.isNaN(v)) return v;
@@ -40,10 +32,7 @@ function numberFromMeta(
   return null;
 }
 
-function sliceByDate<T extends { date: string }>(
-  rows: T[],
-  days: number
-): T[] {
+function sliceByDate<T extends { date: string }>(rows: T[], days: number): T[] {
   const today = todayString();
   const cutoff = addDays(today, -(days - 1));
   return rows.filter((r) => r.date >= cutoff);
@@ -90,8 +79,7 @@ export function RecoveryTrends({ trends }: Props) {
   // ── Sleep total 14d ───────────────────────────────────────────────────
   const sleepTotalLabels = t14.map((r) => formatDate(r.date));
   const sleepTotalValues = t14.map((r) => r.total_sleep_hrs);
-  const sleepTotalTodayIdx =
-    t14[t14.length - 1]?.date === today ? t14.length - 1 : -1;
+  const sleepTotalTodayIdx = t14[t14.length - 1]?.date === today ? t14.length - 1 : -1;
   const sleepTotalLatest = t14[t14.length - 1]?.total_sleep_hrs ?? null;
 
   // ── Sleep efficiency 14d (derived from metadata or fallback) ──────────
@@ -102,18 +90,12 @@ export function RecoveryTrends({ trends }: Props) {
     return metaVal;
   });
   const sleepEffHasAny = sleepEffValues.some((v) => v != null);
-  const sleepEffTodayIdx =
-    t14[t14.length - 1]?.date === today ? t14.length - 1 : -1;
+  const sleepEffTodayIdx = t14[t14.length - 1]?.date === today ? t14.length - 1 : -1;
   const sleepEffLatest = sleepEffValues[sleepEffValues.length - 1] ?? null;
-  const sleepEffAvg = mean(
-    sleepEffValues.filter((v): v is number => v != null)
-  );
+  const sleepEffAvg = mean(sleepEffValues.filter((v): v is number => v != null));
 
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-7)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-7)", minWidth: 0 }}>
       <h2
         style={{
           margin: 0,
@@ -128,21 +110,13 @@ export function RecoveryTrends({ trends }: Props) {
       </h2>
 
       {/* Sleep row: stages / total / efficiency */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-3"
-        style={{ gap: "var(--space-7)" }}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: "var(--space-7)" }}>
         <ChartFrame
           label="Sleep stages · 7D"
-          value={
-            stagesLatestTotal != null
-              ? `last ${hoursToHm(stagesLatestTotal)}`
-              : "—"
-          }
+          value={stagesLatestTotal != null ? `last ${hoursToHm(stagesLatestTotal)}` : "—"}
           note={
             <span style={{ color: "var(--color-text-faint)" }}>
-              <Swatch opacity={0.85} /> Deep ·{" "}
-              <Swatch opacity={0.45} /> Core ·{" "}
+              <Swatch opacity={0.85} /> Deep · <Swatch opacity={0.45} /> Core ·{" "}
               <Swatch opacity={0.18} /> REM
             </span>
           }
@@ -161,7 +135,9 @@ export function RecoveryTrends({ trends }: Props) {
               formatTotal={(v) => hoursToHm(v)}
               refLines={[{ y: 8, label: "8h target", dashed: true }]}
               ariaLabel="Sleep stages — last 7 days"
-              endpointRight={stageTodayIdx >= 0 ? "Today" : sleepStagesLabels[sleepStagesLabels.length - 1]}
+              endpointRight={
+                stageTodayIdx >= 0 ? "Today" : sleepStagesLabels[sleepStagesLabels.length - 1]
+              }
             />
           )}
         </ChartFrame>
@@ -181,7 +157,9 @@ export function RecoveryTrends({ trends }: Props) {
               formatValue={(v) => hoursToHm(v)}
               ariaLabel="Sleep total — last 14 days"
               opacity={() => 0.5}
-              endpointRight={sleepTotalTodayIdx >= 0 ? "Today" : sleepTotalLabels[sleepTotalLabels.length - 1]}
+              endpointRight={
+                sleepTotalTodayIdx >= 0 ? "Today" : sleepTotalLabels[sleepTotalLabels.length - 1]
+              }
             />
           )}
         </ChartFrame>
@@ -231,7 +209,9 @@ export function RecoveryTrends({ trends }: Props) {
               }
               formatValue={(v) => `${v.toFixed(0)}%`}
               ariaLabel="Sleep efficiency — last 14 days"
-              endpointRight={sleepEffTodayIdx >= 0 ? "Today" : sleepEffLabels[sleepEffLabels.length - 1]}
+              endpointRight={
+                sleepEffTodayIdx >= 0 ? "Today" : sleepEffLabels[sleepEffLabels.length - 1]
+              }
               yDomain={[
                 Math.max(0, Math.min(...sleepEffValues.filter((v): v is number => v != null)) - 5),
                 100,
@@ -242,10 +222,7 @@ export function RecoveryTrends({ trends }: Props) {
       </div>
 
       {/* HRV + RHR row */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-7)" }}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--space-7)" }}>
         <ChartFrame
           label="HRV · 30D"
           value={
@@ -337,11 +314,7 @@ function Swatch({ opacity }: { opacity: number }) {
   );
 }
 
-function EmptyRow({
-  message = "No data for this period",
-}: {
-  message?: React.ReactNode;
-}) {
+function EmptyRow({ message = "No data for this period" }: { message?: React.ReactNode }) {
   return (
     <div
       className="flex items-center"

@@ -25,7 +25,9 @@ async function markAllAsReadAction(): Promise<{ error?: string }> {
   "use server";
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
     const { error } = await supabase
       .from("notifications")
@@ -45,7 +47,9 @@ async function markAllAsReadAction(): Promise<{ error?: string }> {
 // request if this ever gets called twice.
 const loadNotificationsPage = cache(async () => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -103,10 +107,7 @@ export default async function NotificationsPage() {
         </p>
       </header>
 
-      <NotificationList
-        notifications={notifications}
-        markAllAsReadAction={markAllAsReadAction}
-      />
+      <NotificationList notifications={notifications} markAllAsReadAction={markAllAsReadAction} />
     </div>
   );
 }

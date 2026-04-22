@@ -110,9 +110,7 @@ export function ActivityTrends({
     });
   } else {
     const calMap = new Map(
-      recovery
-        .filter((d) => d.active_cal != null)
-        .map((d) => [d.date, d.active_cal!])
+      recovery.filter((d) => d.active_cal != null).map((d) => [d.date, d.active_cal!]),
     );
     for (let i = days - 1; i >= 0; i--) {
       const dateStr = addDays(today, -i);
@@ -123,14 +121,21 @@ export function ActivityTrends({
   }
 
   const calTodayIndex = calLabels.length - 1;
-  const dailyCalGoal =
-    weeklyActiveCalGoal != null ? Math.round(weeklyActiveCalGoal / 7) : null;
+  const dailyCalGoal = weeklyActiveCalGoal != null ? Math.round(weeklyActiveCalGoal / 7) : null;
   const calRefLines: { y: number; label?: string; dashed?: boolean }[] = [];
   if (granularity === "weekly" && weeklyActiveCalGoal != null) {
-    calRefLines.push({ y: weeklyActiveCalGoal, label: `Goal ${weeklyActiveCalGoal.toLocaleString()}`, dashed: true });
+    calRefLines.push({
+      y: weeklyActiveCalGoal,
+      label: `Goal ${weeklyActiveCalGoal.toLocaleString()}`,
+      dashed: true,
+    });
   }
   if (granularity === "daily" && dailyCalGoal != null) {
-    calRefLines.push({ y: dailyCalGoal, label: `Daily target ${dailyCalGoal.toLocaleString()}`, dashed: true });
+    calRefLines.push({
+      y: dailyCalGoal,
+      label: `Daily target ${dailyCalGoal.toLocaleString()}`,
+      dashed: true,
+    });
   }
 
   // ── Meta readouts ──────────────────────────────────────────────────────
@@ -140,8 +145,8 @@ export function ActivityTrends({
     granularity === "weekly"
       ? `this week ${latestFreq ?? 0}`
       : latestFreq === 1
-      ? "trained today"
-      : "rest day";
+        ? "trained today"
+        : "rest day";
   const calMeta = (() => {
     if (latestCal == null) return "—";
     const rounded = Math.round(latestCal).toLocaleString();
@@ -172,7 +177,8 @@ export function ActivityTrends({
               borderRadius: "var(--r-1)",
               minHeight: 32,
               padding: "0 var(--space-3)",
-              transition: "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+              transition:
+                "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
             }}
             title={forceWeekly ? "Switch to a shorter window to view daily data" : undefined}
           >
@@ -185,19 +191,12 @@ export function ActivityTrends({
 
   const freqEmpty = freqValues.every((v) => v == null || v === 0);
   const freqFormat = (v: number) =>
-    granularity === "weekly"
-      ? `${v} session${v === 1 ? "" : "s"}`
-      : v > 0
-      ? "trained"
-      : "rest";
+    granularity === "weekly" ? `${v} session${v === 1 ? "" : "s"}` : v > 0 ? "trained" : "rest";
 
   const calLineValues = calValues;
 
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-6)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-6)", minWidth: 0 }}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2
           style={{
@@ -214,18 +213,13 @@ export function ActivityTrends({
         {GranToggle}
       </div>
 
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2"
-        style={{ gap: "var(--space-7)" }}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--space-7)" }}>
         <ChartFrame
-          label={granularity === "weekly" ? "Workout frequency · weekly" : "Workout frequency · daily"}
-          value={freqMeta}
-          note={
-            weeklyWorkoutGoal == null ? (
-              <LinkToSettings />
-            ) : undefined
+          label={
+            granularity === "weekly" ? "Workout frequency · weekly" : "Workout frequency · daily"
           }
+          value={freqMeta}
+          note={weeklyWorkoutGoal == null ? <LinkToSettings /> : undefined}
         >
           <BarSeries
             labels={freqLabels}
@@ -237,11 +231,9 @@ export function ActivityTrends({
             opacity={(_, v) =>
               v == null || v === 0
                 ? 0
-                : weeklyWorkoutGoal != null &&
-                  granularity === "weekly" &&
-                  v >= weeklyWorkoutGoal
-                ? 0.85
-                : 0.5
+                : weeklyWorkoutGoal != null && granularity === "weekly" && v >= weeklyWorkoutGoal
+                  ? 0.85
+                  : 0.5
             }
             endpointRight="Today"
           />
@@ -293,9 +285,7 @@ export function ActivityTrends({
         <ChartFrame
           label={granularity === "weekly" ? "Active calories · weekly" : "Active calories · daily"}
           value={calMeta}
-          note={
-            weeklyActiveCalGoal == null ? <LinkToSettings /> : undefined
-          }
+          note={weeklyActiveCalGoal == null ? <LinkToSettings /> : undefined}
         >
           {granularity === "daily" ? (
             <TrendLine
@@ -318,11 +308,7 @@ export function ActivityTrends({
               ariaLabel="Active calories, weekly"
               endpointRight="Today"
               opacity={(_, v) =>
-                v == null
-                  ? 0
-                  : weeklyActiveCalGoal != null && v >= weeklyActiveCalGoal
-                  ? 0.85
-                  : 0.5
+                v == null ? 0 : weeklyActiveCalGoal != null && v >= weeklyActiveCalGoal ? 0.85 : 0.5
               }
             />
           )}

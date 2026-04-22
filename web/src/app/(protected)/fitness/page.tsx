@@ -28,7 +28,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 async function cancelWorkoutPlan(date: string, reason?: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   const db = createServiceClient();
   await cancelWorkout({ supabase: db, userId: user.id, date, reason });
@@ -97,7 +99,9 @@ export default async function FitnessPage() {
       .order("performed_on", { ascending: false }),
     supabase
       .from("exercise_prs")
-      .select("exercise_name,weight_pr_kg,rep_pr_reps,rep_pr_weight_kg,volume_pr_kg,weight_pr_achieved_at,rep_pr_achieved_at,volume_pr_achieved_at"),
+      .select(
+        "exercise_name,weight_pr_kg,rep_pr_reps,rep_pr_weight_kg,volume_pr_kg,weight_pr_achieved_at,rep_pr_achieved_at,volume_pr_achieved_at",
+      ),
   ]);
 
   const fitnessData = (fitnessRes.data ?? []) as FitnessLog[];
@@ -113,10 +117,7 @@ export default async function FitnessPage() {
   const weekStart = daysAgoString(6);
   const walksThisWeek = walkSessions.filter((w) => w.date >= weekStart);
   const walkCount = walksThisWeek.length;
-  const walkDuration = walksThisWeek.reduce(
-    (s, w) => s + (w.duration_mins ?? 0),
-    0
-  );
+  const walkDuration = walksThisWeek.reduce((s, w) => s + (w.duration_mins ?? 0), 0);
 
   const goals: Record<string, number | null> = {};
   let rawWeightUnit: string | null = null;
@@ -158,10 +159,7 @@ export default async function FitnessPage() {
   const exercisePRs = (exercisePRsRes.data ?? []) as ExercisePR[];
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: "var(--space-7)" }}
-    >
+    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
       {/* ── Header ───────────────────────────────────────────────────── */}
       <header
         className="flex items-start justify-between flex-wrap"
@@ -275,7 +273,7 @@ interface SparklinePoint {
 
 function rankExercisesByVolume(
   sessions: (StrengthSession & { sets: StrengthSessionSet[] })[],
-  limit: number
+  limit: number,
 ): { name: string; points: SparklinePoint[] }[] {
   const byExercise = new Map<
     string,
@@ -314,7 +312,7 @@ function rankExercisesByVolume(
     .map((b) => ({
       name: b.displayName,
       points: [...b.sessionTops.values()].sort((a, b) =>
-        a.performed_on.localeCompare(b.performed_on)
+        a.performed_on.localeCompare(b.performed_on),
       ),
     }));
 }

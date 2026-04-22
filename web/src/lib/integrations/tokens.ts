@@ -83,10 +83,7 @@ export async function deleteIntegration(
   if (error) throw new Error(`Failed to delete integration: ${error.message}`);
 }
 
-export async function listConnectedUsers(
-  db: SupabaseClient,
-  provider: string,
-): Promise<string[]> {
+export async function listConnectedUsers(db: SupabaseClient, provider: string): Promise<string[]> {
   const { data, error } = await db
     .from("user_integrations")
     .select("user_id")

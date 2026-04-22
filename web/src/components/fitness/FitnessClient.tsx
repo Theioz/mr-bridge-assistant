@@ -113,12 +113,12 @@ export function FitnessClient({
         if (data.ok && data.sessions_processed > 0) router.refresh();
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-fill missing exercise descriptions in the background on page load
   const hasMissingDescriptions = weeklyPlans.some((p) =>
-    [...p.warmup, ...p.workout, ...p.cooldown].some((ex) => !ex.description)
+    [...p.warmup, ...p.workout, ...p.cooldown].some((ex) => !ex.description),
   );
   useEffect(() => {
     if (!hasMissingDescriptions) return;
@@ -128,7 +128,7 @@ export function FitnessClient({
         if (data.ok && data.backfilled > 0) router.refresh();
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMissingDescriptions]);
 
   return (
@@ -211,9 +211,7 @@ export function FitnessClient({
               </div>
             </section>
           )}
-          {exercisePRs.length > 0 && (
-            <PersonalRecords prs={exercisePRs} unit={weightUnit} />
-          )}
+          {exercisePRs.length > 0 && <PersonalRecords prs={exercisePRs} unit={weightUnit} />}
         </div>
       )}
 
@@ -254,9 +252,7 @@ function fmtPRDate(iso: string | null): string {
 
 function PersonalRecords({ prs, unit }: { prs: ExercisePR[]; unit: WeightUnit }) {
   const [now] = useState(() => Date.now());
-  const sorted = [...prs].sort((a, b) =>
-    a.exercise_name.localeCompare(b.exercise_name)
-  );
+  const sorted = [...prs].sort((a, b) => a.exercise_name.localeCompare(b.exercise_name));
 
   return (
     <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
@@ -284,52 +280,69 @@ function PersonalRecords({ prs, unit }: { prs: ExercisePR[]; unit: WeightUnit })
         >
           <thead>
             <tr>
-              {["Exercise", `Weight PR (${unit})`, "Rep PR", `Volume (${unit})`, "Last PR"].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    textAlign: "left",
-                    fontWeight: 600,
-                    color: "var(--color-text-faint)",
-                    fontSize: 10,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    padding: "var(--space-2) var(--space-3) var(--space-2) 0",
-                    borderBottom: "1px solid var(--rule-soft)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
+              {["Exercise", `Weight PR (${unit})`, "Rep PR", `Volume (${unit})`, "Last PR"].map(
+                (h) => (
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: "left",
+                      fontWeight: 600,
+                      color: "var(--color-text-faint)",
+                      fontSize: 10,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      padding: "var(--space-2) var(--space-3) var(--space-2) 0",
+                      borderBottom: "1px solid var(--rule-soft)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
             {sorted.map((pr) => {
-              const weightDisplay = pr.weight_pr_kg != null
-                ? kgToDisplay(pr.weight_pr_kg, unit)
-                : null;
-              const repDisplay = pr.rep_pr_reps != null
-                ? pr.rep_pr_weight_kg != null
-                  ? `${pr.rep_pr_reps} @ ${kgToDisplay(pr.rep_pr_weight_kg, unit)} ${unit}`
-                  : `${pr.rep_pr_reps} reps`
-                : null;
-              const volumeDisplay = pr.volume_pr_kg != null
-                ? Math.round(kgToDisplay(pr.volume_pr_kg, unit) ?? 0).toLocaleString()
-                : null;
-              const latestDate = ([pr.weight_pr_achieved_at, pr.rep_pr_achieved_at, pr.volume_pr_achieved_at]
-                .filter(Boolean) as string[])
-                .sort()
-                .at(-1) ?? null;
+              const weightDisplay =
+                pr.weight_pr_kg != null ? kgToDisplay(pr.weight_pr_kg, unit) : null;
+              const repDisplay =
+                pr.rep_pr_reps != null
+                  ? pr.rep_pr_weight_kg != null
+                    ? `${pr.rep_pr_reps} @ ${kgToDisplay(pr.rep_pr_weight_kg, unit)} ${unit}`
+                    : `${pr.rep_pr_reps} reps`
+                  : null;
+              const volumeDisplay =
+                pr.volume_pr_kg != null
+                  ? Math.round(kgToDisplay(pr.volume_pr_kg, unit) ?? 0).toLocaleString()
+                  : null;
+              const latestDate =
+                (
+                  [
+                    pr.weight_pr_achieved_at,
+                    pr.rep_pr_achieved_at,
+                    pr.volume_pr_achieved_at,
+                  ].filter(Boolean) as string[]
+                )
+                  .sort()
+                  .at(-1) ?? null;
               const isRecent = latestDate
                 ? now - new Date(latestDate).getTime() < 30 * 24 * 60 * 60 * 1000
                 : false;
 
               return (
                 <tr key={pr.exercise_name} style={{ borderBottom: "1px solid var(--rule-soft)" }}>
-                  <td style={{ padding: "var(--space-2) var(--space-3) var(--space-2) 0", color: "var(--color-text)", fontWeight: 500 }}>
+                  <td
+                    style={{
+                      padding: "var(--space-2) var(--space-3) var(--space-2) 0",
+                      color: "var(--color-text)",
+                      fontWeight: 500,
+                    }}
+                  >
                     <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                      {isRecent && <span style={{ color: "var(--color-amber)", fontSize: 10 }}>🏆</span>}
+                      {isRecent && (
+                        <span style={{ color: "var(--color-amber)", fontSize: 10 }}>🏆</span>
+                      )}
                       {pr.exercise_name}
                     </span>
                   </td>

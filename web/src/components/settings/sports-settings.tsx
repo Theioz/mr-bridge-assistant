@@ -27,7 +27,7 @@ export function SportsSettings({ favorites, saveAction }: Props) {
       setError(null);
       try {
         const res = await fetch(`/api/sports/search?q=${encodeURIComponent(query.trim())}`);
-        const json = await res.json() as { teams?: Team[]; error?: string };
+        const json = (await res.json()) as { teams?: Team[]; error?: string };
         if (json.error) setError(json.error);
         setResults(json.teams ?? []);
       } catch (e) {

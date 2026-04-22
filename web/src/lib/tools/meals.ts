@@ -5,7 +5,8 @@ import type { ToolContext } from "./_context";
 export function buildMealsTools({ supabase, userId }: ToolContext) {
   return {
     get_recipes: tool({
-      description: "Search saved recipes by ingredient, name, or tag. Omit query to return all recipes.",
+      description:
+        "Search saved recipes by ingredient, name, or tag. Omit query to return all recipes.",
       inputSchema: jsonSchema<{ query?: string }>({
         type: "object",
         properties: {
@@ -27,7 +28,8 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
     }),
 
     get_today_meals: tool({
-      description: "Get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.",
+      description:
+        "Get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.",
       inputSchema: jsonSchema<Record<string, never>>({
         type: "object",
         properties: {},

@@ -23,7 +23,7 @@ function dateToDayNum(dateStr: string): number {
  */
 export function computeStreaks(
   completedLogs: { habit_id: string; date: string }[],
-  today: string
+  today: string,
 ): HabitStreaks {
   const byHabit = new Map<string, Set<number>>();
   for (const log of completedLogs) {

@@ -15,9 +15,12 @@ export async function GET(request: NextRequest) {
   const url = `https://api.polygon.io/v3/reference/tickers?ticker=${ticker}&apiKey=${apiKey}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
-    return NextResponse.json({ valid: false, error: `Polygon returned ${res.status}` }, { status: 502 });
+    return NextResponse.json(
+      { valid: false, error: `Polygon returned ${res.status}` },
+      { status: 502 },
+    );
   }
 
-  const json = await res.json() as { count?: number };
+  const json = (await res.json()) as { count?: number };
   return NextResponse.json({ valid: (json.count ?? 0) > 0 });
 }

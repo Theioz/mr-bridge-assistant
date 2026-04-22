@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import type { RecoveryMetrics } from "@/lib/types";
-import {
-  BarSeries,
-  ChartFrame,
-  StackedBars,
-  TrendLine,
-} from "@/components/charts/primitives";
+import { BarSeries, ChartFrame, StackedBars, TrendLine } from "@/components/charts/primitives";
 import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
 
@@ -145,9 +140,7 @@ function TabPills<T extends string>({ tabs, active, onSelect }: TabPillsProps<T>
               minWidth: 44,
               padding: "0 var(--space-3)",
               background: isActive ? "var(--accent)" : "transparent",
-              color: isActive
-                ? "var(--color-text-on-cta)"
-                : "var(--color-text-muted)",
+              color: isActive ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
               border: "none",
               borderRadius: "var(--r-1)",
               fontSize: "var(--t-micro)",
@@ -237,15 +230,11 @@ function FitnessChartPanel({
     switch (tab) {
       case "weight":
         return wLatest != null
-          ? `${wLatest.toFixed(1)} lb${
-              wAvg != null ? ` · avg ${wAvg.toFixed(1)}` : ""
-            }`
+          ? `${wLatest.toFixed(1)} lb${wAvg != null ? ` · avg ${wAvg.toFixed(1)}` : ""}`
           : "—";
       case "bodyfat":
         return bfLatest != null
-          ? `${bfLatest.toFixed(1)}%${
-              bfAvg != null ? ` · avg ${bfAvg.toFixed(1)}` : ""
-            }`
+          ? `${bfLatest.toFixed(1)}%${bfAvg != null ? ` · avg ${bfAvg.toFixed(1)}` : ""}`
           : "—";
       case "steps":
         return stepsLatest != null
@@ -256,9 +245,7 @@ function FitnessChartPanel({
       case "calories":
         return calLatest != null
           ? `${Math.round(calLatest).toLocaleString()} kcal${
-              calAvg != null
-                ? ` · avg ${Math.round(calAvg).toLocaleString()}`
-                : ""
+              calAvg != null ? ` · avg ${Math.round(calAvg).toLocaleString()}` : ""
             }`
           : "—";
     }
@@ -288,8 +275,8 @@ function FitnessChartPanel({
                     },
                   ]
                 : wAvg != null
-                ? [{ y: wAvg, label: `avg ${wAvg.toFixed(1)}`, dashed: true }]
-                : []),
+                  ? [{ y: wAvg, label: `avg ${wAvg.toFixed(1)}`, dashed: true }]
+                  : []),
             ]}
             formatValue={(v) => `${v.toFixed(1)} lb`}
             ariaLabel={`Weight trend ${windowLabel}`}
@@ -314,8 +301,8 @@ function FitnessChartPanel({
                     },
                   ]
                 : bfAvg != null
-                ? [{ y: bfAvg, label: `avg ${bfAvg.toFixed(1)}%`, dashed: true }]
-                : []),
+                  ? [{ y: bfAvg, label: `avg ${bfAvg.toFixed(1)}%`, dashed: true }]
+                  : []),
             ]}
             formatValue={(v) => `${v.toFixed(1)}%`}
             ariaLabel={`Body fat trend ${windowLabel}`}
@@ -360,21 +347,19 @@ function FitnessChartPanel({
                 ? [
                     {
                       y: Math.round(weeklyActiveCalGoal / 7),
-                      label: `Daily target ${Math.round(
-                        weeklyActiveCalGoal / 7
-                      ).toLocaleString()}`,
+                      label: `Daily target ${Math.round(weeklyActiveCalGoal / 7).toLocaleString()}`,
                       dashed: true,
                     },
                   ]
                 : calAvg != null
-                ? [
-                    {
-                      y: calAvg,
-                      label: `avg ${Math.round(calAvg).toLocaleString()}`,
-                      dashed: true,
-                    },
-                  ]
-                : []),
+                  ? [
+                      {
+                        y: calAvg,
+                        label: `avg ${Math.round(calAvg).toLocaleString()}`,
+                        dashed: true,
+                      },
+                    ]
+                  : []),
             ]}
             formatValue={(v) => `${Math.round(v).toLocaleString()} kcal`}
             ariaLabel={`Active calories ${windowLabel}`}
@@ -407,8 +392,7 @@ function SleepChartPanel({
 
   const [tab, setTab] = useState<SleepTab>("stages");
   const labels = trends.map((d) => formatDate(d.date));
-  const todayIdx =
-    trends[trends.length - 1]?.date === today ? trends.length - 1 : -1;
+  const todayIdx = trends[trends.length - 1]?.date === today ? trends.length - 1 : -1;
 
   const deep = trends.map((d) => d.deep_hrs);
   const rem = trends.map((d) => d.rem_hrs);
@@ -448,21 +432,15 @@ function SleepChartPanel({
         return stagesLatest != null ? fmtHrs(stagesLatest) : "—";
       case "hrv":
         return hrvLatest != null
-          ? `${Math.round(hrvLatest)} ms${
-              hrvAvg != null ? ` · avg ${Math.round(hrvAvg)}` : ""
-            }`
+          ? `${Math.round(hrvLatest)} ms${hrvAvg != null ? ` · avg ${Math.round(hrvAvg)}` : ""}`
           : "—";
       case "rhr":
         return rhrLatest != null
-          ? `${Math.round(rhrLatest)} bpm${
-              rhrAvg != null ? ` · avg ${Math.round(rhrAvg)}` : ""
-            }`
+          ? `${Math.round(rhrLatest)} bpm${rhrAvg != null ? ` · avg ${Math.round(rhrAvg)}` : ""}`
           : "—";
       case "spo2":
         return spo2Latest != null
-          ? `${spo2Latest.toFixed(1)}%${
-              spo2Avg != null ? ` · avg ${spo2Avg.toFixed(1)}%` : ""
-            }`
+          ? `${spo2Latest.toFixed(1)}%${spo2Avg != null ? ` · avg ${spo2Avg.toFixed(1)}%` : ""}`
           : "—";
     }
   })();
@@ -636,9 +614,7 @@ export default function HealthBreakdown({
             <Metric label="REM" value={fmtHrs(recovery.rem_hrs)} />
             <Metric
               label="Steps"
-              value={
-                recovery.steps != null ? recovery.steps.toLocaleString() : "—"
-              }
+              value={recovery.steps != null ? recovery.steps.toLocaleString() : "—"}
             />
           </div>
 
@@ -675,22 +651,12 @@ export default function HealthBreakdown({
               )}
               {metaVal(recovery, "stress_day_summary") != null && (
                 <span style={{ textTransform: "capitalize" }}>
-                  {String(metaVal(recovery, "stress_day_summary")).replace(
-                    /_/g,
-                    " "
-                  )}
+                  {String(metaVal(recovery, "stress_day_summary")).replace(/_/g, " ")}
                 </span>
               )}
               {metaVal(recovery, "resilience_level") != null && (
-                <span
-                  className="ml-auto"
-                  style={{ textTransform: "capitalize" }}
-                >
-                  Resilience:{" "}
-                  {String(metaVal(recovery, "resilience_level")).replace(
-                    /_/g,
-                    " "
-                  )}
+                <span className="ml-auto" style={{ textTransform: "capitalize" }}>
+                  Resilience: {String(metaVal(recovery, "resilience_level")).replace(/_/g, " ")}
                 </span>
               )}
             </div>
@@ -749,11 +715,8 @@ function ScoreSlot({
   large?: boolean;
 }) {
   const accent = score != null && score < 55;
-  const color = score == null
-    ? "var(--color-text-faint)"
-    : accent
-    ? "var(--accent)"
-    : "var(--color-text)";
+  const color =
+    score == null ? "var(--color-text-faint)" : accent ? "var(--accent)" : "var(--color-text)";
   return (
     <div className="flex flex-col" style={{ gap: "var(--space-1)" }}>
       <span

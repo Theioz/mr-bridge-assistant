@@ -50,7 +50,9 @@ export default function EventModal({
   // target event or slot changes, so these initializers always run fresh.
   const [title, setTitle] = useState(editEvent?.title ?? "");
   const [date, setDate] = useState(
-    editEvent ? editEvent.start.slice(0, 10) : (initialDate ?? new Date().toISOString().slice(0, 10))
+    editEvent
+      ? editEvent.start.slice(0, 10)
+      : (initialDate ?? new Date().toISOString().slice(0, 10)),
   );
   const [allDay, setAllDay] = useState(editEvent?.allDay ?? false);
   const [startTime, setStartTime] = useState(() => {
@@ -73,7 +75,14 @@ export default function EventModal({
     setSaving(true);
     setError("");
     try {
-      const body = { title: title.trim(), date, start_time: allDay ? undefined : startTime, end_time: allDay ? undefined : endTime, location: location.trim() || undefined, all_day: allDay };
+      const body = {
+        title: title.trim(),
+        date,
+        start_time: allDay ? undefined : startTime,
+        end_time: allDay ? undefined : endTime,
+        location: location.trim() || undefined,
+        all_day: allDay,
+      };
 
       let res: Response;
       if (isEdit) {
@@ -131,8 +140,13 @@ export default function EventModal({
           }}
           aria-describedby={undefined}
         >
-          <div className="flex items-center justify-between" style={{ marginBottom: "var(--space-4)" }}>
-            <Dialog.Title style={{ color: "var(--color-text)", fontSize: "var(--t-meta)", fontWeight: 600 }}>
+          <div
+            className="flex items-center justify-between"
+            style={{ marginBottom: "var(--space-4)" }}
+          >
+            <Dialog.Title
+              style={{ color: "var(--color-text)", fontSize: "var(--t-meta)", fontWeight: 600 }}
+            >
               {isEdit ? "Edit event" : "New event"}
             </Dialog.Title>
             <Dialog.Close
@@ -150,7 +164,10 @@ export default function EventModal({
             </Dialog.Close>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}
+          >
             {/* Title */}
             <div>
               <label style={labelStyle}>Title</label>
@@ -165,29 +182,67 @@ export default function EventModal({
             </div>
 
             {/* Date + All-day */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "var(--space-3)", alignItems: "end" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: "var(--space-3)",
+                alignItems: "end",
+              }}
+            >
               <div>
                 <label style={labelStyle}>Date</label>
-                <input style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                <input
+                  style={inputStyle}
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                />
               </div>
               <label
-                style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer", paddingBottom: "var(--space-2)", fontSize: "var(--t-meta)", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  cursor: "pointer",
+                  paddingBottom: "var(--space-2)",
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  whiteSpace: "nowrap",
+                }}
               >
-                <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  onChange={(e) => setAllDay(e.target.checked)}
+                />
                 All day
               </label>
             </div>
 
             {/* Times */}
             {!allDay && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}
+              >
                 <div>
                   <label style={labelStyle}>Start</label>
-                  <input style={inputStyle} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label style={labelStyle}>End</label>
-                  <input style={inputStyle} type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
                 </div>
               </div>
             )}
@@ -195,14 +250,28 @@ export default function EventModal({
             {/* Location */}
             <div>
               <label style={labelStyle}>Location</label>
-              <input style={inputStyle} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Optional" />
+              <input
+                style={inputStyle}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Optional"
+              />
             </div>
 
             {error && (
-              <p style={{ fontSize: "var(--t-micro)", color: "oklch(65% 0.18 25)", margin: 0 }}>{error}</p>
+              <p style={{ fontSize: "var(--t-micro)", color: "oklch(65% 0.18 25)", margin: 0 }}>
+                {error}
+              </p>
             )}
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "var(--space-2)",
+                marginTop: "var(--space-1)",
+              }}
+            >
               <Dialog.Close
                 style={{
                   background: "transparent",

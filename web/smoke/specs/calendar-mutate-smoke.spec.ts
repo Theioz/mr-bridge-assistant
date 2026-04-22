@@ -18,12 +18,9 @@ test("calendar mutate — create then delete Smoke Test event", async ({
     .fill("Create a calendar event called Smoke Test tomorrow at 10am");
 
   const [, createResponse] = await Promise.all([
-    page.waitForRequest(
-      (req) => req.url().includes("/api/chat") && req.method() === "POST",
-    ),
+    page.waitForRequest((req) => req.url().includes("/api/chat") && req.method() === "POST"),
     page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/chat") && resp.request().method() === "POST",
+      (resp) => resp.url().includes("/api/chat") && resp.request().method() === "POST",
     ),
     sendButton.click(),
   ]);
@@ -39,17 +36,12 @@ test("calendar mutate — create then delete Smoke Test event", async ({
   expect(createText?.toLowerCase()).toMatch(/creat|schedul|add/);
 
   // — Turn 2: delete —
-  await page
-    .getByPlaceholder("Ask Mr. Bridge...")
-    .fill("Delete the Smoke Test event tomorrow");
+  await page.getByPlaceholder("Ask Mr. Bridge...").fill("Delete the Smoke Test event tomorrow");
 
   const [, deleteResponse] = await Promise.all([
-    page.waitForRequest(
-      (req) => req.url().includes("/api/chat") && req.method() === "POST",
-    ),
+    page.waitForRequest((req) => req.url().includes("/api/chat") && req.method() === "POST"),
     page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/chat") && resp.request().method() === "POST",
+      (resp) => resp.url().includes("/api/chat") && resp.request().method() === "POST",
     ),
     sendButton.click(),
   ]);
@@ -64,8 +56,5 @@ test("calendar mutate — create then delete Smoke Test event", async ({
   console.log("Delete reply:", deleteText?.slice(0, 300));
   expect(deleteText?.toLowerCase()).toMatch(/delet|remov|cancel/);
 
-  expect(
-    consoleErrors,
-    `console errors during test: ${consoleErrors.join("\n")}`,
-  ).toHaveLength(0);
+  expect(consoleErrors, `console errors during test: ${consoleErrors.join("\n")}`).toHaveLength(0);
 });

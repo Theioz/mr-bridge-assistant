@@ -9,10 +9,7 @@ interface Props {
 
 export function RecentSessionsList({ sessions, unit }: Props) {
   return (
-    <section
-      className="flex flex-col"
-      style={{ gap: "var(--space-3)", minWidth: 0 }}
-    >
+    <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
       <h2
         style={{
           margin: 0,
@@ -34,15 +31,13 @@ export function RecentSessionsList({ sessions, unit }: Props) {
             fontStyle: "italic",
           }}
         >
-          No strength sessions logged yet. Log a set during your next workout to
-          get started.
+          No strength sessions logged yet. Log a set during your next workout to get started.
         </p>
       ) : (
         <div>
           {sessions.map((s, idx) => {
-            const exerciseCount = new Set(
-              s.sets.map((set) => set.exercise_name.toLowerCase())
-            ).size;
+            const exerciseCount = new Set(s.sets.map((set) => set.exercise_name.toLowerCase()))
+              .size;
             const totalSets = s.sets.length;
             const topLift = pickTopLift(s.sets, unit);
             return (
@@ -73,12 +68,12 @@ export function RecentSessionsList({ sessions, unit }: Props) {
                       color: "var(--color-text-muted)",
                     }}
                   >
-                    {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} ·{" "}
-                    {totalSets} set{totalSets === 1 ? "" : "s"}
+                    {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} · {totalSets} set
+                    {totalSets === 1 ? "" : "s"}
                     {topLift && (
                       <>
-                        {" "}· top: {topLift.exercise} {topLift.weight} {unit} ×{" "}
-                        {topLift.reps}
+                        {" "}
+                        · top: {topLift.exercise} {topLift.weight} {unit} × {topLift.reps}
                       </>
                     )}
                   </p>
@@ -131,7 +126,7 @@ function fmtDate(dateStr: string): string {
 
 function pickTopLift(
   sets: StrengthSessionSet[],
-  unit: WeightUnit
+  unit: WeightUnit,
 ): { exercise: string; weight: number; reps: number } | null {
   let best: { exercise: string; weight: number; reps: number } | null = null;
   for (const s of sets) {

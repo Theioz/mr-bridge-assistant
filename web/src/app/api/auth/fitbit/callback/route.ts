@@ -58,9 +58,7 @@ export async function GET(req: NextRequest) {
       cache: "no-store",
     });
     if (!res.ok) {
-      return NextResponse.redirect(
-        new URL("/settings?error=fitbit_exchange", req.nextUrl.origin),
-      );
+      return NextResponse.redirect(new URL("/settings?error=fitbit_exchange", req.nextUrl.origin));
     }
     tokenData = await res.json();
   } catch {

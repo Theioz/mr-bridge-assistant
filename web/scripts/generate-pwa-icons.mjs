@@ -8,10 +8,7 @@ import sharp from "sharp";
 const svgPath = "src/app/icon.svg";
 const raw = await readFile(svgPath, "utf8");
 
-const svg = raw.replace(
-  /<svg([^>]*)>/,
-  '<svg$1 preserveAspectRatio="xMidYMid meet">'
-);
+const svg = raw.replace(/<svg([^>]*)>/, '<svg$1 preserveAspectRatio="xMidYMid meet">');
 
 const outputs = [
   { size: 192, path: "public/icon-192.png" },

@@ -20,7 +20,8 @@ export default function SignOutButton() {
         background: "transparent",
         border: "none",
         cursor: "pointer",
-        transition: "color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)",
+        transition:
+          "color var(--motion-fast) var(--ease-out-quart), background-color var(--motion-fast) var(--ease-out-quart)",
       }}
     >
       <LogOut size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />

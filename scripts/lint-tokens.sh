@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # lint-tokens.sh — CI guard to prevent tokenization + inline-hover regressions.
 # Closes #254. Run from repo root: bash scripts/lint-tokens.sh
+# Scope decision (#357): kept as a separate bash script — ESLint cannot natively
+# scan .css files (Guards 2–3: color-mix() and color:"white"), so folding into
+# ESLint would require a second tool anyway with no coverage gain.
 
 set -euo pipefail
 

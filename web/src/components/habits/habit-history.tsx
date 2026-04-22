@@ -104,7 +104,11 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
           <thead>
             <tr>
               <th
-                style={{ ...thStyle, textAlign: "left", padding: "var(--space-2) var(--space-3) var(--space-2) 0" }}
+                style={{
+                  ...thStyle,
+                  textAlign: "left",
+                  padding: "var(--space-2) var(--space-3) var(--space-2) 0",
+                }}
               >
                 Habit
               </th>
@@ -119,9 +123,7 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
             {habits.map((h, i) => (
               <tr
                 key={h.id}
-                style={
-                  i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined
-                }
+                style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined}
               >
                 <td style={nameCellStyle}>{h.name}</td>
                 {weeks.map((w) => {
@@ -165,7 +167,11 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
         <thead>
           <tr>
             <th
-              style={{ ...thStyle, textAlign: "left", padding: "var(--space-2) var(--space-3) var(--space-2) 0" }}
+              style={{
+                ...thStyle,
+                textAlign: "left",
+                padding: "var(--space-2) var(--space-3) var(--space-2) 0",
+              }}
             >
               Habit
             </th>
@@ -178,15 +184,8 @@ export default function HabitHistory({ habits, logs, dates, range, toggleAction 
         </thead>
         <tbody>
           {habits.map((h, i) => (
-            <tr
-              key={h.id}
-              style={
-                i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined
-              }
-            >
-              <td style={nameCellStyle}>
-                {h.emoji ? `${h.emoji} ${h.name}` : h.name}
-              </td>
+            <tr key={h.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : undefined}>
+              <td style={nameCellStyle}>{h.emoji ? `${h.emoji} ${h.name}` : h.name}</td>
               {dates.map((d) => {
                 const done = getCompleted(h.id, d);
                 const isToday = d === today;

@@ -46,10 +46,7 @@ async function refreshFitbitToken(
 // Fitbit API fetch
 // ---------------------------------------------------------------------------
 
-async function fitbitGet(
-  accessToken: string,
-  path: string,
-): Promise<Record<string, unknown>> {
+async function fitbitGet(accessToken: string, path: string): Promise<Record<string, unknown>> {
   const res = await fetch(`${FITBIT_API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
@@ -123,7 +120,11 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
   const refreshToken = integration?.refreshToken;
   if (!refreshToken) throw new Error("Fitbit not connected — authorize via Settings");
 
-  const { accessToken, newRefreshToken } = await refreshFitbitToken(clientId, clientSecret, refreshToken);
+  const { accessToken, newRefreshToken } = await refreshFitbitToken(
+    clientId,
+    clientSecret,
+    refreshToken,
+  );
 
   if (newRefreshToken) {
     await persistRotatedToken(db, userId, "fitbit", newRefreshToken);

@@ -46,10 +46,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: [
-    ["list"],
-    ["html", { open: "never", outputFolder: "smoke/playwright-report" }],
-  ],
+  reporter: [["list"], ["html", { open: "never", outputFolder: "smoke/playwright-report" }]],
   outputDir: "smoke/test-results",
   use: {
     baseURL: "http://localhost:3000",
@@ -57,9 +54,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",

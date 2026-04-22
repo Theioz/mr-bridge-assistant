@@ -9,14 +9,18 @@ export interface SlashCommand {
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
-  { name: "weekly",   description: "Weekly review summary",                                         usage: "/weekly" },
-  { name: "briefing", description: "Today's full briefing (weather, schedule, tasks, habits, recovery)", usage: "/briefing" },
-  { name: "workout",  description: "Log a workout",                                                 usage: "/workout [type]" },
-  { name: "habit",    description: "Mark a habit as done today",                                    usage: "/habit [name]" },
-  { name: "task",     description: "Add a new task",                                                usage: "/task [title]" },
-  { name: "weight",   description: "Log a weigh-in",                                               usage: "/weight [lbs]" },
-  { name: "meal",     description: "Log a meal",                                                    usage: "/meal [description]" },
-  { name: "journal",  description: "Open the journal prompt",                                       usage: "/journal" },
+  { name: "weekly", description: "Weekly review summary", usage: "/weekly" },
+  {
+    name: "briefing",
+    description: "Today's full briefing (weather, schedule, tasks, habits, recovery)",
+    usage: "/briefing",
+  },
+  { name: "workout", description: "Log a workout", usage: "/workout [type]" },
+  { name: "habit", description: "Mark a habit as done today", usage: "/habit [name]" },
+  { name: "task", description: "Add a new task", usage: "/task [title]" },
+  { name: "weight", description: "Log a weigh-in", usage: "/weight [lbs]" },
+  { name: "meal", description: "Log a meal", usage: "/meal [description]" },
+  { name: "journal", description: "Open the journal prompt", usage: "/journal" },
 ];
 
 interface Props {

@@ -14,7 +14,10 @@ import { SportsSettings } from "@/components/settings/sports-settings";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import { FitnessSettings } from "@/components/settings/fitness-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";
-import { EquipmentSettings, type EquipmentItemInput } from "@/components/settings/equipment-settings";
+import {
+  EquipmentSettings,
+  type EquipmentItemInput,
+} from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import { lastSyncStatus, type SyncStatus } from "@/lib/sync/log";
@@ -23,7 +26,9 @@ import type { SportsFavorite } from "@/lib/sync/sports";
 async function updateProfile(key: string, value: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase
     .from("profile")
@@ -35,7 +40,9 @@ async function updateProfile(key: string, value: string) {
 async function deleteProfile(key: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from("profile").delete().eq("user_id", user.id).eq("key", key);
   revalidatePath("/settings");
@@ -45,7 +52,9 @@ async function deleteProfile(key: string) {
 async function saveSportsFavorites(favorites: SportsFavorite[]) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase
     .from("profile")
@@ -72,7 +81,9 @@ async function saveSportsFavorites(favorites: SportsFavorite[]) {
 async function saveWatchlist(tickers: string[]) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase
     .from("profile")
@@ -86,19 +97,25 @@ async function saveWatchlist(tickers: string[]) {
 async function addEquipment(item: EquipmentItemInput) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("user_equipment").upsert(
-    { user_id: user.id, ...item, updated_at: new Date().toISOString() },
-    { onConflict: "user_id,equipment_type,weight_lbs,resistance_level" }
-  );
+  await supabase
+    .from("user_equipment")
+    .upsert(
+      { user_id: user.id, ...item, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,equipment_type,weight_lbs,resistance_level" },
+    );
   revalidatePath("/settings");
 }
 
 async function removeEquipment(id: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from("user_equipment").delete().eq("id", id).eq("user_id", user.id);
   revalidatePath("/settings");
@@ -107,7 +124,9 @@ async function removeEquipment(id: string) {
 async function disconnectGoogle() {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   const db = createServiceClient();
   await deleteIntegration(db, user.id, "google");
@@ -117,7 +136,9 @@ async function disconnectGoogle() {
 async function saveOuraToken(pat: string) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   const trimmed = pat.trim();
   if (!trimmed) return;
@@ -132,7 +153,9 @@ async function saveOuraToken(pat: string) {
 async function disconnectOura() {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   const db = createServiceClient();
   await deleteIntegration(db, user.id, "oura");
@@ -142,7 +165,9 @@ async function disconnectOura() {
 async function disconnectFitbit() {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   const db = createServiceClient();
   await deleteIntegration(db, user.id, "fitbit");
@@ -158,7 +183,10 @@ export default async function SettingsPage({
   const supabase = await createClient();
   const [{ data }, { data: equipmentData }] = await Promise.all([
     supabase.from("profile").select("key,value"),
-    supabase.from("user_equipment").select("id,equipment_type,weight_lbs,resistance_level,count,notes").order("equipment_type"),
+    supabase
+      .from("user_equipment")
+      .select("id,equipment_type,weight_lbs,resistance_level,count,notes")
+      .order("equipment_type"),
   ]);
 
   const values: Record<string, string> = {};
@@ -169,7 +197,9 @@ export default async function SettingsPage({
   const watchlist = JSON.parse(values["stock_watchlist"] ?? "[]") as string[];
   const sportsFavorites = JSON.parse(values["sports_favorites"] ?? "[]") as SportsFavorite[];
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const db = createServiceClient();
   const [
     googleIntegration,
@@ -230,11 +260,7 @@ export default async function SettingsPage({
         errorParam={params.error}
       />
 
-      <ProfileForm
-        values={values}
-        updateAction={updateProfile}
-        deleteAction={deleteProfile}
-      />
+      <ProfileForm values={values} updateAction={updateProfile} deleteAction={deleteProfile} />
 
       <EquipmentSettings
         items={equipmentData ?? []}
@@ -248,10 +274,7 @@ export default async function SettingsPage({
         hasApiKey={!!process.env.POLYGON_API_KEY}
       />
 
-      <SportsSettings
-        favorites={sportsFavorites}
-        saveAction={saveSportsFavorites}
-      />
+      <SportsSettings favorites={sportsFavorites} saveAction={saveSportsFavorites} />
     </div>
   );
 }

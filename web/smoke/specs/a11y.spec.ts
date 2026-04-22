@@ -11,17 +11,17 @@ type Route = {
 // Sentinels are semantic, not networkidle — /chat and /dashboard hold
 // streaming / long-poll connections that never quiet the network tab.
 const ROUTES: Route[] = [
-  { path: "/dashboard",     auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/chat",          auth: "signed-in", settled: (p) => p.getByPlaceholder("Ask Mr. Bridge...") },
-  { path: "/fitness",       auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/habits",        auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/tasks",         auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/weekly",        auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/journal",       auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/meals",         auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/dashboard", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/chat", auth: "signed-in", settled: (p) => p.getByPlaceholder("Ask Mr. Bridge...") },
+  { path: "/fitness", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/habits", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/tasks", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/weekly", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/journal", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/meals", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/notifications", auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/settings",      auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/login",         auth: "public",    settled: (p) => p.getByLabel("Email") },
+  { path: "/settings", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/login", auth: "public", settled: (p) => p.getByLabel("Email") },
 ];
 
 test.describe("a11y — axe sweep (critical + serious)", () => {
@@ -31,8 +31,7 @@ test.describe("a11y — axe sweep (critical + serious)", () => {
       await target.goto(route.path);
       await expect(route.settled(target)).toBeVisible({ timeout: 20_000 });
 
-      const results = await new AxeBuilder({ page: target })
-        .analyze();
+      const results = await new AxeBuilder({ page: target }).analyze();
 
       const blocking = results.violations.filter(
         (v) => v.impact === "critical" || v.impact === "serious",

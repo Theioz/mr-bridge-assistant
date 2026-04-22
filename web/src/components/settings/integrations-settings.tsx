@@ -415,7 +415,15 @@ export function IntegrationsSettings({
       </div>
 
       {/* ── Fitbit ── */}
-      <div style={{ paddingTop: "var(--space-4)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-4)" }}>
+      <div
+        style={{
+          paddingTop: "var(--space-4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--space-4)",
+        }}
+      >
         <div style={labelColStyle}>
           <span style={nameStyle}>Fitbit</span>
           {fitbitIntegration ? (

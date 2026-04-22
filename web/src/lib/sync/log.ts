@@ -10,10 +10,7 @@ export async function logSync(
 }
 
 /** Returns seconds since last successful sync, or null if never synced. */
-export async function lastSyncAgeSecs(
-  db: SupabaseClient,
-  source: string,
-): Promise<number | null> {
+export async function lastSyncAgeSecs(db: SupabaseClient, source: string): Promise<number | null> {
   const { data } = await db
     .from("sync_log")
     .select("synced_at")

@@ -4,7 +4,8 @@ import type { ToolContext } from "./_context";
 export function buildStocksTools({ supabase, userId }: ToolContext) {
   return {
     get_stock_quote: tool({
-      description: "Get current price and daily change for a stock ticker. Checks stocks_cache first; falls back to a live Polygon.io fetch if the cache is stale (>6h) or the ticker is not cached. Use when the user asks about a stock price or market move.",
+      description:
+        "Get current price and daily change for a stock ticker. Checks stocks_cache first; falls back to a live Polygon.io fetch if the cache is stale (>6h) or the ticker is not cached. Use when the user asks about a stock price or market move.",
       inputSchema: jsonSchema<{ ticker: string }>({
         type: "object",
         required: ["ticker"],
@@ -45,7 +46,7 @@ export function buildStocksTools({ supabase, userId }: ToolContext) {
         );
         if (!res.ok) return { error: `Polygon returned ${res.status}` };
 
-        const json = await res.json() as { results?: { o: number; c: number }[] };
+        const json = (await res.json()) as { results?: { o: number; c: number }[] };
         const bar = json.results?.[0];
         if (!bar) return { error: "No data returned for this ticker" };
 

@@ -42,9 +42,15 @@ export async function GET(request: NextRequest) {
     const userIds = await listConnectedUsers(db, "oura");
     const settled = await Promise.allSettled(userIds.map((uid) => syncOura(db, uid)));
     const errors = settled
-      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .map((s, i) =>
+        s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
+      )
       .filter((e): e is { userId: string; error: string } => e !== null);
-    results.oura = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
+    results.oura = {
+      usersSynced: settled.length - errors.length,
+      usersFailed: errors.length,
+      errors,
+    };
   } else {
     results.oura = { skipped: true, ageSecs: Math.round(ouraAge) };
   }
@@ -53,9 +59,15 @@ export async function GET(request: NextRequest) {
     const userIds = await listConnectedUsers(db, "fitbit");
     const settled = await Promise.allSettled(userIds.map((uid) => syncFitbit(db, uid)));
     const errors = settled
-      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .map((s, i) =>
+        s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
+      )
       .filter((e): e is { userId: string; error: string } => e !== null);
-    results.fitbit = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
+    results.fitbit = {
+      usersSynced: settled.length - errors.length,
+      usersFailed: errors.length,
+      errors,
+    };
   } else {
     results.fitbit = { skipped: true, ageSecs: Math.round(fitbitAge) };
   }
@@ -64,9 +76,15 @@ export async function GET(request: NextRequest) {
     const userIds = await listConnectedUsers(db, "google");
     const settled = await Promise.allSettled(userIds.map((uid) => syncGoogleFit(db, uid)));
     const errors = settled
-      .map((s, i) => s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null)
+      .map((s, i) =>
+        s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
+      )
       .filter((e): e is { userId: string; error: string } => e !== null);
-    results.googleFit = { usersSynced: settled.length - errors.length, usersFailed: errors.length, errors };
+    results.googleFit = {
+      usersSynced: settled.length - errors.length,
+      usersFailed: errors.length,
+      errors,
+    };
   } else {
     results.googleFit = { skipped: true, ageSecs: Math.round(googleFitAge) };
   }

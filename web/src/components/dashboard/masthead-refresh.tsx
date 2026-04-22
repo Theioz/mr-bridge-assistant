@@ -37,10 +37,7 @@ export default function MastheadRefresh({ refreshStocks, refreshSports }: Props)
         background: "transparent",
         border: "1px solid var(--rule)",
         borderRadius: "var(--r-1)",
-        color:
-          state === "error"
-            ? "var(--color-danger)"
-            : "var(--color-text-muted)",
+        color: state === "error" ? "var(--color-danger)" : "var(--color-text-muted)",
         cursor: state === "syncing" ? "default" : "pointer",
         opacity: state === "syncing" ? 0.5 : 1,
         transition:
@@ -48,10 +45,7 @@ export default function MastheadRefresh({ refreshStocks, refreshSports }: Props)
       }}
       className="hover-border-strong"
     >
-      <RefreshCw
-        size={15}
-        className={state === "syncing" ? "animate-spin" : undefined}
-      />
+      <RefreshCw size={15} className={state === "syncing" ? "animate-spin" : undefined} />
     </button>
   );
 }

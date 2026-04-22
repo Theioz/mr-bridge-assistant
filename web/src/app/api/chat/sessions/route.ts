@@ -43,12 +43,10 @@ export async function GET() {
         .maybeSingle();
 
       const raw = firstMsg?.content ?? null;
-      const preview = raw
-        ? raw.slice(0, 60).trim() + (raw.length > 60 ? "\u2026" : "")
-        : null;
+      const preview = raw ? raw.slice(0, 60).trim() + (raw.length > 60 ? "\u2026" : "") : null;
 
       return { ...session, preview } as SessionPreview;
-    })
+    }),
   );
 
   const withMessages = previews.filter((s) => s.preview !== null);

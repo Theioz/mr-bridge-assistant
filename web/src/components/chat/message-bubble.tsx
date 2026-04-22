@@ -53,27 +53,42 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
     <em style={{ fontStyle: "italic", color: "var(--color-text-muted)" }}>{children}</em>
   ),
   h1: ({ children }) => (
-    <h1 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
+    <h1
+      className="font-heading mt-3 mb-1 first:mt-0"
+      style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}
+    >
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="font-heading mt-3 mb-1 first:mt-0" style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}>
+    <h2
+      className="font-heading mt-3 mb-1 first:mt-0"
+      style={{ fontSize: "var(--t-meta)", fontWeight: 600, color: "var(--color-text)" }}
+    >
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mt-2 mb-1 first:mt-0" style={{ fontSize: "var(--t-micro)", fontWeight: 500, color: "var(--color-text-muted)" }}>
+    <h3
+      className="mt-2 mb-1 first:mt-0"
+      style={{ fontSize: "var(--t-micro)", fontWeight: 500, color: "var(--color-text-muted)" }}
+    >
       {children}
     </h3>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc list-inside mb-2 space-y-0.5" style={{ color: "var(--color-text-muted)" }}>
+    <ul
+      className="list-disc list-inside mb-2 space-y-0.5"
+      style={{ color: "var(--color-text-muted)" }}
+    >
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal list-inside mb-2 space-y-0.5" style={{ color: "var(--color-text-muted)" }}>
+    <ol
+      className="list-decimal list-inside mb-2 space-y-0.5"
+      style={{ color: "var(--color-text-muted)" }}
+    >
       {children}
     </ol>
   ),
@@ -109,16 +124,17 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
   pre: ({ children }) => <pre className="my-2">{children}</pre>,
   table: ({ children }) => (
     <div className="overflow-x-auto my-2">
-      <table className="w-full tnum" style={{ fontSize: "var(--t-micro)", borderCollapse: "collapse" }}>
+      <table
+        className="w-full tnum"
+        style={{ fontSize: "var(--t-micro)", borderCollapse: "collapse" }}
+      >
         {children}
       </table>
     </div>
   ),
   thead: ({ children }) => <thead>{children}</thead>,
   tbody: ({ children }) => <tbody>{children}</tbody>,
-  tr: ({ children }) => (
-    <tr style={{ borderBottom: "1px solid var(--rule-soft)" }}>{children}</tr>
-  ),
+  tr: ({ children }) => <tr style={{ borderBottom: "1px solid var(--rule-soft)" }}>{children}</tr>,
   th: ({ children }) => (
     <th
       className="text-left px-3 py-1.5"
