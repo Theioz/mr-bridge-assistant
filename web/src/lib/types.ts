@@ -71,13 +71,17 @@ export interface RecoveryMetrics {
   light_hrs: number | null;
   deep_hrs: number | null;
   rem_hrs: number | null;
+  awake_hrs: number | null;
+  sleep_efficiency: number | null;
+  vo2_max: number | null;
   active_cal: number | null;
   steps: number | null;
   activity_score: number | null;
   spo2_avg: number | null;
   body_temp_delta: number | null;
+  bedtime: string | null;
   metadata: Record<string, unknown> | null;
-  source: string | null;
+  source: string;
 }
 
 export interface ChatSession {

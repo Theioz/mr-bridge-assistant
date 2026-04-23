@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
-import { todayString, daysAgoString } from "@/lib/timezone";
+import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import { loadIntegration, persistRotatedToken } from "@/lib/integrations/tokens";
 
 const FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token";
@@ -43,7 +43,8 @@ async function refreshFitbitToken(
 }
 
 // ---------------------------------------------------------------------------
-// Fitbit API fetch
+// Fitbit API fetch — throws on non-2xx. Use fitbitGetOptional for endpoints
+// that may legitimately 404 (e.g. no data for a given date).
 // ---------------------------------------------------------------------------
 
 async function fitbitGet(accessToken: string, path: string): Promise<Record<string, unknown>> {
@@ -52,6 +53,23 @@ async function fitbitGet(accessToken: string, path: string): Promise<Record<stri
     cache: "no-store",
   });
   if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Fitbit ${path} returned ${res.status}: ${body}`);
+  }
+  return res.json();
+}
+
+async function fitbitGetOptional(
+  accessToken: string,
+  path: string,
+): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${FITBIT_API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    // 404 = no data for this date; 400/403 = endpoint not available on plan
+    if ([400, 403, 404].includes(res.status)) return null;
     const body = await res.text();
     throw new Error(`Fitbit ${path} returned ${res.status}: ${body}`);
   }
@@ -100,6 +118,17 @@ function isBetter(
   return (newRow.duration_mins ?? 0) > (exRow.duration_mins ?? 0);
 }
 
+// Enumerate calendar dates from startStr to endStr inclusive (YYYY-MM-DD).
+function dateRange(startStr: string, endStr: string): string[] {
+  const dates: string[] = [];
+  let cur = startStr;
+  while (cur <= endStr) {
+    dates.push(cur);
+    cur = addDays(cur, 1);
+  }
+  return dates;
+}
+
 // ---------------------------------------------------------------------------
 // Main sync function
 // ---------------------------------------------------------------------------
@@ -107,6 +136,7 @@ function isBetter(
 export interface FitbitSyncResult {
   bodyWritten: number;
   workoutsWritten: number;
+  recoveryWritten: number;
 }
 
 export async function syncFitbit(db: SupabaseClient, userId: string): Promise<FitbitSyncResult> {
@@ -283,6 +313,110 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
     }
   }
 
-  await logSync(db, "fitbit", "ok", bodyWritten + workoutsWritten);
-  return { bodyWritten, workoutsWritten };
+  // ── Recovery (sleep + HRV + daily activity summary) ───────────────────────
+  //
+  // Fetch per-date in one parallel batch. Endpoints that return 404 (no data
+  // for that date) are silently skipped via fitbitGetOptional.
+
+  const dates = dateRange(startStr, endStr);
+
+  type PerDateFetch = {
+    date: string;
+    sleep: Record<string, unknown> | null;
+    hrv: Record<string, unknown> | null;
+    activity: Record<string, unknown> | null;
+  };
+
+  const perDateResults = await Promise.all(
+    dates.map(async (d): Promise<PerDateFetch> => {
+      const [sleep, hrv, activity] = await Promise.all([
+        fitbitGetOptional(accessToken, `/1/user/-/sleep/date/${d}.json`),
+        fitbitGetOptional(accessToken, `/1/user/-/hrv/date/${d}.json`),
+        fitbitGetOptional(accessToken, `/1/user/-/activities/date/${d}.json`),
+      ]);
+      return { date: d, sleep, hrv, activity };
+    }),
+  );
+
+  const recoveryRows: Record<string, unknown>[] = [];
+  for (const { date: d, sleep, hrv, activity } of perDateResults) {
+    // Find the main (longest) sleep session tagged as "stages" or pick the
+    // first entry if no stages-capable session exists.
+    const sleepEntries = (sleep?.sleep as Record<string, unknown>[] | undefined) ?? [];
+    const mainSleep =
+      sleepEntries.find((s) => s.type === "stages") ??
+      sleepEntries.find((s) => s.isMainSleep) ??
+      sleepEntries[0] ??
+      null;
+
+    const sleepSummary = sleep?.summary as Record<string, unknown> | undefined;
+    const stages = sleepSummary?.stages as Record<string, number> | undefined;
+
+    const totalSleepMins = sleepSummary?.totalMinutesAsleep as number | undefined;
+    const totalSleepHrs =
+      totalSleepMins != null ? Math.round((totalSleepMins / 60) * 100) / 100 : null;
+
+    const lightHrs = stages?.light != null ? Math.round((stages.light / 60) * 100) / 100 : null;
+    const deepHrs = stages?.deep != null ? Math.round((stages.deep / 60) * 100) / 100 : null;
+    const remHrs = stages?.rem != null ? Math.round((stages.rem / 60) * 100) / 100 : null;
+    const awakeHrs = stages?.wake != null ? Math.round((stages.wake / 60) * 100) / 100 : null;
+
+    const sleepEfficiency =
+      mainSleep?.efficiency != null ? Math.round((mainSleep.efficiency as number) * 10) / 10 : null;
+
+    // Fitbit sleep startTime: "2026-04-22T22:15:30.000"  → extract HH:MM:SS
+    const rawBedtime = mainSleep?.startTime as string | undefined;
+    const bedtime = rawBedtime ? rawBedtime.slice(11, 19) : null;
+
+    // HRV: dailyRmssd is the recommended daily summary field
+    const hrvEntries = (hrv?.hrv as Record<string, unknown>[] | undefined) ?? [];
+    const hrvValue = hrvEntries[0]?.value as Record<string, number> | undefined;
+    const avgHrv = hrvValue?.dailyRmssd != null ? Math.round(hrvValue.dailyRmssd) : null;
+
+    // Daily activity summary
+    const actSummary = activity?.summary as Record<string, unknown> | undefined;
+    const restingHr = actSummary?.restingHeartRate as number | undefined;
+    const steps = actSummary?.steps as number | undefined;
+    const activeCal = actSummary?.activeCalories as number | undefined;
+
+    // Skip this date entirely if there's nothing meaningful to write
+    if (
+      totalSleepHrs == null &&
+      avgHrv == null &&
+      restingHr == null &&
+      steps == null &&
+      activeCal == null
+    ) {
+      continue;
+    }
+
+    recoveryRows.push({
+      user_id: userId,
+      date: d,
+      source: "fitbit",
+      bedtime,
+      total_sleep_hrs: totalSleepHrs,
+      light_hrs: lightHrs,
+      deep_hrs: deepHrs,
+      rem_hrs: remHrs,
+      awake_hrs: awakeHrs,
+      sleep_efficiency: sleepEfficiency,
+      avg_hrv: avgHrv,
+      resting_hr: restingHr ?? null,
+      steps: steps ?? null,
+      active_cal: activeCal ?? null,
+    });
+  }
+
+  let recoveryWritten = 0;
+  if (recoveryRows.length) {
+    const { error } = await db
+      .from("recovery_metrics")
+      .upsert(recoveryRows, { onConflict: "user_id,date,source" });
+    if (error) throw new Error(`recovery_metrics upsert (fitbit): ${error.message}`);
+    recoveryWritten = recoveryRows.length;
+  }
+
+  await logSync(db, "fitbit", "ok", bodyWritten + workoutsWritten + recoveryWritten);
+  return { bodyWritten, workoutsWritten, recoveryWritten };
 }

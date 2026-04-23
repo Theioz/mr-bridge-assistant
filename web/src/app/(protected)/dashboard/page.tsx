@@ -137,6 +137,7 @@ export default async function DashboardPage() {
     supabase
       .from("recovery_metrics")
       .select("*")
+      .eq("source", "oura")
       .lt("date", today)
       .order("date", { ascending: false })
       .limit(1),
@@ -144,12 +145,14 @@ export default async function DashboardPage() {
     supabase
       .from("recovery_metrics")
       .select("date,readiness,sleep_score,source")
+      .eq("source", "oura")
       .eq("date", today)
       .limit(1),
     // Windowed recovery trend (HRV, sleep stages, steps, calories, RHR, SpO2)
     supabase
       .from("recovery_metrics")
       .select("*")
+      .eq("source", "oura")
       .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
     supabase.from("habit_registry").select("id,name,emoji,category,icon_key").eq("active", true),

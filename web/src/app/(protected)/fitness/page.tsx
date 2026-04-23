@@ -73,6 +73,7 @@ export default async function FitnessPage() {
     supabase
       .from("recovery_metrics")
       .select("*")
+      .eq("source", "oura")
       .gte("date", daysAgoString(recoveryDays - 1))
       .order("date", { ascending: true }),
     supabase

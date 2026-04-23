@@ -285,7 +285,7 @@ def seed_recovery(client):
             "body_temp_delta":  round(rng.uniform(-0.4, 0.4), 2),
             "source":           "oura",
         })
-    client.table("recovery_metrics").upsert(rows, on_conflict="user_id,date").execute()
+    client.table("recovery_metrics").upsert(rows, on_conflict="user_id,date,source").execute()
     print(f"[seed] recovery_metrics: {len(rows)} nights")
 
 

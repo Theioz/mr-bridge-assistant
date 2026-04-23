@@ -174,8 +174,6 @@ export async function syncOura(
 
     const meta: Record<string, number | string | null> = {};
     if (sd.bedtime_end != null) meta.bedtime_end = sd.bedtime_end;
-    if (sd.awake_hrs != null) meta.awake_hrs = sd.awake_hrs;
-    if (sd.efficiency != null) meta.sleep_efficiency = sd.efficiency;
     if (sd.latency_mins != null) meta.latency_mins = sd.latency_mins;
     if (sd.avg_breath != null) meta.avg_breath = sd.avg_breath;
     if (sd.avg_hr_sleep != null) meta.avg_hr_sleep = sd.avg_hr_sleep;
@@ -185,7 +183,6 @@ export async function syncOura(
     if (st.stress_recovery_mins != null) meta.stress_recovery_mins = st.stress_recovery_mins;
     if (st.stress_day_summary) meta.stress_day_summary = st.stress_day_summary;
     if (resilience[d]) meta.resilience_level = resilience[d];
-    if (vo2[d] != null) meta.vo2_max = vo2[d];
 
     return {
       user_id: userId,
@@ -195,6 +192,9 @@ export async function syncOura(
       light_hrs: sd.light_hrs ?? null,
       deep_hrs: sd.deep_hrs ?? null,
       rem_hrs: sd.rem_hrs ?? null,
+      awake_hrs: sd.awake_hrs != null ? sd.awake_hrs : null,
+      sleep_efficiency: sd.efficiency != null ? sd.efficiency : null,
+      vo2_max: vo2[d] ?? null,
       avg_hrv: sd.avg_hrv ?? null,
       resting_hr: sd.resting_hr ?? null,
       readiness: readiness[d] ?? null,
@@ -209,7 +209,9 @@ export async function syncOura(
     };
   });
 
-  const { error } = await db.from("recovery_metrics").upsert(rows, { onConflict: "user_id,date" });
+  const { error } = await db
+    .from("recovery_metrics")
+    .upsert(rows, { onConflict: "user_id,date,source" });
   if (error) throw new Error(error.message);
 
   await logSync(db, "oura", "ok", rows.length);

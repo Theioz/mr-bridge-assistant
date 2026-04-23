@@ -434,10 +434,6 @@ def main():
         meta: dict = {}
         if sd.get("bedtime_end"):
             meta["bedtime_end"] = sd["bedtime_end"]
-        if sd.get("awake_hrs") is not None:
-            meta["awake_hrs"] = sd["awake_hrs"]
-        if sd.get("efficiency") is not None:
-            meta["sleep_efficiency"] = sd["efficiency"]
         if sd.get("latency_mins") is not None:
             meta["latency_mins"] = sd["latency_mins"]
         if sd.get("avg_breath") is not None:
@@ -456,8 +452,6 @@ def main():
             meta["stress_day_summary"] = st["stress_day_summary"]
         if resilience.get(d):
             meta["resilience_level"] = resilience[d]
-        if vo2.get(d) is not None:
-            meta["vo2_max"] = vo2[d]
         if hr.get("hr_avg_day") is not None:
             meta["hr_avg_day"] = hr["hr_avg_day"]
         if hr.get("hr_min_day") is not None:
@@ -466,27 +460,30 @@ def main():
             meta["hr_max_day"] = hr["hr_max_day"]
 
         sb_rows.append({
-            "user_id":         owner_user_id,
-            "date":            d,
-            "bedtime":         sd.get("bedtime"),
-            "total_sleep_hrs": sd.get("total_sleep_hrs"),
-            "light_hrs":       sd.get("light_hrs"),
-            "deep_hrs":        sd.get("deep_hrs"),
-            "rem_hrs":         sd.get("rem_hrs"),
-            "avg_hrv":         sd.get("avg_hrv"),
-            "resting_hr":      sd.get("resting_hr"),
-            "readiness":       readiness.get(d),
-            "sleep_score":     sleep_scores.get(d),
-            "active_cal":      act.get("active_cal"),
-            "steps":           act.get("steps"),
-            "activity_score":  act.get("activity_score"),
-            "spo2_avg":        spo2.get(d),
-            "body_temp_delta": body_temp.get(d),
-            "metadata":        meta,
-            "source":          "oura",
+            "user_id":          owner_user_id,
+            "date":             d,
+            "bedtime":          sd.get("bedtime"),
+            "total_sleep_hrs":  sd.get("total_sleep_hrs"),
+            "light_hrs":        sd.get("light_hrs"),
+            "deep_hrs":         sd.get("deep_hrs"),
+            "rem_hrs":          sd.get("rem_hrs"),
+            "awake_hrs":        sd.get("awake_hrs"),
+            "sleep_efficiency": sd.get("efficiency"),
+            "vo2_max":          vo2.get(d),
+            "avg_hrv":          sd.get("avg_hrv"),
+            "resting_hr":       sd.get("resting_hr"),
+            "readiness":        readiness.get(d),
+            "sleep_score":      sleep_scores.get(d),
+            "active_cal":       act.get("active_cal"),
+            "steps":            act.get("steps"),
+            "activity_score":   act.get("activity_score"),
+            "spo2_avg":         spo2.get(d),
+            "body_temp_delta":  body_temp.get(d),
+            "metadata":         meta,
+            "source":           "oura",
         })
 
-    written = upsert(client, "recovery_metrics", sb_rows, conflict="date")
+    written = upsert(client, "recovery_metrics", sb_rows, conflict="user_id,date,source")
     # Add user_id to workout rows before inserting
     workout_rows_with_uid = [{**r, "user_id": owner_user_id} for r in workout_rows]
     workout_written = sync_oura_workouts(client, workout_rows_with_uid, start_str, now.strftime("%Y-%m-%d"), owner_user_id)
