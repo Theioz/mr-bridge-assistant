@@ -16,10 +16,28 @@ function addDays(dateStr: string, n: number): string {
   return d.toLocaleDateString("en-CA");
 }
 
+function carrierTrackingUrl(carrier: string, trackingNumber: string): string {
+  switch (carrier.toLowerCase()) {
+    case "ups":
+      return `https://www.ups.com/track?tracknum=${trackingNumber}`;
+    case "fedex":
+      return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+    case "usps":
+      return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+    case "dhl":
+      return `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}`;
+    case "amazon":
+      return `https://track.amazon.com/tracking/${trackingNumber}`;
+    default:
+      return "";
+  }
+}
+
 interface BannerContent {
   primaryLabel: string;
   trailingLabel: string;
   isUrgent: boolean;
+  trackingUrl: string | null;
 }
 
 function computeBannerContent(packages: Package[]): BannerContent | null {
@@ -40,6 +58,11 @@ function computeBannerContent(packages: Package[]): BannerContent | null {
   );
   const trackingOnly = active.filter((p) => p.estimated_delivery == null);
 
+  function singleUrl(pkg: Package): string | null {
+    const url = carrierTrackingUrl(pkg.carrier, pkg.tracking_number);
+    return url || null;
+  }
+
   if (todayPkgs.length > 0) {
     const pkg = todayPkgs.length === 1 ? todayPkgs[0] : null;
     return {
@@ -48,6 +71,7 @@ function computeBannerContent(packages: Package[]): BannerContent | null {
         : `${todayPkgs.length} packages`,
       trailingLabel: "today",
       isUrgent: true,
+      trackingUrl: pkg ? singleUrl(pkg) : null,
     };
   }
   if (tomorrowPkgs.length > 0) {
@@ -58,20 +82,25 @@ function computeBannerContent(packages: Package[]): BannerContent | null {
         : `${tomorrowPkgs.length} packages`,
       trailingLabel: "tomorrow",
       isUrgent: false,
+      trackingUrl: pkg ? singleUrl(pkg) : null,
     };
   }
   if (weekPkgs.length > 0) {
+    const pkg = weekPkgs.length === 1 ? weekPkgs[0] : null;
     return {
       primaryLabel: `${weekPkgs.length} package${weekPkgs.length === 1 ? "" : "s"}`,
       trailingLabel: "this week",
       isUrgent: false,
+      trackingUrl: pkg ? singleUrl(pkg) : null,
     };
   }
   if (trackingOnly.length > 0) {
+    const pkg = trackingOnly.length === 1 ? trackingOnly[0] : null;
     return {
       primaryLabel: `${trackingOnly.length} package${trackingOnly.length === 1 ? "" : "s"}`,
       trailingLabel: "tracking",
       isUrgent: false,
+      trackingUrl: pkg ? singleUrl(pkg) : null,
     };
   }
   return null;
@@ -145,19 +174,39 @@ export default function PackagesBanner() {
           flexShrink: 0,
         }}
       />
-      <span
-        style={{
-          color: "var(--color-text)",
-          fontWeight: content.isUrgent ? 500 : 400,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
-        {content.primaryLabel}
-      </span>
+      {content.trackingUrl ? (
+        <a
+          href={content.trackingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: "var(--color-text)",
+            fontWeight: content.isUrgent ? 500 : 400,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+            minWidth: 0,
+            textDecoration: "none",
+          }}
+        >
+          {content.primaryLabel}
+        </a>
+      ) : (
+        <span
+          style={{
+            color: "var(--color-text)",
+            fontWeight: content.isUrgent ? 500 : 400,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {content.primaryLabel}
+        </span>
+      )}
       <span style={{ color: "var(--color-text-faint)", flexShrink: 0 }} className="tnum">
         {content.trailingLabel}
       </span>

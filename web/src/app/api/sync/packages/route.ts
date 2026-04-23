@@ -11,10 +11,6 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!process.env.AFTERSHIP_API_KEY) {
-    return NextResponse.json({ error: "AFTERSHIP_API_KEY not configured" }, { status: 503 });
-  }
-
   try {
     const db = createServiceClient();
     const result = await syncPackages(db, user.id);

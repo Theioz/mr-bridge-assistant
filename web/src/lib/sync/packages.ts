@@ -3,7 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { gmail_v1 } from "googleapis";
 import { logSync } from "./log";
 import { getGoogleAuthClient } from "@/lib/google-auth";
-import { createAfterShipTracking, getAfterShipTracking } from "@/lib/aftership";
 import type { Package } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -12,8 +11,6 @@ import type { Package } from "@/lib/types";
 
 export interface PackagesSyncResult {
   new: number;
-  updated: number;
-  delivered: number;
 }
 
 type PackageUpsert = Omit<Package, "id" | "created_at">;
@@ -45,7 +42,6 @@ function extractBodyText(payload: gmail_v1.Schema$MessagePart | undefined | null
     return decodeBase64url(payload.body.data).replace(/<[^>]+>/g, " ");
   }
   if (payload.parts) {
-    // Prefer text/plain, then text/html, then recurse into other parts
     const plain = payload.parts.find((p) => p.mimeType === "text/plain");
     if (plain) return extractBodyText(plain);
     const html = payload.parts.find((p) => p.mimeType === "text/html");
@@ -53,6 +49,38 @@ function extractBodyText(payload: gmail_v1.Schema$MessagePart | undefined | null
     return payload.parts.map((p) => extractBodyText(p)).join("\n");
   }
   return "";
+}
+
+// ---------------------------------------------------------------------------
+// ETA extraction from email body
+// ---------------------------------------------------------------------------
+
+const ETA_PATTERNS = [
+  /estimated\s+delivery(?:\s+date)?:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /expected\s+delivery(?:\s+date)?:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /estimated\s+arrival:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /arrives?\s+by:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /arriving:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /delivers?\s+by:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /delivery\s+by:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+  /will\s+(?:arrive|be\s+delivered)\s+by:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
+];
+
+function extractEta(text: string): string | null {
+  for (const pattern of ETA_PATTERNS) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const raw = match[1].trim().replace(/^[A-Za-z]+,\s*/, "");
+    const hasYear = /\b\d{4}\b/.test(raw);
+    const candidate = hasYear ? raw : `${raw} ${new Date().getFullYear()}`;
+    const d = new Date(candidate);
+    if (isNaN(d.getTime())) continue;
+    if (!hasYear && d.getTime() < Date.now() - 30 * 24 * 60 * 60 * 1000) {
+      d.setFullYear(d.getFullYear() + 1);
+    }
+    return d.toLocaleDateString("en-CA");
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,51 +96,36 @@ function extractTrackingNumbers(text: string, context: string): ExtractedTrackin
   const combined = `${context}\n${text}`;
   const results: ExtractedTracking[] = [];
 
-  // UPS: 1Z + 16 alphanumeric — highly distinctive
   for (const m of combined.matchAll(/\b(1Z[0-9A-Z]{16})\b/g)) {
     results.push({ tracking_number: m[1], carrier: "ups" });
   }
 
-  // Amazon Logistics: TBA + 12 digits
   for (const m of combined.matchAll(/\b(TBA\d{12})\b/g)) {
     results.push({ tracking_number: m[1], carrier: "amazon" });
   }
 
-  // USPS: 22-digit numbers starting with 9 (94xxx, 93xxx, 92xxx, 95xxx)
   for (const m of combined.matchAll(/\b(9[0-9]{21})\b/g)) {
     results.push({ tracking_number: m[1], carrier: "usps" });
   }
 
-  // FedEx: 15 or 20 digits, only when FedEx is mentioned in context
   if (/fedex|federal express/i.test(combined)) {
     for (const m of combined.matchAll(/\b(\d{15}|\d{20})\b/g)) {
       results.push({ tracking_number: m[1], carrier: "fedex" });
     }
   }
 
-  // DHL: 10-11 digits, only when DHL is mentioned
   if (/\bDHL\b/i.test(combined)) {
     for (const m of combined.matchAll(/\b(\d{10,11})\b/g)) {
       results.push({ tracking_number: m[1], carrier: "dhl" });
     }
   }
 
-  // Dedup by tracking_number (keep first occurrence)
   const seen = new Set<string>();
   return results.filter((r) => {
     if (seen.has(r.tracking_number)) return false;
     seen.add(r.tracking_number);
     return true;
   });
-}
-
-// ---------------------------------------------------------------------------
-// Status normalization
-// ---------------------------------------------------------------------------
-
-function normalizeTag(tag: string | null): string {
-  if (!tag) return "pending";
-  return tag.toLowerCase().replace(/\s+/g, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -123,10 +136,6 @@ export async function syncPackages(
   db: SupabaseClient,
   userId: string,
 ): Promise<PackagesSyncResult> {
-  const apiKey = process.env.AFTERSHIP_API_KEY;
-  if (!apiKey) throw new Error("AFTERSHIP_API_KEY not configured");
-
-  // ── Step 1: Scan Gmail ──────────────────────────────────────────────────────
   const auth = await getGoogleAuthClient({ db, userId });
   const gmail = google.gmail({ version: "v1", auth });
 
@@ -137,12 +146,9 @@ export async function syncPackages(
   });
   const messages = listRes.data.messages ?? [];
 
-  // ── Step 2: Determine which messages and tracking numbers are already known ─
   const { data: existingPkgs } = await db
     .from("packages")
-    .select(
-      "gmail_message_id, tracking_number, status, aftership_slug, aftership_id, description, retailer, estimated_delivery, delivered_at",
-    )
+    .select("gmail_message_id, tracking_number")
     .eq("user_id", userId);
 
   const processedMsgIds = new Set<string>(
@@ -155,15 +161,7 @@ export async function syncPackages(
     (existingPkgs ?? []).map((p: { tracking_number: string }) => p.tracking_number),
   );
 
-  // ── Step 3: Extract tracking numbers from new messages ─────────────────────
-  interface Extracted {
-    tracking_number: string;
-    carrier: string;
-    gmail_message_id: string;
-    retailer: string;
-    description: string;
-  }
-  const extracted: Extracted[] = [];
+  const newRows: PackageUpsert[] = [];
 
   for (const msg of messages) {
     if (!msg.id || processedMsgIds.has(msg.id)) continue;
@@ -177,120 +175,42 @@ export async function syncPackages(
       const subject = getHeader(headers, "subject");
       const from = getHeader(headers, "from");
       const bodyText = extractBodyText(full.data.payload) + "\n" + (full.data.snippet ?? "");
+      const combined = `${subject} ${from}\n${bodyText}`;
+
       const trackings = extractTrackingNumbers(bodyText, `${subject} ${from}`);
+      const eta = extractEta(combined);
       const retailer = parseFrom(from);
+
       for (const t of trackings) {
-        if (!knownTrackingNumbers.has(t.tracking_number)) {
-          extracted.push({
-            ...t,
-            gmail_message_id: msg.id,
-            retailer,
-            description: subject,
-          });
-          knownTrackingNumbers.add(t.tracking_number);
-        }
+        if (knownTrackingNumbers.has(t.tracking_number)) continue;
+        knownTrackingNumbers.add(t.tracking_number);
+        newRows.push({
+          user_id: userId,
+          tracking_number: t.tracking_number,
+          carrier: t.carrier,
+          aftership_slug: null,
+          aftership_id: null,
+          description: subject,
+          retailer,
+          status: "intransit",
+          estimated_delivery: eta,
+          delivered_at: null,
+          gmail_message_id: msg.id,
+          last_synced_at: new Date().toISOString(),
+        });
       }
     } catch {
       // skip individual message errors
     }
   }
 
-  // ── Step 4: Create AfterShip trackings for newly discovered numbers ─────────
-  let newCount = 0;
-  const newRows: PackageUpsert[] = [];
-
-  const createResults = await Promise.allSettled(
-    extracted.map(async (e) => {
-      const aftership = await createAfterShipTracking(apiKey, e.tracking_number);
-      return { ...e, aftership };
-    }),
-  );
-
-  for (const r of createResults) {
-    if (r.status === "rejected") continue;
-    const { tracking_number, carrier, gmail_message_id, retailer, description, aftership } =
-      r.value;
-    newCount++;
-    newRows.push({
-      user_id: userId,
-      tracking_number,
-      carrier: aftership.slug ?? carrier,
-      aftership_slug: aftership.slug ?? null,
-      aftership_id: aftership.id ?? null,
-      description,
-      retailer,
-      status: normalizeTag(aftership.tag),
-      estimated_delivery: aftership.expected_delivery?.slice(0, 10) ?? null,
-      delivered_at: null,
-      gmail_message_id,
-      last_synced_at: new Date().toISOString(),
-    });
-  }
-
-  // ── Step 5: Refresh existing active packages from AfterShip ────────────────
-  let updatedCount = 0;
-  let deliveredCount = 0;
-  const refreshRows: PackageUpsert[] = [];
-
-  type ActivePkg = Pick<
-    Package,
-    | "tracking_number"
-    | "carrier"
-    | "aftership_slug"
-    | "aftership_id"
-    | "description"
-    | "retailer"
-    | "estimated_delivery"
-    | "delivered_at"
-    | "gmail_message_id"
-  >;
-
-  const activePkgs = ((existingPkgs ?? []) as (ActivePkg & { status: string | null })[]).filter(
-    (p) => p.status !== "delivered" && p.status !== "expired" && p.aftership_slug,
-  );
-
-  const refreshResults = await Promise.allSettled(
-    activePkgs.map(async (pkg) => {
-      const aftership = await getAfterShipTracking(
-        apiKey,
-        pkg.aftership_slug!,
-        pkg.tracking_number,
-      );
-      return { pkg, aftership };
-    }),
-  );
-
-  for (const r of refreshResults) {
-    if (r.status === "rejected") continue;
-    const { pkg, aftership } = r.value;
-    const status = normalizeTag(aftership.tag);
-    if (status === "delivered") deliveredCount++;
-    else updatedCount++;
-    refreshRows.push({
-      user_id: userId,
-      tracking_number: pkg.tracking_number,
-      carrier: pkg.carrier,
-      aftership_slug: pkg.aftership_slug,
-      aftership_id: aftership.id ?? pkg.aftership_id,
-      description: pkg.description,
-      retailer: pkg.retailer,
-      status,
-      estimated_delivery: aftership.expected_delivery?.slice(0, 10) ?? pkg.estimated_delivery,
-      delivered_at: status === "delivered" ? new Date().toISOString() : pkg.delivered_at,
-      gmail_message_id: pkg.gmail_message_id,
-      last_synced_at: new Date().toISOString(),
-    });
-  }
-
-  // ── Step 6: Upsert all rows ─────────────────────────────────────────────────
-  const allRows = [...newRows, ...refreshRows];
-  if (allRows.length > 0) {
+  if (newRows.length > 0) {
     const { error } = await db
       .from("packages")
-      .upsert(allRows, { onConflict: "user_id,tracking_number" });
+      .upsert(newRows, { onConflict: "user_id,tracking_number" });
     if (error) throw new Error(`Failed to upsert packages: ${error.message}`);
   }
 
-  await logSync(db, "packages", "ok", allRows.length);
-  return { new: newCount, updated: updatedCount, delivered: deliveredCount };
+  await logSync(db, "packages", "ok", newRows.length);
+  return { new: newRows.length };
 }

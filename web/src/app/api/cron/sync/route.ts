@@ -134,29 +134,23 @@ export async function GET(request: NextRequest) {
     results.sports = { skipped: true, reason: "no favorites" };
   }
 
-  // Packages sync — Gmail scan + AfterShip ETA refresh; requires AFTERSHIP_API_KEY
-  if (!process.env.AFTERSHIP_API_KEY) {
-    results.packages = { skipped: true, reason: "AFTERSHIP_API_KEY not set" };
+  // Packages sync — Gmail scan for shipping confirmation emails
+  const packagesAge = await lastSyncAgeSecs(db, "packages");
+  if (packagesAge !== null && packagesAge < SKIP_WINDOW_SECS) {
+    results.packages = { skipped: true, ageSecs: Math.round(packagesAge) };
   } else {
-    const packagesAge = await lastSyncAgeSecs(db, "packages");
-    if (packagesAge !== null && packagesAge < SKIP_WINDOW_SECS) {
-      results.packages = { skipped: true, ageSecs: Math.round(packagesAge) };
-    } else {
-      const userIds = await listConnectedUsers(db, "google");
-      const settled = await Promise.allSettled(userIds.map((uid) => syncPackages(db, uid)));
-      const errors = settled
-        .map((s, i) =>
-          s.status === "rejected"
-            ? { userId: userIds[i], error: (s.reason as Error).message }
-            : null,
-        )
-        .filter((e): e is { userId: string; error: string } => e !== null);
-      results.packages = {
-        usersSynced: settled.length - errors.length,
-        usersFailed: errors.length,
-        errors,
-      };
-    }
+    const userIds = await listConnectedUsers(db, "google");
+    const settled = await Promise.allSettled(userIds.map((uid) => syncPackages(db, uid)));
+    const errors = settled
+      .map((s, i) =>
+        s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
+      )
+      .filter((e): e is { userId: string; error: string } => e !== null);
+    results.packages = {
+      usersSynced: settled.length - errors.length,
+      usersFailed: errors.length,
+      errors,
+    };
   }
 
   return NextResponse.json({ success: true, results });
