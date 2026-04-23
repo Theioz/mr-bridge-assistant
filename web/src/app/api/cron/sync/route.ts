@@ -5,6 +5,7 @@ import { syncFitbit } from "@/lib/sync/fitbit";
 import { syncGoogleFit } from "@/lib/sync/googlefit";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
+import { syncPackages } from "@/lib/sync/packages";
 import { lastSyncAgeSecs } from "@/lib/sync/log";
 import { listConnectedUsers } from "@/lib/integrations/tokens";
 
@@ -131,6 +132,31 @@ export async function GET(request: NextRequest) {
     }
   } else {
     results.sports = { skipped: true, reason: "no favorites" };
+  }
+
+  // Packages sync — Gmail scan + AfterShip ETA refresh; requires AFTERSHIP_API_KEY
+  if (!process.env.AFTERSHIP_API_KEY) {
+    results.packages = { skipped: true, reason: "AFTERSHIP_API_KEY not set" };
+  } else {
+    const packagesAge = await lastSyncAgeSecs(db, "packages");
+    if (packagesAge !== null && packagesAge < SKIP_WINDOW_SECS) {
+      results.packages = { skipped: true, ageSecs: Math.round(packagesAge) };
+    } else {
+      const userIds = await listConnectedUsers(db, "google");
+      const settled = await Promise.allSettled(userIds.map((uid) => syncPackages(db, uid)));
+      const errors = settled
+        .map((s, i) =>
+          s.status === "rejected"
+            ? { userId: userIds[i], error: (s.reason as Error).message }
+            : null,
+        )
+        .filter((e): e is { userId: string; error: string } => e !== null);
+      results.packages = {
+        usersSynced: settled.length - errors.length,
+        usersFailed: errors.length,
+        errors,
+      };
+    }
   }
 
   return NextResponse.json({ success: true, results });

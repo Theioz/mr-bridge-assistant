@@ -21,6 +21,7 @@ import {
 import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
+import PackagesBanner from "@/components/dashboard/packages-banner";
 import ScheduleToday from "@/components/dashboard/schedule-today";
 import ImportantEmails from "@/components/dashboard/important-emails";
 import TasksSummary from "@/components/dashboard/tasks-summary";
@@ -289,6 +290,11 @@ export default async function DashboardPage() {
       {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
       <div className="print:order-7" data-reveal data-stagger="2">
         <UpcomingBirthdayWidget />
+      </div>
+
+      {/* ── Package deliveries banner (null when no active deliveries) ── */}
+      <div className="print:order-7" data-reveal data-stagger="2">
+        <PackagesBanner />
       </div>
 
       {/* ── Today's scores strip (readiness + sleep focal) ─────────── */}

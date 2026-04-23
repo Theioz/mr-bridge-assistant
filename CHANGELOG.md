@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Package delivery widget — expected delivery dates on dashboard (#412).** The dashboard now surfaces a lightweight banner strip (below the birthday banner) showing the most imminent incoming delivery. Gmail is scanned for shipping confirmation emails (UPS, FedEx, USPS, DHL, Amazon tracking numbers extracted via regex); AfterShip resolves live carrier ETAs; data persists in a new RLS-scoped `packages` Supabase table. The banner is grouped by Today / Tomorrow / This week / Tracking and returns `null` when there are no active deliveries. Background refresh runs in the existing daily cron; on-mount stale-refresh triggers automatically if data is more than 6 hours old. Requires `AFTERSHIP_API_KEY` env var.
+
 ### Refactored
 - **Split `scripts/_supabase.py` god module into focused helpers (#402).** Notification logging extracted into `scripts/_notifications.py`; HTTP retry and sync_log writes extracted into `scripts/_sync_log.py`. `_supabase.py` now contains only `get_client`, `get_owner_user_id`, and `upsert`. Seven callers updated to import from the correct module; ten callers required no changes.
 
