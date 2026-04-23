@@ -21,17 +21,6 @@ function hoursToHm(h: number): string {
   return m > 0 ? `${hi}h ${m}m` : `${hi}h`;
 }
 
-function numberFromMeta(meta: Record<string, unknown> | null, key: string): number | null {
-  if (!meta) return null;
-  const v = meta[key];
-  if (typeof v === "number" && !Number.isNaN(v)) return v;
-  if (typeof v === "string") {
-    const parsed = parseFloat(v);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-  return null;
-}
-
 function sliceByDate<T extends { date: string }>(rows: T[], days: number): T[] {
   const today = todayString();
   const cutoff = addDays(today, -(days - 1));
@@ -84,11 +73,7 @@ export function RecoveryTrends({ trends }: Props) {
 
   // ── Sleep efficiency 14d (derived from metadata or fallback) ──────────
   const sleepEffLabels = t14.map((r) => formatDate(r.date));
-  const sleepEffValues = t14.map((r) => {
-    // Oura stores as metadata.sleep_efficiency; value is 0-100 percent.
-    const metaVal = numberFromMeta(r.metadata, "sleep_efficiency");
-    return metaVal;
-  });
+  const sleepEffValues = t14.map((r) => r.sleep_efficiency);
   const sleepEffHasAny = sleepEffValues.some((v) => v != null);
   const sleepEffTodayIdx = t14[t14.length - 1]?.date === today ? t14.length - 1 : -1;
   const sleepEffLatest = sleepEffValues[sleepEffValues.length - 1] ?? null;

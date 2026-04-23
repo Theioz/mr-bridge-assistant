@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **Sleep efficiency chart blank after #453.** `RecoveryTrends` was reading `sleep_efficiency` from `metadata` JSONB; the cleanup migration in #453 removed that key. Now reads from the promoted real column `r.sleep_efficiency` directly.
+
 ### Added
 - **Multi-source recovery_metrics: Fitbit sleep/HRV/steps/calories + schema changes (#449).** Prerequisite for per-metric source preferences (#435). Three changes ship together: (1) `recovery_metrics` gains a `source` column in the unique constraint (`user_id, date, source`) so Fitbit and Oura rows coexist per date — existing rows backfilled to `source = 'oura'`. (2) Fitbit sync now calls the sleep, HRV, and daily-activity-summary endpoints and writes recovery rows with `source = 'fitbit'`. (3) Three Oura metadata JSONB fields (`sleep_efficiency`, `awake_hrs`, `vo2_max`) promoted to real columns with SQL backfill. All existing read paths updated with `source = 'oura'` filter to preserve current behaviour until the preference layer (#435) ships.
 
