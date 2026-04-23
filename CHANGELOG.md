@@ -8,6 +8,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Multi-source recovery_metrics: Fitbit sleep/HRV/steps/calories + schema changes (#449).** Prerequisite for per-metric source preferences (#435). Three changes ship together: (1) `recovery_metrics` gains a `source` column in the unique constraint (`user_id, date, source`) so Fitbit and Oura rows coexist per date — existing rows backfilled to `source = 'oura'`. (2) Fitbit sync now calls the sleep, HRV, and daily-activity-summary endpoints and writes recovery rows with `source = 'fitbit'`. (3) Three Oura metadata JSONB fields (`sleep_efficiency`, `awake_hrs`, `vo2_max`) promoted to real columns with SQL backfill. All existing read paths updated with `source = 'oura'` filter to preserve current behaviour until the preference layer (#435) ships.
+
 - **Package delivery widget — expected delivery dates on dashboard (#412).** The dashboard now surfaces a lightweight banner strip (below the birthday banner) showing the most imminent incoming delivery. Gmail is scanned for shipping confirmation emails; UPS, FedEx, USPS, DHL, and Amazon tracking numbers are extracted via regex, and estimated delivery dates are parsed directly from the email body. Data persists in a new RLS-scoped `packages` Supabase table. The banner groups by Today / Tomorrow / This week / Tracking, returns `null` when there are no active deliveries, and links single-package buckets directly to the carrier's tracking page. Background refresh runs in the existing daily cron; on-mount stale-refresh triggers automatically if data is more than 6 hours old. No external API key required.
 
 ### Refactored

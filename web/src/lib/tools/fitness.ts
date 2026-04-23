@@ -32,6 +32,7 @@ export function buildFitnessTools({ supabase, userId }: ToolContext) {
         let recQ = supabase
           .from("recovery_metrics")
           .select("date, avg_hrv, resting_hr, sleep_score, readiness, source")
+          .eq("source", "oura")
           .order("date", { ascending: false })
           .limit(1);
         if (userId) {

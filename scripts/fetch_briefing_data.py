@@ -102,6 +102,7 @@ def main():
             client.table("recovery_metrics")
             .select("*")
             .eq("user_id", uid)
+            .eq("source", "oura")
             .order("date", desc=True)
             .limit(1)
             .execute()

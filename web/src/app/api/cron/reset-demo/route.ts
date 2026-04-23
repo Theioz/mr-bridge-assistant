@@ -287,7 +287,9 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
       source: "oura",
     });
   }
-  await supabase.from("recovery_metrics").upsert(recoveryRows, { onConflict: "user_id,date" });
+  await supabase
+    .from("recovery_metrics")
+    .upsert(recoveryRows, { onConflict: "user_id,date,source" });
 
   // Study log
   const studyRows = [

@@ -153,6 +153,7 @@ async function WeeklyGrid({
     supabase
       .from("recovery_metrics")
       .select("date,readiness,sleep_score,avg_hrv")
+      .eq("source", "oura")
       .gte("date", weekStart)
       .lte("date", today)
       .order("date", { ascending: true }),
