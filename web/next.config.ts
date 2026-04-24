@@ -5,9 +5,17 @@ const withAnalyze = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+const isDev = process.env.NODE_ENV !== "production";
+
+// Next 16 + Turbopack uses eval() to parse the RSC stream in dev. Prod builds
+// don't, so 'unsafe-eval' is dev-only.
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://a.espncdn.com https://*.supabase.co",
   "font-src 'self' data:",
