@@ -252,6 +252,17 @@ Mr. Bridge reads a flat key-value `profile` table in Supabase. Fill in your deta
 - **Web app** → open the web interface → **Settings** → fill in Display Name, Home Location, Target Weight, nutrition goals, and fitness goals, then save each field. The Appearance section lets you pick System / Light / Dark (persisted to `profile.theme_preference`; header toggle and Settings radio stay in sync). The **Equipment** section lets you log your gym equipment (dumbbell pairs, barbells, resistance bands, etc.) so Bridge proposes exercises within your actual inventory.
 - **Chat** → ask Mr. Bridge: *"Set my weight goal to 160 lbs"* or *"My name is Jason"* — the AI writes these directly to Supabase.
 
+### Step 10b — Enable admin access (owner account)
+
+The `/admin` route is gated by `is_admin: true` in your Supabase user metadata. Set it once after deploying:
+
+1. Supabase dashboard → **Authentication** → **Users**
+2. Find your owner account row → click **Edit**
+3. Under **User Metadata**, add: `{ "is_admin": true }`
+4. Save
+
+Navigate to `https://your-app.vercel.app/admin` — you should see the tenant list. Non-admin accounts receive a 404 (the route is not advertised).
+
 ### Step 11 — First session
 
 ```bash
@@ -351,6 +362,10 @@ mr-bridge-assistant/
 │   ├── .env.local.example                 # Web app env var template
 │   ├── src/
 │   │   ├── app/
+│   │   │   ├── admin/                     # Admin-only pages (404 for non-admins; set is_admin: true in Supabase user_metadata)
+│   │   │   │   ├── layout.tsx             # Admin gate — notFound() if !is_admin
+│   │   │   │   ├── page.tsx               # Tenant list + create/delete user
+│   │   │   │   └── tenants/[userId]/page.tsx  # Tenant drill-down: profile, integrations, chat, quota overrides, feature flags, audit log
 │   │   │   ├── (protected)/               # Auth-gated pages
 │   │   │   │   ├── layout.tsx             # Protected layout with sidebar
 │   │   │   │   ├── page.tsx               # Daily briefing dashboard
