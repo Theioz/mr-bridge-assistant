@@ -65,6 +65,7 @@ async function deleteTenant(formData: FormData) {
   if (deleteError) {
     redirect(`/admin?deleteError=${encodeURIComponent(deleteError.message)}`);
   }
+  revalidatePath("/admin");
   redirect("/admin");
 }
 
