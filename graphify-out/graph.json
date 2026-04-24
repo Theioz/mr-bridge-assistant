@@ -3157,7 +3157,7 @@
       "label": "onKey()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/chat-interface.tsx",
-      "source_location": "L268",
+      "source_location": "L269",
       "id": "chat_interface_onkey",
       "community": 19,
       "norm_label": "onkey()"
@@ -13365,7 +13365,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/chat/chat-interface.tsx",
-      "source_location": "L268",
+      "source_location": "L269",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_components_chat_chat_interface_tsx",
       "_tgt": "chat_interface_onkey",
