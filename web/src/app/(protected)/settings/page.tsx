@@ -108,6 +108,30 @@ async function saveWatchlist(tickers: string[]) {
   revalidatePath("/settings");
 }
 
+async function saveWorkoutPrefs(prefs: string[], equip: string[]) {
+  "use server";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await Promise.all([
+    supabase
+      .from("profile")
+      .upsert(
+        { user_id: user.id, key: "workout_preferences", value: JSON.stringify(prefs) },
+        { onConflict: "user_id,key" },
+      ),
+    supabase
+      .from("profile")
+      .upsert(
+        { user_id: user.id, key: "equipment_preference", value: JSON.stringify(equip) },
+        { onConflict: "user_id,key" },
+      ),
+  ]);
+  revalidatePath("/settings");
+}
+
 async function addEquipment(item: EquipmentItemInput) {
   "use server";
   const supabase = await createClient();
@@ -288,6 +312,9 @@ async function SettingsContent({
         <FitnessSettings
           restTimerEnabled={values["rest_timer_enabled"] !== "0"}
           updateAction={updateProfile}
+          initialWorkoutPrefs={JSON.parse(values["workout_preferences"] ?? "[]") as string[]}
+          initialEquipment={JSON.parse(values["equipment_preference"] ?? "[]") as string[]}
+          saveWorkoutPrefsAction={saveWorkoutPrefs}
         />
         <EquipmentSettings
           items={equipmentData ?? []}
