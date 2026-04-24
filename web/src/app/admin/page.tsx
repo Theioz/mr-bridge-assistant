@@ -62,11 +62,19 @@ async function deleteTenant(formData: FormData) {
   });
 
   const { error: deleteError } = await svc.auth.admin.deleteUser(targetUserId);
-  if (deleteError) throw new Error(deleteError.message);
+  if (deleteError) {
+    redirect(`/admin?deleteError=${encodeURIComponent(deleteError.message)}`);
+  }
   redirect("/admin");
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
+  const deleteError = params.deleteError ?? null;
   const svc = createServiceClient();
 
   const [{ data: listResult }, { data: quotas }, { data: integrations }] = await Promise.all([
@@ -123,6 +131,22 @@ export default async function AdminPage() {
       >
         Admin
       </h1>
+
+      {deleteError && (
+        <p
+          role="alert"
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-danger)",
+            border: "1px solid var(--color-danger)",
+            borderRadius: "var(--r-1)",
+            padding: "var(--space-3) var(--space-4)",
+            marginBottom: "var(--space-5)",
+          }}
+        >
+          Delete failed: {deleteError}
+        </p>
+      )}
 
       {/* Create tenant */}
       <section
