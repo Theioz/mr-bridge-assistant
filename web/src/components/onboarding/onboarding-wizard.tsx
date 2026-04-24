@@ -5,11 +5,22 @@ import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
+
+type NutritionSuggestion = {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
 
 interface Props {
   initialName: string;
   initialLocation: string;
+  initialBirthday: string;
+  initialWeightLb: string;
+  initialHeightCm: string;
+  initialBiologicalSex: string;
   initialFocus: string[];
   initialFitnessGoal: string;
   initialFitnessLevel: string;
@@ -17,13 +28,27 @@ interface Props {
   initialEquipment: string[];
   initialCalorieTarget: string;
   initialProteinTarget: string;
+  initialCarbTarget: string;
+  initialFatTarget: string;
   initialWatchlist: string[];
   initialSportsFavorites: SportsFavorite[];
   saveNameAndLocationAction: (name: string, city: string) => Promise<void>;
+  saveBodyStatsAction: (
+    birthday: string,
+    weightLb: string,
+    heightCm: string,
+    sex: string,
+  ) => Promise<void>;
   saveFocusAction: (focus: string[]) => Promise<void>;
   saveFitnessGoalsAction: (goal: string, level: string) => Promise<void>;
   saveWorkoutPreferencesAction: (prefs: string[], equip: string[]) => Promise<void>;
-  saveNutritionTargetsAction: (calories: string, proteinG: string) => Promise<void>;
+  saveNutritionTargetsAction: (
+    calories: string,
+    proteinG: string,
+    carbsG: string,
+    fatG: string,
+  ) => Promise<void>;
+  suggestNutritionTargetsAction: () => Promise<NutritionSuggestion | null>;
   saveWatchlistAction: (tickers: string[]) => Promise<void>;
   saveSportsFavoritesAction: (favorites: SportsFavorite[]) => Promise<void>;
   completeAction: () => Promise<void>;
@@ -63,7 +88,7 @@ const WORKOUT_TYPES = [
   { id: "mixed", label: "Mixed" },
 ];
 
-const EQUIPMENT_OPTIONS = [
+const EQUIPMENT_PRESETS = [
   { id: "barbells", label: "Barbells & free weights" },
   { id: "cables", label: "Cables & machines" },
   { id: "bands", label: "Resistance bands" },
@@ -72,21 +97,29 @@ const EQUIPMENT_OPTIONS = [
   { id: "bodyweight", label: "Bodyweight only" },
 ];
 
+const PRESET_IDS = new Set(EQUIPMENT_PRESETS.map((p) => p.id));
+
+const SEX_OPTIONS = [
+  { id: "male", label: "Male" },
+  { id: "female", label: "Female" },
+  { id: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
 const INTEGRATION_CARDS = [
   {
     id: "google",
     label: "Google Calendar & Gmail",
-    description: "Daily schedule, meetings, and important emails in your briefing.",
+    description: "Daily schedule, meetings, and important emails synced automatically.",
   },
   {
     id: "oura",
     label: "Oura Ring",
-    description: "Sleep, recovery, and readiness scores.",
+    description: "Continuous sleep, recovery, and readiness data.",
   },
   {
     id: "fitbit",
     label: "Fitbit",
-    description: "Workouts, body composition, and activity data.",
+    description: "Workouts, body composition, and activity logged in real time.",
   },
 ];
 
@@ -109,6 +142,10 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.02em",
   marginBottom: "var(--space-2)",
 };
+
+function getEquipmentLabel(id: string): string {
+  return EQUIPMENT_PRESETS.find((p) => p.id === id)?.label ?? id;
+}
 
 function OptionChip({
   selected,
@@ -209,6 +246,10 @@ function NavButtons({
 export function OnboardingWizard({
   initialName,
   initialLocation,
+  initialBirthday,
+  initialWeightLb,
+  initialHeightCm,
+  initialBiologicalSex,
   initialFocus,
   initialFitnessGoal,
   initialFitnessLevel,
@@ -216,13 +257,17 @@ export function OnboardingWizard({
   initialEquipment,
   initialCalorieTarget,
   initialProteinTarget,
+  initialCarbTarget,
+  initialFatTarget,
   initialWatchlist,
   initialSportsFavorites,
   saveNameAndLocationAction,
+  saveBodyStatsAction,
   saveFocusAction,
   saveFitnessGoalsAction,
   saveWorkoutPreferencesAction,
   saveNutritionTargetsAction,
+  suggestNutritionTargetsAction,
   saveWatchlistAction,
   saveSportsFavoritesAction,
   completeAction,
@@ -230,24 +275,34 @@ export function OnboardingWizard({
   const [step, setStep] = useState(0);
   const [isPending, startTransition] = useTransition();
 
-  // Step 1 state
+  // Step 0: About you
   const [name, setName] = useState(initialName);
   const [location, setLocation] = useState(initialLocation);
 
-  // Step 2 state
+  // Step 1: Body stats
+  const [birthday, setBirthday] = useState(initialBirthday);
+  const [weightLb, setWeightLb] = useState(initialWeightLb);
+  const [heightCm, setHeightCm] = useState(initialHeightCm);
+  const [biologicalSex, setBiologicalSex] = useState(initialBiologicalSex);
+
+  // Step 2: Focus
   const [focus, setFocus] = useState<string[]>(initialFocus);
 
-  // Step 3 state
+  // Step 3: Fitness goals
   const [fitnessGoal, setFitnessGoal] = useState(initialFitnessGoal);
   const [fitnessLevel, setFitnessLevel] = useState(initialFitnessLevel);
 
-  // Step 4 state
+  // Step 4: Workout preferences
   const [workoutPrefs, setWorkoutPrefs] = useState<string[]>(initialWorkoutPrefs);
   const [equipment, setEquipment] = useState<string[]>(initialEquipment);
+  const [equipmentDraft, setEquipmentDraft] = useState("");
 
-  // Step 5 state
+  // Step 5: Nutrition targets
   const [calorieTarget, setCalorieTarget] = useState(initialCalorieTarget);
   const [proteinTarget, setProteinTarget] = useState(initialProteinTarget);
+  const [carbTarget, setCarbTarget] = useState(initialCarbTarget);
+  const [fatTarget, setFatTarget] = useState(initialFatTarget);
+  const [generating, setGenerating] = useState(false);
 
   function advance() {
     setStep((s) => s + 1);
@@ -257,7 +312,26 @@ export function OnboardingWizard({
     return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
   }
 
-  // Step 1: You
+  function addEquipmentTag(raw: string) {
+    const tag = raw.trim().toLowerCase();
+    if (tag && !equipment.includes(tag)) setEquipment((prev) => [...prev, tag]);
+  }
+
+  function removeEquipmentTag(tag: string) {
+    setEquipment((prev) => prev.filter((t) => t !== tag));
+  }
+
+  function handleEquipmentKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addEquipmentTag(equipmentDraft);
+      setEquipmentDraft("");
+    } else if (e.key === "Backspace" && !equipmentDraft) {
+      const custom = equipment.filter((t) => !PRESET_IDS.has(t));
+      if (custom.length > 0) removeEquipmentTag(custom[custom.length - 1]);
+    }
+  }
+
   function handleNameLocationContinue() {
     startTransition(async () => {
       await saveNameAndLocationAction(name.trim(), location.trim());
@@ -265,7 +339,20 @@ export function OnboardingWizard({
     });
   }
 
-  // Step 2: Focus
+  function handleBodyStatsContinue() {
+    startTransition(async () => {
+      if (birthday.trim() || weightLb.trim() || heightCm.trim() || biologicalSex.trim()) {
+        await saveBodyStatsAction(
+          birthday.trim(),
+          weightLb.trim(),
+          heightCm.trim(),
+          biologicalSex.trim(),
+        );
+      }
+      advance();
+    });
+  }
+
   function handleFocusContinue() {
     startTransition(async () => {
       if (focus.length > 0) await saveFocusAction(focus);
@@ -273,7 +360,6 @@ export function OnboardingWizard({
     });
   }
 
-  // Step 3: Fitness goals
   function handleFitnessGoalsContinue() {
     startTransition(async () => {
       if (fitnessGoal || fitnessLevel) await saveFitnessGoalsAction(fitnessGoal, fitnessLevel);
@@ -281,7 +367,6 @@ export function OnboardingWizard({
     });
   }
 
-  // Step 4: Workout setup
   function handleWorkoutContinue() {
     startTransition(async () => {
       if (workoutPrefs.length > 0 || equipment.length > 0)
@@ -290,17 +375,35 @@ export function OnboardingWizard({
     });
   }
 
-  // Step 5: Nutrition
+  async function handleGenerateTargets() {
+    setGenerating(true);
+    try {
+      const result = await suggestNutritionTargetsAction();
+      if (result) {
+        setCalorieTarget(String(result.calories));
+        setProteinTarget(String(result.protein_g));
+        setCarbTarget(String(result.carbs_g));
+        setFatTarget(String(result.fat_g));
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function handleNutritionContinue() {
     startTransition(async () => {
-      if (calorieTarget.trim() || proteinTarget.trim())
-        await saveNutritionTargetsAction(calorieTarget.trim(), proteinTarget.trim());
+      if (calorieTarget.trim() || proteinTarget.trim() || carbTarget.trim() || fatTarget.trim()) {
+        await saveNutritionTargetsAction(
+          calorieTarget.trim(),
+          proteinTarget.trim(),
+          carbTarget.trim(),
+          fatTarget.trim(),
+        );
+      }
       advance();
     });
   }
 
-  // Step 6: Watchlist & Sports — saved live by embedded components, just advance
-  // Step 7: Integrations — complete
   function handleComplete() {
     startTransition(async () => {
       await completeAction();
@@ -308,10 +411,10 @@ export function OnboardingWizard({
   }
 
   const stepHeadingId = `onboarding-step-${step}`;
+  const customEquipment = equipment.filter((t) => !PRESET_IDS.has(t));
 
   return (
     <div>
-      {/* Progress */}
       <p
         style={{
           fontSize: "var(--t-micro)",
@@ -323,7 +426,7 @@ export function OnboardingWizard({
         Step {step + 1} of {TOTAL_STEPS}
       </p>
 
-      {/* Step 1: You */}
+      {/* Step 0: About you */}
       {step === 0 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
@@ -371,8 +474,100 @@ export function OnboardingWizard({
         </section>
       )}
 
-      {/* Step 2: Focus */}
+      {/* Step 1: Body stats */}
       {step === 1 && (
+        <section aria-labelledby={stepHeadingId}>
+          <h2
+            id={stepHeadingId}
+            className="db-section-label"
+            style={{ marginBottom: "var(--space-2)" }}
+          >
+            Body stats
+          </h2>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+              marginBottom: "var(--space-5)",
+            }}
+          >
+            Used as a baseline for nutrition targets and workout programming. Connect integrations
+            later to keep these updated automatically.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+            <div>
+              <label htmlFor="onboarding-birthday" style={labelStyle}>
+                Date of birth
+              </label>
+              <input
+                id="onboarding-birthday"
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className="focus:outline-none input-focus-ring"
+                style={inputStyle}
+              />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "var(--space-4)",
+              }}
+            >
+              <div>
+                <label htmlFor="onboarding-weight" style={labelStyle}>
+                  Weight (lbs)
+                </label>
+                <input
+                  id="onboarding-weight"
+                  type="number"
+                  value={weightLb}
+                  onChange={(e) => setWeightLb(e.target.value)}
+                  placeholder="e.g. 175"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label htmlFor="onboarding-height" style={labelStyle}>
+                  Height (cm)
+                </label>
+                <input
+                  id="onboarding-height"
+                  type="number"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  placeholder="e.g. 178"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div>
+              <p style={{ ...labelStyle, marginBottom: "var(--space-3)" }}>Biological sex</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                {SEX_OPTIONS.map((opt) => (
+                  <OptionChip
+                    key={opt.id}
+                    selected={biologicalSex === opt.id}
+                    onClick={() => setBiologicalSex((prev) => (prev === opt.id ? "" : opt.id))}
+                  >
+                    {opt.label}
+                  </OptionChip>
+                ))}
+              </div>
+            </div>
+          </div>
+          <NavButtons onSkip={advance} onContinue={handleBodyStatsContinue} isPending={isPending} />
+        </section>
+      )}
+
+      {/* Step 2: Focus */}
+      {step === 2 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
@@ -417,7 +612,7 @@ export function OnboardingWizard({
       )}
 
       {/* Step 3: Fitness goals */}
-      {step === 2 && (
+      {step === 3 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
@@ -475,8 +670,8 @@ export function OnboardingWizard({
         </section>
       )}
 
-      {/* Step 4: Workout setup */}
-      {step === 3 && (
+      {/* Step 4: Workout preferences */}
+      {step === 4 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
@@ -506,8 +701,67 @@ export function OnboardingWizard({
               <p style={{ ...labelStyle, marginBottom: "var(--space-3)" }}>
                 Equipment you have access to
               </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                {EQUIPMENT_OPTIONS.map((e) => (
+              {/* Custom tags */}
+              {customEquipment.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "var(--space-2)",
+                    marginBottom: "var(--space-3)",
+                  }}
+                >
+                  {customEquipment.map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1) var(--space-3)",
+                        borderRadius: "var(--r-1)",
+                        border: "1px solid var(--accent)",
+                        background: "var(--accent)",
+                        color: "var(--color-text-on-cta)",
+                        fontSize: "var(--t-micro)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {getEquipmentLabel(tag)}
+                      <button
+                        type="button"
+                        onClick={() => removeEquipmentTag(tag)}
+                        aria-label={`Remove ${getEquipmentLabel(tag)}`}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          padding: 0,
+                          lineHeight: 1,
+                          fontSize: "var(--t-body)",
+                          opacity: 0.7,
+                          marginLeft: 2,
+                          minWidth: 16,
+                          minHeight: 16,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Preset chips */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "var(--space-2)",
+                  marginBottom: "var(--space-3)",
+                }}
+              >
+                {EQUIPMENT_PRESETS.map((e) => (
                   <OptionChip
                     key={e.id}
                     selected={equipment.includes(e.id)}
@@ -517,6 +771,16 @@ export function OnboardingWizard({
                   </OptionChip>
                 ))}
               </div>
+              {/* Custom text input */}
+              <input
+                type="text"
+                value={equipmentDraft}
+                onChange={(e) => setEquipmentDraft(e.target.value)}
+                onKeyDown={handleEquipmentKeyDown}
+                placeholder="Add other equipment — press Enter to add"
+                className="focus:outline-none input-focus-ring"
+                style={inputStyle}
+              />
             </div>
           </div>
           <NavButtons onSkip={advance} onContinue={handleWorkoutContinue} isPending={isPending} />
@@ -524,7 +788,7 @@ export function OnboardingWizard({
       )}
 
       {/* Step 5: Nutrition targets */}
-      {step === 4 && (
+      {step === 5 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
@@ -540,46 +804,111 @@ export function OnboardingWizard({
               marginBottom: "var(--space-5)",
             }}
           >
-            Leave blank to let Mr. Bridge estimate targets based on your fitness goal.
+            Set your daily macro targets, or let Mr. Bridge estimate them from your body stats and
+            goals.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-            <div>
-              <label htmlFor="onboarding-calories" style={labelStyle}>
-                Daily calorie target
-              </label>
-              <input
-                id="onboarding-calories"
-                type="number"
-                value={calorieTarget}
-                onChange={(e) => setCalorieTarget(e.target.value)}
-                placeholder="e.g. 2200"
-                min={0}
-                className="focus:outline-none input-focus-ring"
-                style={inputStyle}
-              />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "var(--space-4)",
+              }}
+            >
+              <div>
+                <label htmlFor="onboarding-calories" style={labelStyle}>
+                  Calories
+                </label>
+                <input
+                  id="onboarding-calories"
+                  type="number"
+                  value={calorieTarget}
+                  onChange={(e) => setCalorieTarget(e.target.value)}
+                  placeholder="e.g. 2400"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label htmlFor="onboarding-protein" style={labelStyle}>
+                  Protein (g)
+                </label>
+                <input
+                  id="onboarding-protein"
+                  type="number"
+                  value={proteinTarget}
+                  onChange={(e) => setProteinTarget(e.target.value)}
+                  placeholder="e.g. 180"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label htmlFor="onboarding-carbs" style={labelStyle}>
+                  Carbs (g)
+                </label>
+                <input
+                  id="onboarding-carbs"
+                  type="number"
+                  value={carbTarget}
+                  onChange={(e) => setCarbTarget(e.target.value)}
+                  placeholder="e.g. 260"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label htmlFor="onboarding-fat" style={labelStyle}>
+                  Fat (g)
+                </label>
+                <input
+                  id="onboarding-fat"
+                  type="number"
+                  value={fatTarget}
+                  onChange={(e) => setFatTarget(e.target.value)}
+                  placeholder="e.g. 70"
+                  min={0}
+                  className="focus:outline-none input-focus-ring"
+                  style={inputStyle}
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="onboarding-protein" style={labelStyle}>
-                Daily protein target (g)
-              </label>
-              <input
-                id="onboarding-protein"
-                type="number"
-                value={proteinTarget}
-                onChange={(e) => setProteinTarget(e.target.value)}
-                placeholder="e.g. 160"
-                min={0}
-                className="focus:outline-none input-focus-ring"
-                style={inputStyle}
-              />
+            <div style={{ display: "flex", justifyContent: "flex-start" }}>
+              <button
+                type="button"
+                onClick={handleGenerateTargets}
+                disabled={generating || isPending}
+                style={{
+                  minHeight: 44,
+                  padding: "0 var(--space-4)",
+                  borderRadius: "var(--r-1)",
+                  border: "1px solid var(--rule)",
+                  background: "transparent",
+                  color: "var(--color-text)",
+                  fontSize: "var(--t-meta)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  opacity: generating || isPending ? 0.4 : 1,
+                  transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+                }}
+              >
+                {generating ? "Generating…" : "Generate with Mr. Bridge →"}
+              </button>
             </div>
           </div>
-          <NavButtons onSkip={advance} onContinue={handleNutritionContinue} isPending={isPending} />
+          <NavButtons
+            onSkip={advance}
+            onContinue={handleNutritionContinue}
+            isPending={isPending || generating}
+          />
         </section>
       )}
 
       {/* Step 6: Watchlist & Sports */}
-      {step === 5 && (
+      {step === 6 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
@@ -619,15 +948,15 @@ export function OnboardingWizard({
         </section>
       )}
 
-      {/* Step 7: Integrations */}
-      {step === 6 && (
+      {/* Step 7: Connect integrations */}
+      {step === 7 && (
         <section aria-labelledby={stepHeadingId}>
           <h2
             id={stepHeadingId}
             className="db-section-label"
             style={{ marginBottom: "var(--space-2)" }}
           >
-            Connect integrations
+            Connect your data sources
           </h2>
           <p
             style={{
@@ -636,8 +965,8 @@ export function OnboardingWizard({
               marginBottom: "var(--space-5)",
             }}
           >
-            Connect your tools so Mr. Bridge can include them in your daily briefing. You can always
-            do this later in Settings.
+            Each integration continuously syncs your health, fitness, and calendar data so Mr.
+            Bridge improves over time — no manual entry needed. Connect anytime in Settings.
           </p>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {INTEGRATION_CARDS.map((card, i) => (

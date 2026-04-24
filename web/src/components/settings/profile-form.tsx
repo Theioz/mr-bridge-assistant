@@ -77,6 +77,32 @@ const NUTRITION_GOAL_FIELDS: Field[] = [
   },
 ];
 
+const BODY_STATS_FIELDS: Field[] = [
+  {
+    key: "birthday",
+    label: "Date of Birth",
+    placeholder: "YYYY-MM-DD",
+    hint: "Used to calculate age for nutrition estimates",
+  },
+  {
+    key: "body_weight_lb",
+    label: "Weight (lbs)",
+    placeholder: "e.g. 175",
+    hint: "Baseline — integrations update this automatically",
+  },
+  {
+    key: "height_cm",
+    label: "Height (cm)",
+    placeholder: "e.g. 178",
+  },
+  {
+    key: "biological_sex",
+    label: "Biological Sex",
+    placeholder: "male / female / prefer not to say",
+    hint: "Used for nutrition and fitness estimates",
+  },
+];
+
 const FITNESS_GOAL_FIELDS: Field[] = [
   {
     key: "weekly_workout_goal",
@@ -611,6 +637,20 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
     <>
       <SettingsSection label="Profile">
         {EDITABLE_FIELDS.map((field, i) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
+            isFirst={i === 0}
+          />
+        ))}
+      </SettingsSection>
+
+      <SettingsSection label="Body Stats">
+        {BODY_STATS_FIELDS.map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}
