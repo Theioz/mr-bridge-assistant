@@ -99,7 +99,19 @@ async function saveNutritionTargets(
   for (const row of rows) await upsert(user.id, row.key, row.value);
 }
 
-async function suggestNutritionTargets(): Promise<NutritionTargets | null> {
+type NutritionOverrides = {
+  birthday?: string;
+  weightLb?: string;
+  heightCm?: string;
+  biologicalSex?: string;
+  fitnessGoal?: string;
+  fitnessLevel?: string;
+  workoutPrefs?: string[];
+};
+
+async function suggestNutritionTargets(
+  overrides?: NutritionOverrides,
+): Promise<NutritionTargets | null> {
   "use server";
   const supabase = await createClient();
   const {
@@ -121,19 +133,21 @@ async function suggestNutritionTargets(): Promise<NutritionTargets | null> {
     .limit(1)
     .maybeSingle();
 
-  const weightLb =
-    latestWeightRow?.weight_lb ?? (v["body_weight_lb"] ? parseFloat(v["body_weight_lb"]) : null);
-  const heightCm = v["height_cm"] ? parseFloat(v["height_cm"]) : null;
-  const birthday = v["birthday"];
+  // Overrides (unsaved wizard state) take priority over persisted profile values
+  const rawWeightLb = overrides?.weightLb ?? v["body_weight_lb"];
+  const weightLb = latestWeightRow?.weight_lb ?? (rawWeightLb ? parseFloat(rawWeightLb) : null);
+  const rawHeightCm = overrides?.heightCm ?? v["height_cm"];
+  const heightCm = rawHeightCm ? parseFloat(rawHeightCm) : null;
+  const birthday = overrides?.birthday ?? v["birthday"];
   const age = birthday
     ? Math.floor((Date.now() - new Date(birthday).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null;
-  const sex = v["biological_sex"] ?? null;
-  const goal = v["fitness_goal"] ?? null;
-  const level = v["fitness_level"] ?? null;
-  const workoutPrefs = v["workout_preferences"]
-    ? (JSON.parse(v["workout_preferences"]) as string[])
-    : [];
+  const sex = overrides?.biologicalSex ?? v["biological_sex"] ?? null;
+  const goal = overrides?.fitnessGoal ?? v["fitness_goal"] ?? null;
+  const level = overrides?.fitnessLevel ?? v["fitness_level"] ?? null;
+  const workoutPrefs =
+    overrides?.workoutPrefs ??
+    (v["workout_preferences"] ? (JSON.parse(v["workout_preferences"]) as string[]) : []);
 
   const parts: string[] = [];
   if (age) parts.push(`Age: ${age}`);

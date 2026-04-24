@@ -14,6 +14,16 @@ type NutritionSuggestion = {
   fat_g: number;
 };
 
+type NutritionOverrides = {
+  birthday?: string;
+  weightLb?: string;
+  heightCm?: string;
+  biologicalSex?: string;
+  fitnessGoal?: string;
+  fitnessLevel?: string;
+  workoutPrefs?: string[];
+};
+
 interface Props {
   initialName: string;
   initialLocation: string;
@@ -48,7 +58,9 @@ interface Props {
     carbsG: string,
     fatG: string,
   ) => Promise<void>;
-  suggestNutritionTargetsAction: () => Promise<NutritionSuggestion | null>;
+  suggestNutritionTargetsAction: (
+    overrides?: NutritionOverrides,
+  ) => Promise<NutritionSuggestion | null>;
   saveWatchlistAction: (tickers: string[]) => Promise<void>;
   saveSportsFavoritesAction: (favorites: SportsFavorite[]) => Promise<void>;
   completeAction: () => Promise<void>;
@@ -142,6 +154,24 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.02em",
   marginBottom: "var(--space-2)",
 };
+
+function cmToFtIn(cmStr: string): { ft: string; inches: string } {
+  if (!cmStr.trim()) return { ft: "", inches: "" };
+  const cm = parseFloat(cmStr);
+  if (isNaN(cm) || cm <= 0) return { ft: "", inches: "" };
+  const totalInches = cm / 2.54;
+  return {
+    ft: String(Math.floor(totalInches / 12)),
+    inches: String(Math.round(totalInches % 12)),
+  };
+}
+
+function ftInToCm(ft: string, inches: string): string {
+  const f = parseFloat(ft) || 0;
+  const i = parseFloat(inches) || 0;
+  if (f === 0 && i === 0) return "";
+  return String(Math.round((f * 12 + i) * 2.54));
+}
 
 function getEquipmentLabel(id: string): string {
   return EQUIPMENT_PRESETS.find((p) => p.id === id)?.label ?? id;
@@ -282,7 +312,9 @@ export function OnboardingWizard({
   // Step 1: Body stats
   const [birthday, setBirthday] = useState(initialBirthday);
   const [weightLb, setWeightLb] = useState(initialWeightLb);
-  const [heightCm, setHeightCm] = useState(initialHeightCm);
+  const { ft: initFt, inches: initIn } = cmToFtIn(initialHeightCm);
+  const [heightFt, setHeightFt] = useState(initFt);
+  const [heightIn, setHeightIn] = useState(initIn);
   const [biologicalSex, setBiologicalSex] = useState(initialBiologicalSex);
 
   // Step 2: Focus
@@ -341,11 +373,12 @@ export function OnboardingWizard({
 
   function handleBodyStatsContinue() {
     startTransition(async () => {
-      if (birthday.trim() || weightLb.trim() || heightCm.trim() || biologicalSex.trim()) {
+      const heightCmValue = ftInToCm(heightFt, heightIn);
+      if (birthday.trim() || weightLb.trim() || heightCmValue || biologicalSex.trim()) {
         await saveBodyStatsAction(
           birthday.trim(),
           weightLb.trim(),
-          heightCm.trim(),
+          heightCmValue,
           biologicalSex.trim(),
         );
       }
@@ -378,7 +411,15 @@ export function OnboardingWizard({
   async function handleGenerateTargets() {
     setGenerating(true);
     try {
-      const result = await suggestNutritionTargetsAction();
+      const result = await suggestNutritionTargetsAction({
+        birthday: birthday.trim() || undefined,
+        weightLb: weightLb.trim() || undefined,
+        heightCm: ftInToCm(heightFt, heightIn) || undefined,
+        biologicalSex: biologicalSex.trim() || undefined,
+        fitnessGoal: fitnessGoal.trim() || undefined,
+        fitnessLevel: fitnessLevel.trim() || undefined,
+        workoutPrefs: workoutPrefs.length > 0 ? workoutPrefs : undefined,
+      });
       if (result) {
         setCalorieTarget(String(result.calories));
         setProteinTarget(String(result.protein_g));
@@ -532,19 +573,49 @@ export function OnboardingWizard({
                 />
               </div>
               <div>
-                <label htmlFor="onboarding-height" style={labelStyle}>
-                  Height (cm)
-                </label>
-                <input
-                  id="onboarding-height"
-                  type="number"
-                  value={heightCm}
-                  onChange={(e) => setHeightCm(e.target.value)}
-                  placeholder="e.g. 178"
-                  min={0}
-                  className="focus:outline-none input-focus-ring"
-                  style={inputStyle}
-                />
+                <label style={labelStyle}>Height</label>
+                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                  <input
+                    id="onboarding-height-ft"
+                    type="number"
+                    value={heightFt}
+                    onChange={(e) => setHeightFt(e.target.value)}
+                    placeholder="5"
+                    min={0}
+                    max={8}
+                    className="focus:outline-none input-focus-ring"
+                    style={{ ...inputStyle, width: undefined, flex: 1 }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ft
+                  </span>
+                  <input
+                    id="onboarding-height-in"
+                    type="number"
+                    value={heightIn}
+                    onChange={(e) => setHeightIn(e.target.value)}
+                    placeholder="10"
+                    min={0}
+                    max={11}
+                    className="focus:outline-none input-focus-ring"
+                    style={{ ...inputStyle, width: undefined, flex: 1 }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    in
+                  </span>
+                </div>
               </div>
             </div>
             <div>

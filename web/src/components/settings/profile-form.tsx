@@ -77,6 +77,24 @@ const NUTRITION_GOAL_FIELDS: Field[] = [
   },
 ];
 
+function cmToFtIn(cmStr: string): { ft: string; inches: string } {
+  if (!cmStr.trim()) return { ft: "", inches: "" };
+  const cm = parseFloat(cmStr);
+  if (isNaN(cm) || cm <= 0) return { ft: "", inches: "" };
+  const totalInches = cm / 2.54;
+  return {
+    ft: String(Math.floor(totalInches / 12)),
+    inches: String(Math.round(totalInches % 12)),
+  };
+}
+
+function ftInToCm(ft: string, inches: string): string {
+  const f = parseFloat(ft) || 0;
+  const i = parseFloat(inches) || 0;
+  if (f === 0 && i === 0) return "";
+  return String(Math.round((f * 12 + i) * 2.54));
+}
+
 const BODY_STATS_FIELDS: Field[] = [
   {
     key: "birthday",
@@ -89,11 +107,6 @@ const BODY_STATS_FIELDS: Field[] = [
     label: "Weight (lbs)",
     placeholder: "e.g. 175",
     hint: "Baseline — integrations update this automatically",
-  },
-  {
-    key: "height_cm",
-    label: "Height (cm)",
-    placeholder: "e.g. 178",
   },
   {
     key: "biological_sex",
@@ -560,6 +573,165 @@ function FieldRow({
   );
 }
 
+function HeightRow({
+  initialCm,
+  updateAction,
+  deleteAction,
+  onDirtyChange,
+  isFirst,
+}: {
+  initialCm: string;
+  updateAction: (key: string, value: string) => Promise<void>;
+  deleteAction: (key: string) => Promise<void>;
+  onDirtyChange?: (key: string, dirty: boolean) => void;
+  isFirst?: boolean;
+}) {
+  const { ft: initFt, inches: initIn } = cmToFtIn(initialCm);
+  const [ft, setFt] = useState(initFt);
+  const [inches, setInches] = useState(initIn);
+  const [baselineFt, setBaselineFt] = useState(initFt);
+  const [baselineIn, setBaselineIn] = useState(initIn);
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const isDirty = ft !== baselineFt || inches !== baselineIn;
+
+  useEffect(() => {
+    onDirtyChange?.("height_cm", isDirty);
+    return () => onDirtyChange?.("height_cm", false);
+  }, [isDirty, onDirtyChange]);
+
+  function handleSave() {
+    startTransition(async () => {
+      const cm = ftInToCm(ft, inches);
+      if (cm === "") {
+        await deleteAction("height_cm");
+      } else {
+        await updateAction("height_cm", cm);
+      }
+      setBaselineFt(ft);
+      setBaselineIn(inches);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    });
+  }
+
+  const inputBase: React.CSSProperties = {
+    background: "transparent",
+    border: "1px solid var(--rule)",
+    borderRadius: "var(--r-1)",
+    color: "var(--color-text)",
+    fontSize: "var(--t-meta)",
+    padding: "0 var(--space-3)",
+    minHeight: 44,
+    flex: 1,
+    minWidth: 0,
+    transition: "border-color var(--motion-fast) var(--ease-out-quart)",
+  };
+
+  return (
+    <div
+      style={{
+        paddingTop: "var(--space-3)",
+        paddingBottom: "var(--space-3)",
+        borderTop: isFirst ? "none" : "1px solid var(--rule-soft)",
+      }}
+    >
+      <div
+        className="flex items-start justify-between"
+        style={{ gap: "var(--space-3)", marginBottom: "var(--space-2)" }}
+      >
+        <span style={{ fontSize: "var(--t-meta)", fontWeight: 500, color: "var(--color-text)" }}>
+          Height
+        </span>
+      </div>
+      <div className="flex" style={{ gap: "var(--space-2)", alignItems: "center" }}>
+        <input
+          type="number"
+          value={ft}
+          onChange={(e) => {
+            setFt(e.target.value);
+            setSaved(false);
+          }}
+          placeholder="5"
+          min={0}
+          max={8}
+          aria-label="Height feet"
+          className="focus:outline-none input-focus-ring"
+          style={inputBase}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+          }}
+        />
+        <span
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", flexShrink: 0 }}
+        >
+          ft
+        </span>
+        <input
+          type="number"
+          value={inches}
+          onChange={(e) => {
+            setInches(e.target.value);
+            setSaved(false);
+          }}
+          placeholder="10"
+          min={0}
+          max={11}
+          aria-label="Height inches"
+          className="focus:outline-none input-focus-ring"
+          style={inputBase}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+          }}
+        />
+        <span
+          style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)", flexShrink: 0 }}
+        >
+          in
+        </span>
+        <button
+          onClick={handleSave}
+          disabled={!isDirty || isPending}
+          className="flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          style={{
+            gap: "var(--space-1)",
+            padding: "0 var(--space-3)",
+            minHeight: 44,
+            minWidth: 72,
+            flexShrink: 0,
+            background: saved ? "transparent" : isDirty ? "var(--accent)" : "transparent",
+            color: saved
+              ? "var(--color-positive)"
+              : isDirty
+                ? "var(--color-text-on-cta)"
+                : "var(--color-text-muted)",
+            border: `1px solid ${
+              saved ? "var(--color-positive)" : isDirty ? "var(--accent)" : "var(--rule)"
+            }`,
+            borderRadius: "var(--r-1)",
+            fontSize: "var(--t-micro)",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
+            transition:
+              "background var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+          }}
+        >
+          {isPending ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : saved ? (
+            <>
+              <Check size={14} /> Saved
+            </>
+          ) : (
+            "Save"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RecalculateLink({ deleteAction }: { deleteAction: (key: string) => Promise<void> }) {
   const [isPending, startTransition] = useTransition();
   return (
@@ -650,7 +822,7 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
       </SettingsSection>
 
       <SettingsSection label="Body Stats">
-        {BODY_STATS_FIELDS.map((field, i) => (
+        {BODY_STATS_FIELDS.slice(0, 2).map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}
@@ -659,6 +831,22 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
             deleteAction={deleteAction}
             onDirtyChange={handleDirtyChange}
             isFirst={i === 0}
+          />
+        ))}
+        <HeightRow
+          initialCm={values["height_cm"] ?? ""}
+          updateAction={updateAction}
+          deleteAction={deleteAction}
+          onDirtyChange={handleDirtyChange}
+        />
+        {BODY_STATS_FIELDS.slice(2).map((field) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
           />
         ))}
       </SettingsSection>
