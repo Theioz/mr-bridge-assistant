@@ -77,7 +77,13 @@ function LoginForm() {
     setState("loading");
     setErrorMsg("");
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({ email: e, password: p });
+    const { data, error } = await supabase.auth.signUp({
+      email: e,
+      password: p,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
     if (error) {
       setErrorMsg(error.message);
       setState("error");
