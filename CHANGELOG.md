@@ -13,6 +13,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Fixed
 - **Clean up three sources of console noise during the CSP Report-Only soak.** (1) `interest-cohort=()` was the FLoC opt-out; Google killed FLoC in 2022 and Chrome now rejects the directive as "Unrecognized feature." (2) `upgrade-insecure-requests` is ignored by the CSP spec when delivered under `Content-Security-Policy-Report-Only`; it will be added back when the CSP flips to enforcing. (3) `'unsafe-eval'` added to `script-src` in dev only (`NODE_ENV !== "production"`) because Next 16 + Turbopack uses `eval()` to parse the RSC stream in dev mode, which tripped ~130 Report-Only violations per `/dashboard` load. Production builds don't use `eval`, so the prod CSP stays tight.
 
+- **ThemeToggle SSR/client hydration mismatch on /dashboard.** `next-themes` reads from `localStorage` on the client, which may disagree with the cookie-backed `defaultTheme` the server rendered with — the server rendered `Theme: System` + Monitor icon while the client hydrated as `Theme: Dark` + Moon icon, tripping React error #418 and the downstream `Cannot read properties of null (reading 'parentNode')` crash. `web/src/components/theme-toggle.tsx` now gates the theme-dependent label/icon behind a `mounted` flag so SSR and the first client render produce the same placeholder. New Playwright regression `web/smoke/specs/dashboard-hydration.spec.ts` asserts no React hydration errors in the dashboard console.
+
 - **Sleep efficiency chart blank after #453.** `RecoveryTrends` was reading `sleep_efficiency` from `metadata` JSONB; the cleanup migration in #453 removed that key. Now reads from the promoted real column `r.sleep_efficiency` directly.
 
 ### Added
