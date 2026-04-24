@@ -302,7 +302,7 @@ export default async function AdminPage() {
                     >
                       Inspect →
                     </a>
-                    <details style={{ display: "inline-block" }}>
+                    <details style={{ display: "inline-block", position: "relative" }}>
                       <summary
                         style={{
                           fontSize: "var(--t-micro)",
@@ -316,6 +316,7 @@ export default async function AdminPage() {
                       <div
                         style={{
                           position: "absolute",
+                          right: 0,
                           background: "var(--color-surface-raised)",
                           border: "1px solid var(--color-border)",
                           borderRadius: "var(--r-2)",
