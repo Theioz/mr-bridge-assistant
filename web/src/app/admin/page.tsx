@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { AdminTenant, TenantQuotaRow } from "@/lib/admin-types";
@@ -60,8 +61,9 @@ async function deleteTenant(formData: FormData) {
     after_value: null,
   });
 
-  await svc.auth.admin.deleteUser(targetUserId);
-  revalidatePath("/admin");
+  const { error: deleteError } = await svc.auth.admin.deleteUser(targetUserId);
+  if (deleteError) throw new Error(deleteError.message);
+  redirect("/admin");
 }
 
 export default async function AdminPage() {
