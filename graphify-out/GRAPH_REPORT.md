@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-24)
 
 ## Corpus Check
-- 242 files · ~603,643 words
+- 244 files · ~605,536 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 930 nodes · 1102 edges · 184 communities detected
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 233 edges (avg confidence: 0.8)
+- 935 nodes · 1106 edges · 185 communities detected
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 234 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -194,9 +194,10 @@
 - [[_COMMUNITY_Community 181|Community 181]]
 - [[_COMMUNITY_Community 182|Community 182]]
 - [[_COMMUNITY_Community 183|Community 183]]
+- [[_COMMUNITY_Community 184|Community 184]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `createClient()` - 75 edges
+1. `createClient()` - 76 edges
 2. `POST@chat/route.ts` - 20 edges
 3. `todayString()` - 20 edges
 4. `main()` - 19 edges
@@ -212,18 +213,18 @@
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
 - `todayString()` --calls--> `makeDemo()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/timezone.ts → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/tools/calendar.ts
+- `createSmokeAdminClient()` --calls--> `createClient()`  [INFERRED]
+  /Users/jason/Code Projects/mr-bridge-assistant/web/smoke/utils/supabase-verify.ts → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
 - `saveJournalEntry()` --calls--> `createClient()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/journal/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
 - `updateProfile()` --calls--> `createClient()`  [INFERRED]
-  /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/settings/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
-- `deleteProfile()` --calls--> `createClient()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/settings/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (69): createClient(), backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), lastSyncAgeSecs(), lastSyncStatus(), addEquipment() (+61 more)
+Nodes (71): createClient(), backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), lastSyncAgeSecs(), lastSyncStatus(), addEquipment() (+63 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
@@ -234,12 +235,12 @@ Cohesion: 0.06
 Nodes (41): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range(), get_profile_value() (+33 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.09
-Nodes (33): load_integration(), _now_iso(), persist_rotated_token(), Per-user integration token helpers — mirrors web/src/lib/integrations/tokens.ts., Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if, Encrypt and save a rotated refresh token back to user_integrations., _require_encryption_key(), main() (+25 more)
+Cohesion: 0.06
+Nodes (18): buildCalendarTools(), makeDemo(), buildEquipmentTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools() (+10 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.07
-Nodes (18): buildCalendarTools(), makeDemo(), buildEquipmentTools(), buildFitnessTools(), buildGmailTools(), buildHabitsTools(), buildMealsTools(), buildProfileTools() (+10 more)
+Cohesion: 0.09
+Nodes (33): load_integration(), _now_iso(), persist_rotated_token(), Per-user integration token helpers — mirrors web/src/lib/integrations/tokens.ts., Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if, Encrypt and save a rotated refresh token back to user_integrations., _require_encryption_key(), main() (+25 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.12
@@ -390,8 +391,8 @@ Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
 ### Community 42 - "Community 42"
-Cohesion: 0.83
-Nodes (3): handleDemoLogin(), handleSubmit(), signIn()
+Cohesion: 0.67
+Nodes (2): createSmokeAdminClient(), requireEnv()
 
 ### Community 43 - "Community 43"
 Cohesion: 0.5
@@ -815,115 +816,115 @@ Nodes (0):
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
-Nodes (1): Open a urllib request with timeout and exponential backoff on transient errors.
+Nodes (0): 
 
 ### Community 149 - "Community 149"
 Cohesion: 1.0
-Nodes (1): Return the real owner's user UUID from OWNER_USER_ID env var.     Raises if not
+Nodes (1): Open a urllib request with timeout and exponential backoff on transient errors.
 
 ### Community 150 - "Community 150"
 Cohesion: 1.0
-Nodes (1): Insert a row into the notifications table. Non-fatal — errors are printed to std
+Nodes (1): Return the real owner's user UUID from OWNER_USER_ID env var.     Raises if not
 
 ### Community 151 - "Community 151"
 Cohesion: 1.0
-Nodes (1): Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req
+Nodes (1): Insert a row into the notifications table. Non-fatal — errors are printed to std
 
 ### Community 152 - "Community 152"
 Cohesion: 1.0
-Nodes (1): Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat
+Nodes (1): Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req
 
 ### Community 153 - "Community 153"
 Cohesion: 1.0
-Nodes (1): Extract HH:MM:SS from ISO datetime string for Postgres time column.
+Nodes (1): Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat
 
 ### Community 154 - "Community 154"
 Cohesion: 1.0
-Nodes (1): Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be
+Nodes (1): Extract HH:MM:SS from ISO datetime string for Postgres time column.
 
 ### Community 155 - "Community 155"
 Cohesion: 1.0
-Nodes (1): Returns (score_by_day, body_temp_delta_by_day).
+Nodes (1): Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be
 
 ### Community 156 - "Community 156"
 Cohesion: 1.0
-Nodes (1): Returns dict keyed by day with active_cal, steps, total_calories, activity_score
+Nodes (1): Returns (score_by_day, body_temp_delta_by_day).
 
 ### Community 157 - "Community 157"
 Cohesion: 1.0
-Nodes (1): Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.
+Nodes (1): Returns dict keyed by day with active_cal, steps, total_calories, activity_score
 
 ### Community 158 - "Community 158"
 Cohesion: 1.0
-Nodes (1): Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional
+Nodes (1): Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.
 
 ### Community 159 - "Community 159"
 Cohesion: 1.0
-Nodes (1): Returns dict keyed by day with resilience level string. Optional endpoint.
+Nodes (1): Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional
 
 ### Community 160 - "Community 160"
 Cohesion: 1.0
-Nodes (1): Returns dict keyed by day with VO2 max value. Optional endpoint.
+Nodes (1): Returns dict keyed by day with resilience level string. Optional endpoint.
 
 ### Community 161 - "Community 161"
 Cohesion: 1.0
-Nodes (1): Fetch intraday heart rate samples and group by date.     Returns dict keyed by d
+Nodes (1): Returns dict keyed by day with VO2 max value. Optional endpoint.
 
 ### Community 162 - "Community 162"
 Cohesion: 1.0
-Nodes (1): Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u
+Nodes (1): Fetch intraday heart rate samples and group by date.     Returns dict keyed by d
 
 ### Community 163 - "Community 163"
 Cohesion: 1.0
-Nodes (1): Replace all oura-source workout_sessions rows in the date range, then insert fre
+Nodes (1): Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u
 
 ### Community 164 - "Community 164"
 Cohesion: 1.0
-Nodes (1): Returns (access_token, new_refresh_token_or_none).
+Nodes (1): Replace all oura-source workout_sessions rows in the date range, then insert fre
 
 ### Community 165 - "Community 165"
 Cohesion: 1.0
-Nodes (1): Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm
+Nodes (1): Returns (access_token, new_refresh_token_or_none).
 
 ### Community 166 - "Community 166"
 Cohesion: 1.0
-Nodes (1): Fetch existing workout rows for a set of dates (for overlap detection).
+Nodes (1): Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm
 
 ### Community 167 - "Community 167"
 Cohesion: 1.0
-Nodes (1): Convert HH:MM:SS string to total minutes past midnight.
+Nodes (1): Fetch existing workout rows for a set of dates (for overlap detection).
 
 ### Community 168 - "Community 168"
 Cohesion: 1.0
-Nodes (1): Return True if new_row is preferable to existing_row.      Priority: has HR data
+Nodes (1): Convert HH:MM:SS string to total minutes past midnight.
 
 ### Community 169 - "Community 169"
 Cohesion: 1.0
-Nodes (1): Compare new workouts against existing rows for time-overlap (±5 min).      Retur
+Nodes (1): Return True if new_row is preferable to existing_row.      Priority: has HR data
 
 ### Community 170 - "Community 170"
 Cohesion: 1.0
-Nodes (1): Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act
+Nodes (1): Compare new workouts against existing rows for time-overlap (±5 min).      Retur
 
 ### Community 171 - "Community 171"
 Cohesion: 1.0
-Nodes (1): Resolve a city/address string to (lat, lon, display_name) via Open-Meteo geocodi
+Nodes (1): Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act
 
 ### Community 172 - "Community 172"
 Cohesion: 1.0
-Nodes (1): Call Open-Meteo forecast API. Returns raw JSON response.
+Nodes (1): Resolve a city/address string to (lat, lon, display_name) via Open-Meteo geocodi
 
 ### Community 173 - "Community 173"
 Cohesion: 1.0
-Nodes (1): Fetch weather data and return a structured dict.      Location resolution (first
+Nodes (1): Call Open-Meteo forecast API. Returns raw JSON response.
 
 ### Community 174 - "Community 174"
 Cohesion: 1.0
-Nodes (1): Return single-line briefing format: temp, condition | High/Low | Wind | Precip.
+Nodes (1): Fetch weather data and return a structured dict.      Location resolution (first
 
 ### Community 175 - "Community 175"
 Cohesion: 1.0
-Nodes (1): Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.
+Nodes (1): Return single-line briefing format: temp, condition | High/Low | Wind | Precip.
 
 ### Community 176 - "Community 176"
 Cohesion: 1.0
@@ -931,29 +932,33 @@ Nodes (1): Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.
 
 ### Community 177 - "Community 177"
 Cohesion: 1.0
-Nodes (1): Return seconds since last successful sync for source, or None if never.
+Nodes (1): Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.
 
 ### Community 178 - "Community 178"
 Cohesion: 1.0
-Nodes (1): Run one sync script as a subprocess. Returns (source, returncode, output).
+Nodes (1): Return seconds since last successful sync for source, or None if never.
 
 ### Community 179 - "Community 179"
 Cohesion: 1.0
-Nodes (1): Run alert scripts sequentially after syncs. Errors are non-fatal.
+Nodes (1): Run one sync script as a subprocess. Returns (source, returncode, output).
 
 ### Community 180 - "Community 180"
 Cohesion: 1.0
-Nodes (1): Run first-time or re-auth OAuth flow. Prints GOOGLE_FIT_REFRESH_TOKEN for .env.
+Nodes (1): Run alert scripts sequentially after syncs. Errors are non-fatal.
 
 ### Community 181 - "Community 181"
 Cohesion: 1.0
-Nodes (1): List all datasources and return a map of dataTypeName → [dataSourceId].      Use
+Nodes (1): Run first-time or re-auth OAuth flow. Prints GOOGLE_FIT_REFRESH_TOKEN for .env.
 
 ### Community 182 - "Community 182"
 Cohesion: 1.0
-Nodes (1): Discover available body datasources, then aggregate by dataSourceId.      Return
+Nodes (1): List all datasources and return a map of dataTypeName → [dataSourceId].      Use
 
 ### Community 183 - "Community 183"
+Cohesion: 1.0
+Nodes (1): Discover available body datasources, then aggregate by dataSourceId.      Return
+
+### Community 184 - "Community 184"
 Cohesion: 1.0
 Nodes (1): Strip "'s birthday" suffix to get just the person's name.
 
@@ -1022,45 +1027,45 @@ Nodes (1): Strip "'s birthday" suffix to get just the person's name.
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 93`** (2 nodes): `save()`, `end-of-workout-recap.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
+- **Thin community `Community 94`** (2 nodes): `effectiveTokensForQuota()`, `quota-math.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
+- **Thin community `Community 95`** (2 nodes): `window-actions.ts`, `setWindowPreference()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
+- **Thin community `Community 96`** (2 nodes): `useKeyboardOpen()`, `use-keyboard-open.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (2 nodes): `window.ts`, `getWindow()`
+- **Thin community `Community 97`** (2 nodes): `useUnsavedChangesWarning()`, `use-unsaved-changes-warning.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (1 nodes): `postcss.config.mjs`
+- **Thin community `Community 98`** (2 nodes): `window.ts`, `getWindow()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (1 nodes): `next-env.d.ts`
+- **Thin community `Community 99`** (1 nodes): `postcss.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (1 nodes): `eslint.config.mjs`
+- **Thin community `Community 100`** (1 nodes): `next-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (1 nodes): `next.config.ts`
+- **Thin community `Community 101`** (1 nodes): `eslint.config.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (1 nodes): `calendar-smoke.spec.ts`
+- **Thin community `Community 102`** (1 nodes): `next.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
+- **Thin community `Community 103`** (1 nodes): `calendar-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (1 nodes): `a11y.spec.ts`
+- **Thin community `Community 104`** (1 nodes): `chat-multi-turn-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 105`** (1 nodes): `calendar-mutate-smoke.spec.ts`
+- **Thin community `Community 105`** (1 nodes): `a11y.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (1 nodes): `export.spec.ts`
+- **Thin community `Community 106`** (1 nodes): `calendar-mutate-smoke.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (1 nodes): `chat.spec.ts`
+- **Thin community `Community 107`** (1 nodes): `export.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (1 nodes): `dashboard-hydration.spec.ts`
+- **Thin community `Community 108`** (1 nodes): `chat.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 109`** (1 nodes): `generate-pwa-icons.mjs`
+- **Thin community `Community 109`** (1 nodes): `dashboard-hydration.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (1 nodes): `layout.tsx`
+- **Thin community `Community 110`** (1 nodes): `generate-pwa-icons.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (1 nodes): `error.tsx`
+- **Thin community `Community 111`** (1 nodes): `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 112`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `loading.tsx`
+- **Thin community `Community 113`** (1 nodes): `error.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 114`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -1068,152 +1073,154 @@ Nodes (1): Strip "'s birthday" suffix to get just the person's name.
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 116`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `page.tsx`
+- **Thin community `Community 117`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `loading.tsx`
+- **Thin community `Community 118`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 119`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `page.tsx`
+- **Thin community `Community 120`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `loading.tsx`
+- **Thin community `Community 121`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 122`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 123`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `ambient-background.tsx`
+- **Thin community `Community 124`** (1 nodes): `loading.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `sheet.tsx`
+- **Thin community `Community 125`** (1 nodes): `ambient-background.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `undo-toast.tsx`
+- **Thin community `Community 126`** (1 nodes): `sheet.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `completed-tasks.tsx`
+- **Thin community `Community 127`** (1 nodes): `undo-toast.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `slash-command-menu.tsx`
+- **Thin community `Community 128`** (1 nodes): `completed-tasks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `session-sidebar.tsx`
+- **Thin community `Community 129`** (1 nodes): `slash-command-menu.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `radial-completion.tsx`
+- **Thin community `Community 130`** (1 nodes): `session-sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `longest-chain-badges.tsx`
+- **Thin community `Community 131`** (1 nodes): `radial-completion.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (1 nodes): `habit-icon-picker.tsx`
+- **Thin community `Community 132`** (1 nodes): `longest-chain-badges.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `dashboard-masthead.tsx`
+- **Thin community `Community 133`** (1 nodes): `habit-icon-picker.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `lazy-chart-widgets.tsx`
+- **Thin community `Community 134`** (1 nodes): `dashboard-masthead.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `dashboard-briefing.tsx`
+- **Thin community `Community 135`** (1 nodes): `lazy-chart-widgets.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `tasks-summary.tsx`
+- **Thin community `Community 136`** (1 nodes): `dashboard-briefing.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `important-emails.tsx`
+- **Thin community `Community 137`** (1 nodes): `tasks-summary.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `FitnessClient.tsx`
+- **Thin community `Community 138`** (1 nodes): `important-emails.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `recent-sessions-list.tsx`
+- **Thin community `Community 139`** (1 nodes): `FitnessClient.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `exercise-sparkline.tsx`
+- **Thin community `Community 140`** (1 nodes): `recent-sessions-list.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `types.ts`
+- **Thin community `Community 141`** (1 nodes): `exercise-sparkline.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (1 nodes): `calendar-types.ts`
+- **Thin community `Community 142`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (1 nodes): `_strict.ts`
+- **Thin community `Community 143`** (1 nodes): `calendar-types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `_context.ts`
+- **Thin community `Community 144`** (1 nodes): `_strict.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `server.ts`
+- **Thin community `Community 145`** (1 nodes): `_context.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `provider.ts`
+- **Thin community `Community 146`** (1 nodes): `server.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `config.py`
+- **Thin community `Community 147`** (1 nodes): `provider.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `Open a urllib request with timeout and exponential backoff on transient errors.`
+- **Thin community `Community 148`** (1 nodes): `config.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `Return the real owner's user UUID from OWNER_USER_ID env var.     Raises if not`
+- **Thin community `Community 149`** (1 nodes): `Open a urllib request with timeout and exponential backoff on transient errors.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (1 nodes): `Insert a row into the notifications table. Non-fatal — errors are printed to std`
+- **Thin community `Community 150`** (1 nodes): `Return the real owner's user UUID from OWNER_USER_ID env var.     Raises if not`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (1 nodes): `Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req`
+- **Thin community `Community 151`** (1 nodes): `Insert a row into the notifications table. Non-fatal — errors are printed to std`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (1 nodes): `Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat`
+- **Thin community `Community 152`** (1 nodes): `Fetch an Oura v2 endpoint with start_date/end_date params. Returns None when req`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (1 nodes): `Extract HH:MM:SS from ISO datetime string for Postgres time column.`
+- **Thin community `Community 153`** (1 nodes): `Fetch an Oura v2 endpoint with start_datetime/end_datetime params (e.g. heartrat`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (1 nodes): `Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be`
+- **Thin community `Community 154`** (1 nodes): `Extract HH:MM:SS from ISO datetime string for Postgres time column.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (1 nodes): `Returns (score_by_day, body_temp_delta_by_day).`
+- **Thin community `Community 155`** (1 nodes): `Fetch detailed sleep sessions. Returns dict keyed by day with:       bedtime, be`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (1 nodes): `Returns dict keyed by day with active_cal, steps, total_calories, activity_score`
+- **Thin community `Community 156`** (1 nodes): `Returns (score_by_day, body_temp_delta_by_day).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 157`** (1 nodes): `Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.`
+- **Thin community `Community 157`** (1 nodes): `Returns dict keyed by day with active_cal, steps, total_calories, activity_score`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 158`** (1 nodes): `Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional`
+- **Thin community `Community 158`** (1 nodes): `Returns dict keyed by day with avg SpO2 %. Returns {} if endpoint unavailable.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 159`** (1 nodes): `Returns dict keyed by day with resilience level string. Optional endpoint.`
+- **Thin community `Community 159`** (1 nodes): `Returns dict keyed by day with stress_high_mins, stress_recovery_mins. Optional`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 160`** (1 nodes): `Returns dict keyed by day with VO2 max value. Optional endpoint.`
+- **Thin community `Community 160`** (1 nodes): `Returns dict keyed by day with resilience level string. Optional endpoint.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 161`** (1 nodes): `Fetch intraday heart rate samples and group by date.     Returns dict keyed by d`
+- **Thin community `Community 161`** (1 nodes): `Returns dict keyed by day with VO2 max value. Optional endpoint.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 162`** (1 nodes): `Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u`
+- **Thin community `Community 162`** (1 nodes): `Fetch intraday heart rate samples and group by date.     Returns dict keyed by d`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 163`** (1 nodes): `Replace all oura-source workout_sessions rows in the date range, then insert fre`
+- **Thin community `Community 163`** (1 nodes): `Fetch Oura-detected workouts. Returns list of dicts ready for workout_sessions u`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 164`** (1 nodes): `Returns (access_token, new_refresh_token_or_none).`
+- **Thin community `Community 164`** (1 nodes): `Replace all oura-source workout_sessions rows in the date range, then insert fre`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 165`** (1 nodes): `Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm`
+- **Thin community `Community 165`** (1 nodes): `Returns (access_token, new_refresh_token_or_none).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 166`** (1 nodes): `Fetch existing workout rows for a set of dates (for overlap detection).`
+- **Thin community `Community 166`** (1 nodes): `Build dedup keys from Supabase to avoid re-inserting the same workout.      Norm`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 167`** (1 nodes): `Convert HH:MM:SS string to total minutes past midnight.`
+- **Thin community `Community 167`** (1 nodes): `Fetch existing workout rows for a set of dates (for overlap detection).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 168`** (1 nodes): `Return True if new_row is preferable to existing_row.      Priority: has HR data`
+- **Thin community `Community 168`** (1 nodes): `Convert HH:MM:SS string to total minutes past midnight.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 169`** (1 nodes): `Compare new workouts against existing rows for time-overlap (±5 min).      Retur`
+- **Thin community `Community 169`** (1 nodes): `Return True if new_row is preferable to existing_row.      Priority: has HR data`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 170`** (1 nodes): `Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act`
+- **Thin community `Community 170`** (1 nodes): `Compare new workouts against existing rows for time-overlap (±5 min).      Retur`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 171`** (1 nodes): `Resolve a city/address string to (lat, lon, display_name) via Open-Meteo geocodi`
+- **Thin community `Community 171`** (1 nodes): `Fetch weight, body fat %, and BMI from Fitbit for the given date range.      Act`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 172`** (1 nodes): `Call Open-Meteo forecast API. Returns raw JSON response.`
+- **Thin community `Community 172`** (1 nodes): `Resolve a city/address string to (lat, lon, display_name) via Open-Meteo geocodi`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 173`** (1 nodes): `Fetch weather data and return a structured dict.      Location resolution (first`
+- **Thin community `Community 173`** (1 nodes): `Call Open-Meteo forecast API. Returns raw JSON response.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 174`** (1 nodes): `Return single-line briefing format: temp, condition | High/Low | Wind | Precip.`
+- **Thin community `Community 174`** (1 nodes): `Fetch weather data and return a structured dict.      Location resolution (first`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 175`** (1 nodes): `Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.`
+- **Thin community `Community 175`** (1 nodes): `Return single-line briefing format: temp, condition | High/Low | Wind | Precip.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 176`** (1 nodes): `Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 177`** (1 nodes): `Return seconds since last successful sync for source, or None if never.`
+- **Thin community `Community 177`** (1 nodes): `Return (timeMin, timeMax) RFC3339 strings spanning today in UTC.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 178`** (1 nodes): `Run one sync script as a subprocess. Returns (source, returncode, output).`
+- **Thin community `Community 178`** (1 nodes): `Return seconds since last successful sync for source, or None if never.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 179`** (1 nodes): `Run alert scripts sequentially after syncs. Errors are non-fatal.`
+- **Thin community `Community 179`** (1 nodes): `Run one sync script as a subprocess. Returns (source, returncode, output).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 180`** (1 nodes): `Run first-time or re-auth OAuth flow. Prints GOOGLE_FIT_REFRESH_TOKEN for .env.`
+- **Thin community `Community 180`** (1 nodes): `Run alert scripts sequentially after syncs. Errors are non-fatal.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 181`** (1 nodes): `List all datasources and return a map of dataTypeName → [dataSourceId].      Use`
+- **Thin community `Community 181`** (1 nodes): `Run first-time or re-auth OAuth flow. Prints GOOGLE_FIT_REFRESH_TOKEN for .env.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 182`** (1 nodes): `Discover available body datasources, then aggregate by dataSourceId.      Return`
+- **Thin community `Community 182`** (1 nodes): `List all datasources and return a map of dataTypeName → [dataSourceId].      Use`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 183`** (1 nodes): `Strip "'s birthday" suffix to get just the person's name.`
+- **Thin community `Community 183`** (1 nodes): `Discover available body datasources, then aggregate by dataSourceId.      Return`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 184`** (1 nodes): `Strip "'s birthday" suffix to get just the person's name.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Community 0` to `Community 1`, `Community 34`, `Community 4`, `Community 7`, `Community 42`, `Community 21`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **Why does `todayString()` connect `Community 1` to `Community 0`, `Community 10`, `Community 4`?**
+- **Why does `createClient()` connect `Community 0` to `Community 1`, `Community 34`, `Community 3`, `Community 7`, `Community 42`, `Community 21`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `todayString()` connect `Community 1` to `Community 0`, `Community 10`, `Community 3`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 1`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Are the 74 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `saveJournalEntry()`) actually correct?**
-  _`createClient()` has 74 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `POST@chat/route.ts` connect `Community 3` to `Community 0`, `Community 1`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Are the 75 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `saveJournalEntry()`) actually correct?**
+  _`createClient()` has 75 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 15 inferred relationships involving `POST@chat/route.ts` (e.g. with `createClient()` and `createServiceClient()`) actually correct?**
   _`POST@chat/route.ts` has 15 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 17 inferred relationships involving `todayString()` (e.g. with `POST@strength-sessions/route.ts` and `POST@chat/route.ts`) actually correct?**
