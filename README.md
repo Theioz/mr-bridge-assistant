@@ -20,6 +20,7 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 - **Meals** — Daily macro summary vs goals (calories, protein, carbs, fat, fiber, sugar running total); food photo analyzer (photo → client-side compression → Claude vision → macro estimate → inline-editable review → log) with Bridge chat logging via a propose-then-confirm action card scoped to the analyzer context; nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); soft calorie-consistency warning when manually entered calories diverge >10% from macro-derived kcal; HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
 - **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
+- **Data export** — one-click JSON or CSV zip of all your data from Settings → Data; one file per user-authored table plus a `_manifest.json` with schema version, timestamp, and row counts; optional date-range filter; chat history and encrypted OAuth tokens are deliberately excluded
 
 ---
 
@@ -381,6 +382,8 @@ mr-bridge-assistant/
 │   │   │   │   │   └── validate/route.ts        # GET — proxy Polygon ticker validation (keeps API key server-side)
 │   │   │   │   ├── notifications/
 │   │   │   │   │   └── unread-count/route.ts    # GET — count unread notifications for badge
+│   │   │   │   ├── export/
+│   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
@@ -401,7 +404,8 @@ mr-bridge-assistant/
 │   │   │   │   └── weekly-workout-plan.tsx  # Mon–Sun workout plan cards with phases + Calendar sync
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   ├── settings/
-│   │   │   │   └── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
+│   │   │   │   ├── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
+│   │   │   │   └── data-settings.tsx      # Data export UI — format + range picker, POST /api/export, download zip
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
@@ -413,6 +417,9 @@ mr-bridge-assistant/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       ├── types.ts                   # TypeScript interfaces for all DB tables
+│   │       ├── export/
+│   │       │   ├── tables.ts              # Declarative registry of tables included in data export (#67)
+│   │       │   └── csv.ts                 # Deterministic CSV serializer (ordered columns, CRLF)
 │   │       └── sync/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
 │   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; rotating refresh token

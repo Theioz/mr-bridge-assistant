@@ -8,6 +8,7 @@ export const SETTINGS_TABS = [
   { key: "integrations", label: "Integrations" },
   { key: "watchlists", label: "Watchlists" },
   { key: "appearance", label: "Appearance" },
+  { key: "data", label: "Data" },
 ] as const;
 
 export type SettingsTab = (typeof SETTINGS_TABS)[number]["key"];
