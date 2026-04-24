@@ -101,28 +101,49 @@ export default async function AdminPage() {
 
   tenants.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  const inputStyle: React.CSSProperties = {
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--r-1)",
+    padding: "var(--space-2) var(--space-3)",
+    fontSize: "var(--t-meta)",
+    background: "var(--color-surface)",
+    color: "var(--color-text)",
+  };
+
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 24 }}>Tenants</h1>
+      <h1
+        style={{
+          fontSize: "var(--t-h1)",
+          fontWeight: 600,
+          marginBottom: "var(--space-6)",
+        }}
+      >
+        Admin
+      </h1>
 
       {/* Create tenant */}
       <section
         style={{
-          border: "1px solid var(--color-border)",
-          borderRadius: 8,
-          padding: "20px 24px",
-          marginBottom: 32,
+          paddingBottom: "var(--space-6)",
+          borderBottom: "1px solid var(--rule-soft)",
+          marginBottom: "var(--space-6)",
         }}
       >
-        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Create tenant</h2>
+        <h2 className="db-section-label">Create tenant</h2>
         <form
           action={createTenant}
-          style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}
+          style={{
+            display: "flex",
+            gap: "var(--space-3)",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <label
               htmlFor="create-email"
-              style={{ fontSize: 12, color: "var(--color-text-muted)" }}
+              style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
             >
               Email
             </label>
@@ -132,21 +153,13 @@ export default async function AdminPage() {
               type="email"
               required
               placeholder="user@example.com"
-              style={{
-                border: "1px solid var(--color-border)",
-                borderRadius: 6,
-                padding: "7px 10px",
-                fontSize: 13,
-                background: "var(--color-surface)",
-                color: "var(--color-text)",
-                width: 220,
-              }}
+              style={{ ...inputStyle, width: 220 }}
             />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <label
               htmlFor="create-password"
-              style={{ fontSize: 12, color: "var(--color-text-muted)" }}
+              style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
             >
               Password
             </label>
@@ -157,15 +170,7 @@ export default async function AdminPage() {
               required
               minLength={8}
               placeholder="min 8 chars"
-              style={{
-                border: "1px solid var(--color-border)",
-                borderRadius: 6,
-                padding: "7px 10px",
-                fontSize: 13,
-                background: "var(--color-surface)",
-                color: "var(--color-text)",
-                width: 180,
-              }}
+              style={{ ...inputStyle, width: 180 }}
             />
           </div>
           <button
@@ -174,9 +179,9 @@ export default async function AdminPage() {
               background: "var(--color-primary)",
               color: "var(--color-text-on-cta)",
               border: "none",
-              borderRadius: 6,
-              padding: "8px 16px",
-              fontSize: 13,
+              borderRadius: "var(--r-1)",
+              padding: "var(--space-2) var(--space-4)",
+              fontSize: "var(--t-meta)",
               fontWeight: 500,
               cursor: "pointer",
             }}
@@ -187,13 +192,20 @@ export default async function AdminPage() {
       </section>
 
       {/* Tenant table */}
-      <section
-        style={{ border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}
-      >
+      <section>
+        <h2 className="db-section-label">
+          Tenants <span className="meta">{tenants.length}</span>
+        </h2>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "var(--t-meta)",
+            }}
+          >
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+              <tr style={{ borderBottom: "1px solid var(--rule)" }}>
                 {[
                   "Email",
                   "Created",
@@ -206,11 +218,13 @@ export default async function AdminPage() {
                   <th
                     key={h}
                     style={{
-                      padding: "10px 16px",
+                      padding: "var(--space-2) var(--space-4) var(--space-3)",
                       textAlign: "left",
                       fontWeight: 600,
-                      fontSize: 12,
-                      color: "var(--color-text-muted)",
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-faint)",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -221,12 +235,15 @@ export default async function AdminPage() {
             </thead>
             <tbody>
               {tenants.map((t) => (
-                <tr key={t.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <td style={{ padding: "12px 16px", fontWeight: 500 }}>{t.email}</td>
+                <tr key={t.id} style={{ borderBottom: "1px solid var(--rule-soft)" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>
+                    {t.email}
+                  </td>
                   <td
                     style={{
-                      padding: "12px 16px",
+                      padding: "var(--space-3) var(--space-4)",
                       color: "var(--color-text-muted)",
+                      fontSize: "var(--t-micro)",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -234,38 +251,53 @@ export default async function AdminPage() {
                   </td>
                   <td
                     style={{
-                      padding: "12px 16px",
+                      padding: "var(--space-3) var(--space-4)",
                       color: "var(--color-text-muted)",
+                      fontSize: "var(--t-micro)",
                       whiteSpace: "nowrap",
                     }}
                   >
                     {t.last_sign_in_at ? new Date(t.last_sign_in_at).toLocaleDateString() : "—"}
                   </td>
-                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap" }}>
                     <span
                       style={{
                         color:
                           t.tokens_used_today / t.token_cap > 0.8
                             ? "var(--color-amber)"
                             : "var(--color-text)",
+                        fontSize: "var(--t-micro)",
                       }}
                     >
                       {t.tokens_used_today.toLocaleString()} / {t.token_cap.toLocaleString()}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                  <td
+                    style={{
+                      padding: "var(--space-3) var(--space-4)",
+                      whiteSpace: "nowrap",
+                      fontSize: "var(--t-micro)",
+                    }}
+                  >
                     {t.tool_calls_used_today} / {t.tool_calls_cap}
                   </td>
-                  <td style={{ padding: "12px 16px" }}>{t.integration_count}</td>
-                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                  <td
+                    style={{
+                      padding: "var(--space-3) var(--space-4)",
+                      fontSize: "var(--t-micro)",
+                    }}
+                  >
+                    {t.integration_count}
+                  </td>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap" }}>
                     <a
                       href={`/admin/tenants/${t.id}`}
                       style={{
                         color: "var(--color-primary)",
                         textDecoration: "none",
-                        fontSize: 12,
+                        fontSize: "var(--t-micro)",
                         fontWeight: 500,
-                        marginRight: 12,
+                        marginRight: "var(--space-4)",
                       }}
                     >
                       Inspect →
@@ -273,7 +305,7 @@ export default async function AdminPage() {
                     <details style={{ display: "inline-block" }}>
                       <summary
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--t-micro)",
                           color: "var(--color-danger)",
                           cursor: "pointer",
                           listStyle: "none",
@@ -284,10 +316,10 @@ export default async function AdminPage() {
                       <div
                         style={{
                           position: "absolute",
-                          background: "var(--color-surface)",
+                          background: "var(--color-surface-raised)",
                           border: "1px solid var(--color-border)",
-                          borderRadius: 8,
-                          padding: 16,
+                          borderRadius: "var(--r-2)",
+                          padding: "var(--space-4)",
                           zIndex: 10,
                           minWidth: 280,
                           boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
@@ -295,8 +327,8 @@ export default async function AdminPage() {
                       >
                         <p
                           style={{
-                            fontSize: 12,
-                            marginBottom: 10,
+                            fontSize: "var(--t-micro)",
+                            marginBottom: "var(--space-3)",
                             color: "var(--color-text-muted)",
                           }}
                         >
@@ -305,7 +337,11 @@ export default async function AdminPage() {
                         </p>
                         <form
                           action={deleteTenant}
-                          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "var(--space-2)",
+                          }}
                         >
                           <input type="hidden" name="targetUserId" value={t.id} />
                           <input type="hidden" name="expectedEmail" value={t.email} />
@@ -315,12 +351,8 @@ export default async function AdminPage() {
                             required
                             placeholder={t.email}
                             style={{
-                              border: "1px solid var(--color-danger)",
-                              borderRadius: 6,
-                              padding: "6px 10px",
-                              fontSize: 12,
-                              background: "var(--color-surface)",
-                              color: "var(--color-text)",
+                              ...inputStyle,
+                              borderColor: "var(--color-danger)",
                             }}
                           />
                           <button
@@ -329,9 +361,9 @@ export default async function AdminPage() {
                               background: "var(--color-danger)",
                               color: "var(--color-bg)",
                               border: "none",
-                              borderRadius: 6,
-                              padding: "7px 12px",
-                              fontSize: 12,
+                              borderRadius: "var(--r-1)",
+                              padding: "var(--space-2) var(--space-3)",
+                              fontSize: "var(--t-micro)",
                               fontWeight: 600,
                               cursor: "pointer",
                             }}
@@ -348,7 +380,12 @@ export default async function AdminPage() {
                 <tr>
                   <td
                     colSpan={7}
-                    style={{ padding: 24, textAlign: "center", color: "var(--color-text-muted)" }}
+                    style={{
+                      padding: "var(--space-7)",
+                      textAlign: "center",
+                      color: "var(--color-text-muted)",
+                      fontSize: "var(--t-meta)",
+                    }}
                   >
                     No tenants found.
                   </td>
