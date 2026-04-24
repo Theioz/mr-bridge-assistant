@@ -276,19 +276,32 @@ function UsageBar({ used, cap }: { used: number; cap: number }) {
   const color =
     pct > 80 ? "var(--color-danger)" : pct > 60 ? "var(--color-amber)" : "var(--color-primary)";
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
       <div
         style={{
           flex: 1,
           height: 6,
-          borderRadius: 3,
-          background: "var(--color-border)",
+          borderRadius: "var(--r-1)",
+          background: "var(--rule-soft)",
           overflow: "hidden",
         }}
       >
-        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3 }} />
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: color,
+            borderRadius: "var(--r-1)",
+          }}
+        />
       </div>
-      <span style={{ fontSize: 12, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
+      <span
+        style={{
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          whiteSpace: "nowrap",
+        }}
+      >
         {used.toLocaleString()} / {cap.toLocaleString()}
       </span>
     </div>
@@ -297,9 +310,9 @@ function UsageBar({ used, cap }: { used: number; cap: number }) {
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid var(--color-border)",
-  borderRadius: 6,
-  padding: "6px 10px",
-  fontSize: 13,
+  borderRadius: "var(--r-1)",
+  padding: "var(--space-2) var(--space-3)",
+  fontSize: "var(--t-meta)",
   background: "var(--color-surface)",
   color: "var(--color-text)",
   width: 140,
@@ -309,40 +322,37 @@ const btnStyle: React.CSSProperties = {
   background: "var(--color-primary)",
   color: "var(--color-text-on-cta)",
   border: "none",
-  borderRadius: 6,
-  padding: "7px 12px",
-  fontSize: 12,
+  borderRadius: "var(--r-1)",
+  padding: "var(--space-2) var(--space-3)",
+  fontSize: "var(--t-micro)",
   fontWeight: 500,
   cursor: "pointer",
 };
 
 const panelStyle: React.CSSProperties = {
-  border: "1px solid var(--color-border)",
-  borderRadius: 8,
-  overflow: "hidden",
-  marginBottom: 20,
+  paddingTop: "var(--space-5)",
+  paddingBottom: "var(--space-5)",
+  borderBottom: "1px solid var(--rule-soft)",
+  marginBottom: "var(--space-5)",
 };
 
 const panelHeadStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  borderBottom: "1px solid var(--color-border)",
-  fontWeight: 600,
-  fontSize: 13,
+  marginBottom: "var(--space-4)",
 };
 
 const rowStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "10px 16px",
-  borderBottom: "1px solid var(--color-border)",
-  fontSize: 13,
-  gap: 8,
+  padding: "var(--space-2) 0",
+  borderBottom: "1px solid var(--rule-soft)",
+  fontSize: "var(--t-meta)",
+  gap: "var(--space-2)",
 };
 
 const labelStyle: React.CSSProperties = {
   color: "var(--color-text-muted)",
-  fontSize: 12,
+  fontSize: "var(--t-micro)",
   minWidth: 140,
 };
 
@@ -426,16 +436,34 @@ export default async function TenantDetailPage({
   return (
     <div>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+      <div style={{ marginBottom: "var(--space-2)" }}>
         <a
           href="/admin"
-          style={{ color: "var(--color-text-muted)", textDecoration: "none", fontSize: 13 }}
+          style={{
+            color: "var(--color-text-muted)",
+            textDecoration: "none",
+            fontSize: "var(--t-micro)",
+          }}
         >
-          ← Tenants
+          ← Admin
         </a>
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>{detail.user.email}</h1>
       </div>
-      <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 32 }}>
+      <h1
+        style={{
+          fontSize: "var(--t-h1)",
+          fontWeight: 600,
+          marginBottom: "var(--space-2)",
+        }}
+      >
+        {detail.user.email}
+      </h1>
+      <p
+        style={{
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          marginBottom: "var(--space-6)",
+        }}
+      >
         ID: {detail.user.id} · Created {new Date(detail.user.created_at).toLocaleString()} · Last
         sign-in:{" "}
         {detail.user.last_sign_in_at
@@ -447,8 +475,8 @@ export default async function TenantDetailPage({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
-          gap: 24,
+          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+          gap: "var(--space-7)",
           alignItems: "start",
         }}
       >
@@ -456,11 +484,13 @@ export default async function TenantDetailPage({
         <div>
           {/* Profile */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Profile</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Profile
+            </h2>
             {detail.profile.length === 0 ? (
-              <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--color-text-muted)" }}>
+              <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
                 No profile entries.
-              </div>
+              </p>
             ) : (
               detail.profile.map((p, i) => (
                 <div
@@ -474,7 +504,7 @@ export default async function TenantDetailPage({
                   <span style={labelStyle}>{p.key}</span>
                   <span
                     style={{
-                      fontSize: 13,
+                      fontSize: "var(--t-meta)",
                       textAlign: "right",
                       wordBreak: "break-all",
                       maxWidth: 240,
@@ -489,9 +519,17 @@ export default async function TenantDetailPage({
 
           {/* Integrations */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Integrations ({detail.integrations.length})</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Integrations <span className="meta">{detail.integrations.length}</span>
+            </h2>
             {detail.integrations.length === 0 ? (
-              <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div
+                style={{
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  paddingBottom: "var(--space-2)",
+                }}
+              >
                 No integrations connected.
               </div>
             ) : (
@@ -507,7 +545,7 @@ export default async function TenantDetailPage({
                   <span style={{ fontWeight: 500, textTransform: "capitalize" }}>
                     {intg.provider}
                   </span>
-                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
                     Connected {new Date(intg.connected_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -517,9 +555,17 @@ export default async function TenantDetailPage({
 
           {/* Last 20 chat sessions */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Last 20 chat sessions</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Last 20 sessions
+            </h2>
             {detail.sessions.length === 0 ? (
-              <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div
+                style={{
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  paddingBottom: "var(--space-2)",
+                }}
+              >
                 No sessions.
               </div>
             ) : (
@@ -527,22 +573,28 @@ export default async function TenantDetailPage({
                 <div
                   key={s.id}
                   style={{
-                    padding: "10px 16px",
+                    padding: "var(--space-2) 0",
                     borderBottom:
                       i < detail.sessions.length - 1 ? "1px solid var(--color-border)" : "none",
-                    fontSize: 13,
+                    fontSize: "var(--t-meta)",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>
                       {new Date(s.last_active_at).toLocaleString()}
                     </span>
                   </div>
                   {s.summary && (
                     <p
                       style={{
-                        margin: "4px 0 0",
-                        fontSize: 12,
+                        margin: "var(--space-1) 0 0",
+                        fontSize: "var(--t-micro)",
                         color: "var(--color-text-muted)",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -562,19 +614,27 @@ export default async function TenantDetailPage({
         <div>
           {/* Rate-limit overrides — topmost, most important */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Rate-limit overrides</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Rate-limit overrides
+            </h2>
 
             {/* Token usage + override */}
-            <div style={{ padding: "16px 16px 0" }}>
-              <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>
+            <div style={{ paddingBottom: "var(--space-4)" }}>
+              <p
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  marginBottom: "var(--space-1)",
+                }}
+              >
                 Daily chat tokens
               </p>
               <UsageBar used={q.tokens_used_today} cap={tokenCap} />
               <p
                 style={{
-                  fontSize: 11,
+                  fontSize: "var(--t-micro)",
                   color: "var(--color-text-muted)",
-                  margin: "4px 0 12px",
+                  margin: "var(--space-1) 0 var(--space-3)",
                 }}
               >
                 Base: {q.daily_chat_tokens.toLocaleString()} · Override:{" "}
@@ -584,7 +644,7 @@ export default async function TenantDetailPage({
               </p>
               <form
                 action={updateTokenOverride}
-                style={{ display: "flex", gap: 8, marginBottom: 16 }}
+                style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}
               >
                 <input type="hidden" name="userId" value={userId} />
                 <input
@@ -605,17 +665,28 @@ export default async function TenantDetailPage({
             </div>
 
             {/* Tool call usage + override */}
-            <div style={{ padding: "0 16px 0", borderTop: "1px solid var(--color-border)" }}>
-              <div style={{ height: 16 }} />
-              <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>
+            <div
+              style={{
+                borderTop: "1px solid var(--color-border)",
+                paddingTop: "var(--space-4)",
+                paddingBottom: "var(--space-4)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  marginBottom: "var(--space-1)",
+                }}
+              >
                 Daily tool calls
               </p>
               <UsageBar used={q.tool_calls_used_today} cap={toolCap} />
               <p
                 style={{
-                  fontSize: 11,
+                  fontSize: "var(--t-micro)",
                   color: "var(--color-text-muted)",
-                  margin: "4px 0 12px",
+                  margin: "var(--space-1) 0 var(--space-3)",
                 }}
               >
                 Base: {q.daily_tool_calls} · Override:{" "}
@@ -625,7 +696,7 @@ export default async function TenantDetailPage({
               </p>
               <form
                 action={updateToolCallOverride}
-                style={{ display: "flex", gap: 8, marginBottom: 16 }}
+                style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}
               >
                 <input type="hidden" name="userId" value={userId} />
                 <input
@@ -648,14 +719,14 @@ export default async function TenantDetailPage({
             {/* Reset today's usage */}
             <div
               style={{
-                padding: "12px 16px",
+                padding: "var(--space-3) 0",
                 borderTop: "1px solid var(--color-border)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
                 Reset today&apos;s usage counters to zero
               </span>
               <form action={resetQuotaToday}>
@@ -677,10 +748,18 @@ export default async function TenantDetailPage({
 
           {/* Feature flags */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Feature flags</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Feature flags
+            </h2>
 
             {allFlagNames.length === 0 ? (
-              <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div
+                style={{
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  paddingBottom: "var(--space-2)",
+                }}
+              >
                 No flags defined yet.
               </div>
             ) : (
@@ -697,22 +776,24 @@ export default async function TenantDetailPage({
                       borderBottom:
                         i < allFlagNames.length - 1 ? "1px solid var(--color-border)" : "none",
                       flexWrap: "wrap",
-                      gap: 8,
+                      gap: "var(--space-2)",
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 120 }}>
-                      <span style={{ fontWeight: 500, fontSize: 13 }}>{flagName}</span>
+                      <span style={{ fontWeight: 500, fontSize: "var(--t-meta)" }}>{flagName}</span>
                       <br />
-                      <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                      <span
+                        style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+                      >
                         {hasOverride
                           ? `per-user override · global: ${globalFlag?.enabled ? "on" : "off"}`
                           : "global default"}
                       </span>
                     </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--t-micro)",
                           fontWeight: 600,
                           color: effectiveEnabled
                             ? "var(--color-positive)"
@@ -727,7 +808,11 @@ export default async function TenantDetailPage({
                         <input type="hidden" name="newEnabled" value={String(!effectiveEnabled)} />
                         <button
                           type="submit"
-                          style={{ ...btnStyle, fontSize: 11, padding: "5px 10px" }}
+                          style={{
+                            ...btnStyle,
+                            fontSize: "var(--t-micro)",
+                            padding: "var(--space-1) var(--space-2)",
+                          }}
                         >
                           {effectiveEnabled ? "Disable" : "Enable"}
                         </button>
@@ -743,8 +828,8 @@ export default async function TenantDetailPage({
                               background: "none",
                               color: "var(--color-text-muted)",
                               border: "1px solid var(--color-border)",
-                              fontSize: 11,
-                              padding: "5px 10px",
+                              fontSize: "var(--t-micro)",
+                              padding: "var(--space-1) var(--space-2)",
                             }}
                           >
                             Clear override
@@ -760,17 +845,22 @@ export default async function TenantDetailPage({
             {/* Add/set global flag */}
             <div
               style={{
-                padding: "12px 16px",
+                padding: "var(--space-3) 0",
                 borderTop: "1px solid var(--color-border)",
-                background: "var(--color-surface)",
               }}
             >
-              <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 8 }}>
+              <p
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-muted)",
+                  marginBottom: "var(--space-2)",
+                }}
+              >
                 Set global flag default
               </p>
               <form
                 action={setGlobalFeatureFlag}
-                style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+                style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}
               >
                 <input type="hidden" name="userId" value={userId} />
                 <input
@@ -799,9 +889,17 @@ export default async function TenantDetailPage({
 
           {/* Audit log */}
           <section style={panelStyle}>
-            <div style={panelHeadStyle}>Audit log (last 20)</div>
+            <h2 className="db-section-label" style={panelHeadStyle}>
+              Audit log
+            </h2>
             {detail.auditLog.length === 0 ? (
-              <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div
+                style={{
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  paddingBottom: "var(--space-2)",
+                }}
+              >
                 No audit entries yet.
               </div>
             ) : (
@@ -809,13 +907,19 @@ export default async function TenantDetailPage({
                 <div
                   key={row.id}
                   style={{
-                    padding: "10px 16px",
+                    padding: "var(--space-2) 0",
                     borderBottom:
                       i < detail.auditLog.length - 1 ? "1px solid var(--color-border)" : "none",
-                    fontSize: 12,
+                    fontSize: "var(--t-micro)",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "var(--space-2)",
+                    }}
+                  >
                     <span style={{ fontWeight: 500 }}>{row.action}</span>
                     <span style={{ color: "var(--color-text-muted)" }}>
                       {new Date(row.created_at).toLocaleString()}
@@ -824,10 +928,10 @@ export default async function TenantDetailPage({
                   {(row.before_value != null || row.after_value != null) && (
                     <p
                       style={{
-                        margin: "4px 0 0",
+                        margin: "var(--space-1) 0 0",
                         color: "var(--color-text-muted)",
                         fontFamily: "monospace",
-                        fontSize: 11,
+                        fontSize: "var(--t-micro)",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -848,24 +952,35 @@ export default async function TenantDetailPage({
       {/* Delete tenant — bottom of page, destructive */}
       <section
         style={{
-          marginTop: 48,
+          marginTop: "var(--space-10)",
           border: "1px solid var(--color-danger)",
-          borderRadius: 8,
-          padding: "20px 24px",
+          borderRadius: "var(--r-2)",
+          padding: "var(--space-5) var(--space-6)",
         }}
       >
         <h2
-          style={{ fontSize: 14, fontWeight: 600, color: "var(--color-danger)", marginBottom: 8 }}
+          style={{
+            fontSize: "var(--t-meta)",
+            fontWeight: 600,
+            color: "var(--color-danger)",
+            marginBottom: "var(--space-2)",
+          }}
         >
           Delete tenant
         </h2>
-        <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 16 }}>
+        <p
+          style={{
+            fontSize: "var(--t-meta)",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-4)",
+          }}
+        >
           This permanently deletes the account and all associated data. Type{" "}
           <strong style={{ color: "var(--color-text)" }}>{detail.user.email}</strong> to confirm.
         </p>
         <form
           action={deleteTenantFromDetail}
-          style={{ display: "flex", gap: 10, flexWrap: "wrap" }}
+          style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}
         >
           <input type="hidden" name="userId" value={userId} />
           <input type="hidden" name="expectedEmail" value={detail.user.email} />
@@ -882,9 +997,9 @@ export default async function TenantDetailPage({
               background: "var(--color-danger)",
               color: "var(--color-bg)",
               border: "none",
-              borderRadius: 6,
-              padding: "8px 16px",
-              fontSize: 13,
+              borderRadius: "var(--r-1)",
+              padding: "var(--space-2) var(--space-4)",
+              fontSize: "var(--t-meta)",
               fontWeight: 600,
               cursor: "pointer",
             }}

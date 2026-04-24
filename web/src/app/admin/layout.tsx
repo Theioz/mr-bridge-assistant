@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Nav from "@/components/nav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -12,57 +13,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        color: "var(--color-text)",
-        background: "var(--color-bg)",
-      }}
-    >
-      <header
+    <div className="flex min-h-screen" style={{ color: "var(--color-text)" }}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg"
         style={{
-          borderBottom: "1px solid var(--color-border)",
-          padding: "12px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
+          background: "var(--color-primary)",
+          color: "var(--color-text-on-cta)",
+          padding: "10px 14px",
+          fontSize: 14,
+          fontWeight: 500,
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 15 }}>Mr. Bridge Admin</span>
-        <a
-          href="/dashboard"
-          style={{
-            fontSize: 13,
-            color: "var(--color-text-muted)",
-            textDecoration: "none",
-            marginLeft: "auto",
-          }}
-        >
-          ← Back to app
-        </a>
-        <form
-          action={async () => {
-            "use server";
-            const sb = await createClient();
-            await sb.auth.signOut();
-          }}
-        >
-          <button
-            type="submit"
-            style={{
-              fontSize: 13,
-              color: "var(--color-text-muted)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>{children}</main>
+        Skip to main content
+      </a>
+      <Nav />
+      <main
+        id="main-content"
+        className="flex-1 ml-0 lg:ml-60 px-5 lg:px-8 pt-8 pb-[calc(56px+env(safe-area-inset-bottom)+16px)] lg:pb-8 min-w-0"
+      >
+        <div className="max-w-6xl mx-auto">{children}</div>
+      </main>
     </div>
   );
 }
