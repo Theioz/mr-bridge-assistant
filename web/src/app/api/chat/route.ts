@@ -287,6 +287,22 @@ function isToolResultOk(result: unknown): boolean {
   return true;
 }
 
+// Billing-aligned token weight for quota accounting (#457).
+// Cache reads are billed at ~10% of normal; cache writes and uncached input
+// at 1x; output at 1x. Integer result to match the int DB column.
+function effectiveTokensForQuota(usage: {
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  noCacheTokens?: number;
+}): number {
+  const output = usage.outputTokens ?? 0;
+  const noCache = usage.noCacheTokens ?? 0;
+  const cacheWrite = usage.cacheWriteTokens ?? 0;
+  const cacheRead = usage.cacheReadTokens ?? 0;
+  return output + noCache + cacheWrite + Math.round(cacheRead / 10);
+}
+
 function synthesizeFallbackSummary(
   steps: CompletedToolStep[],
   flags: { hitStepCap: boolean; budgetExceeded: boolean; aborted: boolean },
@@ -404,6 +420,24 @@ export async function POST(req: Request) {
   const isDemo = !!(demoUserId && userId === demoUserId);
 
   const supabase = createServiceClient();
+
+  // #457: per-tenant daily rate limit. Atomic check + increment before any
+  // expensive work (message persist, context load, streaming). Fail open on
+  // DB error so a Supabase hiccup never blocks paying users.
+  const quotaKind = isDemo ? "demo" : "chat";
+  const { data: quotaResult, error: quotaError } = await supabase.rpc("check_and_increment_quota", {
+    p_user_id: userId,
+    p_kind: quotaKind,
+  });
+  if (quotaError) {
+    console.error("[chat] quota check error — failing open:", quotaError);
+  } else if (quotaResult && !(quotaResult as { allowed: boolean }).allowed) {
+    const { resets_at } = quotaResult as { allowed: boolean; resets_at: string };
+    return new Response(JSON.stringify({ error: "daily_quota_exhausted", resets_at }), {
+      status: 429,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   // Fetch user name from profile for personalised system prompt
   let userName: string | null = null;
@@ -709,6 +743,25 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }
       const stepWarnings = (steps ?? []).flatMap((s) => s.warnings ?? []);
       const allWarnings = [...(warnings ?? []), ...stepWarnings];
+
+      // #457: record actual billing-weighted token cost post-stream.
+      // Demo path uses Groq (free) — skip. Errors are non-fatal; the
+      // tool-call counter incremented pre-stream is the primary cap guard.
+      if (!isDemo) {
+        const delta = effectiveTokensForQuota({
+          outputTokens: totalUsage?.outputTokens,
+          cacheReadTokens,
+          cacheWriteTokens,
+          noCacheTokens,
+        });
+        if (delta > 0) {
+          const { error: recordErr } = await supabase.rpc("record_quota_tokens", {
+            p_user_id: userId,
+            p_tokens: delta,
+          });
+          if (recordErr) console.error("[chat] record_quota_tokens error:", recordErr);
+        }
+      }
 
       // Pair up tool calls with their results so the synthesizer can tell
       // "tool ran and succeeded" from "tool ran and failed" — the bug #319
