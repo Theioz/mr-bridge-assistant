@@ -149,6 +149,44 @@ function selectModel(
     /what.{0,10}my.{0,20}goal/,
     /get.{0,10}profile/,
     /log.{0,10}(that|it) as/,
+    // Workout read-only lookups
+    /show.{0,15}workout/,
+    /what.{0,15}(is |are |'s )?my workout/,
+    /today.{0,15}workout/,
+    /workout.{0,15}today/,
+    /show.{0,15}exercises/,
+    /what.{0,15}exercises/,
+    /list.{0,15}exercises/,
+    // Calendar read-only lookups
+    /what.{0,20}(on|is|are).{0,15}(schedule|calendar)/,
+    /show.{0,10}(schedule|calendar|events)/,
+    /list.{0,10}(schedule|calendar|events)/,
+    /any events.{0,20}(today|tomorrow|this week)/,
+    /schedule (today|tomorrow|this week)/,
+    /(today|tomorrow).{0,10}schedule/,
+    // Recovery and sleep read-only
+    /show.{0,15}recovery/,
+    /recovery (score|data|today)/,
+    /readiness (score|today)/,
+    /sleep (score|data|last night)/,
+    /show.{0,15}sleep/,
+    /\bhrv\b/,
+    // Body stats read-only
+    /current weight/,
+    /what.{0,10}(is |'s )?my weight/,
+    /body (fat|comp)/,
+    // Stocks read-only
+    /my stocks/,
+    /show.{0,10}stocks/,
+    /my watchlist/,
+    // Sports read-only
+    /game scores/,
+    /sports scores/,
+    /show.{0,10}sports/,
+    /any games/,
+    // Streak lookups
+    /my streak/,
+    /what.{0,10}my.{0,10}streak/,
   ];
   if (simplePatterns.some((p) => p.test(msg))) return "haiku";
 
@@ -388,7 +426,7 @@ function withTrailingCacheBreakpoint<T extends Record<string, unknown>>(tools: T
       ...(last.providerOptions ?? {}),
       anthropic: {
         ...(last.providerOptions?.anthropic ?? {}),
-        cacheControl: { type: "ephemeral" as const },
+        cacheControl: { type: "ephemeral" as const, ttl: "1h" },
       },
     },
   };
@@ -628,14 +666,16 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     | Array<{
         role: "system";
         content: string;
-        providerOptions?: { anthropic?: { cacheControl: { type: "ephemeral" } } };
+        providerOptions?: {
+          anthropic?: { cacheControl: { type: "ephemeral"; ttl?: "5m" | "1h" } };
+        };
       }> = isDemo
     ? demoSystemPrompt
     : [
         {
           role: "system",
           content: STATIC_SYSTEM_PROMPT,
-          providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+          providerOptions: { anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } } },
         },
         {
           role: "system",
