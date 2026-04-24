@@ -59,6 +59,14 @@ function getSlashToken(value: string, cursorPos: number): { start: number; query
 
 const composerTransition = `border-color var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)`;
 
+function formatResetsAt(isoString: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(isoString));
+}
+
 const TOUCH_QUERY = "(pointer: coarse)";
 
 function subscribeTouch(onChange: () => void): () => void {
@@ -105,6 +113,9 @@ export default function ChatInterface({
 
   // Local input state — v5 removed useChat's managed input/handleInputChange.
   const [input, setInput] = useState(initialInput ?? "");
+  // Tracks the resets_at of the last dismissed quota banner so re-triggering
+  // the same error doesn't reshow it, but a different resets_at (new day) does.
+  const [dismissedResetsAt, setDismissedResetsAt] = useState<string | null>(null);
 
   // Track the turn-complete sentinel from the server (issue 319). When the
   // stream ends, we inspect the assistant message's metadata to confirm it
@@ -135,15 +146,31 @@ export default function ChatInterface({
 
   const isLoading = status === "streaming" || status === "submitted";
 
+  // Derive quota-exhausted state from useChat's error — no useEffect needed.
+  // Dismissed when the user clicks Dismiss; reappears if a new resets_at arrives.
+  const quotaExhausted = useMemo<{ resetsAt: string } | null>(() => {
+    if (!error) return null;
+    try {
+      const parsed = JSON.parse(error.message) as { error?: string; resets_at?: string };
+      if (parsed?.error === "daily_quota_exhausted" && parsed?.resets_at) {
+        if (parsed.resets_at === dismissedResetsAt) return null;
+        return { resetsAt: parsed.resets_at };
+      }
+    } catch {
+      // not a quota error
+    }
+    return null;
+  }, [error, dismissedResetsAt]);
+
   const handleSubmit = useCallback(
     (e?: { preventDefault?: () => void }) => {
       e?.preventDefault?.();
       const text = input.trim();
-      if (!text || isLoading) return;
+      if (!text || isLoading || quotaExhausted) return;
       sendMessage({ text }, { body: { sessionId, model: modelOverride } });
       setInput("");
     },
-    [input, isLoading, sendMessage, sessionId, modelOverride],
+    [input, isLoading, quotaExhausted, sendMessage, sessionId, modelOverride],
   );
 
   // ── Slash-command menu state ──────────────────────────────────────────
@@ -430,6 +457,42 @@ export default function ChatInterface({
         <div ref={bottomRef} />
       </div>
 
+      {/* Quota exhausted banner — above composer, persists until dismissed */}
+      {quotaExhausted && (
+        <div
+          className="flex items-center justify-between print:hidden"
+          style={{
+            gap: "var(--space-3)",
+            padding: "var(--space-3) var(--space-4)",
+            borderRadius: "var(--r-2)",
+            background: "var(--color-danger-subtle)",
+            border: "1px solid var(--color-danger)",
+            margin: "var(--space-2) 0 0",
+          }}
+        >
+          <span style={{ fontSize: "var(--t-meta)", color: "var(--color-danger)" }}>
+            Daily message limit reached. Resets at {formatResetsAt(quotaExhausted.resetsAt)}.
+          </span>
+          <button
+            type="button"
+            onClick={() => setDismissedResetsAt(quotaExhausted.resetsAt)}
+            className="cursor-pointer hover-text-brighten"
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+              background: "transparent",
+              border: "none",
+              padding: "var(--space-1)",
+              flexShrink: 0,
+              transition: `color var(--motion-fast) var(--ease-out-quart)`,
+            }}
+            aria-label="Dismiss quota banner"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Input bar */}
       <form
         onSubmit={handleSubmit}
@@ -549,7 +612,7 @@ export default function ChatInterface({
         <button
           type={isLoading ? "button" : "submit"}
           onClick={isLoading ? () => stop() : undefined}
-          disabled={!isLoading && !input.trim()}
+          disabled={!isLoading && (!input.trim() || !!quotaExhausted)}
           aria-label={isLoading ? "Stop generating" : "Send"}
           className="cursor-pointer hover-text-brighten disabled:opacity-30 disabled:cursor-default"
           style={{
