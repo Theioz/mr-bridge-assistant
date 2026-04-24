@@ -369,6 +369,7 @@ mr-bridge-assistant/
 │   │   │   ├── (protected)/               # Auth-gated pages
 │   │   │   │   ├── layout.tsx             # Protected layout with sidebar
 │   │   │   │   ├── page.tsx               # Daily briefing dashboard
+│   │   │   │   ├── onboarding/page.tsx    # First-run wizard (7 steps) — redirected here by auth callback for new accounts; sets onboarding_completed in profile on finish
 │   │   │   │   ├── tasks/page.tsx         # Task management
 │   │   │   │   ├── habits/page.tsx        # Habit tracking — add/archive + 7/30/90d history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
