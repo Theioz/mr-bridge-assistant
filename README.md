@@ -384,6 +384,10 @@ mr-bridge-assistant/
 │   │   │   │   │   └── unread-count/route.ts    # GET — count unread notifications for badge
 │   │   │   │   ├── export/
 │   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
+│   │   │   │   ├── quota/
+│   │   │   │   │   └── route.ts           # GET — daily token/tool-call/demo-turn usage vs caps; is_demo flag
+│   │   │   │   ├── usage/
+│   │   │   │   │   └── storage/route.ts   # GET — per-category row counts + estimated bytes via estimate_user_storage RPC
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
 │   │   │   │       └── gmail/route.ts     # Important unread emails
@@ -405,7 +409,8 @@ mr-bridge-assistant/
 │   │   │   ├── journal/                   # Guided journal flow + history list
 │   │   │   ├── settings/
 │   │   │   │   ├── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
-│   │   │   │   └── data-settings.tsx      # Data export UI — format + range picker, POST /api/export, download zip
+│   │   │   │   ├── data-settings.tsx      # Data export UI — format + range picker, POST /api/export, download zip
+│   │   │   │   └── usage-settings.tsx     # Usage tab — daily quota progress bars + per-category stored-data sizes
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card

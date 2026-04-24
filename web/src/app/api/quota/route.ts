@@ -36,6 +36,9 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
+  const demoUserId = process.env.DEMO_USER_ID ?? null;
+  const isDemo = !!(demoUserId && user.id === demoUserId);
+
   const { data, error } = await supabase
     .from("tenant_quotas")
     .select(
@@ -56,6 +59,7 @@ export async function GET() {
   const resetsAt = new Date(Date.UTC(y, m - 1, d + 1)).toISOString();
 
   return NextResponse.json({
+    is_demo: isDemo,
     chat: {
       tokens_used: row.tokens_used_today,
       tokens_cap: row.daily_chat_tokens_override ?? row.daily_chat_tokens,

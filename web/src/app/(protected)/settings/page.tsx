@@ -25,6 +25,7 @@ import { lastSyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
 import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
 import { DataSettings } from "@/components/settings/data-settings";
+import { UsageSettings } from "@/components/settings/usage-settings";
 
 const VALID_TABS = new Set<string>([
   "profile",
@@ -33,6 +34,7 @@ const VALID_TABS = new Set<string>([
   "watchlists",
   "appearance",
   "data",
+  "usage",
 ]);
 
 async function updateProfile(key: string, value: string) {
@@ -199,6 +201,10 @@ async function SettingsContent({
 
   if (activeTab === "data") {
     return <DataSettings />;
+  }
+
+  if (activeTab === "usage") {
+    return <UsageSettings />;
   }
 
   const supabase = await createClient();
