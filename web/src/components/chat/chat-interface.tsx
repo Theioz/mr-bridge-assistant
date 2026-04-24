@@ -131,7 +131,8 @@ export default function ChatInterface({
   const { messages, sendMessage, regenerate, status, stop, error } = useChat({
     transport,
     messages: initialMessages,
-    onFinish: ({ message }) => {
+    onFinish: ({ message, isError }) => {
+      if (isError) return;
       const meta = (message as UIMessage | undefined)?.metadata as TurnCompleteMeta | undefined;
       const tc = meta?.turnComplete;
       const turnComplete = !!tc;
