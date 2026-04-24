@@ -9,12 +9,38 @@ import Logo from "@/components/ui/logo";
 const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL ?? "";
 const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
 
-type State = "idle" | "loading" | "error";
+type Mode = "signin" | "signup" | "forgot";
+type State = "idle" | "loading" | "error" | "pending";
+
+function ModeLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "none",
+        border: "none",
+        color: "var(--accent)",
+        cursor: "pointer",
+        fontSize: "inherit",
+        fontWeight: 500,
+        padding: 0,
+        minHeight: 44,
+        display: "inline-flex",
+        alignItems: "center",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState<Mode>("signin");
   const [state, setState] = useState<State>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const searchParams = useSearchParams();
@@ -25,6 +51,13 @@ function LoginForm() {
       ? nextParam
       : "/dashboard";
   const router = useRouter();
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setState("idle");
+    setErrorMsg("");
+    setConfirmPassword("");
+  }
 
   async function signIn(e: string, p: string) {
     setState("loading");
@@ -40,9 +73,52 @@ function LoginForm() {
     }
   }
 
+  async function signUp(e: string, p: string) {
+    setState("loading");
+    setErrorMsg("");
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({ email: e, password: p });
+    if (error) {
+      setErrorMsg(error.message);
+      setState("error");
+    } else if (!data.session) {
+      setState("pending");
+    } else {
+      router.refresh();
+      router.push(redirectTo);
+    }
+  }
+
+  async function sendResetEmail(e: string) {
+    setState("loading");
+    setErrorMsg("");
+    const supabase = createClient();
+    const origin = window.location.origin;
+    const { error } = await supabase.auth.resetPasswordForEmail(e, {
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    });
+    if (error) {
+      setErrorMsg(error.message);
+      setState("error");
+    } else {
+      setState("pending");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await signIn(email, password);
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setErrorMsg("Passwords do not match.");
+        setState("error");
+        return;
+      }
+      await signUp(email, password);
+    } else if (mode === "forgot") {
+      await sendResetEmail(email);
+    } else {
+      await signIn(email, password);
+    }
   }
 
   async function handleDemoLogin() {
@@ -75,12 +151,37 @@ function LoginForm() {
 
   const emailInvalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const pwInvalid = !password.trim();
-  const submitDisabled = state === "loading" || emailInvalid || pwInvalid;
+  const confirmInvalid = mode === "signup" && confirmPassword !== password;
+  const submitDisabled =
+    state === "loading" ||
+    state === "pending" ||
+    emailInvalid ||
+    (mode !== "forgot" && pwInvalid) ||
+    confirmInvalid;
+
   const disabledHint = emailInvalid
     ? "Enter a valid email"
-    : pwInvalid
+    : mode !== "forgot" && pwInvalid
       ? "Enter your password"
-      : undefined;
+      : confirmInvalid
+        ? "Passwords must match"
+        : undefined;
+
+  const submitLabel =
+    state === "loading"
+      ? "…"
+      : mode === "signup"
+        ? "Create account"
+        : mode === "forgot"
+          ? "Send reset link"
+          : "Sign in";
+
+  const subtitle =
+    mode === "signup"
+      ? "Create your account"
+      : mode === "forgot"
+        ? "Reset your password"
+        : "Personal assistant";
 
   return (
     <div
@@ -126,7 +227,7 @@ function LoginForm() {
               margin: 0,
             }}
           >
-            Personal assistant
+            {subtitle}
           </p>
         </header>
 
@@ -170,53 +271,89 @@ function LoginForm() {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" style={labelStyle}>
-              Password
-            </label>
-            <div style={{ position: "relative" }}>
+          {mode !== "forgot" && (
+            <div>
+              <label htmlFor="password" style={labelStyle}>
+                Password
+              </label>
+              <div style={{ position: "relative" }}>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  aria-invalid={state === "error"}
+                  aria-describedby={state === "error" ? "login-error" : undefined}
+                  className="focus:outline-none input-focus-ring"
+                  style={{ ...inputStyle, paddingRight: 44 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="hover-text-brighten"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: 0,
+                    transform: "translateY(-50%)",
+                    width: 44,
+                    height: 44,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--color-text-faint)",
+                    cursor: "pointer",
+                    borderRadius: "var(--r-1)",
+                    transition: "color var(--motion-fast) var(--ease-out-quart)",
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div>
+              <label htmlFor="confirm-password" style={labelStyle}>
+                Confirm password
+              </label>
               <input
-                id="password"
+                id="confirm-password"
                 type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                aria-invalid={state === "error"}
+                aria-invalid={state === "error" && confirmInvalid}
                 aria-describedby={state === "error" ? "login-error" : undefined}
                 className="focus:outline-none input-focus-ring"
-                style={{ ...inputStyle, paddingRight: 44 }}
+                style={inputStyle}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                className="hover-text-brighten"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  right: 0,
-                  transform: "translateY(-50%)",
-                  width: 44,
-                  height: 44,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--color-text-faint)",
-                  cursor: "pointer",
-                  borderRadius: "var(--r-1)",
-                  transition: "color var(--motion-fast) var(--ease-out-quart)",
-                }}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-          </div>
+          )}
 
-          {state === "error" && (
+          {state === "pending" ? (
+            <p
+              role="status"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+                textAlign: "center",
+                margin: 0,
+              }}
+            >
+              {mode === "forgot"
+                ? `Check your inbox — we sent a reset link to ${email}.`
+                : `Check your inbox — we sent a confirmation link to ${email}.`}
+            </p>
+          ) : state === "error" ? (
             <p
               id="login-error"
               role="alert"
@@ -226,9 +363,9 @@ function LoginForm() {
                 margin: 0,
               }}
             >
-              {errorMsg || "Invalid email or password."}
+              {errorMsg || "Something went wrong."}
             </p>
-          )}
+          ) : null}
 
           <button
             type="submit"
@@ -250,11 +387,41 @@ function LoginForm() {
               transition: "opacity var(--motion-fast) var(--ease-out-quart)",
             }}
           >
-            {state === "loading" ? "Signing in…" : "Sign in"}
+            {submitLabel}
           </button>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-2)",
+              alignItems: "center",
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            {mode === "signin" && (
+              <>
+                <span>
+                  New here?{" "}
+                  <ModeLink onClick={() => switchMode("signup")}>Create an account</ModeLink>
+                </span>
+                <ModeLink onClick={() => switchMode("forgot")}>Forgot password?</ModeLink>
+              </>
+            )}
+            {mode === "signup" && (
+              <span>
+                Already have an account?{" "}
+                <ModeLink onClick={() => switchMode("signin")}>Sign in</ModeLink>
+              </span>
+            )}
+            {mode === "forgot" && (
+              <ModeLink onClick={() => switchMode("signin")}>Back to sign in</ModeLink>
+            )}
+          </div>
         </form>
 
-        {DEMO_EMAIL && DEMO_PASSWORD && (
+        {mode === "signin" && DEMO_EMAIL && DEMO_PASSWORD && (
           <div
             style={{
               display: "flex",
