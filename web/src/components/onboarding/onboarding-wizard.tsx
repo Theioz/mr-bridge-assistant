@@ -335,6 +335,7 @@ export function OnboardingWizard({
   const [carbTarget, setCarbTarget] = useState(initialCarbTarget);
   const [fatTarget, setFatTarget] = useState(initialFatTarget);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   function advance() {
     setStep((s) => s + 1);
@@ -410,6 +411,7 @@ export function OnboardingWizard({
 
   async function handleGenerateTargets() {
     setGenerating(true);
+    setGenerateError(null);
     try {
       const result = await suggestNutritionTargetsAction({
         birthday: birthday.trim() || undefined,
@@ -425,7 +427,13 @@ export function OnboardingWizard({
         setProteinTarget(String(result.protein_g));
         setCarbTarget(String(result.carbs_g));
         setFatTarget(String(result.fat_g));
+      } else {
+        setGenerateError(
+          "Fill in your body stats and fitness goal on earlier steps to generate personalized targets.",
+        );
       }
+    } catch {
+      setGenerateError("Something went wrong. Enter targets manually.");
     } finally {
       setGenerating(false);
     }
@@ -947,27 +955,40 @@ export function OnboardingWizard({
                 />
               </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-start" }}>
-              <button
-                type="button"
-                onClick={handleGenerateTargets}
-                disabled={generating || isPending}
-                style={{
-                  minHeight: 44,
-                  padding: "0 var(--space-4)",
-                  borderRadius: "var(--r-1)",
-                  border: "1px solid var(--rule)",
-                  background: "transparent",
-                  color: "var(--color-text)",
-                  fontSize: "var(--t-meta)",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  opacity: generating || isPending ? 0.4 : 1,
-                  transition: "opacity var(--motion-fast) var(--ease-out-quart)",
-                }}
-              >
-                {generating ? "Generating…" : "Generate with Mr. Bridge →"}
-              </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              <div>
+                <button
+                  type="button"
+                  onClick={handleGenerateTargets}
+                  disabled={generating || isPending}
+                  style={{
+                    minHeight: 44,
+                    padding: "0 var(--space-4)",
+                    borderRadius: "var(--r-1)",
+                    border: "1px solid var(--rule)",
+                    background: "transparent",
+                    color: "var(--color-text)",
+                    fontSize: "var(--t-meta)",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    opacity: generating || isPending ? 0.4 : 1,
+                    transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+                  }}
+                >
+                  {generating ? "Generating…" : "Generate with Mr. Bridge →"}
+                </button>
+              </div>
+              {generateError && (
+                <p
+                  style={{
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-muted)",
+                    margin: 0,
+                  }}
+                >
+                  {generateError}
+                </p>
+              )}
             </div>
           </div>
           <NavButtons
