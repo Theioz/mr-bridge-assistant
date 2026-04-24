@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Performance
+- **Parallelize a11y smoke tests (#498).** `web/smoke/specs/a11y.spec.ts` now calls `test.describe.configure({ mode: "parallel" })` so the 11 route tests run across workers instead of sequentially. `smoke:a11y` npm script passes `--workers=4` to override the global `workers:1` constraint (which exists solely for the chat suite). Wall-clock time drops from ~60s to ~ceil(11/4) × avg-test-time ≈ 20s. Chat tests are untouched.
 - **Reduce Anthropic API cost — 1-hour cache TTL and expanded Haiku routing.** Two changes to `web/src/app/api/chat/route.ts`. (1) Both cache breakpoints (system prompt and trailing tool) now use `ttl: "1h"` instead of the default 5-minute TTL. The 5-minute window was causing 10–30 cache re-writes per active hour at $3.75/MTok each; 1-hour TTL cuts that to 1 re-write/hr at $6/MTok — roughly 60–80% reduction in cache-write cost on active days. (2) `selectModel` Gate 4 (Haiku simple patterns) extended with 34 new read-only patterns across workouts, calendar, recovery/sleep, body stats, stocks, sports, and streaks. Mutations (`assign_workout`, `create_calendar_event`, `reschedule_workout`, etc.) are not affected — they have no simple-pattern match and fall through to Sonnet. All 19 routing test cases verified in-process before PR.
 
 ### Security

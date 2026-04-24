@@ -13,7 +13,7 @@
     "prepare": "cd .. && husky web/.husky",
     "smoke": "playwright test",
     "smoke:chat": "playwright test smoke/specs/chat.spec.ts",
-    "smoke:a11y": "playwright test smoke/specs/a11y.spec.ts",
+    "smoke:a11y": "playwright test smoke/specs/a11y.spec.ts --workers=2",
     "smoke:perf": "tsx smoke/perf/lighthouse.mts",
     "smoke:install": "playwright install --with-deps chromium"
   },

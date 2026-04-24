@@ -25,6 +25,7 @@ const ROUTES: Route[] = [
 ];
 
 test.describe("a11y — axe sweep (critical + serious)", () => {
+  test.describe.configure({ mode: "parallel" });
   for (const route of ROUTES) {
     test(`${route.path}`, async ({ signedInPage, page }, testInfo) => {
       const target = route.auth === "signed-in" ? signedInPage : page;
