@@ -24,8 +24,8 @@ function ModeLink({ onClick, children }: { onClick: () => void; children: React.
         cursor: "pointer",
         fontSize: "inherit",
         fontWeight: 500,
-        padding: 0,
-        minHeight: 44,
+        padding: "0 2px",
+        height: 44,
         display: "inline-flex",
         alignItems: "center",
       }}
