@@ -24,6 +24,7 @@ import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/inte
 import { lastSyncStatus } from "@/lib/sync/log";
 import type { SportsFavorite } from "@/lib/sync/sports";
 import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
+import { DataSettings } from "@/components/settings/data-settings";
 
 const VALID_TABS = new Set<string>([
   "profile",
@@ -31,6 +32,7 @@ const VALID_TABS = new Set<string>([
   "integrations",
   "watchlists",
   "appearance",
+  "data",
 ]);
 
 async function updateProfile(key: string, value: string) {
@@ -193,6 +195,10 @@ async function SettingsContent({
 }) {
   if (activeTab === "appearance") {
     return <AppearanceSettings />;
+  }
+
+  if (activeTab === "data") {
+    return <DataSettings />;
   }
 
   const supabase = await createClient();
