@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Security
+- **Baseline security response headers (#455).** `web/next.config.ts` now serves `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geolocation/interest-cohort denied), `X-Content-Type-Options: nosniff`, and a `Content-Security-Policy-Report-Only` directive scoped to `'self'` + Supabase (https + wss) + `a.espncdn.com` on every route. CSP ships Report-Only during a 7-day soak to surface directive gaps via browser console without breaking production; a follow-up one-line PR flips it to enforcing. New Playwright spec `web/smoke/specs/security-headers.spec.ts` asserts all five headers on both unauthenticated and authenticated routes, and the existing chat smoke (`consoleErrors.toHaveLength(0)`) doubles as the CSP-violation regression net. A separate issue is filed to drop `'unsafe-inline'` via nonce injection. Required for multi-tenant SaaS launch (#201, #450).
+
 ### Fixed
 - **Sleep efficiency chart blank after #453.** `RecoveryTrends` was reading `sleep_efficiency` from `metadata` JSONB; the cleanup migration in #453 removed that key. Now reads from the promoted real column `r.sleep_efficiency` directly.
 
