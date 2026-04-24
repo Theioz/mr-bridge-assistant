@@ -16,7 +16,7 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  "upgrade-insecure-requests",
+  // upgrade-insecure-requests is spec-ignored under Report-Only; add back when flipping to enforcing.
 ].join("; ");
 
 const securityHeaders = [
