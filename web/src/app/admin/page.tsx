@@ -84,7 +84,7 @@ export default async function AdminPage() {
 
   const tenants: AdminTenant[] = users.map((u) => {
     const q = quotaMap.get(u.id);
-    const tokenCap = q?.daily_chat_tokens_override ?? q?.daily_chat_tokens ?? 100000;
+    const tokenCap = q?.daily_chat_tokens_override ?? q?.daily_chat_tokens ?? 500000;
     const toolCap = q?.daily_tool_calls_override ?? q?.daily_tool_calls ?? 500;
     return {
       id: u.id,

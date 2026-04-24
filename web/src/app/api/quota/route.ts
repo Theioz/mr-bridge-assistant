@@ -18,7 +18,7 @@ interface TenantQuotaRow {
 // sees "0 / cap" instead of an empty state. The row is lazily created on first
 // chat request via check_and_increment_quota's INSERT … ON CONFLICT DO NOTHING.
 const DEFAULTS: TenantQuotaRow = {
-  daily_chat_tokens: 100000,
+  daily_chat_tokens: 500000,
   daily_tool_calls: 500,
   tokens_used_today: 0,
   tool_calls_used_today: 0,

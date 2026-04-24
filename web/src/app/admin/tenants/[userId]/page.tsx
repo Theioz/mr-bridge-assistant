@@ -260,7 +260,7 @@ async function deleteTenantFromDetail(formData: FormData) {
 // ─── helpers ──────────────────────────────────────────────────────────────
 
 const QUOTA_DEFAULTS: TenantQuotaRow = {
-  daily_chat_tokens: 100000,
+  daily_chat_tokens: 500000,
   daily_tool_calls: 500,
   tokens_used_today: 0,
   tool_calls_used_today: 0,
