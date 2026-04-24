@@ -20,7 +20,7 @@ function ModeLink({ onClick, children }: { onClick: () => void; children: React.
       style={{
         background: "none",
         border: "none",
-        color: "var(--accent)",
+        color: "var(--accent-text)",
         cursor: "pointer",
         fontSize: "inherit",
         fontWeight: 500,
