@@ -85,7 +85,7 @@ function LoginForm() {
       setState("pending");
     } else {
       router.refresh();
-      router.push(redirectTo);
+      router.push("/onboarding");
     }
   }
 
