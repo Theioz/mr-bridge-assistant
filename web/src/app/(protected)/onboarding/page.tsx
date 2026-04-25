@@ -46,7 +46,13 @@ async function saveNameAndLocation(name: string, city: string) {
   revalidatePath("/dashboard");
 }
 
-async function saveBodyStats(birthday: string, weightLb: string, heightCm: string, sex: string) {
+async function saveBodyStats(
+  birthday: string,
+  weightLb: string,
+  heightCm: string,
+  sex: string,
+  targetWeightLb: string,
+) {
   "use server";
   const user = await getUser();
   if (!user) return;
@@ -55,6 +61,7 @@ async function saveBodyStats(birthday: string, weightLb: string, heightCm: strin
     { key: "body_weight_lb", value: weightLb },
     { key: "height_cm", value: heightCm },
     { key: "biological_sex", value: sex },
+    { key: "target_weight_lb", value: targetWeightLb },
   ].filter((r) => r.value.trim());
   for (const row of rows) await upsert(user.id, row.key, row.value);
 }
@@ -66,12 +73,13 @@ async function saveFocus(focus: string[]) {
   await upsert(user.id, "primary_focus", JSON.stringify(focus));
 }
 
-async function saveFitnessGoals(goal: string, level: string) {
+async function saveFitnessGoals(goal: string, level: string, workoutDaysPerWeek: string) {
   "use server";
   const user = await getUser();
   if (!user) return;
   if (goal.trim()) await upsert(user.id, "fitness_goal", goal);
   if (level.trim()) await upsert(user.id, "fitness_level", level);
+  if (workoutDaysPerWeek.trim()) await upsert(user.id, "workout_days_per_week", workoutDaysPerWeek);
 }
 
 async function saveWorkoutPreferences(prefs: string[], equip: string[]) {
@@ -108,6 +116,8 @@ type NutritionOverrides = {
   fitnessGoal?: string;
   fitnessLevel?: string;
   workoutPrefs?: string[];
+  targetWeightLb?: string;
+  workoutDaysPerWeek?: string;
 };
 
 async function suggestNutritionTargets(
@@ -149,14 +159,23 @@ async function suggestNutritionTargets(
   const workoutPrefs =
     overrides?.workoutPrefs ??
     (v["workout_preferences"] ? (JSON.parse(v["workout_preferences"]) as string[]) : []);
+  const rawTargetWeightLb = overrides?.targetWeightLb ?? v["target_weight_lb"];
+  const targetWeightLb = rawTargetWeightLb ? parseFloat(rawTargetWeightLb) : null;
+  const workoutDaysPerWeek = overrides?.workoutDaysPerWeek ?? v["workout_days_per_week"] ?? null;
 
   const parts: string[] = [];
   if (age) parts.push(`Age: ${age}`);
   if (sex) parts.push(`Sex: ${sex}`);
-  if (weightLb) parts.push(`Weight: ${weightLb} lbs (${(weightLb / 2.20462).toFixed(1)} kg)`);
+  if (weightLb)
+    parts.push(`Current weight: ${weightLb} lbs (${(weightLb / 2.20462).toFixed(1)} kg)`);
+  if (targetWeightLb)
+    parts.push(
+      `Target weight: ${targetWeightLb} lbs (${(targetWeightLb / 2.20462).toFixed(1)} kg)`,
+    );
   if (heightCm) parts.push(`Height: ${heightCm} cm`);
   if (goal) parts.push(`Goal: ${goal.replace(/_/g, " ")}`);
   if (level) parts.push(`Fitness level: ${level}`);
+  if (workoutDaysPerWeek) parts.push(`Workout days per week: ${workoutDaysPerWeek}`);
   if (workoutPrefs.length > 0) parts.push(`Workout types: ${workoutPrefs.join(", ")}`);
 
   if (parts.length === 0) return null;
@@ -220,11 +239,13 @@ export default async function OnboardingPage() {
         initialLocation={v["location_city"] ?? ""}
         initialBirthday={v["birthday"] ?? ""}
         initialWeightLb={v["body_weight_lb"] ?? ""}
+        initialTargetWeightLb={v["target_weight_lb"] ?? ""}
         initialHeightCm={v["height_cm"] ?? ""}
         initialBiologicalSex={v["biological_sex"] ?? ""}
         initialFocus={JSON.parse(v["primary_focus"] ?? "[]") as string[]}
         initialFitnessGoal={v["fitness_goal"] ?? ""}
         initialFitnessLevel={v["fitness_level"] ?? ""}
+        initialWorkoutDaysPerWeek={v["workout_days_per_week"] ?? ""}
         initialWorkoutPrefs={JSON.parse(v["workout_preferences"] ?? "[]") as string[]}
         initialEquipment={JSON.parse(v["equipment_preference"] ?? "[]") as string[]}
         initialCalorieTarget={v["calorie_target"] ?? ""}
