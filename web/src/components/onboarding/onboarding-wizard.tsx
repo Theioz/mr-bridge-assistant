@@ -22,6 +22,8 @@ type NutritionOverrides = {
   fitnessGoal?: string;
   fitnessLevel?: string;
   workoutPrefs?: string[];
+  targetWeightLb?: string;
+  workoutDaysPerWeek?: string;
 };
 
 interface Props {
@@ -29,11 +31,13 @@ interface Props {
   initialLocation: string;
   initialBirthday: string;
   initialWeightLb: string;
+  initialTargetWeightLb: string;
   initialHeightCm: string;
   initialBiologicalSex: string;
   initialFocus: string[];
   initialFitnessGoal: string;
   initialFitnessLevel: string;
+  initialWorkoutDaysPerWeek: string;
   initialWorkoutPrefs: string[];
   initialEquipment: string[];
   initialCalorieTarget: string;
@@ -48,9 +52,14 @@ interface Props {
     weightLb: string,
     heightCm: string,
     sex: string,
+    targetWeightLb: string,
   ) => Promise<void>;
   saveFocusAction: (focus: string[]) => Promise<void>;
-  saveFitnessGoalsAction: (goal: string, level: string) => Promise<void>;
+  saveFitnessGoalsAction: (
+    goal: string,
+    level: string,
+    workoutDaysPerWeek: string,
+  ) => Promise<void>;
   saveWorkoutPreferencesAction: (prefs: string[], equip: string[]) => Promise<void>;
   saveNutritionTargetsAction: (
     calories: string,
@@ -278,11 +287,13 @@ export function OnboardingWizard({
   initialLocation,
   initialBirthday,
   initialWeightLb,
+  initialTargetWeightLb,
   initialHeightCm,
   initialBiologicalSex,
   initialFocus,
   initialFitnessGoal,
   initialFitnessLevel,
+  initialWorkoutDaysPerWeek,
   initialWorkoutPrefs,
   initialEquipment,
   initialCalorieTarget,
@@ -312,6 +323,7 @@ export function OnboardingWizard({
   // Step 1: Body stats
   const [birthday, setBirthday] = useState(initialBirthday);
   const [weightLb, setWeightLb] = useState(initialWeightLb);
+  const [targetWeightLb, setTargetWeightLb] = useState(initialTargetWeightLb);
   const { ft: initFt, inches: initIn } = cmToFtIn(initialHeightCm);
   const [heightFt, setHeightFt] = useState(initFt);
   const [heightIn, setHeightIn] = useState(initIn);
@@ -323,6 +335,7 @@ export function OnboardingWizard({
   // Step 3: Fitness goals
   const [fitnessGoal, setFitnessGoal] = useState(initialFitnessGoal);
   const [fitnessLevel, setFitnessLevel] = useState(initialFitnessLevel);
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(initialWorkoutDaysPerWeek);
 
   // Step 4: Workout preferences
   const [workoutPrefs, setWorkoutPrefs] = useState<string[]>(initialWorkoutPrefs);
@@ -375,12 +388,19 @@ export function OnboardingWizard({
   function handleBodyStatsContinue() {
     startTransition(async () => {
       const heightCmValue = ftInToCm(heightFt, heightIn);
-      if (birthday.trim() || weightLb.trim() || heightCmValue || biologicalSex.trim()) {
+      if (
+        birthday.trim() ||
+        weightLb.trim() ||
+        targetWeightLb.trim() ||
+        heightCmValue ||
+        biologicalSex.trim()
+      ) {
         await saveBodyStatsAction(
           birthday.trim(),
           weightLb.trim(),
           heightCmValue,
           biologicalSex.trim(),
+          targetWeightLb.trim(),
         );
       }
       advance();
@@ -396,7 +416,8 @@ export function OnboardingWizard({
 
   function handleFitnessGoalsContinue() {
     startTransition(async () => {
-      if (fitnessGoal || fitnessLevel) await saveFitnessGoalsAction(fitnessGoal, fitnessLevel);
+      if (fitnessGoal || fitnessLevel || workoutDaysPerWeek)
+        await saveFitnessGoalsAction(fitnessGoal, fitnessLevel, workoutDaysPerWeek);
       advance();
     });
   }
@@ -416,10 +437,12 @@ export function OnboardingWizard({
       const result = await suggestNutritionTargetsAction({
         birthday: birthday.trim() || undefined,
         weightLb: weightLb.trim() || undefined,
+        targetWeightLb: targetWeightLb.trim() || undefined,
         heightCm: ftInToCm(heightFt, heightIn) || undefined,
         biologicalSex: biologicalSex.trim() || undefined,
         fitnessGoal: fitnessGoal.trim() || undefined,
         fitnessLevel: fitnessLevel.trim() || undefined,
+        workoutDaysPerWeek: workoutDaysPerWeek.trim() || undefined,
         workoutPrefs: workoutPrefs.length > 0 ? workoutPrefs : undefined,
       });
       if (result) {
@@ -627,6 +650,21 @@ export function OnboardingWizard({
               </div>
             </div>
             <div>
+              <label htmlFor="onboarding-target-weight" style={labelStyle}>
+                Target weight (lbs)
+              </label>
+              <input
+                id="onboarding-target-weight"
+                type="number"
+                value={targetWeightLb}
+                onChange={(e) => setTargetWeightLb(e.target.value)}
+                placeholder="e.g. 165"
+                min={0}
+                className="focus:outline-none input-focus-ring"
+                style={inputStyle}
+              />
+            </div>
+            <div>
               <p style={{ ...labelStyle, marginBottom: "var(--space-3)" }}>Biological sex</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
                 {SEX_OPTIONS.map((opt) => (
@@ -736,6 +774,20 @@ export function OnboardingWizard({
                     >
                       {l.description}
                     </span>
+                  </OptionChip>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p style={{ ...labelStyle, marginBottom: "var(--space-3)" }}>Workout days per week</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                {["1", "2", "3", "4", "5", "6", "7"].map((d) => (
+                  <OptionChip
+                    key={d}
+                    selected={workoutDaysPerWeek === d}
+                    onClick={() => setWorkoutDaysPerWeek((prev) => (prev === d ? "" : d))}
+                  >
+                    {d}
                   </OptionChip>
                 ))}
               </div>
