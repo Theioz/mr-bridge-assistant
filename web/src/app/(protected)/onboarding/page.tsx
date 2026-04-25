@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { generateText } from "ai";
+import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import type { SportsFavorite } from "@/lib/sync/sports";
@@ -161,21 +162,17 @@ async function suggestNutritionTargets(
   if (parts.length === 0) return null;
 
   try {
-    const { text } = await generateText({
+    const { object } = await generateObject({
       model: anthropic("claude-haiku-4-5-20251001"),
-      maxOutputTokens: 80,
-      prompt: `You are a sports nutritionist. Return ONLY a JSON object — no markdown, no explanation — with daily macro targets for this person:\n\n${parts.join("\n")}\n\nFormat: {"calories":2400,"protein_g":180,"carbs_g":260,"fat_g":70}`,
+      schema: z.object({
+        calories: z.number(),
+        protein_g: z.number(),
+        carbs_g: z.number(),
+        fat_g: z.number(),
+      }),
+      prompt: `You are a sports nutritionist. Suggest daily macro targets for this person:\n\n${parts.join("\n")}`,
     });
-    const parsed = JSON.parse(text.trim()) as NutritionTargets;
-    if (
-      typeof parsed.calories === "number" &&
-      typeof parsed.protein_g === "number" &&
-      typeof parsed.carbs_g === "number" &&
-      typeof parsed.fat_g === "number"
-    ) {
-      return parsed;
-    }
-    return null;
+    return object;
   } catch {
     return null;
   }
