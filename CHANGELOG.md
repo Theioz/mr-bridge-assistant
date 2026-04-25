@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Fixed
+- **Onboarding generate button now reliably fills in targets.** Replaced `generateText` + manual `JSON.parse` with `generateObject` (Zod schema). The old approach silently returned null whenever the model included any preamble text or markdown fences in its response, causing the "fill in your body stats" error even when stats were present.
 - **Onboarding generate button shows error when no data to work with.** "Generate with Mr. Bridge →" now shows an inline hint if it returns null (no body stats or fitness goals entered yet) instead of silently doing nothing. Also catches unexpected errors and shows a fallback message.
 - **Workout preferences and equipment now editable in Settings → Fitness tab.** Previously, `workout_preferences` and `equipment_preference` set during onboarding had no Settings UI — they were invisible and uneditable after setup. Settings → Fitness tab now has "Workout preferences" (chip toggles) and "Equipment" (preset chips + free-text tag input) sections that save immediately on change, matching the onboarding experience.
 
