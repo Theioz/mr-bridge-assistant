@@ -99,38 +99,12 @@ python3 scripts/sync-oura.py --days 30  # last 30 days
 
 ---
 
-## Renpho — body fat %, BMI, muscle mass
-
-**Script:** `scripts/sync-renpho.py`
-
-Renpho has no API — requires a manual CSV export from the app.
-
-**Export steps:**
-1. Open Renpho app → **Me** tab (bottom right)
-2. Tap **Export Data**
-3. Select date range → export
-4. Share/save the CSV file to your Mac
-
-**Run:**
-```bash
-python3 scripts/sync-renpho.py ~/Downloads/renpho_export.csv
-```
-
-The script auto-detects column names and handles different Renpho app versions. Body fat %, BMI, and muscle mass are written to the Baseline Metrics table alongside weight.
-
----
-
 ## Recommended workflow
 
 Run before starting a session to get the latest data:
 ```bash
 python3 scripts/sync-googlefit.py
 python3 scripts/sync-oura.py
-```
-
-Run Renpho sync after each weigh-in (weekly or as needed):
-```bash
-python3 scripts/sync-renpho.py ~/Downloads/renpho_export.csv
 ```
 
 All sync data writes to Supabase — no file commits needed.
