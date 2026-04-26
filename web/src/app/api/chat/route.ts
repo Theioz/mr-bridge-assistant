@@ -288,6 +288,10 @@ When asked what to cook or for recipe ideas:
 // ceiling let the Lambda die mid-stream.
 export const maxDuration = 90;
 const TURN_DEADLINE_MS = 80_000;
+// #519: emitted as a stream text part before abort so the client always sees
+// readable text rather than an error state on timeout.
+const DEADLINE_MESSAGE =
+  "I ran out of time mid-task. Here's what I gathered so far — reply **'continue'** to pick up where I left off.";
 
 // Issue #223 + #319: when the agent loop ends without an assistant text
 // message (step-cap stopWhen, token-budget stopWhen, Vercel-timeout abort, or
@@ -854,12 +858,18 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       // writes both columns in one insert.
       contentToPersist = text.trim();
       if (!contentToPersist) {
-        contentToPersist = synthesizeFallbackSummary(completedSteps, {
-          hitStepCap,
-          budgetExceeded,
-          aborted: deadlineExceeded,
-        });
-        synthesized = true;
+        if (deadlineExceeded) {
+          // #519: transform will have injected DEADLINE_MESSAGE as stream text;
+          // use the same string so the content column matches what the client saw.
+          contentToPersist = DEADLINE_MESSAGE;
+        } else {
+          contentToPersist = synthesizeFallbackSummary(completedSteps, {
+            hitStepCap,
+            budgetExceeded,
+            aborted: false,
+          });
+          synthesized = true;
+        }
       }
 
       console.log(
@@ -890,6 +900,37 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   const result = await agent.stream({
     messages: [...contextModelMessages, ...incomingModelMessages],
     abortSignal: turnAbort.signal,
+    // #519: intercept error/abort parts caused by the deadline and replace them
+    // with a readable text block so the client always gets a chat bubble.
+    experimental_transform: () => {
+      let activeTextId: string | null = null;
+      let deadlineTextInjected = false;
+      return new TransformStream({
+        transform(chunk, controller) {
+          if (chunk.type === "text-start") activeTextId = chunk.id;
+          else if (chunk.type === "text-end") activeTextId = null;
+
+          if (
+            (chunk.type === "error" || chunk.type === "abort") &&
+            deadlineExceeded &&
+            !deadlineTextInjected
+          ) {
+            deadlineTextInjected = true;
+            if (activeTextId !== null) {
+              controller.enqueue({ type: "text-end" as const, id: activeTextId });
+              activeTextId = null;
+            }
+            const id = "deadline-0";
+            controller.enqueue({ type: "text-start" as const, id });
+            controller.enqueue({ type: "text-delta" as const, id, text: DEADLINE_MESSAGE });
+            controller.enqueue({ type: "text-end" as const, id });
+            return;
+          }
+
+          controller.enqueue(chunk);
+        },
+      });
+    },
   });
 
   // v5: emit the turn-complete sentinel (#319) as message metadata stamped on
@@ -956,6 +997,12 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       }
     },
     onError: (error) => {
+      // #519: deadline aborts are handled by the transform — suppress here so
+      // the client never sees an error state from our own turnAbort signal.
+      if (error instanceof Error && error.name === "AbortError" && turnAbort.signal.aborted) {
+        console.warn("[chat] deadline abort — stream closed cleanly");
+        return "";
+      }
       console.error("[chat] stream error:", JSON.stringify(error));
       return "An error occurred.";
     },
