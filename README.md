@@ -486,7 +486,6 @@ mr-bridge-assistant/
 ├── scripts/
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
 │   ├── requirements.txt                   # Pinned Python dependencies
-│   ├── setup-web-oauth.py                 # Browser-based OAuth flow (legacy — users now connect Google via /settings → Integrations per #390)
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
@@ -494,8 +493,6 @@ mr-bridge-assistant/
 │   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
 │   ├── sync-oura.py                       # Oura Ring → recovery_metrics + workout_sessions
 │   ├── sync-fitbit.py                     # Fitbit workouts + body comp → Supabase
-│   ├── normalize_workout_activities.py    # One-time: normalize activity names to canonical aliases
-│   ├── sync-renpho.py                     # Renpho CSV → Supabase fitness_log (deprecated)
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
