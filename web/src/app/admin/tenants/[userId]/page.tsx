@@ -13,6 +13,7 @@ import type {
   TenantProfileEntry,
   TenantQuotaRow,
 } from "@/lib/admin-types";
+import { USER_TZ } from "@/lib/timezone";
 
 // ─── server actions ────────────────────────────────────────────────────────
 
@@ -455,10 +456,11 @@ export default async function TenantDetailPage({
           marginBottom: "var(--space-6)",
         }}
       >
-        ID: {detail.user.id} · Created {new Date(detail.user.created_at).toLocaleString()} · Last
+        ID: {detail.user.id} · Created{" "}
+        {new Date(detail.user.created_at).toLocaleString("en-US", { timeZone: USER_TZ })} · Last
         sign-in:{" "}
         {detail.user.last_sign_in_at
-          ? new Date(detail.user.last_sign_in_at).toLocaleString()
+          ? new Date(detail.user.last_sign_in_at).toLocaleString("en-US", { timeZone: USER_TZ })
           : "never"}
       </p>
 
@@ -537,7 +539,8 @@ export default async function TenantDetailPage({
                     {intg.provider}
                   </span>
                   <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-                    Connected {new Date(intg.connected_at).toLocaleDateString()}
+                    Connected{" "}
+                    {new Date(intg.connected_at).toLocaleDateString("en-US", { timeZone: USER_TZ })}
                   </span>
                 </div>
               ))
@@ -578,7 +581,7 @@ export default async function TenantDetailPage({
                     }}
                   >
                     <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>
-                      {new Date(s.last_active_at).toLocaleString()}
+                      {new Date(s.last_active_at).toLocaleString("en-US", { timeZone: USER_TZ })}
                     </span>
                   </div>
                   {s.summary && (
@@ -913,7 +916,7 @@ export default async function TenantDetailPage({
                   >
                     <span style={{ fontWeight: 500 }}>{row.action}</span>
                     <span style={{ color: "var(--color-text-muted)" }}>
-                      {new Date(row.created_at).toLocaleString()}
+                      {new Date(row.created_at).toLocaleString("en-US", { timeZone: USER_TZ })}
                     </span>
                   </div>
                   {(row.before_value != null || row.after_value != null) && (

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { AdminTenant, TenantQuotaRow } from "@/lib/admin-types";
+import { USER_TZ } from "@/lib/timezone";
 
 async function createTenant(formData: FormData) {
   "use server";
@@ -274,7 +275,7 @@ export default async function AdminPage({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {new Date(t.created_at).toLocaleDateString()}
+                    {new Date(t.created_at).toLocaleDateString("en-US", { timeZone: USER_TZ })}
                   </td>
                   <td
                     style={{
@@ -284,7 +285,11 @@ export default async function AdminPage({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {t.last_sign_in_at ? new Date(t.last_sign_in_at).toLocaleDateString() : "—"}
+                    {t.last_sign_in_at
+                      ? new Date(t.last_sign_in_at).toLocaleDateString("en-US", {
+                          timeZone: USER_TZ,
+                        })
+                      : "—"}
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap" }}>
                     <span
