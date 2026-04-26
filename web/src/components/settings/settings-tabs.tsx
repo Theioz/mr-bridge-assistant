@@ -28,6 +28,7 @@ export function SettingsTabs({ activeTab }: Props) {
   return (
     <nav
       aria-label="Settings sections"
+      className="settings-nav"
       style={{
         overflowX: "auto",
         WebkitOverflowScrolling: "touch",
@@ -36,7 +37,6 @@ export function SettingsTabs({ activeTab }: Props) {
         marginBottom: "var(--space-6)",
       }}
     >
-      <style>{`nav::-webkit-scrollbar { display: none }`}</style>
       <div className="flex" style={{ minWidth: "max-content", paddingInlineEnd: "var(--space-4)" }}>
         {SETTINGS_TABS.map(({ key, label }) => {
           const active = key === activeTab;

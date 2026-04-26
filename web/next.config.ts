@@ -5,31 +5,8 @@ const withAnalyze = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-const isDev = process.env.NODE_ENV !== "production";
-
-// Next 16 + Turbopack uses eval() to parse the RSC stream in dev. Prod builds
-// don't, so 'unsafe-eval' is dev-only.
-const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'";
-
-const CSP = [
-  "default-src 'self'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://a.espncdn.com https://*.supabase.co",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-  // upgrade-insecure-requests is spec-ignored under Report-Only; add back when flipping to enforcing.
-].join("; ");
-
+// Content-Security-Policy is set per-request in src/middleware.ts (with a nonce).
 const securityHeaders = [
-  // Report-Only during soak week; flip to Content-Security-Policy to enforce.
-  { key: "Content-Security-Policy-Report-Only", value: CSP },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
