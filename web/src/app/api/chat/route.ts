@@ -1,6 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { todayString } from "@/lib/timezone";
+import { buildProactivityContext } from "@/lib/chat/proactivity-context";
 import { ToolLoopAgent, wrapLanguageModel, stepCountIs, convertToModelMessages } from "ai";
 import type { StopCondition, ToolSet, UIMessage, ModelMessage } from "ai";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
@@ -477,16 +478,19 @@ export async function POST(req: Request) {
     });
   }
 
-  // Fetch user name from profile for personalised system prompt
+  // Fetch name + proactivity_enabled in one round-trip
   let userName: string | null = null;
+  let proactivityEnabled = true;
   if (userId) {
-    const { data: nameRow } = await supabase
+    const { data: profileRows } = await supabase
       .from("profile")
-      .select("value")
+      .select("key, value")
       .eq("user_id", userId)
-      .eq("key", "name")
-      .maybeSingle();
-    if (nameRow) userName = nameRow.value as string;
+      .in("key", ["name", "proactivity_enabled"]);
+    const profileMap: Record<string, string> = {};
+    for (const row of profileRows ?? []) profileMap[row.key as string] = row.value as string;
+    if (profileMap["name"]) userName = profileMap["name"];
+    proactivityEnabled = profileMap["proactivity_enabled"] !== "0";
   }
 
   // Load the last 10 messages from this session as context (#319: was loading
@@ -572,6 +576,11 @@ export async function POST(req: Request) {
   }
 
   const userLabel = userName ?? (isDemo ? "Demo User" : "the user");
+
+  // Fetch proactivity signals for non-demo users who have the feature enabled.
+  // Runs in parallel with the context load and message persist above (all I/O is done).
+  const proactivityBlock =
+    !isDemo && proactivityEnabled ? await buildProactivityContext(userId, supabase) : "";
 
   // Demo: full string prompt (Groq doesn't support cacheControl).
   // Non-demo: dynamic block only — the static rules live in STATIC_SYSTEM_PROMPT above.
@@ -661,15 +670,14 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   // an Anthropic ephemeral cacheControl marker so its ~1.4k tokens + tool
   // schemas above it are cached (~5 min TTL); the dynamic block (date + name)
   // follows uncached so cache hits don't invalidate each turn.
-  const systemValue:
-    | string
-    | Array<{
-        role: "system";
-        content: string;
-        providerOptions?: {
-          anthropic?: { cacheControl: { type: "ephemeral"; ttl?: "5m" | "1h" } };
-        };
-      }> = isDemo
+  type SystemEntry = {
+    role: "system";
+    content: string;
+    providerOptions?: {
+      anthropic?: { cacheControl: { type: "ephemeral"; ttl?: "5m" | "1h" } };
+    };
+  };
+  const systemValue: string | SystemEntry[] = isDemo
     ? demoSystemPrompt
     : [
         {
@@ -677,10 +685,8 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           content: STATIC_SYSTEM_PROMPT,
           providerOptions: { anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } } },
         },
-        {
-          role: "system",
-          content: dynamicPromptBlock,
-        },
+        { role: "system", content: dynamicPromptBlock },
+        ...(proactivityBlock ? [{ role: "system" as const, content: proactivityBlock }] : []),
       ];
 
   // Per-turn safeguards (issues #223 + #319): raise step cap from 12→20 so

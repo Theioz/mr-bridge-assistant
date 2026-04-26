@@ -42,6 +42,7 @@ function getEquipmentLabel(id: string): string {
 
 interface Props {
   restTimerEnabled: boolean;
+  proactivityEnabled: boolean;
   updateAction: (key: string, value: string) => Promise<void>;
   initialFitnessGoal: string;
   initialFitnessLevel: string;
@@ -53,6 +54,7 @@ interface Props {
 
 export function FitnessSettings({
   restTimerEnabled,
+  proactivityEnabled,
   updateAction,
   initialFitnessGoal,
   initialFitnessLevel,
@@ -62,6 +64,7 @@ export function FitnessSettings({
   saveWorkoutPrefsAction,
 }: Props) {
   const [, startTimerTransition] = useTransition();
+  const [, startProactivityTransition] = useTransition();
   const [, startGoalTransition] = useTransition();
   const [, startSaveTransition] = useTransition();
 
@@ -75,6 +78,12 @@ export function FitnessSettings({
   function handleTimerToggle() {
     startTimerTransition(() => {
       updateAction("rest_timer_enabled", restTimerEnabled ? "0" : "1");
+    });
+  }
+
+  function handleProactivityToggle() {
+    startProactivityTransition(() => {
+      updateAction("proactivity_enabled", proactivityEnabled ? "0" : "1");
     });
   }
 
@@ -231,6 +240,62 @@ export function FitnessSettings({
           </div>
           <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
             {restTimerEnabled ? "Auto-starts after each logged set" : "Rest timer disabled"}
+          </span>
+        </div>
+      </section>
+
+      {/* Proactive signals */}
+      <section aria-labelledby="proactivity-heading" style={sectionStyle}>
+        <h2 id="proactivity-heading" className="db-section-label">
+          Proactive signals
+        </h2>
+        <div className="flex items-center" style={{ gap: "var(--space-4)" }}>
+          <div
+            className="flex items-center p-0.5"
+            style={{
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              gap: 2,
+            }}
+            role="radiogroup"
+            aria-label="Proactive signals"
+          >
+            {(["On", "Off"] as const).map((label) => {
+              const selected = label === "On" ? proactivityEnabled : !proactivityEnabled;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={handleProactivityToggle}
+                  style={{
+                    fontFamily: "var(--font-body), system-ui, sans-serif",
+                    fontSize: "var(--t-micro)",
+                    fontWeight: 500,
+                    letterSpacing: "0.02em",
+                    padding: "0 var(--space-3)",
+                    minHeight: 44,
+                    minWidth: 48,
+                    background: selected ? "var(--accent)" : "transparent",
+                    color: selected ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+                    border: "none",
+                    borderRadius: "var(--r-1)",
+                    cursor: "pointer",
+                    transition:
+                      "background var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
+            {proactivityEnabled
+              ? "Bridge surfaces HRV, RPE, streak, and task signals unprompted"
+              : "Bridge responds only when asked"}
           </span>
         </div>
       </section>

@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Proactive in-session intelligence (#458).** Bridge now checks recovery, training, task, and habit signals on every session start and surfaces anomalies without being asked. Six rules run in parallel: HRV 3-day decline vs 7-day baseline, RPE ≥ 9 on last 2 consecutive strength sessions, overdue task count, established habit not yet logged after 18:00, sleep < 6 h for 2 consecutive nights, and body weight trending counter to goal for 5+ weigh-ins. Signals are injected as a verified-facts block in the dynamic system prompt — Bridge references them in context without ever fabricating data not in the DB. If no signals fire, the prompt is byte-for-byte identical to today. Gated behind `proactivity_enabled` profile preference (default on); toggle added to Settings → Fitness.
+
 ### Fixed
 - **Settings → Fitness: fitness goals now reflect onboarding selections.** `fitness_goal`, `fitness_level`, and `workout_days_per_week` set during onboarding were saved to `profile` but never shown in Settings. The Fitness tab now has a "Fitness goals" section with chip selectors for primary goal, fitness level, and workout days per week — pre-populated from the profile and saving immediately on change. A hint directs users to chat with Mr. Bridge for a personalized recommendation.
 - **Onboarding generate button now reliably fills in targets.** Replaced `generateText` + manual `JSON.parse` with `generateObject` (Zod schema). The old approach silently returned null whenever the model included any preamble text or markdown fences in its response, causing the "fill in your body stats" error even when stats were present.
