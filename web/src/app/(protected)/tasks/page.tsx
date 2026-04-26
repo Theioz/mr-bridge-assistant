@@ -45,15 +45,12 @@ async function completeTask(taskId: string): Promise<{ error?: string }> {
   "use server";
   try {
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("tasks")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", taskId);
+    const { error } = await supabase.from("tasks").update({ status: "completed" }).eq("id", taskId);
     if (error) return { error: error.message };
     // Also complete any active subtasks
     await supabase
       .from("tasks")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .update({ status: "completed" })
       .eq("parent_id", taskId)
       .eq("status", "active");
     revalidatePath("/tasks");
@@ -129,10 +126,7 @@ async function completeSubtask(id: string): Promise<{ error?: string }> {
       .select("parent_id")
       .eq("id", id)
       .single();
-    const { error } = await supabase
-      .from("tasks")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", id);
+    const { error } = await supabase.from("tasks").update({ status: "completed" }).eq("id", id);
     if (error) return { error: error.message };
     // Check if all siblings are now completed — if so, complete parent
     if (subtask?.parent_id) {
@@ -142,10 +136,7 @@ async function completeSubtask(id: string): Promise<{ error?: string }> {
         .eq("parent_id", subtask.parent_id);
       const allDone = (siblings ?? []).every((s) => s.status === "completed");
       if (allDone) {
-        await supabase
-          .from("tasks")
-          .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("id", subtask.parent_id);
+        await supabase.from("tasks").update({ status: "completed" }).eq("id", subtask.parent_id);
       }
     }
     revalidatePath("/tasks");
