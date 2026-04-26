@@ -21,6 +21,16 @@ test("dashboard hydrates without React hydration errors", async ({
     `dashboard threw hydration errors:\n${hydrationErrors.join("\n")}`,
   ).toEqual([]);
 
+  // Explicit regression for text-node variant (#487): args[]=text means a
+  // rendered string differed between SSR and the first client render.
+  const textNodeErrors = consoleErrors.filter(
+    (msg) => /args\[\]=text/i.test(msg) || /#418.*text/i.test(msg),
+  );
+  expect(
+    textNodeErrors,
+    `dashboard threw text-node hydration errors (React #418 args[]=text):\n${textNodeErrors.join("\n")}`,
+  ).toEqual([]);
+
   // Preserve the existing pre-existing-errors convention from chat.spec.ts.
   consoleErrors.length = 0;
 });

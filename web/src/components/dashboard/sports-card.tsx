@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Trophy } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { SportsCache } from "@/lib/types";
 import type { Game, Standing } from "@/lib/sync/sports/provider";
+import { USER_TZ } from "@/lib/timezone";
 
 interface Props {
   rows: SportsCache[];
@@ -24,21 +25,24 @@ const LOSS_COLOR = "var(--color-danger)";
 
 function fmtDay(iso: string): string {
   const d = new Date(iso);
-  const wd = d.toLocaleDateString("en-US", { weekday: "short" });
-  return `${wd} ${d.getMonth() + 1}/${d.getDate()}`;
+  const wd = d.toLocaleDateString("en-US", { weekday: "short", timeZone: USER_TZ });
+  const md = d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", timeZone: USER_TZ });
+  return `${wd} ${md}`;
 }
 
 function fmtDayTime(iso: string): string {
   const d = new Date(iso);
-  const wd = d.toLocaleDateString("en-US", { weekday: "short" });
+  const wd = d.toLocaleDateString("en-US", { weekday: "short", timeZone: USER_TZ });
+  const md = d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", timeZone: USER_TZ });
   const time = d
     .toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZone: USER_TZ,
     })
     .replace(":00", "");
-  return `${wd} ${d.getMonth() + 1}/${d.getDate()} ${time}`;
+  return `${wd} ${md} ${time}`;
 }
 
 function nextGameLabel(g: Game | undefined, league: string): string {
