@@ -125,7 +125,42 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
     }
   }
 
-  if (seen.size === 0) return null;
+  if (seen.size === 0) {
+    return (
+      <div className="flex justify-start print:hidden">
+        <div
+          className="flex flex-wrap"
+          style={{ gap: "var(--space-1)", padding: "var(--space-1) 0" }}
+        >
+          <span
+            data-testid="tool-status-chip"
+            className="inline-flex items-center rounded-full tnum"
+            style={{
+              gap: "var(--space-1)",
+              padding: "var(--space-1) var(--space-3)",
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--accent)",
+              color: "var(--color-text)",
+              transition: `border-color var(--motion-fast) var(--ease-out-quart), color var(--motion-fast) var(--ease-out-quart)`,
+            }}
+          >
+            <span
+              aria-hidden
+              className="inline-block rounded-full animate-spin shrink-0"
+              style={{
+                width: 10,
+                height: 10,
+                border: "1.5px solid var(--accent)",
+                borderTopColor: "transparent",
+              }}
+            />
+            Working…
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const chips = Array.from(seen.values());
 
@@ -170,6 +205,7 @@ const ToolStatusBar = memo(function ToolStatusBar({ messages, isLoading }: Props
           return (
             <span
               key={part.toolCallId}
+              data-testid="tool-status-chip"
               className="inline-flex items-center rounded-full tnum"
               style={{
                 gap: "var(--space-1)",
