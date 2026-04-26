@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Chat: citation sources on assistant messages (#479).** Completed assistant messages that involved tool calls now display a collapsible "N sources" link below the response text. Clicking it reveals pill chips — one per tool call — showing the tool name and a one-line result summary (e.g. "Fetching habits — 6 items"). Failed tool calls are visually distinguished with a danger border and ✕ marker. In-flight streaming behavior is unchanged.
 - **Proactive in-session intelligence (#458).** Bridge now checks recovery, training, task, and habit signals on every session start and surfaces anomalies without being asked. Six rules run in parallel: HRV 3-day decline vs 7-day baseline, RPE ≥ 9 on last 2 consecutive strength sessions, overdue task count, established habit not yet logged after 18:00, sleep < 6 h for 2 consecutive nights, and body weight trending counter to goal for 5+ weigh-ins. Signals are injected as a verified-facts block in the dynamic system prompt — Bridge references them in context without ever fabricating data not in the DB. If no signals fire, the prompt is byte-for-byte identical to today. Gated behind `proactivity_enabled` profile preference (default on); toggle added to Settings → Fitness.
 
 ### Fixed

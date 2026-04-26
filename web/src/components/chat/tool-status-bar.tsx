@@ -3,7 +3,7 @@
 import { memo } from "react";
 import type { UIMessage } from "ai";
 
-const TOOL_LABELS: Record<string, string> = {
+export const TOOL_LABELS: Record<string, string> = {
   get_tasks: "Fetching tasks",
   add_task: "Adding task",
   complete_task: "Completing task",
@@ -29,7 +29,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_sports_data: "Fetching sports data",
 };
 
-function toolLabel(toolName: string): string {
+export function toolLabel(toolName: string): string {
   return TOOL_LABELS[toolName] ?? toolName.replace(/_/g, " ");
 }
 
@@ -86,11 +86,12 @@ function previewFor(toolName: string, input: unknown): string | null {
 // Each part carries a toolCallId plus (when available) the tool input object.
 type ToolState = "input-streaming" | "input-available" | "output-available" | "output-error";
 
-type ToolUIPart = {
+export type ToolUIPart = {
   type: `tool-${string}`;
   toolCallId: string;
   state: ToolState;
   input?: unknown;
+  output?: unknown;
 };
 
 function isToolPart(part: { type: string }): part is ToolUIPart {
