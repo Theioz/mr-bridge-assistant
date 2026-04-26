@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Mona_Sans, Hubot_Sans } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const themePref = await getServerThemePreference();
   const htmlThemeAttr =
     themePref === "light" || themePref === "dark" ? { "data-theme": themePref } : {};
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
@@ -48,7 +50,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
         <AmbientBackground />
-        <ThemeProvider defaultTheme={themePref}>{children}</ThemeProvider>
+        <ThemeProvider defaultTheme={themePref} nonce={nonce}>
+          {children}
+        </ThemeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

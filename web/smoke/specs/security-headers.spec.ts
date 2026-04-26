@@ -17,6 +17,7 @@ const REQUIRED_CSP_DIRECTIVES = [
   "https://a.espncdn.com",
   "https://*.supabase.co",
   "wss://*.supabase.co",
+  "upgrade-insecure-requests",
 ];
 
 function assertHeaders(headers: Record<string, string>) {
@@ -30,11 +31,16 @@ function assertHeaders(headers: Record<string, string>) {
     }
   }
 
-  const csp = headers["content-security-policy-report-only"];
-  expect(csp, "missing Content-Security-Policy-Report-Only").toBeTruthy();
+  const csp = headers["content-security-policy"];
+  expect(csp, "missing Content-Security-Policy (enforcing)").toBeTruthy();
   for (const directive of REQUIRED_CSP_DIRECTIVES) {
     expect(csp, `CSP missing directive: ${directive}`).toContain(directive);
   }
+  expect(csp, "CSP must contain a per-request nonce").toMatch(/nonce-[A-Za-z0-9+/]+=*/);
+  expect(csp, "CSP script-src must use 'strict-dynamic'").toContain("'strict-dynamic'");
+  expect(csp, "CSP script-src must not contain 'unsafe-inline'").not.toMatch(
+    /script-src[^;]*'unsafe-inline'/,
+  );
 }
 
 base("security headers — unauthenticated /login", async ({ page }) => {

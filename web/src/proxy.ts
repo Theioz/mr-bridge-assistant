@@ -1,8 +1,41 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+function buildCSP(nonce: string): string {
+  // 'strict-dynamic' trusts scripts loaded by nonce-bearing scripts; host allowlists
+  // are ignored by CSP3 browsers when strict-dynamic is present but left for fallback.
+  const scriptSrc = isDev
+    ? `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
+    : `script-src 'nonce-${nonce}' 'strict-dynamic'`;
+
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    // style-src-elem governs <style> tags; style-src-attr governs style= attributes
+    // (Radix UI portals set inline positioning styles that cannot carry a nonce).
+    `style-src-elem 'nonce-${nonce}' 'self'`,
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Generate a per-request nonce and forward it to RSC via x-nonce request header
+  // so layout.tsx can read it with headers() if needed.
+  const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64");
+  const requestHeadersWithNonce = new Headers(request.headers);
+  requestHeadersWithNonce.set("x-nonce", nonce);
+
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeadersWithNonce } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +47,8 @@ export async function proxy(request: NextRequest) {
         setAll: (cookiesToSet: { name: string; value: string; options?: any }[]) => {
           // Must update both request and response cookies for token rotation to work
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
+          // Re-create with nonce headers so x-nonce is still forwarded after token rotation.
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeadersWithNonce } });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
@@ -41,6 +75,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  supabaseResponse.headers.set("Content-Security-Policy", buildCSP(nonce));
   return supabaseResponse;
 }
 

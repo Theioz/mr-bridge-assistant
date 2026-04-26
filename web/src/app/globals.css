@@ -694,3 +694,15 @@ body {
     pointer-events: auto !important;
   }
 }
+
+/* settings-tabs.tsx: hide the horizontal scroll indicator on the settings nav */
+.settings-nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* watchlist-widget.tsx: hide sparklines on narrow viewports */
+@media (max-width: 480px) {
+  .watchlist-spark {
+    display: none;
+  }
+}

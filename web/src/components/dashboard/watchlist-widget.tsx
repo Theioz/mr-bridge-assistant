@@ -147,9 +147,6 @@ export function WatchlistWidget({ rows, hasApiKey, refreshAction }: Props) {
 
   return (
     <section>
-      <style>{`
-        @media (max-width: 480px) { .watchlist-spark { display: none; } }
-      `}</style>
       <h2 className="db-section-label">Watchlist</h2>
 
       {!hasApiKey ? (

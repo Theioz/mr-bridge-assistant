@@ -6,9 +6,11 @@ import type { ThemePreference } from "@/lib/theme";
 export function ThemeProvider({
   children,
   defaultTheme,
+  nonce,
 }: {
   children: React.ReactNode;
   defaultTheme: ThemePreference;
+  nonce?: string;
 }) {
   return (
     <NextThemesProvider
@@ -16,6 +18,7 @@ export function ThemeProvider({
       defaultTheme={defaultTheme}
       enableSystem
       disableTransitionOnChange
+      nonce={nonce}
     >
       {children}
     </NextThemesProvider>
