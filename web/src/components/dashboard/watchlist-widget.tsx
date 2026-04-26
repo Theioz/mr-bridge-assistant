@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, LineChart as LineChartIcon } from "lucide-react";
 import EmptyState from "./empty-state";
 import type { StocksCache } from "@/lib/types";
+import { USER_TZ } from "@/lib/timezone";
 
 function Sparkline({ points }: { points: { close: number }[] }) {
   if (points.length < 2) return null;
@@ -57,7 +58,7 @@ function isStocksStale(latest: string | null): boolean {
   if (!latest) return true;
   const ageMs = Date.now() - new Date(latest).getTime();
   const nyParts = new Date().toLocaleString("en-US", {
-    timeZone: "America/New_York",
+    timeZone: USER_TZ,
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",

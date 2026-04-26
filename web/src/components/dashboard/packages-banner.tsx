@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { PackagesApiResponse } from "@/app/api/packages/route";
 import type { Package } from "@/lib/types";
+import { USER_TZ } from "@/lib/timezone";
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
 function todayDateString(): string {
-  return new Date().toLocaleDateString("en-CA");
+  return new Date().toLocaleDateString("en-CA", { timeZone: USER_TZ });
 }
 
 function addDays(dateStr: string, n: number): string {
