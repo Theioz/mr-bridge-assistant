@@ -1,11 +1,11 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-26)
 
 ## Corpus Check
-- 254 files · ~622,115 words
+- 254 files · ~624,350 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 974 nodes · 1381 edges · 148 communities detected
+- 975 nodes · 1382 edges · 148 communities detected
 - Extraction: 75% EXTRACTED · 25% INFERRED · 0% AMBIGUOUS · INFERRED: 351 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -174,8 +174,8 @@
 ## Surprising Connections (you probably didn't know these)
 - `SettingsContent()` --calls--> `lastSyncStatus()`  [INFERRED]
   /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/settings/page.tsx → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/log.ts
-- `GET@validate/route.ts` --calls--> `getUser()`  [INFERRED]
-  web/src/app/api/stocks/validate/route.ts → /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/onboarding/page.tsx
+- `getUser()` --calls--> `GET@validate/route.ts`  [INFERRED]
+  /Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/onboarding/page.tsx → web/src/app/api/stocks/validate/route.ts
 - `GET@validate/route.ts` --calls--> `createClient()`  [INFERRED]
   web/src/app/api/stocks/validate/route.ts → /Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/supabase/client.ts
 - `POST@export/route.ts` --calls--> `toCSV()`  [INFERRED]
@@ -191,7 +191,7 @@ Nodes (100): createClient(), backfillAllPRs(), upsertExercisePRs(), getSportsPro
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
-Nodes (41): getISOWeekKey(), getISOWeekLabel(), latestLabel(), getExcludedCalendarIds(), dateRange(), fitbitGet(), fmtHrZones(), isBetter() (+33 more)
+Nodes (35): getISOWeekKey(), getISOWeekLabel(), latestLabel(), getExcludedCalendarIds(), buildProactivityContext(), ruleHabitAtRisk(), ruleHighRpe(), ruleHrvDecline() (+27 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
@@ -218,12 +218,12 @@ Cohesion: 0.15
 Nodes (26): main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS., Logged strength sessions + sets (issue #249) — 6 sessions over 3 weeks.     stre (+18 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.1
-Nodes (11): cancelWorkout(), err(), ok(), getGoogleAuthClient(), GoogleNotConnectedError, rescheduleWorkout(), tzOffsetString(), DELETE@[eventId]/route.ts (+3 more)
+Cohesion: 0.11
+Nodes (16): cancelWorkout(), err(), ok(), getGoogleAuthClient(), GoogleNotConnectedError, decodeBase64url(), extractBodyText(), extractEta() (+8 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.15
-Nodes (18): fitGet(), fitPost(), getGoogleAccessToken(), syncGoogleFit(), lastSyncStatus(), logSync(), fmtTime(), ouraGet() (+10 more)
+Cohesion: 0.13
+Nodes (19): dateRange(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+11 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.14
@@ -275,23 +275,23 @@ Nodes (0):
 
 ### Community 22 - "Community 22"
 Cohesion: 0.29
-Nodes (2): fmtShortDate(), fmtWeekRange()
+Nodes (2): clearLongPress(), handleTouchStart()
 
 ### Community 23 - "Community 23"
+Cohesion: 0.29
+Nodes (2): fmtShortDate(), fmtWeekRange()
+
+### Community 24 - "Community 24"
 Cohesion: 0.32
 Nodes (7): last_sync_age(), main(), Run alert scripts sequentially after syncs. Errors are non-fatal., Return seconds since last successful sync for source, or None if never., Run one sync script as a subprocess. Returns (source, returncode, output)., _run_alerts(), run_sync()
 
-### Community 24 - "Community 24"
+### Community 25 - "Community 25"
 Cohesion: 0.48
 Nodes (5): handleDemoLogin(), handleSubmit(), sendResetEmail(), signIn(), signUp()
 
-### Community 25 - "Community 25"
+### Community 26 - "Community 26"
 Cohesion: 0.29
 Nodes (0): 
-
-### Community 26 - "Community 26"
-Cohesion: 0.33
-Nodes (2): clearLongPress(), handleTouchStart()
 
 ### Community 27 - "Community 27"
 Cohesion: 0.33
@@ -371,11 +371,11 @@ Nodes (2): createSmokeAdminClient(), requireEnv()
 
 ### Community 46 - "Community 46"
 Cohesion: 0.5
-Nodes (2): MastheadRefresh(), useSyncAll()
+Nodes (1): toCSV()
 
 ### Community 47 - "Community 47"
 Cohesion: 0.5
-Nodes (1): toCSV()
+Nodes (2): MastheadRefresh(), useSyncAll()
 
 ### Community 48 - "Community 48"
 Cohesion: 0.67
@@ -950,8 +950,8 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Community 0` to `Community 1`, `Community 4`, `Community 37`, `Community 8`, `Community 45`, `Community 24`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Community 0` to `Community 1`, `Community 4`, `Community 37`, `Community 8`, `Community 45`, `Community 25`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **Why does `getUser()` connect `Community 0` to `Community 8`, `Community 1`, `Community 4`?**
   _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 1`?**

@@ -2,6 +2,7 @@
 
 import { memo, useRef, useState } from "react";
 import type { UIMessage } from "ai";
+import { toolLabel, type ToolUIPart } from "./tool-status-bar";
 import remarkGfm from "remark-gfm";
 import type ReactMarkdownType from "react-markdown";
 import dynamic from "next/dynamic";
@@ -169,6 +170,125 @@ const MD_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = 
   ),
 };
 
+function getToolParts(message: UIMessage): ToolUIPart[] {
+  const result: ToolUIPart[] = [];
+  for (const p of message.parts) {
+    const tp = p as {
+      type?: string;
+      state?: string;
+      toolCallId?: string;
+      input?: unknown;
+      output?: unknown;
+    };
+    if (
+      typeof tp.type === "string" &&
+      tp.type.startsWith("tool-") &&
+      (tp.state === "output-available" || tp.state === "output-error")
+    ) {
+      result.push(tp as ToolUIPart);
+    }
+  }
+  return result;
+}
+
+function summarizeOutput(toolName: string, output: unknown): string {
+  if (Array.isArray(output)) {
+    const n = output.length;
+    return n === 1 ? "1 item" : `${n} items`;
+  }
+  if (output && typeof output === "object") {
+    if ("ok" in output && (output as { ok: unknown }).ok === false) return "failed";
+    for (const key of [
+      "tasks",
+      "habits",
+      "events",
+      "items",
+      "meals",
+      "recipes",
+      "sessions",
+      "workouts",
+      "results",
+    ]) {
+      const val = (output as Record<string, unknown>)[key];
+      if (Array.isArray(val)) {
+        const n = val.length;
+        return n === 1 ? "1 item" : `${n} items`;
+      }
+    }
+  }
+  void toolName;
+  return "done";
+}
+
+function SourcesRow({ parts }: { parts: ToolUIPart[] }) {
+  const [open, setOpen] = useState(false);
+  const n = parts.length;
+  const label = n === 1 ? "1 source" : `${n} sources`;
+
+  return (
+    <div style={{ marginTop: "var(--space-2)" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-faint)",
+          textDecoration: "underline",
+          textUnderlineOffset: 2,
+          cursor: "pointer",
+        }}
+      >
+        {label}
+      </button>
+      {open && (
+        <div
+          className="flex flex-wrap"
+          style={{ gap: "var(--space-1)", marginTop: "var(--space-1)" }}
+        >
+          {parts.map((part) => {
+            const toolName = part.type.slice("tool-".length);
+            const isError = part.state === "output-error";
+            const verb = toolLabel(toolName);
+            const summary = isError ? "failed" : summarizeOutput(toolName, part.output);
+            const raw = `${verb} — ${summary}`;
+            const chipLabel = raw.length > 44 ? `${raw.slice(0, 44)}…` : raw;
+
+            return (
+              <span
+                key={part.toolCallId}
+                className="inline-flex items-center rounded-full"
+                style={{
+                  gap: "var(--space-1)",
+                  padding: "var(--space-1) var(--space-3)",
+                  fontSize: "var(--t-micro)",
+                  background: "transparent",
+                  border: `1px solid ${isError ? "var(--color-danger)" : "var(--rule-soft)"}`,
+                  color: isError ? "var(--color-danger)" : "var(--color-text-faint)",
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    fontSize: 10,
+                    lineHeight: 1,
+                    color: isError ? "var(--color-danger)" : "var(--color-positive)",
+                  }}
+                >
+                  {isError ? "✕" : "✓"}
+                </span>
+                {chipLabel}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
   const [revealed, setRevealed] = useState(false);
@@ -193,6 +313,7 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const text = getMessageText(message);
   const createdAt = getCreatedAt(message);
   const showTime = createdAt && (revealed || pinned);
+  const toolParts = !isUser ? getToolParts(message) : [];
 
   // Role distinction is carried by layout (alignment + subtle surface tint on
   // the user side) rather than a color block. Spec: "user/assistant
@@ -228,6 +349,7 @@ const MessageBubble = memo(function MessageBubble({ message }: Props) {
             {text}
           </ReactMarkdown>
         )}
+        {toolParts.length > 0 && <SourcesRow parts={toolParts} />}
       </div>
       {createdAt && (
         <span
