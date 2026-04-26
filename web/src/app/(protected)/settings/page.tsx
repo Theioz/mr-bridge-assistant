@@ -312,6 +312,9 @@ async function SettingsContent({
         <FitnessSettings
           restTimerEnabled={values["rest_timer_enabled"] !== "0"}
           updateAction={updateProfile}
+          initialFitnessGoal={values["fitness_goal"] ?? ""}
+          initialFitnessLevel={values["fitness_level"] ?? ""}
+          initialWorkoutDaysPerWeek={values["workout_days_per_week"] ?? ""}
           initialWorkoutPrefs={JSON.parse(values["workout_preferences"] ?? "[]") as string[]}
           initialEquipment={JSON.parse(values["equipment_preference"] ?? "[]") as string[]}
           saveWorkoutPrefsAction={saveWorkoutPrefs}

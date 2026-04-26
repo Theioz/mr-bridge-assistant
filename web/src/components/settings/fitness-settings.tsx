@@ -2,6 +2,20 @@
 
 import { useState, useTransition } from "react";
 
+const FITNESS_GOALS = [
+  { id: "build_muscle", label: "Build muscle" },
+  { id: "lose_weight", label: "Lose weight" },
+  { id: "improve_endurance", label: "Improve endurance" },
+  { id: "athletic_performance", label: "Athletic performance" },
+  { id: "general_fitness", label: "General fitness" },
+];
+
+const FITNESS_LEVELS = [
+  { id: "beginner", label: "Beginner", description: "< 1 year" },
+  { id: "intermediate", label: "Intermediate", description: "1–3 years" },
+  { id: "advanced", label: "Advanced", description: "3+ years" },
+];
+
 const WORKOUT_TYPES = [
   { id: "strength", label: "Strength training" },
   { id: "cardio", label: "Cardio" },
@@ -29,6 +43,9 @@ function getEquipmentLabel(id: string): string {
 interface Props {
   restTimerEnabled: boolean;
   updateAction: (key: string, value: string) => Promise<void>;
+  initialFitnessGoal: string;
+  initialFitnessLevel: string;
+  initialWorkoutDaysPerWeek: string;
   initialWorkoutPrefs: string[];
   initialEquipment: string[];
   saveWorkoutPrefsAction: (prefs: string[], equip: string[]) => Promise<void>;
@@ -37,13 +54,20 @@ interface Props {
 export function FitnessSettings({
   restTimerEnabled,
   updateAction,
+  initialFitnessGoal,
+  initialFitnessLevel,
+  initialWorkoutDaysPerWeek,
   initialWorkoutPrefs,
   initialEquipment,
   saveWorkoutPrefsAction,
 }: Props) {
   const [, startTimerTransition] = useTransition();
+  const [, startGoalTransition] = useTransition();
   const [, startSaveTransition] = useTransition();
 
+  const [fitnessGoal, setFitnessGoal] = useState(initialFitnessGoal);
+  const [fitnessLevel, setFitnessLevel] = useState(initialFitnessLevel);
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(initialWorkoutDaysPerWeek);
   const [workoutPrefs, setWorkoutPrefs] = useState<string[]>(initialWorkoutPrefs);
   const [equipment, setEquipment] = useState<string[]>(initialEquipment);
   const [equipmentDraft, setEquipmentDraft] = useState("");
@@ -51,6 +75,30 @@ export function FitnessSettings({
   function handleTimerToggle() {
     startTimerTransition(() => {
       updateAction("rest_timer_enabled", restTimerEnabled ? "0" : "1");
+    });
+  }
+
+  function handleFitnessGoalSelect(id: string) {
+    const next = fitnessGoal === id ? "" : id;
+    setFitnessGoal(next);
+    startGoalTransition(() => {
+      updateAction("fitness_goal", next);
+    });
+  }
+
+  function handleFitnessLevelSelect(id: string) {
+    const next = fitnessLevel === id ? "" : id;
+    setFitnessLevel(next);
+    startGoalTransition(() => {
+      updateAction("fitness_level", next);
+    });
+  }
+
+  function handleWorkoutDaysSelect(d: string) {
+    const next = workoutDaysPerWeek === d ? "" : d;
+    setWorkoutDaysPerWeek(next);
+    startGoalTransition(() => {
+      updateAction("workout_days_per_week", next);
     });
   }
 
@@ -184,6 +232,81 @@ export function FitnessSettings({
           <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>
             {restTimerEnabled ? "Auto-starts after each logged set" : "Rest timer disabled"}
           </span>
+        </div>
+      </section>
+
+      {/* Fitness goals */}
+      <section aria-labelledby="fitness-goals-heading" style={sectionStyle}>
+        <h2 id="fitness-goals-heading" className="db-section-label">
+          Fitness goals
+        </h2>
+        <p
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-5)",
+          }}
+        >
+          Not sure what to pick? Chat with Mr. Bridge and describe your situation — it will set
+          these for you.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+          <div>
+            <p style={subLabelStyle}>Primary goal</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {FITNESS_GOALS.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => handleFitnessGoalSelect(g.id)}
+                  style={chipStyle(fitnessGoal === g.id)}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={subLabelStyle}>Fitness level</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {FITNESS_LEVELS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => handleFitnessLevelSelect(l.id)}
+                  style={chipStyle(fitnessLevel === l.id)}
+                >
+                  <span style={{ fontWeight: 600 }}>{l.label}</span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "var(--t-micro)",
+                      fontWeight: 400,
+                      opacity: 0.8,
+                      marginTop: 2,
+                    }}
+                  >
+                    {l.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={subLabelStyle}>Workout days per week</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {["1", "2", "3", "4", "5", "6", "7"].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => handleWorkoutDaysSelect(d)}
+                  style={chipStyle(workoutDaysPerWeek === d)}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
