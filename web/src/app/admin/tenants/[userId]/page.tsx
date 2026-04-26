@@ -38,10 +38,7 @@ async function updateTokenOverride(formData: FormData) {
 
   await svc
     .from("tenant_quotas")
-    .upsert(
-      { user_id: userId, daily_chat_tokens_override: value, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
+    .upsert({ user_id: userId, daily_chat_tokens_override: value }, { onConflict: "user_id" });
 
   await svc.from("admin_audit_log").insert({
     admin_user_id: admin.id,
@@ -76,10 +73,7 @@ async function updateToolCallOverride(formData: FormData) {
 
   await svc
     .from("tenant_quotas")
-    .upsert(
-      { user_id: userId, daily_tool_calls_override: value, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
+    .upsert({ user_id: userId, daily_tool_calls_override: value }, { onConflict: "user_id" });
 
   await svc.from("admin_audit_log").insert({
     admin_user_id: admin.id,
@@ -114,7 +108,6 @@ async function resetQuotaToday(formData: FormData) {
       user_id: userId,
       tokens_used_today: 0,
       tool_calls_used_today: 0,
-      updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
   );
@@ -148,7 +141,6 @@ async function setFeatureFlag(formData: FormData) {
       user_id: userId,
       flag_name: flagName,
       enabled,
-      updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,flag_name" },
   );
@@ -215,7 +207,6 @@ async function setGlobalFeatureFlag(formData: FormData) {
       user_id: null,
       flag_name: flagName,
       enabled,
-      updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,flag_name" },
   );

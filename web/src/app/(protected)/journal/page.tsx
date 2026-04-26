@@ -29,7 +29,6 @@ async function saveJournalEntry(
       user_id: user.id,
       responses,
       free_write: freeWrite.trim() || null,
-      updated_at: new Date().toISOString(),
     },
     { onConflict: "date,user_id" },
   );
