@@ -1,6 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
-import { todayString } from "@/lib/timezone";
+import { USER_TZ } from "@/lib/timezone";
 import { buildProactivityContext } from "@/lib/chat/proactivity-context";
 import { ToolLoopAgent, wrapLanguageModel, stepCountIs, convertToModelMessages } from "ai";
 import type { StopCondition, ToolSet, UIMessage, ModelMessage } from "ai";
@@ -577,6 +577,16 @@ export async function POST(req: Request) {
 
   const userLabel = userName ?? (isDemo ? "Demo User" : "the user");
 
+  const _now = new Date();
+  const _dayName = _now.toLocaleDateString("en-US", { weekday: "long", timeZone: USER_TZ });
+  const _dateStr = _now.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: USER_TZ,
+  });
+  const todayFull = `${_dayName}, ${_dateStr}`;
+
   // Fetch proactivity signals for non-demo users who have the feature enabled.
   // Runs in parallel with the context load and message persist above (all I/O is done).
   const proactivityBlock =
@@ -584,7 +594,7 @@ export async function POST(req: Request) {
 
   // Demo: full string prompt (Groq doesn't support cacheControl).
   // Non-demo: dynamic block only — the static rules live in STATIC_SYSTEM_PROMPT above.
-  const demoSystemPrompt = `You are Mr. Bridge, a personal AI assistant. Today's date is ${todayString()}.
+  const demoSystemPrompt = `You are Mr. Bridge, a personal AI assistant. Today is ${todayFull}.
 You are currently running in demo mode for a fictional persona: Demo User, a software engineer based in San Francisco.
 Address the user as "Demo User" — naturally in conversation, not robotically after every sentence.
 
@@ -606,7 +616,8 @@ Tools available:
 - get_user_equipment, get_workout_plan, assign_workout, update_workout_exercise, get_workout_history, cancel_workout, reschedule_workout`;
 
   const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
-Today's date is ${todayString()}.
+Today is ${todayFull}.
+When the user names a weekday (e.g. "Monday"), resolve it to a specific date relative to today. If today IS that weekday, use today's date. Otherwise, use the next future occurrence of that weekday. Never assume "Monday" means "tomorrow" regardless of what day today is.
 ${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : "If you learn the user's name during the conversation, use it naturally going forward."}`;
 
   // #342: convert structured UIMessage[] (with tool-call / tool-result / file

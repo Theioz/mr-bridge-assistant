@@ -99,7 +99,7 @@ const btnBase = {
 
 export default function CalendarView() {
   const [view, setView] = useState<View>("week");
-  const [current, setCurrent] = useState(new Date());
+  const [current, setCurrent] = useState(() => new Date());
   // null = loading; array = loaded (even if empty)
   const [events, setEvents] = useState<CalendarRangeEvent[] | null>(null);
   const [notConnected, setNotConnected] = useState(false);
