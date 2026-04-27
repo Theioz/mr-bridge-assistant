@@ -50,8 +50,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
         {nonce && (
+          // Browsers strip the nonce attribute from DOM elements after parsing
+          // (security measure); suppressHydrationWarning prevents React from
+          // flagging the server/client attribute mismatch on this element.
           <script
             nonce={nonce}
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: `window.__webpack_nonce__='${nonce}'` }}
           />
         )}
