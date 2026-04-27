@@ -11,7 +11,7 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 25 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, workout history, equipment inventory, cancel/reschedule workouts, stock quotes, session history); conflict detection and deduplication pre-flight before every calendar create; every state-mutating tool returns a verified `{ ok, error? }` shape with read-after-write verification on calendar mutations, so Bridge surfaces real errors instead of falsely confirming actions; slash command autocomplete; **citation sources** — completed assistant messages show a collapsible "N sources" row listing each tool called, its result summary, and a ✕ marker on failures; **proactive in-session intelligence** — HRV decline, high RPE fatigue, overdue tasks, habit-at-risk, sleep deficit, and weight-vs-goal signals are checked on each session start and surfaced unprompted when data supports it (toggle in Settings → Fitness; off = no change to prompt)
+- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 26 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, workout history, equipment inventory, cancel/reschedule workouts, stock quotes, sports data, session history); conflict detection and deduplication pre-flight before every calendar create; every state-mutating tool returns a verified `{ ok, error? }` shape with read-after-write verification on calendar mutations, so Bridge surfaces real errors instead of falsely confirming actions; slash command autocomplete; **citation sources** — completed assistant messages show a collapsible "N sources" row listing each tool called, its result summary, and a ✕ marker on failures; **proactive in-session intelligence** — HRV decline, high RPE fatigue, overdue tasks, habit-at-risk, sleep deficit, and weight-vs-goal signals are checked on each session start and surfaced unprompted when data supports it (toggle in Settings → Fitness; off = no change to prompt)
 - **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, optional ntfy.sh push on completion, kill-switch in Settings → Fitness)
@@ -68,7 +68,7 @@ supabase link --project-ref <your-project-ref>   # ref is the part of the URL af
 supabase db push
 ```
 
-This creates all tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, sports_cache, etc.).
+This creates all tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, sports_cache, user_integrations, etc.).
 
 ### Step 3 — Get your Anthropic API key
 
@@ -356,7 +356,33 @@ mr-bridge-assistant/
 │       ├── 20260413000008_tasks_parent_id.sql
 │       ├── 20260414000000_add_workout_plans.sql
 │       ├── 20260414000001_workout_plans_add_name.sql
-│       └── 20260414000002_add_stocks_cache.sql
+│       ├── 20260414000002_add_stocks_cache.sql
+│       ├── 20260415000000_chat_sessions_soft_delete.sql
+│       ├── 20260415000001_add_sports_cache.sql
+│       ├── 20260415000002_sports_cache_unique_per_league.sql
+│       ├── 20260415000003_habit_registry_icon_key.sql
+│       ├── 20260416000000_add_strength_sessions.sql
+│       ├── 20260416000001_profile_weight_unit.sql
+│       ├── 20260417000000_add_sugar_to_meal_log.sql
+│       ├── 20260417000001_fix_multitenant_unique_constraints.sql
+│       ├── 20260420000000_chat_messages_add_parts.sql
+│       ├── 20260420000001_add_user_integrations.sql
+│       ├── 20260421000000_add_user_equipment.sql
+│       ├── 20260421000001_add_workout_plan_status.sql
+│       ├── 20260421000002_add_exercise_prs.sql
+│       ├── 20260421000003_add_user_context_to_meal_log.sql
+│       ├── 20260423000000_add_packages.sql
+│       ├── 20260423000001_recovery_multi_source.sql
+│       ├── 20260423000002_cleanup_recovery_metadata.sql
+│       ├── 20260424000000_add_tenant_quotas.sql
+│       ├── 20260424000001_add_estimate_user_storage.sql
+│       ├── 20260424000002_update_estimate_user_storage.sql
+│       ├── 20260424000003_expand_estimate_user_storage.sql
+│       ├── 20260424000004_add_admin_audit_log.sql
+│       ├── 20260424000005_add_feature_flags.sql
+│       ├── 20260424000006_increase_default_token_limit.sql
+│       ├── 20260424000007_fix_missing_cascade_tenant_delete.sql
+│       └── 20260426000000_db_generated_timestamps.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── .env.local.example                 # Web app env var template
@@ -380,13 +406,15 @@ mr-bridge-assistant/
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
 │   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (16 tools)
+│   │   │   │   ├── chat/route.ts          # Claude API tool use (26 tools)
 │   │   │   │   ├── sync/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
 │   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts
-│   │   │   │   │   └── googlefit/route.ts # POST — sync last 7d Google Fit body comp
+│   │   │   │   │   ├── googlefit/route.ts # POST — sync last 7d Google Fit body comp
+│   │   │   │   │   └── packages/route.ts  # POST — sync package deliveries from email → packages table
 │   │   │   │   ├── cron/
-│   │   │   │   │   └── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
+│   │   │   │   │   ├── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
+│   │   │   │   │   └── reset-demo/route.ts # GET — nightly demo data wipe + reseed (CRON_SECRET auth)
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
 │   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision: food macro estimation (mode=food) or exact label reading (mode=label)
@@ -396,17 +424,38 @@ mr-bridge-assistant/
 │   │   │   │   ├── stocks/
 │   │   │   │   │   ├── refresh/route.ts         # POST — sync stock_watchlist tickers via syncStocks()
 │   │   │   │   │   └── validate/route.ts        # GET — proxy Polygon ticker validation (keeps API key server-side)
+│   │   │   │   ├── sports/
+│   │   │   │   │   ├── refresh/route.ts         # POST — sync sports_cache for tracked leagues via TheSportsDB
+│   │   │   │   │   └── search/route.ts          # GET — search sports events by league/team
 │   │   │   │   ├── notifications/
+│   │   │   │   │   ├── push/route.ts            # POST — send push notification via ntfy.sh
 │   │   │   │   │   └── unread-count/route.ts    # GET — count unread notifications for badge
+│   │   │   │   ├── packages/
+│   │   │   │   │   └── route.ts                 # GET — list tracked package deliveries from packages table
+│   │   │   │   ├── strength-sessions/
+│   │   │   │   │   └── route.ts                 # GET/POST — strength session log (sets, reps, weight per exercise)
+│   │   │   │   ├── workout-plans/
+│   │   │   │   │   └── backfill-descriptions/route.ts # POST — AI-generate exercise descriptions for existing plan entries
+│   │   │   │   ├── exercise-prs/
+│   │   │   │   │   └── backfill/route.ts        # POST — compute personal records from historical strength_session_sets
 │   │   │   │   ├── export/
 │   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
 │   │   │   │   ├── quota/
 │   │   │   │   │   └── route.ts           # GET — daily token/tool-call/demo-turn usage vs caps; is_demo flag
 │   │   │   │   ├── usage/
 │   │   │   │   │   └── storage/route.ts   # GET — per-category row counts + estimated bytes via estimate_user_storage RPC
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── google/start/route.ts    # GET — initiate Google OAuth flow
+│   │   │   │   │   ├── google/callback/route.ts # GET — handle Google OAuth callback; store encrypted refresh token
+│   │   │   │   │   ├── fitbit/start/route.ts    # GET — initiate Fitbit OAuth flow
+│   │   │   │   │   └── fitbit/callback/route.ts # GET — handle Fitbit OAuth callback; store encrypted refresh token
 │   │   │   │   └── google/
-│   │   │   │       ├── calendar/route.ts  # Today's Google Calendar events
-│   │   │   │       └── gmail/route.ts     # Important unread emails
+│   │   │   │       ├── calendar/route.ts              # GET — today's Google Calendar events (dashboard widget)
+│   │   │   │       ├── calendar/events/route.ts       # GET/POST — create calendar events (chat tool backend)
+│   │   │   │       ├── calendar/events/[eventId]/route.ts # PATCH/DELETE — update or delete a specific event
+│   │   │   │       ├── calendar/range/route.ts        # GET — events over a date range (weekly workout plan sync)
+│   │   │   │       ├── calendar/upcoming-birthday/route.ts # GET — next birthday event from Calendar
+│   │   │   │       └── gmail/route.ts                # GET — important unread emails (dashboard widget)
 │   │   │   ├── error.tsx                   # Top-level error boundary (friendly + retry)
 │   │   │   ├── (protected)/error.tsx       # Protected-route error boundary (retry + dashboard fallback)
 │   │   │   └── login/
