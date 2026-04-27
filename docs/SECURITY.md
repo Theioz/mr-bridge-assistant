@@ -38,7 +38,14 @@ Rotate highest blast radius first. After each rotation, verify the listed signal
 8. Third-party API keys (POLYGON_API_KEY, etc.) — rotate in respective consoles.
 9. Deployment Protection token — regenerate in Vercel dashboard.
 
-**Do not rotate ENCRYPTION_KEY** without a re-encryption migration script that decrypts every `user_integrations.refresh_token_encrypted` row with the old key and re-encrypts with the new. This is a separate, planned operation.
+**Do not rotate ENCRYPTION_KEY** without a re-encryption migration. See [docs/runbooks/rotate-encryption-key.md](runbooks/rotate-encryption-key.md) for the full procedure.
+
+## Key rotation runbooks
+
+| Secret | Runbook |
+|--------|---------|
+| ENCRYPTION_KEY | [runbooks/rotate-encryption-key.md](runbooks/rotate-encryption-key.md) |
+| SUPABASE_SERVICE_ROLE_KEY | [runbooks/rotate-service-role-key.md](runbooks/rotate-service-role-key.md) |
 
 ## Breach response
 
