@@ -49,6 +49,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {...htmlThemeAttr}
     >
       <body style={{ background: "var(--color-bg)", color: "var(--color-text)" }}>
+        {nonce && (
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: `window.__webpack_nonce__='${nonce}'` }}
+          />
+        )}
         <AmbientBackground />
         <ThemeProvider defaultTheme={themePref} nonce={nonce}>
           {children}
