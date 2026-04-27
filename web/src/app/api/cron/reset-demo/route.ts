@@ -16,7 +16,6 @@ const TABLES = [
   "recovery_metrics",
   "fitness_log",
   "tasks",
-  "timer_state",
   "profile",
 ] as const;
 
