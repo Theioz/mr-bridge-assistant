@@ -40,6 +40,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### CI
 - **Parallelize smoke-pr chat and a11y jobs (#496).** `smoke-pr` split into `smoke-pr-chat` and `smoke-pr-a11y` jobs that run in parallel on every PR. Each job uploads a distinct artifact (`smoke-pr-chat-artifacts` / `smoke-pr-a11y-artifacts`) on failure. `smoke-release` is unchanged.
+- **ESLint cleanup and CI opt-in to Node.js 24 action runtime (#439).** Prefixed unused destructured params with `_`; removed unused `SyncStatus` type import in settings page and unused `workouts` assignment in fitness page; replaced `<img>` with `<Image>` from `next/image` in the `sports-card` TeamLogo component. Added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` to all CI jobs ahead of the GitHub Actions June 2026 forced cutover.
 
 ### Performance
 - **Parallelize a11y smoke tests (#498).** `web/smoke/specs/a11y.spec.ts` now calls `test.describe.configure({ mode: "parallel" })` so the 11 route tests run across workers instead of sequentially. `smoke:a11y` npm script passes `--workers=4` to override the global `workers:1` constraint (which exists solely for the chat suite). Wall-clock time drops from ~60s to ~ceil(11/4) × avg-test-time ≈ 20s. Chat tests are untouched.
@@ -79,6 +80,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 - **Settings page reorganized into tabbed navigation (#434).** Replaces the single long-scroll layout with five named tabs — Profile, Fitness, Integrations, Watchlists, Appearance. Active tab persists to `?tab=` URL param for deep-link and back-navigation support. Default tab on first load is Profile. Each tab fetches only the Supabase data its sections require (e.g. the Integrations tab is the only one that invokes `loadIntegration` and `lastSyncStatus`). No changes to any individual settings section component.
+- **Admin pages styled to match site design system (#502).** Replaced the standalone admin header chrome with the shared `<Nav />` component so admin pages look and navigate identically to the rest of the app. Converted raw pixel values and hardcoded sizes in `admin/page.tsx` and `admin/tenants/[userId]/page.tsx` to CSS design tokens (`var(--space-*)`, `var(--t-*)`, `var(--r-*)`, `var(--rule-soft)`); all sections now use `.db-section-label` headings and hairline row rules consistent with Phase B dashboard surfaces. Passes token-lint clean.
 
 ### Performance
 - **Mobile Lighthouse LCP improvements and /settings CLS fix (#384).** All 11 routes now pass the perf smoke gate. Key changes:
@@ -121,6 +123,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **`logSync()` was writing to a non-existent column `rows_written`; corrected to `records_written`.**
   Previously every web-triggered sync silently failed to write its sync_log row (supabase-js returns an error object rather than throwing, and the return value was ignored). This meant the Sync Now timestamps above would never update. The Python sync scripts already used the correct column name.
+- **Sports: allow ESPN CDN domain for team logo images (#442).** Added `a.espncdn.com` to `images.remotePatterns` in `next.config.ts`. Next.js `Image` blocks external hostnames by default; without this entry all sports team logo images silently failed to load. Works in tandem with the `<img>` → `<Image>` migration in the TeamLogo component (#439).
 
 ### Fixed
 - **Graphify extractor — eliminate false god nodes from Next.js route handlers and method-call noise (#429).**

@@ -1,7 +1,7 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-27)
 
 ## Corpus Check
-- 252 files · ~624,974 words
+- 252 files · ~625,157 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
