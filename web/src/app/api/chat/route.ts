@@ -38,34 +38,84 @@ const DEADLINE_MESSAGE =
   "I ran out of time mid-task. Here's what I completed — use the Continue button to pick up where I left off.";
 
 // Removes assistant messages whose tool_use blocks have no matching tool_result
-// in the immediately following tool message. This happens when the deadline fires
-// mid-tool-call: the model emits tool_use, but results never arrive before abort.
-// Sending that malformed history to Anthropic causes a 400 "tool_use without tool_result".
+// anywhere in the message array. This happens when the deadline fires mid-tool-call:
+// the model emits tool_use, but results never arrive before abort. Sending that
+// malformed history to Anthropic causes a 400 "tool_use without tool_result".
+//
+// Previous implementation only scanned the immediately-following message for results,
+// missing orphans when multiple tool-calls are interleaved or when the result message
+// is absent entirely. This version builds a global result-ID set first so every orphan
+// is caught regardless of position.
+//
+// Also handles both SDK format (type: "tool-call") and Anthropic wire format
+// (type: "tool_use") so DB-stored parts in either encoding are caught.
 type AnyPart = { type: string; [k: string]: unknown };
 
-function sanitizeIncompleteToolCalls(messages: ModelMessage[]): ModelMessage[] {
+function getToolCallId(p: AnyPart): string {
+  // SDK ModelMessage: toolCallId; Anthropic wire: id or tool_use_id
+  return String(p.toolCallId ?? p.id ?? p.tool_use_id ?? "");
+}
+
+function isToolCallPart(p: AnyPart): boolean {
+  return p.type === "tool-call" || p.type === "tool_use";
+}
+
+function isToolResultPart(p: AnyPart): boolean {
+  return p.type === "tool-result" || p.type === "tool_result";
+}
+
+function sanitizeIncompleteToolCalls(messages: ModelMessage[], sessionId?: string): ModelMessage[] {
+  // Pass 1: collect every tool-result ID across the entire message array.
+  const allResultIds = new Set<string>();
+  for (const msg of messages) {
+    if (Array.isArray(msg.content)) {
+      for (const p of msg.content as AnyPart[]) {
+        if (isToolResultPart(p)) {
+          const id = getToolCallId(p);
+          if (id) allResultIds.add(id);
+        }
+      }
+    }
+  }
+
+  // Pass 2: strip any assistant tool-call that has no matching result anywhere.
   const out: ModelMessage[] = [];
   let i = 0;
   while (i < messages.length) {
     const msg = messages[i];
     if (msg.role === "assistant" && Array.isArray(msg.content)) {
       const parts = msg.content as AnyPart[];
-      const toolCalls = parts.filter((p) => p.type === "tool-call");
+      const toolCalls = parts.filter(isToolCallPart);
       if (toolCalls.length > 0) {
-        const next = messages[i + 1];
-        const nextParts: AnyPart[] =
-          next?.role === "tool" && Array.isArray(next.content) ? (next.content as AnyPart[]) : [];
-        const resultIds = new Set<string>(
-          nextParts.filter((p) => p.type === "tool-result").map((p) => String(p.toolCallId ?? "")),
-        );
-        const allMatched = toolCalls.every((c) => resultIds.has(String(c.toolCallId ?? "")));
-        if (!allMatched) {
-          // Keep non-tool-call parts (text, reasoning); drop unmatched tool calls.
-          const stripped = parts.filter((p) => p.type !== "tool-call");
+        const orphaned = toolCalls.filter((c) => {
+          const id = getToolCallId(c);
+          return !id || !allResultIds.has(id);
+        });
+        if (orphaned.length > 0) {
+          const orphanIds = orphaned.map((c) => getToolCallId(c) || "?").join(",");
+          console.log(
+            `[chat] sanitize: dropping ${orphaned.length}/${toolCalls.length} orphaned tool-call(s)` +
+              ` ids=${orphanIds} msg[${i}] session=${sessionId ?? "?"}`,
+          );
+          // Keep non-tool-call parts and any tool-calls that DO have results.
+          const matchedIds = new Set(
+            toolCalls
+              .filter((c) => {
+                const id = getToolCallId(c);
+                return id && allResultIds.has(id);
+              })
+              .map(getToolCallId),
+          );
+          const stripped = parts.filter((p) => {
+            if (!isToolCallPart(p)) return true;
+            const id = getToolCallId(p);
+            return id && matchedIds.has(id);
+          });
           if (stripped.length > 0)
             out.push({ ...msg, content: stripped } as unknown as ModelMessage);
-          // Skip an orphaned tool message immediately following.
-          if (messages[i + 1]?.role === "tool") i++;
+          // If ALL tool-calls were orphaned, skip the immediately following tool message
+          // (it would also be orphaned — no point sending empty results to Anthropic).
+          if (orphaned.length === toolCalls.length && messages[i + 1]?.role === "tool") i++;
           i++;
           continue;
         }
@@ -158,21 +208,18 @@ export async function POST(req: Request) {
     userName,
   });
 
-  // #342: convert structured UIMessage[] (with tool-call / tool-result / file
-  // parts) into ModelMessage[] for the agent. The SDK already drops empty
-  // text parts, so the legacy empty-content filter is no longer needed.
-  //
-  // Pre-sanitize UIMessages: remove any tool-invocation parts that don't have
-  // a completed output (state !== "output-available" | "output-error"). These
-  // are tool_use blocks the model emitted before a deadline abort, where the
-  // results never arrived. Leaving them in causes Anthropic to reject the next
-  // request with "tool_use without tool_result" (400). This complements the
-  // ModelMessage-level sanitizeIncompleteToolCalls pass below.
+  // Pre-sanitize UIMessages: strip tool-invocation parts without a completed output.
+  // ToolLoopAgent emits "dynamic-tool" parts (NOT "tool-<name>") at runtime, so we
+  // check both shapes. Valid completion states: "output-available" | "output-error".
+  // "input-streaming" / "input-available" mean the deadline fired before results
+  // arrived — including them causes Anthropic 400 "tool_use without tool_result".
   const sanitizedUIMessages = messages.map((msg) => {
     if (msg.role !== "assistant") return msg;
     const safeParts = msg.parts.filter((part) => {
       const p = part as { type?: string; state?: string };
-      if (typeof p.type === "string" && p.type.startsWith("tool-")) {
+      const t = p.type ?? "";
+      const isToolPart = t.startsWith("tool-") || t === "dynamic-tool";
+      if (isToolPart) {
         return p.state === "output-available" || p.state === "output-error";
       }
       return true;
@@ -183,7 +230,11 @@ export async function POST(req: Request) {
     );
     return { ...msg, parts: safeParts };
   });
-  const incomingModelMessages = await convertToModelMessages(sanitizedUIMessages);
+  // ignoreIncompleteToolCalls strips any remaining input-streaming / input-available
+  // tool parts the UIMessage sanitizer might have missed (defense-in-depth).
+  const incomingModelMessages = await convertToModelMessages(sanitizedUIMessages, {
+    ignoreIncompleteToolCalls: true,
+  });
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
   const tools = buildChatTools(toolContext, isDemo);
@@ -377,7 +428,7 @@ export async function POST(req: Request) {
     },
   });
 
-  const safeIncomingMessages = sanitizeIncompleteToolCalls(incomingModelMessages);
+  const safeIncomingMessages = sanitizeIncompleteToolCalls(incomingModelMessages, sessionId);
   const result = await agent.stream({
     messages: [...contextModelMessages, ...safeIncomingMessages],
     abortSignal: turnAbort.signal,
