@@ -3,284 +3,28 @@ import { createGroq } from "@ai-sdk/groq";
 import { USER_TZ } from "@/lib/timezone";
 import { buildProactivityContext } from "@/lib/chat/proactivity-context";
 import { ToolLoopAgent, wrapLanguageModel, stepCountIs, convertToModelMessages } from "ai";
-import type { StopCondition, ToolSet, UIMessage, ModelMessage } from "ai";
-import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
+import type { UIMessage } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { ToolContext } from "@/lib/tools/_context";
-import { buildTasksTools } from "@/lib/tools/tasks";
-import { buildHabitsTools } from "@/lib/tools/habits";
-import { buildFitnessTools } from "@/lib/tools/fitness";
-import { buildProfileTools } from "@/lib/tools/profile";
-import { buildGmailTools } from "@/lib/tools/gmail";
-import { buildCalendarTools } from "@/lib/tools/calendar";
-import { buildMealsTools } from "@/lib/tools/meals";
-import { buildSessionTools } from "@/lib/tools/session";
-import { buildWorkoutTools } from "@/lib/tools/workouts";
-import { buildEquipmentTools } from "@/lib/tools/equipment";
-import { buildStocksTools } from "@/lib/tools/stocks";
-import { buildSportsTools } from "@/lib/tools/sports";
-
-const retryOnOverload: LanguageModelV3Middleware = {
-  specificationVersion: "v3",
-  wrapStream: async ({ doStream }) => {
-    for (let attempt = 0; attempt <= 2; attempt++) {
-      if (attempt > 0) {
-        const delay = attempt * 1500;
-        console.log(`[chat] API overloaded, retrying in ${delay}ms (attempt ${attempt + 1})`);
-        await new Promise((r) => setTimeout(r, delay));
-      }
-      try {
-        return await doStream();
-      } catch (err) {
-        const isOverloaded =
-          err instanceof Error &&
-          (err.message.toLowerCase().includes("overload") ||
-            (err as { status?: number }).status === 529);
-        if (!isOverloaded || attempt === 2) throw err;
-      }
-    }
-    throw new Error("Max retries exceeded");
-  },
-};
-
-/** Concatenate all text parts of a UIMessage into a single string.
- * Used for the denormalized `content` snapshot the sidebar preview reads,
- * for the dedup guard, for selectModel's heuristics, and for logging. */
-function extractTextFromParts(message: UIMessage): string {
-  return message.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("");
-}
-
-function selectModel(
-  messages: UIMessage[],
-  modelOverride?: "haiku" | "sonnet" | "auto",
-): "haiku" | "sonnet" {
-  if (modelOverride === "haiku") return "haiku";
-  if (modelOverride === "sonnet") return "sonnet";
-
-  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  if (!lastUser) return "sonnet";
-  const msg = extractTextFromParts(lastUser).toLowerCase().trim();
-  if (!msg) return "sonnet";
-
-  // Gate 1: length
-  if (msg.length > 280) return "sonnet";
-
-  // Gate 2: sentence count
-  const sentences = msg.split(/[.!?]+/).filter((s) => s.trim().length > 0);
-  if (sentences.length >= 3) return "sonnet";
-
-  // Gate 3: complex keywords
-  const complexPatterns = [
-    "analyze",
-    "analysis",
-    "recommend",
-    "should i",
-    "what should",
-    "plan",
-    "strategy",
-    "help me",
-    "best way",
-    "optimize",
-    "review",
-    "compare",
-    "versus",
-    " vs ",
-    "summarize",
-    "summary",
-    "trend",
-    "progress",
-    "what do you think",
-    "advice",
-    "suggest",
-    "improve",
-    "breakdown",
-    "fitness goal",
-    "meal plan",
-    "workout plan",
-    "schedule strategy",
-    "is it worth",
-    "explain why",
-    "set my goal",
-    "save my goal",
-    "update my goal",
-    "set my target",
-    "save that",
-    "save these",
-    "write that to",
-    "lock that in",
-  ];
-  if (complexPatterns.some((p) => msg.includes(p))) return "sonnet";
-
-  // Gate 4: simple command patterns
-  const simplePatterns = [
-    /add task/,
-    /create task/,
-    /new task/,
-    /complete task/,
-    /mark.{0,20}done/,
-    /mark.{0,20}complete/,
-    /finish task/,
-    /log habit/,
-    /log.{0,10}meal/,
-    /had.{0,30}for (breakfast|lunch|dinner|snack)/,
-    /create event/,
-    /add event/,
-    /schedule.{0,20}at \d/,
-    /book.{0,20}at \d/,
-    /show.{0,10}tasks/,
-    /list.{0,10}tasks/,
-    /get.{0,10}tasks/,
-    /what.{0,10}tasks/,
-    /check habits/,
-    /show habits/,
-    /get recipes/,
-    /find recipes/,
-    /what.{0,20}recipes/,
-    /my habits today/,
-    /what.{0,20}(eat|ate|had).{0,20}today/,
-    /today.{0,20}meals/,
-    /what.{0,20}weight.{0,20}goal/,
-    /what.{0,20}(protein|calorie|macro).{0,20}goal/,
-    /show.{0,10}habits/,
-    /how.{0,20}habits.{0,20}(today|this week)/,
-    /what.{0,10}my.{0,20}goal/,
-    /get.{0,10}profile/,
-    /log.{0,10}(that|it) as/,
-    // Workout read-only lookups
-    /show.{0,15}workout/,
-    /what.{0,15}(is |are |'s )?my workout/,
-    /today.{0,15}workout/,
-    /workout.{0,15}today/,
-    /show.{0,15}exercises/,
-    /what.{0,15}exercises/,
-    /list.{0,15}exercises/,
-    // Calendar read-only lookups
-    /what.{0,20}(on|is|are).{0,15}(schedule|calendar)/,
-    /show.{0,10}(schedule|calendar|events)/,
-    /list.{0,10}(schedule|calendar|events)/,
-    /any events.{0,20}(today|tomorrow|this week)/,
-    /schedule (today|tomorrow|this week)/,
-    /(today|tomorrow).{0,10}schedule/,
-    // Recovery and sleep read-only
-    /show.{0,15}recovery/,
-    /recovery (score|data|today)/,
-    /readiness (score|today)/,
-    /sleep (score|data|last night)/,
-    /show.{0,15}sleep/,
-    /\bhrv\b/,
-    // Body stats read-only
-    /current weight/,
-    /what.{0,10}(is |'s )?my weight/,
-    /body (fat|comp)/,
-    // Stocks read-only
-    /my stocks/,
-    /show.{0,10}stocks/,
-    /my watchlist/,
-    // Sports read-only
-    /game scores/,
-    /sports scores/,
-    /show.{0,10}sports/,
-    /any games/,
-    // Streak lookups
-    /my streak/,
-    /what.{0,10}my.{0,10}streak/,
-  ];
-  if (simplePatterns.some((p) => p.test(msg))) return "haiku";
-
-  return "sonnet";
-}
-
-// ── Static system prompt (module-level, never changes — safe to cache) ──────
-// The dynamic block (date + user name) is built inside POST per-request.
-// Only the static block carries cacheControl so the cache key is stable
-// across users and days; the tiny dynamic block is processed fresh each turn.
-const STATIC_SYSTEM_PROMPT = `Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
-Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
-Do not narrate before calling tools — never say things like "Let me check that", "Let me grab that now", "One moment", etc. Call the tool directly and respond after.
-Never announce a next action without committing to it. If you write "Now assigning X", "Next I'll...", "Moving on to..." or similar, you must either (a) call the corresponding tool in the same turn, or (b) end with an explicit confirmation question (e.g. "Shall I assign Saturday now?"). A bare promissory statement with no tool call and no question is forbidden — do not announce and stop.
-When making sequential tool calls, always start each status update on a new line — never run status messages together without a line break.
-When creating multiple calendar events, work one week at a time. After completing each week, stop and report what was created, then wait for the user to confirm before continuing to the next week. Never attempt to create more than 7 events in a single response.
-Step-limit planning rule (hard requirement — never skip this):
-Before starting any task, count the total tool calls it will require. If the total is more than 15:
-1. BEFORE calling any tool, state: how many total tool calls are needed, how many batches that splits into (max 15 per batch), and exactly what each batch will cover.
-2. Execute only batch 1. At the end of batch 1, stop and tell the user word-for-word what to reply to continue — e.g. 'Reply "continue — batch 2 of 3" to proceed.' Include a clear summary of what was done and what remains.
-3. Do not start batch 2 until the user replies. Never silently exceed 15 tool calls in a single turn.
-If you are mid-task and realize you are approaching 15 steps without having announced a batch plan, stop immediately, report what you completed, and give the user the explicit continuation prompt before calling any more tools.
-Before calling get_session_history, ask the user: "Should I pull earlier messages from this session for more context?" Only call the tool if they confirm.
-
-Verified-success rule: Every state-mutating tool returns either { ok: true, ... } or { ok: false, error }. Never say a mutating action is "done" or use ✓ unless the most recent tool result for that action has ok: true in this turn. If you don't see a successful tool result, either run the tool now or tell the user the action didn't go through (with the error if you have one). Do not infer success from the user's confirmation alone or from the absence of a visible failure.
-
-Calendar pre-flight rules (apply before every create_calendar_event or assign_workout call):
-1. Call list_calendar_events for the target date. Check for time overlaps with the proposed event. If any overlap exists, surface it to the user and ask how to proceed — never silently double-book.
-2. Check the same result for an event with a matching title (case-insensitive). If a duplicate title exists on that date, show it and ask whether to create another, update the existing one, or skip.
-3. Only call create_calendar_event or assign_workout after the user has confirmed there are no conflicts or has explicitly accepted them.
-
-Calendar mutation rules:
-- delete_calendar_event: always state the event title, date, and time; require explicit user confirmation before calling.
-- update_calendar_event: always state the before/after diff; require explicit user confirmation before calling.
-
-You have access to the user's Supabase data, Gmail, and Google Calendar via tools. Use them when asked — do not tell the user you lack access to email or calendar. Never suggest these integrations aren't connected; they are.
-
-Tools available:
-- get_tasks: active/completed/archived tasks
-- add_task: create a new task or subtask (use parent_id to add items to a list — call get_tasks first to find the parent task ID)
-- complete_task: mark a task done by ID
-- get_habits_today: all active habits + today's completion status
-- log_habit: mark a habit complete for a given date
-- get_fitness_summary: recent body composition, workouts, recovery metrics
-- get_profile: profile key/value store
-- update_profile: upsert one or more profile keys — use for goals, preferences, and targets agreed upon in conversation. Always tell the user what you're about to write before calling this, then confirm what was saved. For known fitness/nutrition goals, use the canonical keys so they appear in the web UI: weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal. For other goals (sleep, study, etc.) use dot-notation: sleep.goal.hrs, study.goal.mins_per_day, etc.
-- search_gmail: search Gmail with any query string, returns message IDs + metadata
-- get_email_body: fetch and decode the full plain-text body of an email by message ID
-- list_calendar_events: list events across all calendars for a date range (defaults to today); each event includes a calendarType field: "primary" (user's own events), "birthday" (auto-generated from contacts), "holiday" (subscription holiday calendars), "other" (shared/secondary). Each event also includes an eventId — preserve it for delete/update calls. By default show only primary+other events; mention birthdays as reminders separately; omit holiday events unless the user asks. IMPORTANT: only report events that appear in the tool result — never infer or carry over events from conversation history
-- create_calendar_event: create a Google Calendar event on the primary calendar. Pre-flight required: call list_calendar_events first, check for time overlaps and duplicate titles on the target date, surface any conflicts to the user, and confirm before proceeding.
-- delete_calendar_event: delete an event by eventId. Always state title/date/time and require explicit user confirmation first.
-- update_calendar_event: patch an existing event by eventId (summary, start, end, location, description). Always state before/after and require explicit user confirmation first.
-- get_recipes: search the saved recipe library by ingredient, name, or tag; omit query to return all saved recipes. Use this as one input alongside your own recipe knowledge — do not limit suggestions to saved recipes only.
-- get_today_meals: get all meals logged today. Call this before making any claim about what the user has or hasn't eaten today.
-- get_session_history: fetch earlier messages from this chat session. Ask the user before calling: "Should I pull earlier messages from this session for more context?"
-- get_user_equipment: fetch the user's equipment inventory (items list + maxes map giving the highest weight_lbs per type). Call this before proposing any workout weights.
-- get_workout_plan: fetch this week's workout plan (Mon–Sun). Call before making any suggestion or edit to the program.
-- assign_workout: upsert one day's workout plan to Supabase and create/update the Google Calendar event. Pre-flight required: call list_calendar_events first, check for overlaps and duplicate Workout titles on that date, surface conflicts to the user, and confirm before proceeding. Equipment pre-flight: call get_user_equipment first — never propose a weight exceeding the user's inventory max for that equipment type.
-- update_workout_exercise: patch a single exercise within a day's plan by name (case-insensitive) and refresh the calendar event description. Same equipment constraint: never set weight_lbs beyond inventory max.
-- get_workout_history: fetch logged strength-session performance (actual sets/reps/weights/RPE/notes). Filter by exercise_name (case-insensitive partial match) and/or days back (default 30). Weights are returned in kg canonically — include the user's weight_unit from get_profile when reporting numbers.
-- cancel_workout: soft-cancel a scheduled workout — updates status to 'cancelled', records reason, deletes the calendar event. Pre-flight: state the date and workout name; require explicit user confirmation. Never delete a calendar event directly to cancel a workout — always use this tool so the skip is recorded in the database.
-- reschedule_workout: move a planned workout from one date to another atomically — copies full exercise config, soft-cancels the source row, PATCHes the existing calendar event to the new date. Pre-flight: state from/to dates; require explicit user confirmation. Use this instead of chaining cancel_workout + assign_workout.
-
-Equipment rules (apply whenever proposing workout weights):
-1. Before proposing weights in assign_workout or suggesting progressions, call get_user_equipment.
-2. Never propose a weight_lbs value that exceeds the user's inventory max for that equipment type (e.g. if max dumbbell is 30 lbs, never write weight_lbs: 35 for a dumbbell exercise).
-3. assign_workout and update_workout_exercise will reject out-of-inventory weights — if you see a rejection, call get_user_equipment to refresh the bounds and re-propose.
-4. If the user asks for a weight beyond their current inventory, tell them and offer alternatives (lower weight + higher reps, substitute exercise) rather than writing an unachievable plan.
-
-Progression heuristics (apply when the user asks for planning/adjustment — always call get_workout_history first):
-1. If the last 2 sessions for an exercise hit top-of-range reps at the prescribed weight, suggest +2.5 kg upper-body / +5 kg lower-body for the next session.
-2. If RPE ≥ 9 on working sets for 2+ consecutive sessions, hold the weight (do not add).
-3. If the user missed target reps 2 sessions in a row for the same exercise, suggest a 10% deload.
-4. If an exercise hasn't progressed (top weight × reps flat or lower) across 4+ sessions, suggest a variation swap.
-Always surface the evidence ("last 3 bench sessions: 135×8, 135×8, 135×9 — hit top of range twice, ready to go to 137.5") before making the recommendation. The user may override any suggestion.
-Only include sessions with status 'planned' or 'completed' in progression analysis — never count cancelled or skipped sessions.
-
-Recipes and meal planning are in scope.
-
-Meal logging is done through the Meals tab in the web interface — do not attempt to log meals yourself. If the user asks you to log a meal, tell them to use the Meals tab. You can still read today's logged meals via get_today_meals to give accurate nutrition advice.
-Before making any claim about what the user has or hasn't eaten today, always call get_today_meals first.
-
-Ingredient assumptions: Unless the user states otherwise in this conversation, assume the only ingredients available are bare essentials — salt, pepper, neutral oil, olive oil, butter, garlic, onion, basic dry spices (cumin, paprika, oregano, chili flake, cinnamon, etc.), flour, sugar, baking soda/powder, vinegar, soy sauce, and stock/broth. Do not assume proteins, produce, dairy, or specialty ingredients are on hand.
-
-When the user says what they have available (e.g. "I have chicken, broccoli, and rice"), treat those ingredients as the primary constraint for the rest of the conversation.
-
-When asked what to cook or for recipe ideas:
-1. Call get_recipes to check the saved recipe library — if a saved recipe is a good fit for the context (ingredients on hand, dietary preferences, fitness goals), surface it with a note that it's saved.
-2. Also suggest 1–2 recipes from your own knowledge that are NOT in the saved list. The saved list is a library of recipes the user likes, not a menu to be confined to.
-3. If the user hasn't said what they have on hand, ask: "What proteins or produce do you have available?"
-4. Call get_fitness_summary to calibrate the recommendation — prioritize protein post-workout, lower-calorie options in a deficit phase, etc.
-5. Call get_profile to check for dietary preferences and cuisine preferences (ignore any pantry-related profile keys).
-6. Always provide at least one concrete, actionable recipe recommendation. Include estimated calories, protein, carbs, and fat. Flag if the meal is a poor nutritional fit for current fitness context.`;
+import { selectModel, extractTextFromParts } from "@/lib/chat/select-model";
+import { buildSystemValue } from "@/lib/chat/system-prompt";
+import { buildChatTools } from "@/lib/chat/build-tools";
+import {
+  extractCompletedSteps,
+  computeCacheMetrics,
+  synthesizeFallbackSummary,
+  effectiveTokensForQuota,
+} from "@/lib/chat/synthesis";
+import { retryOnOverload, tokenBudgetExceeds } from "@/lib/chat/middleware";
+import {
+  fetchUserProfile,
+  loadContextMessages,
+  upsertSession,
+  persistUserMessage,
+  recordTurnQuota,
+  persistAssistantMessage,
+} from "@/lib/chat/persist";
 
 // Lambda runtime ceiling. A wall-clock timer trips turnAbort at TURN_DEADLINE_MS
 // so onFinish always runs and persists a fallback assistant message before
@@ -292,151 +36,6 @@ const TURN_DEADLINE_MS = 80_000;
 // readable text rather than an error state on timeout.
 const DEADLINE_MESSAGE =
   "I ran out of time mid-task. Here's what I gathered so far — reply **'continue'** to pick up where I left off.";
-
-// Issue #223 + #319: when the agent loop ends without an assistant text
-// message (step-cap stopWhen, token-budget stopWhen, Vercel-timeout abort, or
-// a quiet model), build a short human-readable summary from the tool calls
-// that did execute so the user sees acknowledgement instead of silence — and
-// CRUCIALLY, distinguish ok-true from ok-false tool results so we never
-// claim success for an action that failed.
-const TOOL_PHRASING: Record<string, [success: string, attempt: string]> = {
-  add_task: ["added a task", "add a task"],
-  complete_task: ["marked a task complete", "mark a task complete"],
-  log_habit: ["logged a habit", "log a habit"],
-  update_profile: ["updated your profile", "update your profile"],
-  create_calendar_event: ["created a calendar event", "create a calendar event"],
-  update_calendar_event: ["updated a calendar event", "update a calendar event"],
-  delete_calendar_event: ["deleted a calendar event", "delete a calendar event"],
-  assign_workout: ["assigned a workout", "assign a workout"],
-  update_workout_exercise: ["updated a workout exercise", "update a workout exercise"],
-  cancel_workout: ["cancelled a workout", "cancel a workout"],
-  reschedule_workout: ["rescheduled a workout", "reschedule a workout"],
-};
-
-interface CompletedToolStep {
-  toolName: string;
-  ok: boolean;
-  error?: string;
-}
-
-function isToolResultOk(result: unknown): boolean {
-  // Mutating tools: explicit { ok: true | false }
-  if (result && typeof result === "object" && "ok" in result) {
-    return (result as { ok: boolean }).ok === true;
-  }
-  // Read-only tools: anything without an `error` key counts as ok for the
-  // purposes of "did this complete?"
-  if (result && typeof result === "object" && "error" in result) return false;
-  return true;
-}
-
-// Billing-aligned token weight for quota accounting (#457).
-// Cache reads are billed at ~10% of normal; cache writes and uncached input
-// at 1x; output at 1x. Integer result to match the int DB column.
-function effectiveTokensForQuota(usage: {
-  outputTokens?: number;
-  cacheReadTokens?: number;
-  cacheWriteTokens?: number;
-  noCacheTokens?: number;
-}): number {
-  const output = usage.outputTokens ?? 0;
-  const noCache = usage.noCacheTokens ?? 0;
-  const cacheWrite = usage.cacheWriteTokens ?? 0;
-  const cacheRead = usage.cacheReadTokens ?? 0;
-  return output + noCache + cacheWrite + Math.round(cacheRead / 10);
-}
-
-function synthesizeFallbackSummary(
-  steps: CompletedToolStep[],
-  flags: { hitStepCap: boolean; budgetExceeded: boolean; aborted: boolean },
-): string {
-  const succeeded = steps.filter((s) => s.ok && TOOL_PHRASING[s.toolName]);
-  const failed = steps.filter((s) => !s.ok && TOOL_PHRASING[s.toolName]);
-
-  const phraseList = (subset: CompletedToolStep[], idx: 0 | 1): string => {
-    const counts = new Map<string, number>();
-    for (const s of subset) counts.set(s.toolName, (counts.get(s.toolName) ?? 0) + 1);
-    const out: string[] = [];
-    for (const [name, n] of counts) {
-      const phrase = TOOL_PHRASING[name][idx];
-      out.push(n > 1 ? `${phrase} (×${n})` : phrase);
-    }
-    return out.join(", ");
-  };
-
-  let body: string;
-  if (failed.length === 0 && succeeded.length === 0) {
-    body = "I hit a snag generating a response — please try again.";
-  } else if (failed.length === 0) {
-    body = `Done. I ${phraseList(succeeded, 0)}.`;
-  } else if (succeeded.length === 0) {
-    const firstError = failed.find((f) => f.error)?.error;
-    body = `I tried to ${phraseList(failed, 1)} but it didn't go through${firstError ? ` — ${firstError}` : ""}. Please try again.`;
-  } else {
-    const firstError = failed.find((f) => f.error)?.error;
-    body =
-      `Partial: I ${phraseList(succeeded, 0)}, but failed to ${phraseList(failed, 1)}` +
-      `${firstError ? ` (${firstError})` : ""}. Check before retrying the failed parts.`;
-  }
-
-  const reason = flags.aborted
-    ? " (I ran out of time before finishing — your request may or may not have completed; check before retrying.)"
-    : flags.budgetExceeded
-      ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
-      : flags.hitStepCap
-        ? ' (Hit my 20-step turn limit — this task has more work remaining. Reply **"continue"** and I\'ll pick up where I left off.)'
-        : "";
-  return body + reason;
-}
-
-// Stop the tool loop when cumulative token usage across steps exceeds `budget`.
-// v6 `stopWhen` accepts an array of predicates composed with OR, so this pairs
-// with `stepCountIs` to replace the v4-era hand-rolled cumulativeTokens tally.
-//
-// Note on prompt caching (#340): usage.inputTokens is the grand total of input
-// tokens processed by the model, including cache reads and writes. The budget
-// ceiling intentionally protects against runaway context growth, not cost —
-// cached reads still count here even though they're billed at ~10%. Do not
-// subtract cacheReadTokens from this tally.
-// Generic over TOOLS so the predicate composes with a concrete, typed tools
-// object in ToolLoopAgent's `stopWhen` (which uses `NoInfer<TOOLS>`). The
-// SDK's own helpers (e.g. `stepCountIs`) return `StopCondition<any>` for the
-// same reason; we parametrize instead to keep `--no-explicit-any` clean.
-const tokenBudgetExceeds =
-  <T extends ToolSet>(budget: number): StopCondition<T> =>
-  ({ steps }) => {
-    let total = 0;
-    for (const s of steps) {
-      total += (s.usage?.inputTokens ?? 0) + (s.usage?.outputTokens ?? 0);
-    }
-    return total > budget;
-  };
-
-// Attach an Anthropic ephemeral cache breakpoint to the last entry in a tools
-// object. Anthropic caps requests at 4 cache breakpoints total — anchoring one
-// marker on the trailing tool caches every tool above it and leaves headroom
-// for the system-prompt marker (#340). Non-Anthropic providers ignore the
-// provider-scoped `anthropic` key so this is safe to pass through; callers
-// should still skip the wrap on the demo path for clarity.
-function withTrailingCacheBreakpoint<T extends Record<string, unknown>>(tools: T): T {
-  const keys = Object.keys(tools);
-  if (keys.length === 0) return tools;
-  const lastKey = keys[keys.length - 1];
-  const last = tools[lastKey] as {
-    providerOptions?: { anthropic?: Record<string, unknown> } & Record<string, unknown>;
-  } & Record<string, unknown>;
-  const nextLast = {
-    ...last,
-    providerOptions: {
-      ...(last.providerOptions ?? {}),
-      anthropic: {
-        ...(last.providerOptions?.anthropic ?? {}),
-        cacheControl: { type: "ephemeral" as const, ttl: "1h" },
-      },
-    },
-  };
-  return { ...tools, [lastKey]: nextLast } as T;
-}
 
 export async function POST(req: Request) {
   const {
@@ -482,105 +81,21 @@ export async function POST(req: Request) {
     });
   }
 
-  // Fetch name + proactivity_enabled in one round-trip
-  let userName: string | null = null;
-  let proactivityEnabled = true;
-  if (userId) {
-    const { data: profileRows } = await supabase
-      .from("profile")
-      .select("key, value")
-      .eq("user_id", userId)
-      .in("key", ["name", "proactivity_enabled"]);
-    const profileMap: Record<string, string> = {};
-    for (const row of profileRows ?? []) profileMap[row.key as string] = row.value as string;
-    if (profileMap["name"]) userName = profileMap["name"];
-    proactivityEnabled = profileMap["proactivity_enabled"] !== "0";
-  }
-
-  // Load the last 10 messages from this session as context (#319: was loading
-  // the FIRST 10 by ordering ascending then limiting — for any session past 10
-  // turns the model lost recent context, including its own prior tool results).
-  // Historical context stays text-only — the model needs flat strings from
-  // history, and `content` is authoritative for that. Promoting historical
-  // tool-result round-trips into the model is a separate follow-up.
-  let contextModelMessages: ModelMessage[] = [];
-  if (sessionId) {
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("role, content, position")
-      .eq("session_id", sessionId)
-      .in("role", ["user", "assistant"])
-      .order("position", { ascending: false, nullsFirst: false })
-      .limit(10);
-    if (data) {
-      // Filter out empty-content messages — they cause Anthropic 400 errors —
-      // then reverse so messages flow oldest→newest into the model.
-      contextModelMessages = (data as { role: "user" | "assistant"; content: string }[])
-        .filter((m) => m.content.trim() !== "")
-        .reverse()
-        .map((m) => ({ role: m.role, content: m.content })) as ModelMessage[];
-    }
-  }
+  const { userName, proactivityEnabled } = await fetchUserProfile(supabase, userId);
+  const contextModelMessages = await loadContextMessages(supabase, sessionId);
 
   // Persist the session and user message immediately — before streaming starts.
   // This ensures messages survive stream errors, timeouts, or aborts (fix for issue #132).
   const lastUserMessage = messages[messages.length - 1];
   const userMessageContent = lastUserMessage ? extractTextFromParts(lastUserMessage) : "";
-
-  if (sessionId && userId && userMessageContent.trim()) {
-    try {
-      // Upsert the session — creates it if it doesn't exist yet (lazy session creation
-      // for new chats whose UUID was generated client-side before any DB write).
-      await supabase.from("chat_sessions").upsert(
-        {
-          id: sessionId,
-          user_id: userId,
-          device: "web",
-          last_active_at: new Date().toISOString(),
-        },
-        { onConflict: "id" },
-      );
-
-      // Dedup guard: skip insert if an identical user message was persisted in the
-      // last 10 seconds (handles retries — same message re-POSTed after a stream error).
-      const { data: recent } = await supabase
-        .from("chat_messages")
-        .select("id")
-        .eq("session_id", sessionId)
-        .eq("role", "user")
-        .eq("content", userMessageContent)
-        .gte("created_at", new Date(Date.now() - 10_000).toISOString())
-        .limit(1)
-        .maybeSingle();
-
-      if (!recent) {
-        // Derive next position: MAX(position) + 1 within this session.
-        const { data: posRow } = await supabase
-          .from("chat_messages")
-          .select("position")
-          .eq("session_id", sessionId)
-          .order("position", { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
-        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
-
-        await supabase.from("chat_messages").insert({
-          session_id: sessionId,
-          user_id: userId,
-          role: "user",
-          content: userMessageContent,
-          parts: lastUserMessage?.parts ?? [{ type: "text", text: userMessageContent }],
-          position: nextPos,
-        });
-      }
-    } catch (err) {
-      // Non-fatal — stream proceeds regardless; worst case the message is missing on refresh
-      console.error("[chat] early user message persist error:", err);
-    }
-  }
+  await persistUserMessage(supabase, {
+    sessionId,
+    userId,
+    content: userMessageContent,
+    parts: lastUserMessage?.parts,
+  });
 
   const userLabel = userName ?? (isDemo ? "Demo User" : "the user");
-
   const _now = new Date();
   const _dayName = _now.toLocaleDateString("en-US", { weekday: "long", timeZone: USER_TZ });
   const _dateStr = _now.toLocaleDateString("en-US", {
@@ -592,37 +107,16 @@ export async function POST(req: Request) {
   const todayFull = `${_dayName}, ${_dateStr}`;
 
   // Fetch proactivity signals for non-demo users who have the feature enabled.
-  // Runs in parallel with the context load and message persist above (all I/O is done).
   const proactivityBlock =
     !isDemo && proactivityEnabled ? await buildProactivityContext(userId, supabase) : "";
 
-  // Demo: full string prompt (Groq doesn't support cacheControl).
-  // Non-demo: dynamic block only — the static rules live in STATIC_SYSTEM_PROMPT above.
-  const demoSystemPrompt = `You are Mr. Bridge, a personal AI assistant. Today is ${todayFull}.
-You are currently running in demo mode for a fictional persona: Demo User, a software engineer based in San Francisco.
-Address the user as "Demo User" — naturally in conversation, not robotically after every sentence.
-
-Style: Direct, structured, high-density. No filler, no emojis, no motivational language.
-Quantify wherever possible. Conservative estimates. Lead with the answer, then reasoning.
-Do not narrate before calling tools. Call the tool directly and respond after.
-
-This is a demo account with realistic but fictional data. All data changes are reset nightly.
-You have access to Demo User's demo data via tools: tasks, habits, fitness, recovery, profile, recipes, meal log, Gmail (simulated), and Calendar (simulated).
-
-Tools available:
-- get_tasks, add_task, complete_task
-- get_habits_today, log_habit
-- get_fitness_summary
-- get_profile, update_profile
-- search_gmail, get_email_body (returns demo emails)
-- list_calendar_events, create_calendar_event, delete_calendar_event, update_calendar_event (demo mode — no real changes)
-- get_recipes, get_today_meals
-- get_user_equipment, get_workout_plan, assign_workout, update_workout_exercise, get_workout_history, cancel_workout, reschedule_workout`;
-
-  const dynamicPromptBlock = `You are Mr. Bridge, ${userLabel}'s personal AI assistant.
-Today is ${todayFull}.
-When the user names a weekday (e.g. "Monday"), resolve it to a specific date relative to today. If today IS that weekday, use today's date. Otherwise, use the next future occurrence of that weekday. Never assume "Monday" means "tomorrow" regardless of what day today is.
-${userName ? `Address the user as "${userName}" — use their name naturally in conversation, not robotically after every sentence.` : "If you learn the user's name during the conversation, use it naturally going forward."}`;
+  const systemValue = buildSystemValue({
+    isDemo,
+    userLabel,
+    todayFull,
+    proactivityBlock,
+    userName,
+  });
 
   // #342: convert structured UIMessage[] (with tool-call / tool-result / file
   // parts) into ModelMessage[] for the agent. The SDK already drops empty
@@ -630,24 +124,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   const incomingModelMessages = await convertToModelMessages(messages);
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
-  const baseTools = {
-    ...buildTasksTools(toolContext),
-    ...buildHabitsTools(toolContext),
-    ...buildFitnessTools(toolContext),
-    ...buildProfileTools(toolContext),
-    ...buildGmailTools(toolContext),
-    ...buildCalendarTools(toolContext),
-    ...buildMealsTools(toolContext),
-    ...buildSessionTools(toolContext),
-    ...buildWorkoutTools(toolContext),
-    ...buildEquipmentTools(toolContext),
-    ...buildStocksTools(toolContext),
-    ...buildSportsTools(toolContext),
-  };
-  // #340: Anthropic ephemeral cache breakpoint on the trailing tool (caches
-  // all 23 tool schemas above it). Skip on the demo path — Groq doesn't
-  // support prompt caching.
-  const tools = isDemo ? baseTools : withTrailingCacheBreakpoint(baseTools);
+  const tools = buildChatTools(toolContext, isDemo);
 
   // Select model: demo → Groq Llama (free tier); real user → Anthropic tier selection
   let selectedModel;
@@ -668,47 +145,15 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
   }
 
   // #339: Anthropic extended thinking on the Sonnet path, behind ENABLE_THINKING
-  // for an A/B measurement run (see PR description). Adaptive mode per the
-  // @ai-sdk/anthropic docs: "For newer models (claude-sonnet-4-6, claude-opus-4-6,
-  // and later), use adaptive thinking" — the model decides per-turn whether
-  // reasoning is warranted. Reasoning is session-only — sendReasoning:false on
-  // the stream response keeps reasoning bytes off the wire, and the #319
-  // synthesizer only consumes `text`+steps. Anthropic counts reasoning as output
-  // tokens, so TOKEN_BUDGET enforcement covers them automatically; the SDK does
-  // NOT break out reasoning into outputTokens.reasoning (always undefined for
-  // the Anthropic provider — see convert-anthropic-messages-usage.ts), so we
-  // measure thinking impact via outputTokens + durationMs deltas.
+  // for an A/B measurement run. Adaptive mode: the model decides per-turn
+  // whether reasoning is warranted. Reasoning is session-only — sendReasoning:false
+  // on the stream response keeps reasoning bytes off the wire.
   const thinkingEnabled = modelTier === "sonnet" && process.env.ENABLE_THINKING === "1";
-
-  // System prompt shape (#340). Demo path stays a plain string for Groq.
-  // Real-user path splits into two system messages: the static prefix carries
-  // an Anthropic ephemeral cacheControl marker so its ~1.4k tokens + tool
-  // schemas above it are cached (~5 min TTL); the dynamic block (date + name)
-  // follows uncached so cache hits don't invalidate each turn.
-  type SystemEntry = {
-    role: "system";
-    content: string;
-    providerOptions?: {
-      anthropic?: { cacheControl: { type: "ephemeral"; ttl?: "5m" | "1h" } };
-    };
-  };
-  const systemValue: string | SystemEntry[] = isDemo
-    ? demoSystemPrompt
-    : [
-        {
-          role: "system",
-          content: STATIC_SYSTEM_PROMPT,
-          providerOptions: { anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } } },
-        },
-        { role: "system", content: dynamicPromptBlock },
-        ...(proactivityBlock ? [{ role: "system" as const, content: proactivityBlock }] : []),
-      ];
 
   // Per-turn safeguards (issues #223 + #319): raise step cap from 12→20 so
   // multi-step calendar/task flows can finish their summary, bound cost with a
   // token budget, and bound wall-time with TURN_DEADLINE_MS so onFinish ALWAYS
-  // runs before Vercel's maxDuration kill — the silent-stall path #319 hit
-  // when the Lambda died mid-stream and onFinish never persisted the fallback.
+  // runs before Vercel's maxDuration kill.
   const MAX_STEPS = 20;
   const TOKEN_BUDGET = 150_000;
   const turnStartedAt = Date.now();
@@ -783,31 +228,17 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
       // aggregation of inputTokenDetails is provider-dependent; stepping
       // manually matches what the SDK's telemetry does and is robust to
       // null-filled detail objects on non-Anthropic providers (Groq).
-      let cacheReadTokens = 0;
-      let cacheWriteTokens = 0;
-      let noCacheTokens = 0;
-      // #339: count reasoning blocks + total reasoning text length per turn.
-      // The Anthropic SDK does NOT populate outputTokens.reasoning (always
-      // undefined — see convert-anthropic-messages-usage.ts), so usage-based
-      // accounting can't tell us whether thinking fired. StepResult.reasoning
-      // and StepResult.reasoningText DO carry the actual reasoning content,
-      // which is the only definitive signal. Chars are a proxy for token
-      // volume since reasoning gets bundled into outputTokens at billing time.
-      let reasoningParts = 0;
-      let reasoningChars = 0;
-      for (const s of steps ?? []) {
-        cacheReadTokens += s.usage?.inputTokenDetails?.cacheReadTokens ?? 0;
-        cacheWriteTokens += s.usage?.inputTokenDetails?.cacheWriteTokens ?? 0;
-        noCacheTokens += s.usage?.inputTokenDetails?.noCacheTokens ?? 0;
-        reasoningParts += s.reasoning?.length ?? 0;
-        reasoningChars += s.reasoningText?.length ?? 0;
-      }
-      const stepWarnings = (steps ?? []).flatMap((s) => s.warnings ?? []);
-      const allWarnings = [...(warnings ?? []), ...stepWarnings];
+      const {
+        cacheReadTokens,
+        cacheWriteTokens,
+        noCacheTokens,
+        reasoningParts,
+        reasoningChars,
+        allWarnings,
+      } = computeCacheMetrics(steps ?? [], warnings);
 
       // #457: record actual billing-weighted token cost post-stream.
-      // Demo path uses Groq (free) — skip. Errors are non-fatal; the
-      // tool-call counter incremented pre-stream is the primary cap guard.
+      // Demo path uses Groq (free) — skip.
       if (!isDemo) {
         const delta = effectiveTokensForQuota({
           outputTokens: totalUsage?.outputTokens,
@@ -815,38 +246,13 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
           cacheWriteTokens,
           noCacheTokens,
         });
-        if (delta > 0) {
-          const { error: recordErr } = await supabase.rpc("record_quota_tokens", {
-            p_user_id: userId,
-            p_tokens: delta,
-          });
-          if (recordErr) console.error("[chat] record_quota_tokens error:", recordErr);
-        }
+        await recordTurnQuota(supabase, userId, delta);
       }
 
       // Pair up tool calls with their results so the synthesizer can tell
-      // "tool ran and succeeded" from "tool ran and failed" — the bug #319
-      // fix for the synthesizer claiming success from toolCalls alone.
-      const completedSteps: CompletedToolStep[] = [];
-      const allCalls = (steps ?? []).flatMap((s) => s.toolCalls ?? []);
-      const allResults = (steps ?? []).flatMap((s) => s.toolResults ?? []);
-      const resultByCallId = new Map<string, unknown>();
-      for (const r of allResults) {
-        const callId = (r as { toolCallId?: string }).toolCallId;
-        // v5 renamed tool result payload: .result → .output
-        if (callId) resultByCallId.set(callId, (r as { output?: unknown }).output);
-      }
-      for (const call of allCalls) {
-        const result = resultByCallId.get(call.toolCallId);
-        const stepOk = result === undefined ? false : isToolResultOk(result);
-        const stepError =
-          result && typeof result === "object" && "error" in result
-            ? String((result as { error?: unknown }).error)
-            : undefined;
-        completedSteps.push({ toolName: call.toolName, ok: stepOk, error: stepError });
-      }
-      const failedToolCount = completedSteps.filter((s) => !s.ok).length;
-      hadFailures = failedToolCount > 0;
+      // "tool ran and succeeded" from "tool ran and failed".
+      const completedSteps = extractCompletedSteps(steps ?? []);
+      hadFailures = completedSteps.filter((s) => !s.ok).length > 0;
 
       // Determine what to persist. Three cases:
       //   1. Model produced text → persist as-is (normal path).
@@ -876,7 +282,7 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
         `[chat] turn complete session=${sessionId} steps=${stepCount}/${MAX_STEPS} ` +
           `tokens=${cumulativeTokens} durationMs=${durationMs} finishReason=${finishReason} ` +
           `hitStepCap=${hitStepCap} budgetExceeded=${budgetExceeded} deadlineExceeded=${deadlineExceeded} ` +
-          `synthesized=${synthesized} toolFailures=${failedToolCount}/${completedSteps.length}`,
+          `synthesized=${synthesized} toolFailures=${completedSteps.filter((s) => !s.ok).length}/${completedSteps.length}`,
       );
 
       // #340: structured per-turn cache-usage log. `isDemo` on Groq reports no
@@ -955,43 +361,18 @@ ${userName ? `Address the user as "${userName}" — use their name naturally in 
     onFinish: async ({ responseMessage }) => {
       if (!sessionId || !userId) return;
       try {
-        // Update session last_active_at to reflect completed turn.
-        await supabase.from("chat_sessions").upsert(
-          {
-            id: sessionId,
-            user_id: userId,
-            device: "web",
-            last_active_at: new Date().toISOString(),
-          },
-          { onConflict: "id" },
-        );
-
-        // Derive next position so the assistant message sorts after the user message.
-        const { data: posRow } = await supabase
-          .from("chat_messages")
-          .select("position")
-          .eq("session_id", sessionId)
-          .order("position", { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
-        const nextPos = ((posRow?.position as number | null) ?? 0) + 1;
-
+        await upsertSession(supabase, { sessionId, userId });
         // #342: dual-write — `content` is the preview snapshot (text or #319
         // synthesized fallback); `parts` is the structured assistant message
         // for round-trip rendering. Reasoning parts are stripped — #339 owns
-        // reasoning persistence; this PR keeps it ephemeral, matching the
+        // reasoning persistence; this keeps it ephemeral, matching the
         // sendReasoning:false posture above.
-        const partsToPersist = responseMessage.parts.filter((p) => p.type !== "reasoning");
-
-        const { error: insertError } = await supabase.from("chat_messages").insert({
-          session_id: sessionId,
-          user_id: userId,
-          role: "assistant",
+        await persistAssistantMessage(supabase, {
+          sessionId,
+          userId,
           content: contentToPersist,
-          parts: partsToPersist,
-          position: nextPos,
+          parts: responseMessage.parts.filter((p) => p.type !== "reasoning"),
         });
-        if (insertError) throw insertError;
       } catch (persistErr) {
         console.error("[chat] onFinish persist error:", persistErr);
       }
