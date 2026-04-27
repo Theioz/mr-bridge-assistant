@@ -161,7 +161,29 @@ export async function POST(req: Request) {
   // #342: convert structured UIMessage[] (with tool-call / tool-result / file
   // parts) into ModelMessage[] for the agent. The SDK already drops empty
   // text parts, so the legacy empty-content filter is no longer needed.
-  const incomingModelMessages = await convertToModelMessages(messages);
+  //
+  // Pre-sanitize UIMessages: remove any tool-invocation parts that don't have
+  // a completed output (state !== "output-available" | "output-error"). These
+  // are tool_use blocks the model emitted before a deadline abort, where the
+  // results never arrived. Leaving them in causes Anthropic to reject the next
+  // request with "tool_use without tool_result" (400). This complements the
+  // ModelMessage-level sanitizeIncompleteToolCalls pass below.
+  const sanitizedUIMessages = messages.map((msg) => {
+    if (msg.role !== "assistant") return msg;
+    const safeParts = msg.parts.filter((part) => {
+      const p = part as { type?: string; state?: string };
+      if (typeof p.type === "string" && p.type.startsWith("tool-")) {
+        return p.state === "output-available" || p.state === "output-error";
+      }
+      return true;
+    });
+    if (safeParts.length === msg.parts.length) return msg;
+    console.log(
+      `[chat] sanitized ${msg.parts.length - safeParts.length} incomplete tool part(s) from assistant message session=${sessionId}`,
+    );
+    return { ...msg, parts: safeParts };
+  });
+  const incomingModelMessages = await convertToModelMessages(sanitizedUIMessages);
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
   const tools = buildChatTools(toolContext, isDemo);
@@ -243,11 +265,22 @@ export async function POST(req: Request) {
         : 0;
       if (used >= MAX_STEPS - 5) {
         const remaining = MAX_STEPS - used;
+        // args.instructions may be a SystemEntry[] (for real users with cacheControl).
+        // Template-literal interpolation would stringify the array as "[object Object],..."
+        // which silently wipes the system prompt. Extract plain text first.
+        const instructionsText =
+          typeof args.instructions === "string"
+            ? args.instructions
+            : Array.isArray(args.instructions)
+              ? (args.instructions as Array<{ content?: string }>)
+                  .map((b) => b.content ?? "")
+                  .join("\n\n")
+              : String(args.instructions ?? "");
         return {
           ...args,
           instructions:
-            `${args.instructions ?? ""}\n\n` +
-            `⚠ STEP LIMIT: You have used approximately ${used} of ${MAX_STEPS} steps this turn — roughly ${remaining} remaining. ` +
+            instructionsText +
+            `\n\n⚠ STEP LIMIT: You have used approximately ${used} of ${MAX_STEPS} steps this turn — roughly ${remaining} remaining. ` +
             `Do NOT start any new work. Finish only the current action, then stop and summarize for the user: what was completed this turn and what work remains unfinished. End with "Use the Continue button to pick up where I left off."`,
         };
       }
