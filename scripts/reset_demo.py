@@ -44,7 +44,6 @@ TABLES = [
     "fitness_log",
     "tasks",
     "notifications",
-    "timer_state",
     "stocks_cache",
     "sports_cache",
     "profile",

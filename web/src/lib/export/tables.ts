@@ -8,7 +8,6 @@
 //   - stocks_cache / sports_cache    — provider caches
 //   - user_integrations              — pgp_sym_encrypt'd OAuth refresh tokens
 //   - sync_log                       — internal observability
-//   - timer_state                    — ephemeral session state
 
 export type ExportTable = {
   name: string;

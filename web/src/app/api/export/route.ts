@@ -79,7 +79,6 @@ export async function POST(req: Request) {
       "sports_cache",
       "user_integrations",
       "sync_log",
-      "timer_state",
     ],
   };
 
