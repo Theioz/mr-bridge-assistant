@@ -2,13 +2,13 @@
 
 When planning new features or making non-trivial changes:
 
-1. **Pull latest best practices** before starting:
-   ```bash
-   bash scripts/update-references.sh
-   ```
-2. **Create a feature branch**:
+1. **Create a feature branch** first — the reference script commits to the current branch:
    ```bash
    git checkout -b feature/<short-description>
+   ```
+2. **Pull latest best practices** (must be on a feature branch, not main):
+   ```bash
+   bash scripts/update-references.sh
    ```
 3. Reference `.claude/references/best-practice/` for patterns and conventions
 4. Implement changes on the branch
