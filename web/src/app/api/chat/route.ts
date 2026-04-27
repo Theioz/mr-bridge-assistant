@@ -208,12 +208,35 @@ export async function POST(req: Request) {
     userName,
   });
 
+  // DIAG: log every assistant UIMessage's tool parts before any sanitization.
+  for (let _mi = 0; _mi < messages.length; _mi++) {
+    const _m = messages[_mi];
+    if (_m.role !== "assistant") continue;
+    const _tp = (_m.parts ?? []).filter((p) => {
+      const t = (p as { type?: string }).type ?? "";
+      return (
+        t.startsWith("tool-") || t === "dynamic-tool" || t === "tool-call" || t === "tool-result"
+      );
+    });
+    if (_tp.length > 0) {
+      console.log(
+        `[chat:diag] PRE-SANITIZE UIMessage[${_mi}] assistant parts=${JSON.stringify(
+          _tp.map((p) => ({
+            type: (p as { type?: string }).type,
+            state: (p as { state?: string }).state,
+            id: (p as { toolCallId?: string; id?: string }).toolCallId ?? (p as { id?: string }).id,
+          })),
+        )} session=${sessionId}`,
+      );
+    }
+  }
+
   // Pre-sanitize UIMessages: strip tool-invocation parts without a completed output.
   // ToolLoopAgent emits "dynamic-tool" parts (NOT "tool-<name>") at runtime, so we
   // check both shapes. Valid completion states: "output-available" | "output-error".
   // "input-streaming" / "input-available" mean the deadline fired before results
   // arrived — including them causes Anthropic 400 "tool_use without tool_result".
-  const sanitizedUIMessages = messages.map((msg) => {
+  const sanitizedUIMessages = messages.map((msg, _msgIdx) => {
     if (msg.role !== "assistant") return msg;
     const safeParts = msg.parts.filter((part) => {
       const p = part as { type?: string; state?: string };
@@ -225,8 +248,9 @@ export async function POST(req: Request) {
       return true;
     });
     if (safeParts.length === msg.parts.length) return msg;
+    const removed = msg.parts.filter((p) => !safeParts.includes(p));
     console.log(
-      `[chat] sanitized ${msg.parts.length - safeParts.length} incomplete tool part(s) from assistant message session=${sessionId}`,
+      `[chat] sanitized ${msg.parts.length - safeParts.length} incomplete tool part(s) from assistant message[${_msgIdx}] session=${sessionId} removed=${JSON.stringify(removed.map((p) => ({ type: (p as { type?: string }).type, state: (p as { state?: string }).state, id: (p as { toolCallId?: string; id?: string }).toolCallId ?? (p as { id?: string }).id })))}`,
     );
     return { ...msg, parts: safeParts };
   });
@@ -235,6 +259,19 @@ export async function POST(req: Request) {
   const incomingModelMessages = await convertToModelMessages(sanitizedUIMessages, {
     ignoreIncompleteToolCalls: true,
   });
+
+  // DIAG: log every ModelMessage with tool-calls or tool-results after conversion.
+  for (let _mi = 0; _mi < incomingModelMessages.length; _mi++) {
+    const _m = incomingModelMessages[_mi];
+    if (!Array.isArray(_m.content)) continue;
+    const _calls = (_m.content as AnyPart[]).filter(isToolCallPart);
+    const _results = (_m.content as AnyPart[]).filter(isToolResultPart);
+    if (_calls.length > 0 || _results.length > 0) {
+      console.log(
+        `[chat:diag] POST-CONVERT ModelMessage[${_mi}] role=${_m.role} calls=${JSON.stringify(_calls.map((c) => ({ type: c.type, id: getToolCallId(c) })))} results=${JSON.stringify(_results.map((r) => ({ type: r.type, id: getToolCallId(r) })))} session=${sessionId}`,
+      );
+    }
+  }
 
   const toolContext: ToolContext = { supabase, userId, isDemo, sessionId };
   const tools = buildChatTools(toolContext, isDemo);
@@ -429,8 +466,30 @@ export async function POST(req: Request) {
   });
 
   const safeIncomingMessages = sanitizeIncompleteToolCalls(incomingModelMessages, sessionId);
+
+  // DIAG: log the full merged message list being sent to the agent, focusing on tool-call/result pairs.
+  const _allMsgs = [...contextModelMessages, ...safeIncomingMessages];
+  console.log(
+    `[chat:diag] AGENT INPUT: ctx=${contextModelMessages.length} incoming=${safeIncomingMessages.length} total=${_allMsgs.length} session=${sessionId}`,
+  );
+  for (let _mi = 0; _mi < _allMsgs.length; _mi++) {
+    const _m = _allMsgs[_mi];
+    if (!Array.isArray(_m.content)) continue;
+    const _calls = (_m.content as AnyPart[]).filter(isToolCallPart);
+    const _results = (_m.content as AnyPart[]).filter(isToolResultPart);
+    if (_calls.length > 0 || _results.length > 0) {
+      const _nextResults =
+        _mi + 1 < _allMsgs.length && Array.isArray(_allMsgs[_mi + 1].content)
+          ? (_allMsgs[_mi + 1].content as AnyPart[]).filter(isToolResultPart)
+          : [];
+      console.log(
+        `[chat:diag] AGENT msg[${_mi}] role=${_m.role} calls=${JSON.stringify(_calls.map((c) => getToolCallId(c)))} results=${JSON.stringify(_results.map((r) => getToolCallId(r)))} next-results=${JSON.stringify(_nextResults.map((r) => getToolCallId(r)))} session=${sessionId}`,
+      );
+    }
+  }
+
   const result = await agent.stream({
-    messages: [...contextModelMessages, ...safeIncomingMessages],
+    messages: _allMsgs,
     abortSignal: turnAbort.signal,
     // #519: intercept error/abort parts caused by the deadline and replace them
     // with a readable text block so the client always gets a chat bubble.
