@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Docs
+- **Rules: delete session-close.md, absorb close reminders into core.md (#472).** `session-close.md` described a `git add .` → `session:` commit → push-to-main flow that contradicted the feature-branch + PR workflow. File deleted; a `## Session Close` section added directly to `core.md` with correct reminders (CHANGELOG, README, graphify update, feature-branch workflow). Context-on-demand table row removed.
 - **Docs: add ARCHITECTURE.md with RLS evolution plan (#477).** New `docs/ARCHITECTURE.md` captures stack overview, 28-table schema grouped by domain, RLS pattern and dual-client model, OAuth token encryption (pgp_sym_encrypt), prompt-caching architecture (1-hour TTL rationale), verified-success contract, and multi-tenant roadmap. Cross-linked from `README.md` and `graphify-out/GRAPH_REPORT.md`. Fills the gap surfaced by the 2026-04-23 audit (Domain C): no single file documented architectural intent, only current state.
 
 ### Refactored
