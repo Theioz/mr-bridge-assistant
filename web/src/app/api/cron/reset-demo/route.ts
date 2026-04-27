@@ -45,18 +45,29 @@ export async function GET(req: Request) {
     log[table] = 0; // Supabase delete doesn't return count reliably via service client
   }
 
-  // Reseed via the seed API (calls seed_demo.py server-side via the Python script)
-  // Since this runs in Vercel serverless we can't spawn a Python process directly.
-  // Instead, inline the seed logic using the Supabase service client.
   const seedResult = await seedDemoData(supabase, demoUserId);
 
   console.log("[reset-demo] Reset complete.", { deleted: log, seeded: seedResult });
   return NextResponse.json({ ok: true, deleted: log, seeded: seedResult });
 }
 
+type SeedBlockResult = { ok: boolean; error?: string };
+type SeedResult = Record<string, SeedBlockResult>;
 type SupabaseClient = ReturnType<typeof createServiceClient>;
 
-async function seedDemoData(supabase: SupabaseClient, uid: string) {
+async function runBlock(label: string, results: SeedResult, fn: () => Promise<unknown>) {
+  try {
+    await fn();
+    results[label] = { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[reset-demo] seed block "${label}" failed:`, msg);
+    results[label] = { ok: false, error: msg };
+  }
+}
+
+async function seedDemoData(supabase: SupabaseClient, uid: string): Promise<SeedResult> {
+  const results: SeedResult = {};
   const today = todayString();
   const daysAgo = (n: number) => addDays(today, -n);
 
@@ -85,9 +96,14 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
     },
     { user_id: uid, key: "cuisine_preferences", value: "Japanese, Mediterranean, American" },
   ];
-  await supabase.from("profile").upsert(profileRows, { onConflict: "user_id,key" });
+  await runBlock("profile", results, async () => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert(profileRows, { onConflict: "user_id,key" });
+    if (error) throw new Error(error.message);
+  });
 
-  // Habit registry
+  // Habit registry — must run before habits to get IDs
   const habitDefs = [
     { name: "Morning workout", category: "fitness", emoji: "💪" },
     { name: "Read 20 min", category: "learning", emoji: "📖" },
@@ -97,16 +113,22 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
     { name: "Code side project", category: "learning", emoji: "💻" },
     { name: "Journal", category: "mindset", emoji: "📝" },
   ];
-  const { data: registry } = await supabase
-    .from("habit_registry")
-    .upsert(
-      habitDefs.map((h) => ({ user_id: uid, ...h, active: true })),
-      { onConflict: "user_id,name" },
-    )
-    .select("id, name");
+  let registry: { id: string; name: string }[] | null = null;
+  await runBlock("habit_registry", results, async () => {
+    const { data, error } = await supabase
+      .from("habit_registry")
+      .upsert(
+        habitDefs.map((h) => ({ user_id: uid, ...h, active: true })),
+        { onConflict: "user_id,name" },
+      )
+      .select("id, name");
+    if (error) throw new Error(error.message);
+    registry = data;
+  });
 
-  // Habit logs — ~60% completion over 30 days
-  if (registry) {
+  // Habit logs — depends on habit_registry result
+  await runBlock("habits", results, async () => {
+    if (!registry) throw new Error("habit_registry failed — skipping habit logs");
     const rates: Record<string, number> = {
       "Morning workout": 0.55,
       "Read 20 min": 0.7,
@@ -116,9 +138,10 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
       "Code side project": 0.6,
       Journal: 0.35,
     };
-    const idMap: Record<string, string> = Object.fromEntries(registry.map((r) => [r.name, r.id]));
+    const idMap: Record<string, string> = Object.fromEntries(
+      (registry as { id: string; name: string }[]).map((r) => [r.name, r.id]),
+    );
     const habitRows = [];
-    // Deterministic pseudo-random using day + habit index as seed
     for (let dago = 30; dago > 0; dago--) {
       const d = daysAgo(dago);
       for (let hi = 0; hi < habitDefs.length; hi++) {
@@ -129,8 +152,11 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
         }
       }
     }
-    await supabase.from("habits").upsert(habitRows, { onConflict: "user_id,habit_id,date" });
-  }
+    const { error } = await supabase
+      .from("habits")
+      .upsert(habitRows, { onConflict: "user_id,habit_id,date" });
+    if (error) throw new Error(error.message);
+  });
 
   // Tasks
   const taskRows = [
@@ -213,83 +239,97 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
       completed_at: `${daysAgo(5)}T20:00:00Z`,
     },
   ];
-  await supabase.from("tasks").insert(taskRows);
+  await runBlock("tasks", results, async () => {
+    const { error } = await supabase.from("tasks").insert(taskRows);
+    if (error) throw new Error(error.message);
+  });
 
   // Fitness log — 30-day body comp arc
-  const fitnessRows = [];
-  for (let i = 0; i < 10; i++) {
-    const dago = 30 - i * 3;
-    const progress = i / 9;
-    const hash = ((i * 37) % 10) / 10 - 0.5;
-    fitnessRows.push({
-      user_id: uid,
-      date: daysAgo(dago),
-      weight_lb: Math.round((182.0 - 3.0 * progress + hash * 0.5) * 10) / 10,
-      body_fat_pct: Math.round((21.0 - 1.0 * progress + hash * 0.3) * 10) / 10,
-      bmi: 26.1,
-      muscle_mass_lb: Math.round((182.0 - 3.0 * progress) * 0.79 * 10) / 10,
-      visceral_fat: 8.0,
-      source: "renpho",
-    });
-  }
-  await supabase.from("fitness_log").upsert(fitnessRows, { onConflict: "user_id,date,source" });
+  await runBlock("fitness_log", results, async () => {
+    const fitnessRows = [];
+    for (let i = 0; i < 10; i++) {
+      const dago = 30 - i * 3;
+      const progress = i / 9;
+      const hash = ((i * 37) % 10) / 10 - 0.5;
+      fitnessRows.push({
+        user_id: uid,
+        date: daysAgo(dago),
+        weight_lb: Math.round((182.0 - 3.0 * progress + hash * 0.5) * 10) / 10,
+        body_fat_pct: Math.round((21.0 - 1.0 * progress + hash * 0.3) * 10) / 10,
+        bmi: 26.1,
+        muscle_mass_lb: Math.round((182.0 - 3.0 * progress) * 0.79 * 10) / 10,
+        visceral_fat: 8.0,
+        source: "renpho",
+      });
+    }
+    const { error } = await supabase
+      .from("fitness_log")
+      .upsert(fitnessRows, { onConflict: "user_id,date,source" });
+    if (error) throw new Error(error.message);
+  });
 
   // Workout sessions
-  const workoutTemplates = [
-    ["Running", 30, 280, 148, "Neighborhood run"],
-    ["Weight Training", 55, 320, 138, "Push day"],
-    ["Weight Training", 60, 340, 142, "Pull day"],
-    ["Cycling", 45, 390, 155, "Bay trail ride"],
-    ["HIIT", 25, 310, 162, "Tabata intervals"],
-    ["Weight Training", 50, 310, 135, "Leg day"],
-    ["Running", 40, 360, 152, "Tempo run"],
-    ["Yoga", 45, 95, 105, "Morning flow"],
-  ] as const;
-  const workoutRows = [];
-  let wcount = 0;
-  for (let dago = 28; dago > 1 && wcount < 18; dago--) {
-    if ((dago * 13) % 7 > 4) continue; // ~57% of days
-    const t = workoutTemplates[(dago * 7 + wcount) % workoutTemplates.length];
-    workoutRows.push({
-      user_id: uid,
-      date: daysAgo(dago),
-      start_time: `0${6 + (dago % 3)}:${dago % 2 === 0 ? "00" : "30"}:00`,
-      activity: t[0],
-      duration_mins: t[1] + (dago % 5) - 2,
-      calories: t[2] + (dago % 10) - 5,
-      avg_hr: t[3] + (dago % 8) - 4,
-      notes: t[4],
-      source: "manual",
-    });
-    wcount++;
-  }
-  await supabase.from("workout_sessions").insert(workoutRows);
+  await runBlock("workout_sessions", results, async () => {
+    const workoutTemplates = [
+      ["Running", 30, 280, 148, "Neighborhood run"],
+      ["Weight Training", 55, 320, 138, "Push day"],
+      ["Weight Training", 60, 340, 142, "Pull day"],
+      ["Cycling", 45, 390, 155, "Bay trail ride"],
+      ["HIIT", 25, 310, 162, "Tabata intervals"],
+      ["Weight Training", 50, 310, 135, "Leg day"],
+      ["Running", 40, 360, 152, "Tempo run"],
+      ["Yoga", 45, 95, 105, "Morning flow"],
+    ] as const;
+    const workoutRows = [];
+    let wcount = 0;
+    for (let dago = 28; dago > 1 && wcount < 18; dago--) {
+      if ((dago * 13) % 7 > 4) continue; // ~57% of days
+      const t = workoutTemplates[(dago * 7 + wcount) % workoutTemplates.length];
+      workoutRows.push({
+        user_id: uid,
+        date: daysAgo(dago),
+        start_time: `0${6 + (dago % 3)}:${dago % 2 === 0 ? "00" : "30"}:00`,
+        activity: t[0],
+        duration_mins: t[1] + (dago % 5) - 2,
+        calories: t[2] + (dago % 10) - 5,
+        avg_hr: t[3] + (dago % 8) - 4,
+        notes: t[4],
+        source: "manual",
+      });
+      wcount++;
+    }
+    const { error } = await supabase.from("workout_sessions").insert(workoutRows);
+    if (error) throw new Error(error.message);
+  });
 
   // Recovery metrics — 30 nights
-  const recoveryRows = [];
-  for (let dago = 30; dago > 0; dago--) {
-    const dateStr = addDays(today, -dago);
-    const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
-    const isWeekend = dow === 0 || dow === 6;
-    const hashA = ((dago * 11) % 10) / 10;
-    const hashB = ((dago * 17) % 10) / 10;
-    recoveryRows.push({
-      user_id: uid,
-      date: daysAgo(dago),
-      total_sleep_hrs: Math.round(((isWeekend ? 6.8 : 7.4) + hashA * 1.2 - 0.6) * 100) / 100,
-      deep_hrs: Math.round((hashA * 0.4 + 1.3) * 100) / 100,
-      rem_hrs: Math.round((hashB * 0.5 + 1.6) * 100) / 100,
-      avg_hrv: Math.max(25, Math.round(52 + hashA * 16 - 8)),
-      resting_hr: Math.max(45, Math.round(58 + hashB * 6 - 3)),
-      readiness: Math.min(100, Math.max(40, Math.round(72 + hashA * 20 - 10))),
-      sleep_score: Math.min(100, Math.max(40, Math.round(74 + hashB * 16 - 8))),
-      active_cal: Math.round(450 + hashA * 160 - 80),
-      source: "oura",
-    });
-  }
-  await supabase
-    .from("recovery_metrics")
-    .upsert(recoveryRows, { onConflict: "user_id,date,source" });
+  await runBlock("recovery_metrics", results, async () => {
+    const recoveryRows = [];
+    for (let dago = 30; dago > 0; dago--) {
+      const dateStr = addDays(today, -dago);
+      const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+      const isWeekend = dow === 0 || dow === 6;
+      const hashA = ((dago * 11) % 10) / 10;
+      const hashB = ((dago * 17) % 10) / 10;
+      recoveryRows.push({
+        user_id: uid,
+        date: daysAgo(dago),
+        total_sleep_hrs: Math.round(((isWeekend ? 6.8 : 7.4) + hashA * 1.2 - 0.6) * 100) / 100,
+        deep_hrs: Math.round((hashA * 0.4 + 1.3) * 100) / 100,
+        rem_hrs: Math.round((hashB * 0.5 + 1.6) * 100) / 100,
+        avg_hrv: Math.max(25, Math.round(52 + hashA * 16 - 8)),
+        resting_hr: Math.max(45, Math.round(58 + hashB * 6 - 3)),
+        readiness: Math.min(100, Math.max(40, Math.round(72 + hashA * 20 - 10))),
+        sleep_score: Math.min(100, Math.max(40, Math.round(74 + hashB * 16 - 8))),
+        active_cal: Math.round(450 + hashA * 160 - 80),
+        source: "oura",
+      });
+    }
+    const { error } = await supabase
+      .from("recovery_metrics")
+      .upsert(recoveryRows, { onConflict: "user_id,date,source" });
+    if (error) throw new Error(error.message);
+  });
 
   // Study log
   const studyRows = [
@@ -329,7 +369,10 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
       notes: "Custom HTTP middleware chain",
     },
   ];
-  await supabase.from("study_log").insert(studyRows);
+  await runBlock("study_log", results, async () => {
+    const { error } = await supabase.from("study_log").insert(studyRows);
+    if (error) throw new Error(error.message);
+  });
 
   // Journal
   const journalRows = [
@@ -364,7 +407,10 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
         "Phone and reading compete for the same time slot. 20-min daily habit applied in the pre-sleep window breaks it.",
     },
   ];
-  await supabase.from("journal_entries").insert(journalRows);
+  await runBlock("journal_entries", results, async () => {
+    const { error } = await supabase.from("journal_entries").insert(journalRows);
+    if (error) throw new Error(error.message);
+  });
 
   // Recipes
   const recipeRows = [
@@ -409,20 +455,10 @@ async function seedDemoData(supabase: SupabaseClient, uid: string) {
       tags: ["high-protein", "quick"],
     },
   ];
-  await supabase.from("recipes").insert(recipeRows);
+  await runBlock("recipes", results, async () => {
+    const { error } = await supabase.from("recipes").insert(recipeRows);
+    if (error) throw new Error(error.message);
+  });
 
-  return {
-    tables: [
-      "profile",
-      "habit_registry",
-      "habits",
-      "tasks",
-      "fitness_log",
-      "workout_sessions",
-      "recovery_metrics",
-      "study_log",
-      "journal_entries",
-      "recipes",
-    ],
-  };
+  return results;
 }
