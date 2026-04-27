@@ -10,12 +10,19 @@ function buildCSP(nonce: string): string {
     ? `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
     : `script-src 'nonce-${nonce}' 'strict-dynamic'`;
 
+  // Dev: Next.js HMR injects <style> tags for CSS hot-reloading without nonces.
+  // Allow 'unsafe-inline' on style-src-elem in dev only, mirroring the 'unsafe-eval'
+  // exception already made for scripts. Production keeps the strict nonce-only policy.
+  const styleSrcElem = isDev
+    ? `style-src-elem 'nonce-${nonce}' 'self' 'unsafe-inline'`
+    : `style-src-elem 'nonce-${nonce}' 'self'`;
+
   return [
     "default-src 'self'",
     scriptSrc,
     // style-src-elem governs <style> tags; style-src-attr governs style= attributes
     // (Radix UI portals set inline positioning styles that cannot carry a nonce).
-    `style-src-elem 'nonce-${nonce}' 'self'`,
+    styleSrcElem,
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' data: https://a.espncdn.com https://*.supabase.co",
     "font-src 'self' data:",
