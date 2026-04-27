@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Docs
+- **Docs: add ARCHITECTURE.md with RLS evolution plan (#477).** New `docs/ARCHITECTURE.md` captures stack overview, 28-table schema grouped by domain, RLS pattern and dual-client model, OAuth token encryption (pgp_sym_encrypt), prompt-caching architecture (1-hour TTL rationale), verified-success contract, and multi-tenant roadmap. Cross-linked from `README.md` and `graphify-out/GRAPH_REPORT.md`. Fills the gap surfaced by the 2026-04-23 audit (Domain C): no single file documented architectural intent, only current state.
+
 ### Refactored
 - **Chat: split route.ts into focused lib/chat/ modules (#475).** `web/src/app/api/chat/route.ts` (~1010 lines) was extracted into six purpose-built modules — `select-model.ts`, `system-prompt.ts`, `build-tools.ts`, `synthesis.ts`, `middleware.ts`, and `persist.ts` — each owning one concern. `route.ts` is now pure orchestration (~385 lines). Zero behavior change; TypeScript clean.
 

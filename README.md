@@ -8,6 +8,8 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 
 [View full size →](docs/architecture.png)
 
+[Architecture decisions & RLS evolution plan →](docs/ARCHITECTURE.md)
+
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
