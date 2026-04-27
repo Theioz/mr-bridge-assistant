@@ -17,6 +17,10 @@ type StepLike = {
   warnings?: unknown[];
 };
 
+// Phrase that signals the model needs continuation — detected by the UI to show
+// the Continue button. Must appear in every synthesized step-cap/deadline message.
+export const NEEDS_CONTINUE_SIGNAL = "pick up where I left off";
+
 export const TOOL_PHRASING: Record<string, [success: string, attempt: string]> = {
   add_task: ["added a task", "add a task"],
   complete_task: ["marked a task complete", "mark a task complete"],
@@ -102,7 +106,7 @@ export function synthesizeFallbackSummary(
     : flags.budgetExceeded
       ? " (Hit my token budget before I could write a longer summary — let me know if you need detail.)"
       : flags.hitStepCap
-        ? ' (Hit my 20-step turn limit — this task has more work remaining. Reply **"continue"** and I\'ll pick up where I left off.)'
+        ? " (Reached my turn limit — more work remains. Use the Continue button to pick up where I left off.)"
         : "";
   return body + reason;
 }

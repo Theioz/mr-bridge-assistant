@@ -3,7 +3,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { USER_TZ } from "@/lib/timezone";
 import { buildProactivityContext } from "@/lib/chat/proactivity-context";
 import { ToolLoopAgent, wrapLanguageModel, stepCountIs, convertToModelMessages } from "ai";
-import type { UIMessage } from "ai";
+import type { UIMessage, ModelMessage } from "ai";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import type { ToolContext } from "@/lib/tools/_context";
@@ -35,7 +35,47 @@ const TURN_DEADLINE_MS = 80_000;
 // #519: emitted as a stream text part before abort so the client always sees
 // readable text rather than an error state on timeout.
 const DEADLINE_MESSAGE =
-  "I ran out of time mid-task. Here's what I gathered so far — reply **'continue'** to pick up where I left off.";
+  "I ran out of time mid-task. Here's what I completed — use the Continue button to pick up where I left off.";
+
+// Removes assistant messages whose tool_use blocks have no matching tool_result
+// in the immediately following tool message. This happens when the deadline fires
+// mid-tool-call: the model emits tool_use, but results never arrive before abort.
+// Sending that malformed history to Anthropic causes a 400 "tool_use without tool_result".
+type AnyPart = { type: string; [k: string]: unknown };
+
+function sanitizeIncompleteToolCalls(messages: ModelMessage[]): ModelMessage[] {
+  const out: ModelMessage[] = [];
+  let i = 0;
+  while (i < messages.length) {
+    const msg = messages[i];
+    if (msg.role === "assistant" && Array.isArray(msg.content)) {
+      const parts = msg.content as AnyPart[];
+      const toolCalls = parts.filter((p) => p.type === "tool-call");
+      if (toolCalls.length > 0) {
+        const next = messages[i + 1];
+        const nextParts: AnyPart[] =
+          next?.role === "tool" && Array.isArray(next.content) ? (next.content as AnyPart[]) : [];
+        const resultIds = new Set<string>(
+          nextParts.filter((p) => p.type === "tool-result").map((p) => String(p.toolCallId ?? "")),
+        );
+        const allMatched = toolCalls.every((c) => resultIds.has(String(c.toolCallId ?? "")));
+        if (!allMatched) {
+          // Keep non-tool-call parts (text, reasoning); drop unmatched tool calls.
+          const stripped = parts.filter((p) => p.type !== "tool-call");
+          if (stripped.length > 0)
+            out.push({ ...msg, content: stripped } as unknown as ModelMessage);
+          // Skip an orphaned tool message immediately following.
+          if (messages[i + 1]?.role === "tool") i++;
+          i++;
+          continue;
+        }
+      }
+    }
+    out.push(msg);
+    i++;
+  }
+  return out;
+}
 
 export async function POST(req: Request) {
   const {
@@ -172,6 +212,7 @@ export async function POST(req: Request) {
   // v5 replaced StreamData's side-channel with per-message metadata.
   let synthesized = false;
   let hadFailures = false;
+  let hitStepCap = false;
   // #342: stash the canonical text-to-persist (from agent.onFinish) so the
   // outer toUIMessageStreamResponse.onFinish can write it alongside the
   // structured `parts` it receives from the SDK as `responseMessage.parts`.
@@ -207,7 +248,7 @@ export async function POST(req: Request) {
           instructions:
             `${args.instructions ?? ""}\n\n` +
             `⚠ STEP LIMIT: You have used approximately ${used} of ${MAX_STEPS} steps this turn — roughly ${remaining} remaining. ` +
-            `Do NOT start any new work. Finish only the current action, then stop and tell the user exactly what was completed, what remains, and to reply "continue" to proceed.`,
+            `Do NOT start any new work. Finish only the current action, then stop and summarize for the user: what was completed this turn and what work remains unfinished. End with "Use the Continue button to pick up where I left off."`,
         };
       }
       return args;
@@ -216,7 +257,7 @@ export async function POST(req: Request) {
       clearTimeout(deadlineTimer);
 
       const stepCount = steps?.length ?? 0;
-      const hitStepCap = stepCount >= MAX_STEPS;
+      hitStepCap = stepCount >= MAX_STEPS;
       const cumulativeTokens = (steps ?? []).reduce(
         (acc, s) => acc + (s.usage?.inputTokens ?? 0) + (s.usage?.outputTokens ?? 0),
         0,
@@ -303,8 +344,9 @@ export async function POST(req: Request) {
     },
   });
 
+  const safeIncomingMessages = sanitizeIncompleteToolCalls(incomingModelMessages);
   const result = await agent.stream({
-    messages: [...contextModelMessages, ...incomingModelMessages],
+    messages: [...contextModelMessages, ...safeIncomingMessages],
     abortSignal: turnAbort.signal,
     // #519: intercept error/abort parts caused by the deadline and replace them
     // with a readable text block so the client always gets a chat bubble.
@@ -354,7 +396,7 @@ export async function POST(req: Request) {
     messageMetadata: ({ part }) => {
       if (part.type === "finish") {
         return {
-          turnComplete: { synthesized, hadFailures, deadlineExceeded },
+          turnComplete: { synthesized, hadFailures, deadlineExceeded, hitStepCap },
         };
       }
     },

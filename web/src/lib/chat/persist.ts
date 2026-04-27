@@ -34,7 +34,7 @@ export async function loadContextMessages(
     .eq("session_id", sessionId)
     .in("role", ["user", "assistant"])
     .order("position", { ascending: false, nullsFirst: false })
-    .limit(10);
+    .limit(20);
   if (!data) return [];
   // Filter out empty-content messages — they cause Anthropic 400 errors —
   // then reverse so messages flow oldest→newest into the model.

@@ -11,6 +11,7 @@ import SlashCommandMenu, { SLASH_COMMANDS, type SlashCommand } from "./slash-com
 import { formatDaySeparator, isSameDay } from "@/lib/relative-time";
 import { useKeyboardOpen } from "@/lib/use-keyboard-open";
 import type { UIMessage } from "ai";
+import { NEEDS_CONTINUE_SIGNAL } from "@/lib/chat/synthesis";
 
 interface Props {
   sessionId: string;
@@ -35,6 +36,7 @@ type TurnCompleteMeta = {
     synthesized: boolean;
     hadFailures: boolean;
     deadlineExceeded: boolean;
+    hitStepCap?: boolean;
   };
   createdAt?: string | Date;
 };
@@ -146,6 +148,25 @@ export default function ChatInterface({
   });
 
   const isLoading = status === "streaming" || status === "submitted";
+
+  // Show Continue button when the last assistant message signals it needs continuation.
+  // Dual detection: metadata (reliable for current-session messages) + text signal
+  // (fallback for messages loaded from DB on page refresh).
+  const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+  const needsContinue = useMemo(() => {
+    if (isLoading || !lastMsg || lastMsg.role !== "assistant") return false;
+    const meta = (lastMsg.metadata as TurnCompleteMeta | undefined)?.turnComplete;
+    if (meta?.hitStepCap || meta?.deadlineExceeded) return true;
+    const text = lastMsg.parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("");
+    return text.includes(NEEDS_CONTINUE_SIGNAL);
+  }, [isLoading, lastMsg]);
+
+  const handleContinue = useCallback(() => {
+    sendMessage({ text: "continue" }, { body: { sessionId, model: modelOverride } });
+  }, [sendMessage, sessionId, modelOverride]);
 
   // Derive quota-exhausted state from useChat's error — no useEffect needed.
   // Dismissed when the user clicks Dismiss; reappears if a new resets_at arrives.
@@ -371,6 +392,30 @@ export default function ChatInterface({
           );
         })}
         <ToolStatusBar messages={messages} isLoading={isLoading} />
+
+        {/* Continue button — appears after step-cap or deadline messages so
+            the user doesn't have to type "continue" manually. */}
+        {needsContinue && (
+          <div className="flex justify-start print:hidden">
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="cursor-pointer hover-text-brighten"
+              style={{
+                padding: "var(--space-2) var(--space-4)",
+                borderRadius: "var(--r-2)",
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--accent)",
+                color: "var(--accent)",
+                minHeight: 36,
+                transition: `color var(--motion-fast) var(--ease-out-quart), border-color var(--motion-fast) var(--ease-out-quart)`,
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        )}
 
         {/* Typing indicator — opacity pulse (not bounce), accent as the one
             attention point during an active turn. */}
