@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Refactored
+- **Chat: split route.ts into focused lib/chat/ modules (#475).** `web/src/app/api/chat/route.ts` (~1010 lines) was extracted into six purpose-built modules — `select-model.ts`, `system-prompt.ts`, `build-tools.ts`, `synthesis.ts`, `middleware.ts`, and `persist.ts` — each owning one concern. `route.ts` is now pure orchestration (~385 lines). Zero behavior change; TypeScript clean.
+
 ### Performance
 - **DB: replace ascending chat_messages position index with DESC NULLS LAST (#459).** The hot-path query `ORDER BY position DESC NULLS LAST LIMIT 10` on `chat_messages` ran against an ascending `(session_id, position)` index, requiring the planner to verify null ordering on every request. The old index is dropped and replaced with `chat_messages_session_position_desc_idx ON chat_messages (session_id, position DESC NULLS LAST)` — an exact match that eliminates planner ambiguity and reduces pre-stream latency by an estimated 100–150 ms per turn. The `profile(user_id, key)` index required by the name/proactivity lookup was already present via the unique constraint added in migration `20260413000001`.
 
