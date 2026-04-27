@@ -420,3 +420,5 @@ export async function syncFitbit(db: SupabaseClient, userId: string): Promise<Fi
   await logSync(db, "fitbit", "ok", bodyWritten + workoutsWritten + recoveryWritten);
   return { bodyWritten, workoutsWritten, recoveryWritten };
 }
+  /* Bounty contribution */
+}
