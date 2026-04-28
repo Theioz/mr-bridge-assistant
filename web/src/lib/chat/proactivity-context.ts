@@ -6,7 +6,10 @@ type SupabaseClient = ReturnType<typeof createServiceClient>;
 // Each rule returns a signal string or null (null = silent omit).
 // All rules run in parallel via Promise.allSettled — a thrown error is treated as null.
 
-async function ruleHrvDecline(userId: string, supabase: SupabaseClient): Promise<string | null> {
+export async function ruleHrvDecline(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<string | null> {
   const { data, error } = await supabase
     .from("recovery_metrics")
     .select("date, avg_hrv")
@@ -42,7 +45,10 @@ async function ruleHrvDecline(userId: string, supabase: SupabaseClient): Promise
   );
 }
 
-async function ruleHighRpe(userId: string, supabase: SupabaseClient): Promise<string | null> {
+export async function ruleHighRpe(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<string | null> {
   const sinceStr = daysAgoString(60);
   const { data: sessions, error: sessErr } = await supabase
     .from("strength_sessions")
@@ -141,7 +147,10 @@ async function ruleHabitAtRisk(userId: string, supabase: SupabaseClient): Promis
   );
 }
 
-async function ruleSleepDeficit(userId: string, supabase: SupabaseClient): Promise<string | null> {
+export async function ruleSleepDeficit(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<string | null> {
   const { data, error } = await supabase
     .from("recovery_metrics")
     .select("date, total_sleep_hrs")
