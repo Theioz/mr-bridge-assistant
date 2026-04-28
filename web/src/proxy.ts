@@ -10,11 +10,12 @@ function buildCSP(nonce: string): string {
     ? `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
     : `script-src 'nonce-${nonce}' 'strict-dynamic'`;
 
-  // Dev: Next.js HMR injects <style> tags for CSS hot-reloading without nonces.
-  // Allow 'unsafe-inline' on style-src-elem in dev only, mirroring the 'unsafe-eval'
-  // exception already made for scripts. Production keeps the strict nonce-only policy.
+  // Dev: Next.js HMR injects <style> tags without nonces. We need 'unsafe-inline'
+  // to allow them — but the CSP spec silently drops 'unsafe-inline' when a nonce
+  // is also present. Omit the nonce from style-src-elem in dev so 'unsafe-inline'
+  // actually takes effect. Production keeps the strict nonce-only policy.
   const styleSrcElem = isDev
-    ? `style-src-elem 'nonce-${nonce}' 'self' 'unsafe-inline'`
+    ? `style-src-elem 'self' 'unsafe-inline'`
     : `style-src-elem 'nonce-${nonce}' 'self'`;
 
   return [
