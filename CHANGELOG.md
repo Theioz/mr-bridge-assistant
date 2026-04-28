@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Fitness: Phase B revamp — replace tabbed layout with flat 2-col grid (#466).** `FitnessClient.tsx` removes the three-tab navigation (Dashboard / Workouts / History) and flattens all sections into a scrollable Phase B layout: body composition + activity charts on row 1, recovery trends + personal records on row 2, this week's workout program full-width on row 3, top exercises + recent sessions on row 4, full workout history full-width on row 5. `db-section-label` hairline pattern matches the Weekly page. Lazy-loaded chart components (BodyCompTrends, RecoveryTrends, ActivityTrends) and the window selector are preserved. Inline set logging and rest timer remain functional.
+
 ### Docs
 - **Infra: add key-rotation runbooks for ENCRYPTION_KEY and SUPABASE_SERVICE_ROLE_KEY (#476).** `docs/runbooks/rotate-encryption-key.md` documents the re-encryption migration (pgp_sym_decrypt → pgp_sym_encrypt in a single transaction), verification steps, and rollback. `docs/runbooks/rotate-service-role-key.md` documents the Supabase dashboard reset → Vercel env update → redeploy flow. Both referenced from `docs/SECURITY.md` under a new Key rotation runbooks table. Surfaced by the 2026-04-23 full audit (Domain F, finding F2.4).
 - **Rules: guard update-references.sh against running on main; reorder features.md steps (#474).** `scripts/update-references.sh` now exits 1 with a clear error if run on `main` (the script commits to the current branch — running on main strands an unpushable commit). `features.md` reordered so branch creation is step 1 and the reference pull is step 2, with inline notes explaining the constraint.
