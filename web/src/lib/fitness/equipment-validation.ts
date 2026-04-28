@@ -110,3 +110,91 @@ export async function validateWeights({
 
   return { valid: violations.length === 0, violations };
 }
+
+// ── Equipment-cap progression ladder ─────────────────────────────────────────
+
+export const PROGRESSION_LADDER = [
+  {
+    type: "add_reps" as const,
+    detail: "Increase rep target by 2-3 (until 20+ rep range)",
+    stimulusGain: "Low" as const,
+  },
+  {
+    type: "add_tempo" as const,
+    detail: "Add 3-second eccentric (3-1-1-0 cadence)",
+    stimulusGain: "Medium" as const,
+  },
+  {
+    type: "add_pause" as const,
+    detail: "Add 2-second pause at hardest position",
+    stimulusGain: "Medium" as const,
+  },
+  {
+    type: "unilateral_convert" as const,
+    detail: "Convert to single-limb variant (effective load doubles)",
+    stimulusGain: "High" as const,
+    example: "Goblet Squat → Bulgarian Split Squat",
+  },
+  {
+    type: "mechanical_drop" as const,
+    detail: "Start with hardest variation, drop to easier mid-set",
+    stimulusGain: "High" as const,
+  },
+  {
+    type: "band_augment" as const,
+    detail: "Add resistance band looped under feet over the dumbbell",
+    stimulusGain: "Medium" as const,
+  },
+  {
+    type: "density" as const,
+    detail: "Reduce rest by 30 seconds while maintaining set/rep volume",
+    stimulusGain: "Medium" as const,
+  },
+] as const;
+
+export type ProgressionStep = (typeof PROGRESSION_LADDER)[number];
+
+export interface ProgressionRecommendation {
+  shouldProgress: boolean;
+  isAtCap: boolean;
+  recommendedStep?: ProgressionStep;
+  rationale: string;
+}
+
+export function getCappedExerciseProgression(opts: {
+  userMaxLoadLbs: number;
+  currentLoadLbs: number;
+  sessionHistory: Array<{ date: string; reps: number; rpe: number; weight_lbs: number }>;
+}): ProgressionRecommendation {
+  const { userMaxLoadLbs, currentLoadLbs, sessionHistory } = opts;
+  const isAtCap = currentLoadLbs >= userMaxLoadLbs * 0.95;
+  const recent = sessionHistory.slice(-3);
+
+  const earnedProgression =
+    recent.length >= 2 && recent.slice(-2).every((s) => s.rpe <= 8 && s.reps >= 12);
+
+  if (!earnedProgression) {
+    return {
+      shouldProgress: false,
+      isAtCap,
+      rationale: "Has not hit top of rep range at sub-RPE 9 for 2 consecutive sessions",
+    };
+  }
+
+  if (!isAtCap) {
+    return {
+      shouldProgress: true,
+      isAtCap: false,
+      rationale: "Load can still increase via standard +2.5 kg upper / +5 kg lower progression",
+    };
+  }
+
+  // At cap + earned progression → recommend unilateral conversion as the highest-stimulus jump
+  return {
+    shouldProgress: true,
+    isAtCap: true,
+    recommendedStep: PROGRESSION_LADDER[3], // unilateral_convert
+    rationale:
+      "At equipment cap with earned progression. Standard load increase impossible — apply progression ladder.",
+  };
+}

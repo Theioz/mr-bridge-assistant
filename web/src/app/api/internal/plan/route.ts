@@ -78,53 +78,69 @@ export async function GET(request: NextRequest) {
     toDateStr,
   );
 
-  const [profileR, sessionsR, recoveryR, mealLogR, fitnessLogR, registryR, habitsR, priorPlansR] =
-    await Promise.allSettled([
-      db.from("profile").select("key,value").eq("user_id", uid),
-      db
-        .from("workout_sessions")
-        .select("date,activity,duration_mins,calories,avg_hr,notes")
-        .eq("user_id", uid)
-        .gte("date", pMon)
-        .lte("date", pSun)
-        .order("date"),
-      db
-        .from("recovery_metrics")
-        .select("date,readiness,sleep_score,total_sleep_hrs,avg_hrv,resting_hr")
-        .eq("user_id", uid)
-        .eq("source", "oura")
-        .gte("date", pMon)
-        .lte("date", pSun)
-        .order("date"),
-      db
-        .from("meal_log")
-        .select("date,meal_type,notes,recipe_id")
-        .eq("user_id", uid)
-        .gte("date", pMon)
-        .lte("date", pSun)
-        .order("date"),
-      db
-        .from("fitness_log")
-        .select("date,weight_lb,body_fat_pct,muscle_mass_lb,bmi")
-        .eq("user_id", uid)
-        .not("body_fat_pct", "is", null)
-        .order("date", { ascending: false })
-        .limit(2),
-      db.from("habit_registry").select("id,name").eq("active", true).eq("user_id", uid),
-      db
-        .from("habits")
-        .select("habit_id,date,completed")
-        .eq("user_id", uid)
-        .gte("date", pMon)
-        .lte("date", pSun),
-      db
-        .from("workout_plans")
-        .select("date,name,status,notes")
-        .eq("user_id", uid)
-        .gte("date", pMon)
-        .lte("date", pSun)
-        .order("date"),
-    ]);
+  const [
+    profileR,
+    sessionsR,
+    recoveryR,
+    mealLogR,
+    fitnessLogR,
+    registryR,
+    habitsR,
+    priorPlansR,
+    strengthSessionsR,
+  ] = await Promise.allSettled([
+    db.from("profile").select("key,value").eq("user_id", uid),
+    db
+      .from("workout_sessions")
+      .select("date,activity,duration_mins,calories,avg_hr,notes")
+      .eq("user_id", uid)
+      .gte("date", pMon)
+      .lte("date", pSun)
+      .order("date"),
+    db
+      .from("recovery_metrics")
+      .select("date,readiness,sleep_score,total_sleep_hrs,avg_hrv,resting_hr")
+      .eq("user_id", uid)
+      .eq("source", "oura")
+      .gte("date", pMon)
+      .lte("date", pSun)
+      .order("date"),
+    db
+      .from("meal_log")
+      .select("date,meal_type,notes,recipe_id")
+      .eq("user_id", uid)
+      .gte("date", pMon)
+      .lte("date", pSun)
+      .order("date"),
+    db
+      .from("fitness_log")
+      .select("date,weight_lb,body_fat_pct,muscle_mass_lb,bmi")
+      .eq("user_id", uid)
+      .not("body_fat_pct", "is", null)
+      .order("date", { ascending: false })
+      .limit(2),
+    db.from("habit_registry").select("id,name").eq("active", true).eq("user_id", uid),
+    db
+      .from("habits")
+      .select("habit_id,date,completed")
+      .eq("user_id", uid)
+      .gte("date", pMon)
+      .lte("date", pSun),
+    db
+      .from("workout_plans")
+      .select("date,name,status,notes")
+      .eq("user_id", uid)
+      .gte("date", pMon)
+      .lte("date", pSun)
+      .order("date"),
+    db
+      .from("strength_sessions")
+      .select("id,performed_on")
+      .eq("user_id", uid)
+      .gte("performed_on", pMon)
+      .lte("performed_on", pSun)
+      .order("performed_on"),
+  ]);
 
   const get = <T>(r: PromiseSettledResult<{ data: T[] | null }>): T[] =>
     r.status === "fulfilled" ? (r.value.data ?? []) : [];
@@ -137,6 +153,27 @@ export async function GET(request: NextRequest) {
   const registry = get<{ id: string; name: string }>(registryR);
   const habits = get<{ habit_id: string; date: string; completed: boolean }>(habitsR);
   const priorPlans = get<Record<string, unknown>>(priorPlansR);
+  const strengthSessions = get<{ id: string; performed_on: string }>(strengthSessionsR);
+
+  // Fetch set-level detail for strength sessions from prior week
+  interface StrengthSet {
+    session_id: string;
+    exercise_name: string;
+    set_number: number;
+    reps: number;
+    weight_kg: number | null;
+    rpe: number | null;
+  }
+  let strengthSets: StrengthSet[] = [];
+  if (strengthSessions.length > 0) {
+    const sessionIds = strengthSessions.map((s) => s.id);
+    const { data: setsData } = await db
+      .from("strength_session_sets")
+      .select("session_id,exercise_name,set_number,reps,weight_kg,rpe")
+      .in("session_id", sessionIds)
+      .order("set_number");
+    strengthSets = (setsData ?? []) as StrengthSet[];
+  }
 
   // Recipe names for meal log
   const recipeIds = [
@@ -206,6 +243,112 @@ export async function GET(request: NextRequest) {
     }
   } else {
     lines.push("No workout plans found for prior week.");
+  }
+
+  lines.push("\n## LAST WEEK'S EXERCISE PERFORMANCE (strength sessions)");
+  if (strengthSessions.length > 0 && strengthSets.length > 0) {
+    // Group sets by session, then by exercise
+    const sessionDateMap = Object.fromEntries(strengthSessions.map((s) => [s.id, s.performed_on]));
+
+    interface ExerciseAgg {
+      sets: number;
+      repsArr: number[];
+      weightsKg: number[];
+      rpeArr: number[];
+      forcedDeload: boolean;
+    }
+
+    // date → exercise → aggregated data
+    const byDateExercise: Record<string, Record<string, ExerciseAgg>> = {};
+
+    // Sort sets within each exercise to detect deloads
+    const setsByExercise: Record<string, StrengthSet[]> = {};
+    for (const set of strengthSets) {
+      const key = `${set.session_id}:::${set.exercise_name}`;
+      if (!setsByExercise[key]) setsByExercise[key] = [];
+      setsByExercise[key].push(set);
+    }
+
+    for (const [key, exSets] of Object.entries(setsByExercise)) {
+      const sessionId = key.split(":::")[0];
+      const exerciseName = key.split(":::")[1];
+      const date = sessionDateMap[sessionId];
+      if (!date) continue;
+
+      exSets.sort((a, b) => a.set_number - b.set_number);
+      const weights = exSets.map((s) => s.weight_kg).filter((w): w is number => w != null);
+      const repsArr = exSets.map((s) => s.reps).filter((r): r is number => r != null);
+      const rpeArr = exSets.map((s) => s.rpe).filter((r): r is number => r != null);
+
+      // Forced deload: weight decreases across sets within this exercise
+      const forcedDeload =
+        weights.length >= 2 && weights.some((w, i) => i > 0 && w < weights[i - 1]);
+
+      if (!byDateExercise[date]) byDateExercise[date] = {};
+      byDateExercise[date][exerciseName] = {
+        sets: exSets.length,
+        repsArr,
+        weightsKg: weights,
+        rpeArr,
+        forcedDeload,
+      };
+    }
+
+    const progressionFlags: string[] = [];
+
+    for (const date of Object.keys(byDateExercise).sort()) {
+      lines.push(`\n  ${date}:`);
+      for (const [exName, agg] of Object.entries(byDateExercise[date])) {
+        const avgRpe =
+          agg.rpeArr.length > 0
+            ? Math.round((agg.rpeArr.reduce((a, b) => a + b, 0) / agg.rpeArr.length) * 10) / 10
+            : null;
+        const maxRpe = agg.rpeArr.length > 0 ? Math.max(...agg.rpeArr) : null;
+        const avgReps =
+          agg.repsArr.length > 0
+            ? Math.round(agg.repsArr.reduce((a, b) => a + b, 0) / agg.repsArr.length)
+            : null;
+        const maxWeightKg = agg.weightsKg.length > 0 ? Math.max(...agg.weightsKg) : null;
+        const maxWeightLb = maxWeightKg != null ? Math.round(maxWeightKg * 2.2046) : null;
+
+        const repsStr = avgReps != null ? `×${avgReps}` : "";
+        const weightStr = maxWeightLb != null ? ` @ ${maxWeightLb} lb` : "";
+        const rpeStr = avgRpe != null ? `, avg RPE ${avgRpe}` : "";
+        const maxRpeStr = maxRpe != null && maxRpe !== avgRpe ? ` (max ${maxRpe})` : "";
+
+        const flags: string[] = [];
+        if (agg.forcedDeload) {
+          flags.push("FORCED DELOAD within session — pre-fatigue or overreaching");
+          progressionFlags.push(
+            `- ${exName} on ${date}: forced intra-session deload (sequencing issue)`,
+          );
+        }
+        if (avgRpe != null && avgRpe <= 7 && avgReps != null && avgReps >= 12) {
+          flags.push("UNDER-LOADED — consider progression ladder if at equipment cap");
+          progressionFlags.push(
+            `- ${exName} on ${date}: avg RPE ${avgRpe} at ${avgReps} reps — under-loaded`,
+          );
+        }
+        if (avgRpe != null && avgRpe >= 8.5 && maxRpe != null && maxRpe >= 9) {
+          flags.push("AT LIMIT — hold weight, do not increase");
+          progressionFlags.push(
+            `- ${exName} on ${date}: avg RPE ${avgRpe}, max RPE ${maxRpe} — at limit`,
+          );
+        }
+
+        const flagStr = flags.length > 0 ? ` [${flags.join("; ")}]` : "";
+        lines.push(
+          `  - ${exName}: ${agg.sets}${repsStr}${weightStr}${rpeStr}${maxRpeStr}${flagStr}`,
+        );
+      }
+    }
+
+    if (progressionFlags.length > 0) {
+      lines.push("\n  PROGRESSION FLAGS THIS WEEK:");
+      progressionFlags.forEach((f) => lines.push(`  ${f}`));
+    }
+  } else {
+    lines.push("No strength session data for prior week.");
   }
 
   lines.push("\n## RECOVERY — PRIOR WEEK");
