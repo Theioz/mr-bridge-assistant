@@ -274,6 +274,47 @@ claude .
 
 Mr. Bridge will sync fitness data, query Supabase, fetch your calendar and Gmail, and deliver the session briefing. On your very first run it will ask for your name if it isn't in the profile table yet.
 
+### Step 12 — Set up the weekly planning agent *(optional)*
+
+The weekly planning agent auto-generates your workout schedule and a meal prep task every Sunday. It runs on Claude's infrastructure — no local machine needed — and pushes a notification to your phone when the plan is ready.
+
+**How it works:**
+
+1. The scheduled agent runs `scripts/fetch_planning_data.py` to pull last week's workouts, recovery scores, meals, habits, and body composition from Supabase
+2. Claude reasons about the data and produces a structured workout + meal prep plan
+3. The agent pipes the plan to `scripts/write_week_plan.py`, which writes `workout_plans` rows (one per workout day) and a `tasks` row (meal prep checklist) to Supabase
+4. An ntfy.sh push notification fires on completion
+
+**Register the schedule:**
+
+In a Claude Code session in this repo, run:
+
+```
+/schedule
+```
+
+When prompted, provide:
+- **Task**: fetch prior-week data, reason about it, produce a JSON workout + meal prep plan, and pipe it to `python3 scripts/write_week_plan.py`
+- **Schedule**: weekly, Sunday at 8 PM (or your preferred time)
+- **Secrets**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OWNER_USER_ID`, `NTFY_TOPIC` (copy values from your root `.env`)
+
+These secrets are stored securely by the Claude Code platform and injected on every run.
+
+**Manual run (test / backfill):**
+
+```bash
+python3 scripts/fetch_planning_data.py    # verify prior-week context output
+echo '<json-plan>' | python3 scripts/write_week_plan.py   # write a plan manually
+```
+
+`write_week_plan.py` is idempotent: if `workout_plans` rows already exist for the coming Mon–Sun, it exits without writing.
+
+**Delivery log:**
+
+```bash
+tail -f ~/.mr-bridge/notify.log
+```
+
 ---
 
 ## Slash commands
