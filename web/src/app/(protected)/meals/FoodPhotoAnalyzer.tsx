@@ -501,9 +501,9 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
   // ── Library multi-select — up to 6 photos at once (#545) ─────────────────
   async function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (libraryInputRef.current) libraryInputRef.current.value = "";
     const remaining = 6 - items.length - pendingPhotos.length;
     const files = Array.from(e.target.files ?? []).slice(0, remaining);
+    if (libraryInputRef.current) libraryInputRef.current.value = "";
     if (files.length === 0) return;
 
     const heic = files.find(
