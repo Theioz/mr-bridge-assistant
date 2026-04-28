@@ -422,7 +422,7 @@ export function WeeklyWorkoutPlan({
                 </span>
                 <span
                   className="tnum"
-                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
                 >
                   {fmtShortDate(day.date)}
                 </span>
@@ -431,7 +431,7 @@ export function WeeklyWorkoutPlan({
                   style={{
                     marginLeft: "auto",
                     fontSize: "var(--t-micro)",
-                    color: "var(--color-text-faint)",
+                    color: "var(--color-text-muted)",
                     fontStyle: "italic",
                   }}
                 >
@@ -472,7 +472,7 @@ export function WeeklyWorkoutPlan({
                 </span>
                 <span
                   className="tnum"
-                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
                 >
                   {fmtShortDate(day.date)}
                 </span>
@@ -546,7 +546,7 @@ export function WeeklyWorkoutPlan({
                 </span>
                 <span
                   className="tnum"
-                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                  style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
                 >
                   {fmtShortDate(day.date)}
                 </span>
@@ -690,7 +690,7 @@ function TodayPip() {
         fontWeight: 600,
         letterSpacing: "0.14em",
         textTransform: "uppercase",
-        color: "var(--accent)",
+        color: "var(--accent-text)",
       }}
     >
       <span
