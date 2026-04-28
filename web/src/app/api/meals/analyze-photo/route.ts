@@ -105,10 +105,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // 4 MB backstop — Vercel's hard limit is 4.5 MB; client compresses first
-  const MAX_SIZE = 4 * 1024 * 1024;
+  // 10 MB safety net — client-side compression targets < 4.5 MB before upload
+  const MAX_SIZE = 10 * 1024 * 1024;
   if (imageFile.size > MAX_SIZE) {
-    return Response.json({ error: "Image must be under 4 MB" }, { status: 413 });
+    return Response.json({ error: "Image must be under 10 MB" }, { status: 413 });
   }
 
   // Read into memory — never stored, analyzed in-transit only

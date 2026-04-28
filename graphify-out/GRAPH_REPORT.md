@@ -1,7 +1,7 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-27)
 
 ## Corpus Check
-- 259 files · ~637,516 words
+- 259 files · ~638,092 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -962,12 +962,12 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 2`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Why does `createClient()` connect `Community 0` to `Community 2`, `Community 4`, `Community 38`, `Community 8`, `Community 46`, `Community 23`, `Community 25`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 2`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Why does `getUser()` connect `Community 0` to `Community 8`, `Community 2`, `Community 4`, `Community 23`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 101 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `AdminLayout()`) actually correct?**
   _`createClient()` has 101 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 80 inferred relationships involving `getUser()` (e.g. with `proxy()` and `GET@callback/route.ts`) actually correct?**
