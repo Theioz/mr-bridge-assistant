@@ -58,15 +58,6 @@ interface FailedPhoto {
   errorMsg: string;
 }
 
-// Fraction options for the per-item portion picker (#545).
-const FRACTIONS: { label: string; value: number }[] = [
-  { label: "¼", value: 0.25 },
-  { label: "⅓", value: 1 / 3 },
-  { label: "½", value: 0.5 },
-  { label: "¾", value: 0.75 },
-  { label: "All", value: 1 },
-];
-
 function roundOrDash(v: number | null, digits = 0): string {
   if (v === null) return "—";
   const m = 10 ** digits;
@@ -129,29 +120,36 @@ const pillBtnBase = {
   transition: "all var(--motion-fast) var(--ease-out-quart)",
 } as const;
 
-// Portion fraction pill picker — rendered inline in each item row (#545).
+// Portion slider — rendered inline in each item row (#554).
 function PortionPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const pct = Math.round(value * 100);
   return (
-    <div className="flex flex-wrap" style={{ gap: "var(--space-1)" }}>
-      {FRACTIONS.map((f) => {
-        const active = Math.abs(f.value - value) < 0.01;
-        return (
-          <button
-            key={f.label}
-            onClick={() => onChange(f.value)}
-            style={{
-              ...pillBtnBase,
-              background: active ? "var(--accent)" : "transparent",
-              color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
-              borderColor: active ? "var(--accent)" : "var(--rule)",
-              minWidth: 36,
-              textAlign: "center" as const,
-            }}
-          >
-            {f.label}
-          </button>
-        );
-      })}
+    <div className="flex items-center" style={{ gap: "var(--space-2)" }}>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={pct}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        aria-label="Portion size"
+        style={{
+          flex: 1,
+          accentColor: "var(--accent)",
+          cursor: "pointer",
+        }}
+      />
+      <span
+        className="tnum"
+        style={{
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          minWidth: 32,
+          textAlign: "right" as const,
+        }}
+      >
+        {pct}%
+      </span>
     </div>
   );
 }
