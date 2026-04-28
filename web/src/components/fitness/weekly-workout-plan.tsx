@@ -690,7 +690,7 @@ function TodayPip() {
         fontWeight: 600,
         letterSpacing: "0.14em",
         textTransform: "uppercase",
-        color: "var(--accent)",
+        color: "var(--accent-text)",
       }}
     >
       <span
