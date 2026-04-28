@@ -17,7 +17,7 @@ import {
 import InlineMealChat from "./InlineMealChat";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-type ScanPhase = "idle" | "loading" | "error" | "manual";
+type ScanPhase = "idle" | "error" | "manual";
 type AnalyzerMode = "food" | "label";
 
 export interface ScanItem {
@@ -43,7 +43,29 @@ export interface ScanItem {
   sugarManuallyEdited?: boolean;
   // User-supplied dish description at capture time (#371).
   user_context?: string;
+  // Fraction of the dish the user ate (0–1). Default 1.0 (#545).
+  portionFraction: number;
 }
+
+interface PendingPhoto {
+  tempId: string;
+  fileName: string;
+}
+
+interface FailedPhoto {
+  tempId: string;
+  file: File;
+  errorMsg: string;
+}
+
+// Fraction options for the per-item portion picker (#545).
+const FRACTIONS: { label: string; value: number }[] = [
+  { label: "¼", value: 0.25 },
+  { label: "⅓", value: 1 / 3 },
+  { label: "½", value: 0.5 },
+  { label: "¾", value: 0.75 },
+  { label: "All", value: 1 },
+];
 
 function roundOrDash(v: number | null, digits = 0): string {
   if (v === null) return "—";
@@ -57,7 +79,7 @@ function sumNullable(items: ScanItem[], field: "fiber_g" | "sugar_g"): number | 
   for (const it of items) {
     const v = it[field];
     if (v !== null && v !== undefined) {
-      sum += v;
+      sum += v * it.portionFraction;
       any = true;
     }
   }
@@ -106,6 +128,33 @@ const pillBtnBase = {
   border: "1px solid var(--rule)",
   transition: "all var(--motion-fast) var(--ease-out-quart)",
 } as const;
+
+// Portion fraction pill picker — rendered inline in each item row (#545).
+function PortionPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex flex-wrap" style={{ gap: "var(--space-1)" }}>
+      {FRACTIONS.map((f) => {
+        const active = Math.abs(f.value - value) < 0.01;
+        return (
+          <button
+            key={f.label}
+            onClick={() => onChange(f.value)}
+            style={{
+              ...pillBtnBase,
+              background: active ? "var(--accent)" : "transparent",
+              color: active ? "var(--color-text-on-cta)" : "var(--color-text-muted)",
+              borderColor: active ? "var(--accent)" : "var(--rule)",
+              minWidth: 36,
+              textAlign: "center" as const,
+            }}
+          >
+            {f.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function MacroLine({ item }: { item: ScanItem }) {
   const showNutrients = item.fiber_g !== null || item.sugar_g !== null;
@@ -209,6 +258,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [reestimatingId, setReestimatingId] = useState<string | null>(null);
 
+  // ── Per-photo batch state (#545) ─────────────────────────────────────────
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+  const [failedPhotos, setFailedPhotos] = useState<FailedPhoto[]>([]);
+
   // ── Manual entry state ───────────────────────────────────────────────────
   const [manualLabel, setManualLabel] = useState("");
   const [manualCal, setManualCal] = useState("");
@@ -234,13 +287,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const [userContext, setUserContext] = useState("");
   const scanCtaRef = useRef<HTMLDivElement>(null);
 
-  // ── Derived totals ────────────────────────────────────────────────────────
+  // ── Derived totals (scaled by per-item portionFraction, #545) ─────────────
   const combined = items.reduce(
     (acc, item) => ({
-      calories: acc.calories + item.calories,
-      protein_g: acc.protein_g + item.protein_g,
-      carbs_g: acc.carbs_g + item.carbs_g,
-      fat_g: acc.fat_g + item.fat_g,
+      calories: acc.calories + item.calories * item.portionFraction,
+      protein_g: acc.protein_g + item.protein_g * item.portionFraction,
+      carbs_g: acc.carbs_g + item.carbs_g * item.portionFraction,
+      fat_g: acc.fat_g + item.fat_g * item.portionFraction,
     }),
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
@@ -248,24 +301,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const combinedFiber = sumNullable(items, "fiber_g");
   const combinedSugar = sumNullable(items, "sugar_g");
 
-  function notifyUnsaved(newItems: ScanItem[]) {
-    onUnsavedItems?.(newItems.length);
-  }
+  // ── Unsaved count: completed items + in-flight analyses (#545) ────────────
+  useEffect(() => {
+    onUnsavedItems?.(items.length + pendingPhotos.length);
+  }, [items.length, pendingPhotos.length, onUnsavedItems]);
 
+  // ── Item helpers ─────────────────────────────────────────────────────────
   function addItem(item: ScanItem) {
-    setItems((prev) => {
-      const next = [...prev, item];
-      notifyUnsaved(next);
-      return next;
-    });
+    setItems((prev) => [...prev, item]);
   }
 
   function removeItem(id: string) {
-    setItems((prev) => {
-      const next = prev.filter((i) => i.id !== id);
-      notifyUnsaved(next);
-      return next;
-    });
+    setItems((prev) => prev.filter((i) => i.id !== id));
     if (expandedItemId === id) setExpandedItemId(null);
   }
 
@@ -275,7 +322,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
   function clearAll() {
     setItems([]);
-    notifyUnsaved([]);
+    setPendingPhotos([]);
+    setFailedPhotos([]);
     setActiveSheet(null);
   }
 
@@ -335,28 +383,22 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     });
   }
 
-  // ── Scan flow ─────────────────────────────────────────────────────────────
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (cameraInputRef.current) cameraInputRef.current.value = "";
-    if (libraryInputRef.current) libraryInputRef.current.value = "";
-
-    if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
-      setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
-      setScanPhase("error");
-      return;
-    }
-
-    setScanPhase("loading");
-
+  // ── Per-photo analysis — called once per file, compression included (#545) ─
+  async function analyzeOneFile(file: File, tempId: string) {
     let imageBlob: Blob;
     try {
       imageBlob = await compressImage(file);
     } catch {
       if (file.size > 4 * 1024 * 1024) {
-        setErrorMsg("Couldn't compress this photo. Try a smaller or lower-resolution image.");
-        setScanPhase("error");
+        setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
+        setFailedPhotos((prev) => [
+          ...prev,
+          {
+            tempId,
+            file,
+            errorMsg: "Couldn't compress this photo. Try a smaller or lower-resolution image.",
+          },
+        ]);
         return;
       }
       imageBlob = file;
@@ -380,8 +422,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
         if (data.mode === "label") {
           if (!data.readable) {
-            setErrorMsg("Label wasn't clear enough to read — try a better-lit photo.");
-            setScanPhase("error");
+            setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
+            setFailedPhotos((prev) => [
+              ...prev,
+              {
+                tempId,
+                file,
+                errorMsg: "Label wasn't clear enough to read — try a better-lit photo.",
+              },
+            ]);
             return;
           }
           addItem({
@@ -396,6 +445,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             sugar_g: data.sugar_g ?? null,
             sodium_mg: data.sodium_mg ?? undefined,
             user_context: trimmedContext || undefined,
+            portionFraction: 1,
           });
         } else {
           addItem({
@@ -411,9 +461,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             sodium_mg: data.sodium_mg ?? undefined,
             ingredients: data.ingredients ?? undefined,
             user_context: trimmedContext || undefined,
+            portionFraction: 1,
           });
         }
-        setScanPhase("idle");
+        setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
       } else {
         const text = await res.text();
         if (res.status === 413 || text.includes("Entity Too Large")) {
@@ -422,9 +473,60 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         throw new Error("Analysis failed");
       }
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Analysis failed");
-      setScanPhase("error");
+      const msg = err instanceof Error ? err.message : "Analysis failed";
+      setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
+      setFailedPhotos((prev) => [...prev, { tempId, file, errorMsg: msg }]);
     }
+  }
+
+  // ── Camera capture — single file at a time, up to 6 total (#545) ─────────
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (libraryInputRef.current) libraryInputRef.current.value = "";
+
+    if (items.length + pendingPhotos.length >= 6) return;
+
+    if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
+      setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
+      setScanPhase("error");
+      return;
+    }
+
+    const tempId = crypto.randomUUID();
+    setPendingPhotos((prev) => [...prev, { tempId, fileName: file.name }]);
+    await analyzeOneFile(file, tempId);
+  }
+
+  // ── Library multi-select — up to 6 photos at once (#545) ─────────────────
+  async function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (libraryInputRef.current) libraryInputRef.current.value = "";
+    const remaining = 6 - items.length - pendingPhotos.length;
+    const files = Array.from(e.target.files ?? []).slice(0, remaining);
+    if (files.length === 0) return;
+
+    const heic = files.find(
+      (f) => f.type === "image/heic" || f.name.toLowerCase().endsWith(".heic"),
+    );
+    if (heic) {
+      setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
+      setScanPhase("error");
+      return;
+    }
+
+    const batch = files.map((f) => ({ tempId: crypto.randomUUID(), fileName: f.name }));
+    setPendingPhotos((prev) => [...prev, ...batch]);
+    await Promise.allSettled(files.map((file, idx) => analyzeOneFile(file, batch[idx].tempId)));
+  }
+
+  // ── Retry a failed photo (#545) ───────────────────────────────────────────
+  function retryFailedPhoto(tempId: string) {
+    const entry = failedPhotos.find((f) => f.tempId === tempId);
+    if (!entry) return;
+    setFailedPhotos((prev) => prev.filter((f) => f.tempId !== tempId));
+    setPendingPhotos((prev) => [...prev, { tempId, fileName: entry.file.name }]);
+    analyzeOneFile(entry.file, tempId);
   }
 
   // ── Per-item re-estimation ────────────────────────────────────────────────
@@ -476,6 +578,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       fat_g: parseFloat(manualFat) || 0,
       fiber_g: null,
       sugar_g: null,
+      portionFraction: 1,
     });
     setManualLabel("");
     setManualCal("");
@@ -562,10 +665,16 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   function buildNutritionContext(): string {
     const lines = items
       .map((i) => {
-        const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
+        const f = i.portionFraction;
+        const pct = f < 1 ? ` (${Math.round(f * 100)}%)` : "";
+        const cal = Math.round(i.calories * f);
+        const p = Math.round(i.protein_g * f);
+        const c = Math.round(i.carbs_g * f);
+        const fat = Math.round(i.fat_g * f);
+        const base = `- ${i.label}${pct}: ${cal} cal, ${p}g P, ${c}g C, ${fat}g fat`;
         const extras: string[] = [];
-        if (i.fiber_g !== null) extras.push(`${roundOrDash(i.fiber_g, 1)}g fiber`);
-        if (i.sugar_g !== null) extras.push(`${roundOrDash(i.sugar_g, 1)}g sugar`);
+        if (i.fiber_g !== null) extras.push(`${roundOrDash(i.fiber_g * f, 1)}g fiber`);
+        if (i.sugar_g !== null) extras.push(`${roundOrDash(i.sugar_g * f, 1)}g sugar`);
         return extras.length ? `${base}, ${extras.join(", ")}` : base;
       })
       .join("\n");
@@ -617,13 +726,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
   const s = parseFloat(servings) || 1;
   const n = parseInt(containers) || 1;
+  const photoCapReached = items.length + pendingPhotos.length >= 6;
+  const hasPhotos = items.length > 0 || pendingPhotos.length > 0 || failedPhotos.length > 0;
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--space-4)" }}>
       {/* Mode toggle — always visible */}
       {ModeToggle}
 
-      {/* Hidden file inputs — camera and library */}
+      {/* Hidden file inputs — camera (single) and library (multi-select) */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -636,32 +747,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         ref={libraryInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
-        onChange={handleFileChange}
+        onChange={handleFilesChange}
       />
-
-      {/* ── LOADING overlay ─────────────────────────────────────────────── */}
-      {scanPhase === "loading" && (
-        <div
-          className="flex items-center"
-          style={{
-            gap: "var(--space-2)",
-            padding: "var(--space-2) var(--space-3)",
-            borderRadius: "var(--r-2)",
-            background: "transparent",
-            border: "1px solid var(--rule)",
-            color: "var(--color-text-muted)",
-            fontSize: "var(--t-meta)",
-          }}
-        >
-          <Loader2
-            size={15}
-            className="animate-spin"
-            style={{ color: "var(--accent)", flexShrink: 0 }}
-          />
-          Analyzing…
-        </div>
-      )}
 
       {/* ── ERROR / recovery panel ───────────────────────────────────────── */}
       {scanPhase === "error" && (
@@ -814,7 +903,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       )}
 
       {/* ── EMPTY STATE — dashed upload zone ─────────────────────────────── */}
-      {items.length === 0 && scanPhase === "idle" && (
+      {!hasPhotos && scanPhase === "idle" && (
         <div
           className="flex flex-col items-center"
           style={{
@@ -902,16 +991,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         </div>
       )}
 
-      {/* ── ITEM LIST ────────────────────────────────────────────────────── */}
-      {items.length > 0 && (
+      {/* ── ITEM LIST (completed + pending + failed) ──────────────────────── */}
+      {hasPhotos && (
         <div className="flex flex-col">
+          {/* Completed items */}
           {items.map((item, idx) => {
             const expanded = expandedItemId === item.id;
+            const isFirst = idx === 0;
             return (
               <div
                 key={item.id}
                 style={{
-                  borderTop: idx > 0 ? "1px solid var(--rule-soft)" : "none",
+                  borderTop: !isFirst ? "1px solid var(--rule-soft)" : "none",
                   padding: "var(--space-3) 0",
                 }}
               >
@@ -965,6 +1056,14 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                       <X size={14} />
                     </button>
                   </div>
+                </div>
+
+                {/* Portion picker — inline below name/macros (#545) */}
+                <div style={{ marginTop: "var(--space-2)" }}>
+                  <PortionPicker
+                    value={item.portionFraction}
+                    onChange={(v) => updateItem(item.id, { portionFraction: v })}
+                  />
                 </div>
 
                 {/* Expand: editable macros + fiber/sugar + optional ingredients + re-estimate */}
@@ -1134,8 +1233,104 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             );
           })}
 
-          {/* Add another scan */}
-          {scanPhase === "idle" && (
+          {/* In-flight analyses — per-photo loading rows */}
+          {pendingPhotos.map((p, idx) => (
+            <div
+              key={p.tempId}
+              style={{
+                borderTop: items.length > 0 || idx > 0 ? "1px solid var(--rule-soft)" : "none",
+                padding: "var(--space-3) 0",
+              }}
+            >
+              <div className="flex items-center" style={{ gap: "var(--space-2)" }}>
+                <Loader2
+                  size={13}
+                  className="animate-spin"
+                  style={{ color: "var(--accent)", flexShrink: 0 }}
+                />
+                <span
+                  style={{
+                    fontSize: "var(--t-body)",
+                    color: "var(--color-text-muted)",
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Analyzing {p.fileName}…
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Failed analyses — error rows with retry */}
+          {failedPhotos.map((f, idx) => (
+            <div
+              key={f.tempId}
+              style={{
+                borderTop:
+                  items.length > 0 || pendingPhotos.length > 0 || idx > 0
+                    ? "1px solid var(--rule-soft)"
+                    : "none",
+                padding: "var(--space-3) 0",
+              }}
+            >
+              <div className="flex items-start" style={{ gap: "var(--space-2)" }}>
+                <AlertCircle
+                  size={13}
+                  style={{ color: "var(--color-danger)", flexShrink: 0, marginTop: 2 }}
+                />
+                <span
+                  style={{
+                    fontSize: "var(--t-meta)",
+                    color: "var(--color-danger)",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {f.errorMsg}
+                </span>
+                <button
+                  onClick={() => retryFailedPhoto(f.tempId)}
+                  className="flex items-center transition-opacity active:opacity-70 flex-shrink-0"
+                  style={{
+                    gap: "var(--space-1)",
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-muted)",
+                    background: "none",
+                    border: "1px solid var(--rule)",
+                    borderRadius: "var(--r-2)",
+                    cursor: "pointer",
+                    padding: "var(--space-1) var(--space-2)",
+                  }}
+                >
+                  <RefreshCw size={11} />
+                  Retry
+                </button>
+                <button
+                  onClick={() =>
+                    setFailedPhotos((prev) => prev.filter((x) => x.tempId !== f.tempId))
+                  }
+                  className="transition-opacity active:opacity-70 flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-muted)",
+                    width: 28,
+                    height: 28,
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Add another scan — hidden when cap reached */}
+          {scanPhase === "idle" && !photoCapReached && (
             <div className="flex" style={{ gap: "var(--space-2)", paddingTop: "var(--space-3)" }}>
               <button
                 onClick={() => cameraInputRef.current?.click()}
@@ -1168,6 +1363,18 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                 From Library
               </button>
             </div>
+          )}
+          {photoCapReached && (
+            <p
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                paddingTop: "var(--space-3)",
+                textAlign: "center",
+              }}
+            >
+              Maximum 6 photos per session.
+            </p>
           )}
         </div>
       )}
