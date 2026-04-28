@@ -22,6 +22,13 @@ import {
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import { lastSyncStatus } from "@/lib/sync/log";
+import {
+  loadMetricPreferences,
+  saveMetricPreference,
+  METRIC_DEFAULTS,
+  type MetricCategory,
+  type MetricPreferences,
+} from "@/lib/metric-preferences";
 import type { SportsFavorite } from "@/lib/sync/sports";
 import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
 import { DataSettings } from "@/components/settings/data-settings";
@@ -159,6 +166,22 @@ async function removeEquipment(id: string) {
   revalidatePath("/settings");
 }
 
+async function saveMetricPreferences(prefs: Record<string, string>) {
+  "use server";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const db = createServiceClient();
+  await Promise.all(
+    Object.entries(prefs).map(([metric, source]) =>
+      saveMetricPreference(db, user.id, metric as MetricCategory, source),
+    ),
+  );
+  revalidatePath("/settings");
+}
+
 async function disconnectGoogle() {
   "use server";
   const supabase = await createClient();
@@ -240,7 +263,7 @@ async function SettingsContent({
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Wave 2 — all integration loads and sync statuses in parallel
+    // Wave 2 — all integration loads, sync statuses, and metric preferences in parallel
     const [
       googleIntegration,
       ouraIntegration,
@@ -248,6 +271,7 @@ async function SettingsContent({
       googleLastSync,
       ouraLastSync,
       fitbitLastSync,
+      metricPreferences,
     ] = await Promise.all([
       user ? loadIntegration(db, user.id, "google").catch((): null => null) : Promise.resolve(null),
       user ? loadIntegration(db, user.id, "oura").catch((): null => null) : Promise.resolve(null),
@@ -255,6 +279,11 @@ async function SettingsContent({
       lastSyncStatus(db, "google_fit").catch((): null => null),
       lastSyncStatus(db, "oura").catch((): null => null),
       lastSyncStatus(db, "fitbit").catch((): null => null),
+      user
+        ? loadMetricPreferences(db, user.id).catch(
+            (): MetricPreferences => ({ ...METRIC_DEFAULTS }),
+          )
+        : Promise.resolve<MetricPreferences>({ ...METRIC_DEFAULTS }),
     ]);
 
     return (
@@ -269,6 +298,8 @@ async function SettingsContent({
         fitbitIntegration={fitbitIntegration}
         disconnectFitbitAction={disconnectFitbit}
         fitbitLastSync={fitbitLastSync}
+        metricPreferences={metricPreferences}
+        saveMetricPreferencesAction={saveMetricPreferences}
         errorParam={params.error}
       />
     );

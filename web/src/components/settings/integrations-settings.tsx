@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { formatRelative } from "@/lib/relative-time";
 import type { SyncStatus } from "@/lib/sync/log";
+import type { MetricPreferences } from "@/lib/metric-preferences";
 
 interface Integration {
   connectedAt: string;
@@ -20,6 +21,8 @@ interface IntegrationsSettingsProps {
   fitbitIntegration: Integration | null;
   disconnectFitbitAction: () => Promise<void>;
   fitbitLastSync: SyncStatus | null;
+  metricPreferences: MetricPreferences;
+  saveMetricPreferencesAction: (prefs: Record<string, string>) => Promise<void>;
   errorParam?: string;
 }
 
@@ -205,16 +208,32 @@ export function IntegrationsSettings({
   fitbitIntegration,
   disconnectFitbitAction,
   fitbitLastSync,
+  metricPreferences,
+  saveMetricPreferencesAction,
   errorParam,
 }: IntegrationsSettingsProps) {
   const [googlePending, startGoogleTransition] = useTransition();
   const [ouraPending, startOuraTransition] = useTransition();
   const [fitbitPending, startFitbitTransition] = useTransition();
+  const [prefsPending, startPrefsTransition] = useTransition();
   const [ouraExpanded, setOuraExpanded] = useState(false);
   const [ouraToken, setOuraToken] = useState("");
   const [ouraSaving, setOuraSaving] = useState(false);
   const [ouraSync, setOuraSync] = useState<SyncStatus | null>(ouraLastSync ?? null);
   const [fitbitSync, setFitbitSync] = useState<SyncStatus | null>(fitbitLastSync ?? null);
+  const [localPrefs, setLocalPrefs] = useState<MetricPreferences>(metricPreferences);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+
+  function handlePrefChange(metric: keyof MetricPreferences, source: string) {
+    const updated = { ...localPrefs, [metric]: source };
+    setLocalPrefs(updated);
+    setPrefsSaved(false);
+    startPrefsTransition(async () => {
+      await saveMetricPreferencesAction({ [metric]: source });
+      setPrefsSaved(true);
+      setTimeout(() => setPrefsSaved(false), 2000);
+    });
+  }
 
   const errorMsg = errorParam ? ERROR_MESSAGES[errorParam] : null;
 
@@ -433,6 +452,8 @@ export function IntegrationsSettings({
           alignItems: "center",
           justifyContent: "space-between",
           gap: "var(--space-4)",
+          borderBottom: "1px solid var(--rule-soft)",
+          paddingBottom: "var(--space-4)",
         }}
       >
         <div style={labelColStyle}>
@@ -471,6 +492,139 @@ export function IntegrationsSettings({
             </a>
           )}
         </div>
+      </div>
+
+      {/* ── Data Sources ── */}
+      <div style={{ paddingTop: "var(--space-6)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-3)",
+            marginBottom: "var(--space-3)",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 600,
+              color: "var(--color-text)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Data Sources
+          </h3>
+          {prefsSaved && (
+            <span style={{ fontSize: "var(--t-micro)", color: "var(--color-positive)" }}>
+              Saved
+            </span>
+          )}
+          {prefsPending && (
+            <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
+              Saving…
+            </span>
+          )}
+        </div>
+        <p style={{ ...descStyle, marginBottom: "var(--space-4)" }}>
+          When multiple integrations provide the same data, choose which source the assistant reads.
+        </p>
+
+        {(
+          [
+            {
+              metric: "sleep" as const,
+              label: "Sleep",
+              desc: "Total sleep, stages, bedtime, efficiency",
+              options: [
+                ouraIntegration ? { value: "oura", label: "Oura" } : null,
+                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
+              ].filter(Boolean) as { value: string; label: string }[],
+            },
+            {
+              metric: "hrv" as const,
+              label: "HRV",
+              desc: "Average heart rate variability",
+              options: [
+                ouraIntegration ? { value: "oura", label: "Oura" } : null,
+                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
+              ].filter(Boolean) as { value: string; label: string }[],
+            },
+            {
+              metric: "steps" as const,
+              label: "Steps",
+              desc: "Daily step count",
+              options: [
+                ouraIntegration ? { value: "oura", label: "Oura" } : null,
+                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
+              ].filter(Boolean) as { value: string; label: string }[],
+            },
+            {
+              metric: "active_calories" as const,
+              label: "Active Calories",
+              desc: "Active calories burned",
+              options: [
+                ouraIntegration ? { value: "oura", label: "Oura" } : null,
+                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
+              ].filter(Boolean) as { value: string; label: string }[],
+            },
+            {
+              metric: "readiness" as const,
+              label: "Readiness",
+              desc: "Readiness score (Oura only)",
+              options: [ouraIntegration ? { value: "oura", label: "Oura" } : null].filter(
+                Boolean,
+              ) as { value: string; label: string }[],
+            },
+            {
+              metric: "body_composition" as const,
+              label: "Body Composition",
+              desc: "Weight, body fat, BMI",
+              options: [
+                fitbitIntegration ? { value: "fitbit_body", label: "Fitbit" } : null,
+                googleIntegration ? { value: "google_fit", label: "Google Fit" } : null,
+              ].filter(Boolean) as { value: string; label: string }[],
+            },
+          ] as const
+        ).map(({ metric, label, desc, options }) => (
+          <div key={metric} style={{ ...rowStyle, borderBottom: "1px solid var(--rule-soft)" }}>
+            <div style={labelColStyle}>
+              <span style={{ ...nameStyle, fontWeight: 400 }}>{label}</span>
+              <span style={descStyle}>{desc}</span>
+            </div>
+            <div style={actionColStyle}>
+              {options.length === 0 ? (
+                <span style={descStyle}>No source connected</span>
+              ) : options.length === 1 ? (
+                <span style={{ ...descStyle, color: "var(--color-text)" }}>{options[0].label}</span>
+              ) : (
+                <select
+                  value={localPrefs[metric]}
+                  disabled={prefsPending}
+                  onChange={(e) => handlePrefChange(metric, e.target.value)}
+                  style={{
+                    fontFamily: "var(--font-body), system-ui, sans-serif",
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text)",
+                    background: "var(--surface-raised, var(--surface))",
+                    border: "1px solid var(--rule)",
+                    borderRadius: "var(--r-1)",
+                    padding: "0 var(--space-3)",
+                    minHeight: 36,
+                    cursor: prefsPending ? "wait" : "pointer",
+                    opacity: prefsPending ? 0.6 : 1,
+                  }}
+                >
+                  {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
