@@ -279,8 +279,14 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     setActiveSheet(null);
   }
 
-  // ── Image compression (unchanged) ────────────────────────────────────────
+  // ── Image compression ────────────────────────────────────────────────────
+  // Skips canvas work for files already under 2 MB. For larger files, tries
+  // quality 0.82 first; if the result is still > 4.5 MB (rare, very detailed
+  // 4K photos) retries the same canvas at quality 0.70 — no re-decode needed.
   async function compressImage(file: File): Promise<Blob> {
+    const THRESHOLD = 2 * 1024 * 1024;
+    if (file.size <= THRESHOLD) return file;
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       const objectUrl = URL.createObjectURL(file);
@@ -305,11 +311,20 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
           (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error("Compression failed"));
+            if (!blob) return reject(new Error("Compression failed"));
+            if (blob.size <= 4.5 * 1024 * 1024) return resolve(blob);
+            // Pass 2: same canvas, lower quality for unusually detailed photos
+            canvas.toBlob(
+              (blob2) => {
+                if (blob2) resolve(blob2);
+                else reject(new Error("Compression failed"));
+              },
+              "image/jpeg",
+              0.7,
+            );
           },
           "image/jpeg",
-          0.85,
+          0.82,
         );
       };
       img.onerror = () => {
@@ -339,6 +354,11 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     try {
       imageBlob = await compressImage(file);
     } catch {
+      if (file.size > 4 * 1024 * 1024) {
+        setErrorMsg("Couldn't compress this photo. Try a smaller or lower-resolution image.");
+        setScanPhase("error");
+        return;
+      }
       imageBlob = file;
     }
 
