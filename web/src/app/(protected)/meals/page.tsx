@@ -8,6 +8,7 @@ import MealsClient, {
   type RecipeRow,
   type MacroGoals,
   type MacroTotals,
+  type DailyMacroTotals,
 } from "@/components/meals/MealsClient";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default async function MealsPage() {
     },
     { data: mealsData },
     { data: profileData },
+    { data: trendsData },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
@@ -36,6 +38,11 @@ export default async function MealsPage() {
       .order("date", { ascending: false })
       .order("meal_type", { ascending: true }),
     supabase.from("profile").select("key, value"),
+    supabase
+      .from("meal_log")
+      .select("date, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g")
+      .gte("date", daysAgoString(29))
+      .order("date", { ascending: true }),
   ]);
 
   // Wave 2 — recipes query needs user.id from Wave 1.
@@ -92,6 +99,61 @@ export default async function MealsPage() {
     sugar: macroSums.sugar != null ? Math.round(macroSums.sugar * 10) / 10 : null,
   };
 
+  // Aggregate meal_log rows into daily macro totals for the Trends tab.
+  // Fiber/sugar stay null when no meal that day reported them — "not tracked" != 0.
+  const trendAccum = new Map<
+    string,
+    {
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiberSum: number;
+      fiberAny: boolean;
+      sugarSum: number;
+      sugarAny: boolean;
+    }
+  >();
+  for (const row of trendsData ?? []) {
+    const key = row.date as string;
+    if (!trendAccum.has(key)) {
+      trendAccum.set(key, {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiberSum: 0,
+        fiberAny: false,
+        sugarSum: 0,
+        sugarAny: false,
+      });
+    }
+    const e = trendAccum.get(key)!;
+    e.calories += (row.calories as number | null) ?? 0;
+    e.protein += (row.protein_g as number | null) ?? 0;
+    e.carbs += (row.carbs_g as number | null) ?? 0;
+    e.fat += (row.fat_g as number | null) ?? 0;
+    if (row.fiber_g != null) {
+      e.fiberSum += row.fiber_g as number;
+      e.fiberAny = true;
+    }
+    if (row.sugar_g != null) {
+      e.sugarSum += row.sugar_g as number;
+      e.sugarAny = true;
+    }
+  }
+  const macroTrends: DailyMacroTotals[] = Array.from(trendAccum.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, e]) => ({
+      date,
+      calories: e.calories,
+      protein: Math.round(e.protein),
+      carbs: Math.round(e.carbs),
+      fat: Math.round(e.fat),
+      fiber: e.fiberAny ? Math.round(e.fiberSum * 10) / 10 : null,
+      sugar: e.sugarAny ? Math.round(e.sugarSum * 10) / 10 : null,
+    }));
+
   return (
     <div className="max-w-2xl">
       <div style={{ marginBottom: "var(--space-5)" }}>
@@ -115,6 +177,7 @@ export default async function MealsPage() {
         recipes={recipes}
         macroGoals={macroGoals}
         macroTotals={macroTotals}
+        macroTrends={macroTrends}
       />
     </div>
   );
