@@ -210,7 +210,7 @@ export default function BodyFitnessSummary({ fitnessData, trends }: Props) {
   const activeCalLatest = lastNonNull(recovery7, "active_cal");
 
   return (
-    <section className="db-section">
+    <section>
       <h2 className="db-section-label">
         Body &amp; Fitness<span className="meta">7-day average</span>
       </h2>

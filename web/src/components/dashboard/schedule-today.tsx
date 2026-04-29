@@ -41,7 +41,7 @@ export default function ScheduleToday() {
   }, []);
 
   return (
-    <section className="db-section">
+    <section>
       <h2 className="db-section-label">Schedule</h2>
 
       {loading ? (

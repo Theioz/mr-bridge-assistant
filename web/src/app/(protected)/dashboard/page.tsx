@@ -247,8 +247,15 @@ export default async function DashboardPage() {
     timeZone: USER_TZ,
   });
 
+  const rowStyle: React.CSSProperties = {
+    gap: "var(--space-7)",
+    paddingBottom: "var(--space-7)",
+    borderBottom: "1px solid var(--rule-soft)",
+  };
+  const rowStyleLast: React.CSSProperties = { gap: "var(--space-7)" };
+
   return (
-    <div className="space-y-6 print:flex print:flex-col">
+    <div className="flex flex-col print:flex-col" style={{ gap: "var(--space-7)" }}>
       {/* ── Masthead: brand + date + window selector + refresh (desktop) ── */}
       <div className="print:order-1" data-reveal data-stagger="0">
         <DashboardMasthead
@@ -325,20 +332,21 @@ export default async function DashboardPage() {
         <BodyFitnessSummary fitnessData={fitnessData} trends={recoveryTrends} />
       </div>
 
-      {/* ── Schedule today (full width) ──────────────────────────────── */}
-      <div className="print:order-2" data-reveal data-stagger="4">
+      {/* ── Row 1: Schedule + Inbox ──────────────────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2 print:order-2"
+        style={rowStyle}
+        data-reveal
+        data-stagger="4"
+      >
         <ScheduleToday />
+        <ImportantEmails />
       </div>
 
-      {/* ── Tasks + Habits: asymmetric 7/12 + 5/12 split ─────────────── */}
+      {/* ── Row 2: Tasks + Habits ────────────────────────────────────── */}
       <div
-        className="print:order-3"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: "var(--space-6)",
-        }}
-        data-revamp-split
+        className="grid grid-cols-1 lg:grid-cols-2 print:order-3"
+        style={rowStyle}
         data-reveal
         data-stagger="5"
       >
@@ -352,16 +360,12 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── Emails ───────────────────────────────────────────────────── */}
-      <div className="print:order-9" data-reveal data-stagger="6">
-        <ImportantEmails />
-      </div>
-
-      {/* ── Reference: Watchlist + Sports ────────────────────────────── */}
+      {/* ── Row 3: Watchlist + Sports (last row — no trailing rule) ──── */}
       <div
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:order-8"
+        className="grid grid-cols-1 lg:grid-cols-2 print:order-8"
+        style={rowStyleLast}
         data-reveal
-        data-stagger="7"
+        data-stagger="6"
       >
         <WatchlistWidget
           rows={stocksRows}
