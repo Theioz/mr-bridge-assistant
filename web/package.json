@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=3072' next dev --turbopack",
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096' node ../scripts/dev-watchdog.mjs --turbopack",
+    "dev:webpack": "NODE_OPTIONS='--max-old-space-size=4096' node ../scripts/dev-watchdog.mjs --webpack",
+    "dev:raw": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
