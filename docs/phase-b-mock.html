@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Phase B Mock</title>
+  <style>
+    :root {
+      --hue: 240;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-5: 24px; --space-6: 32px; --space-7: 48px;
+      --t-display: clamp(3.25rem, 4.5vw + 1.25rem, 4.5rem);
+      --t-h1: clamp(1.5rem, 1.2vw + 1.1rem, 1.875rem);
+      --t-body: 1rem;
+      --t-meta: 0.9375rem;
+      --t-micro: 0.8125rem;
+      --r-1: 4px;
+      /* Dark theme */
+      --color-bg:           oklch(15.5% 0.012 var(--hue));
+      --color-surface:      oklch(19%   0.015 var(--hue));
+      --color-surface-raised: oklch(22% 0.017 var(--hue));
+      --color-border:       oklch(28%   0.013 var(--hue));
+      --color-border-subtle:oklch(24%   0.013 var(--hue));
+      --color-text:         oklch(95%   0.006 var(--hue));
+      --color-text-muted:   oklch(78%   0.012 var(--hue));
+      --color-text-faint:   oklch(72%   0.014 var(--hue));
+      --accent:             oklch(74%   0.14  70);
+      --color-positive:     oklch(72%   0.15  155);
+      --color-danger:       oklch(70%   0.18  28);
+      --rule:               var(--color-border);
+      --rule-soft:          var(--color-border-subtle);
+    }
+    [data-theme="light"] {
+      --color-bg:           oklch(98.5% 0.005 var(--hue));
+      --color-surface:      oklch(96.5% 0.008 var(--hue));
+      --color-border:       oklch(88%   0.01  var(--hue));
+      --color-border-subtle:oklch(92%   0.008 var(--hue));
+      --color-text:         oklch(16%   0.02  var(--hue));
+      --color-text-muted:   oklch(30%   0.017 var(--hue));
+      --color-text-faint:   oklch(38%   0.014 var(--hue));
+      --accent:             oklch(62%   0.13  65);
+      --color-positive:     oklch(55%   0.11  155);
+      --color-danger:       oklch(58%   0.16  28);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+      font-size: var(--t-body);
+      line-height: 1.5;
+      padding: 24px 20px 80px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ─── */
+    .font-heading { font-family: Georgia, "Times New Roman", serif; }
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* ── Theme toggle ─── */
+    .theme-toggle {
+      position: fixed; top: 16px; right: 16px;
+      background: var(--color-surface-raised);
+      border: 1px solid var(--color-border-subtle);
+      color: var(--color-text-muted);
+      font-size: 12px; padding: 6px 12px; border-radius: var(--r-1);
+      cursor: pointer; z-index: 100;
+    }
+
+    /* ── Phase B layout ─── */
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-7);
+    }
+
+    /* Masthead */
+    .masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--t-micro);
+      letter-spacing: 0.02em;
+    }
+    .masthead-brand { font-weight: 600; font-size: var(--t-meta); color: var(--color-text); }
+    .masthead-right { display: flex; align-items: center; gap: var(--space-3); color: var(--color-text-faint); }
+    .window-pills { display: flex; gap: 6px; }
+    .window-pill {
+      font-size: 11px; padding: 3px 10px; border-radius: 99px;
+      background: transparent; border: 1px solid var(--color-border-subtle);
+      color: var(--color-text-faint); cursor: pointer;
+    }
+    .window-pill.active { background: var(--color-text); color: var(--color-bg); border-color: transparent; }
+
+    /* Greeting */
+    .greeting {
+      font-family: Georgia, serif;
+      font-size: var(--t-display);
+      line-height: 1.02;
+      letter-spacing: -0.025em;
+      font-weight: 400;
+      color: var(--color-text);
+    }
+
+    /* Briefing */
+    .briefing { color: var(--color-text-muted); font-size: var(--t-body); line-height: 1.55; }
+    .briefing strong { color: var(--color-text); font-weight: 500; }
+
+    /* ── Chart block (full-width, no fill) ─── */
+    .chart-placeholder {
+      height: 180px;
+      border: 1px dashed var(--color-border);
+      border-radius: var(--r-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-faint);
+      font-size: var(--t-micro);
+    }
+
+    /* ── Section label ─── */
+    .db-section-label {
+      font-size: var(--t-micro);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--color-text-faint);
+      margin: 0 0 var(--space-4);
+    }
+    .db-section-label .meta {
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      margin-left: var(--space-2);
+    }
+
+    /* ── Row ─── */
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-7);
+      padding-bottom: var(--space-7);
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .row.last {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    @media (min-width: 768px) {
+      .row { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Section (panel) ─── */
+    section { min-width: 0; }
+
+    /* ── List rows ─── */
+    .db-row {
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-3) 0;
+      border-top: 1px solid var(--rule-soft);
+      align-items: baseline;
+      font-size: var(--t-micro);
+    }
+    .db-row:first-child { border-top: none; }
+    .db-row.schedule { grid-template-columns: 4.5rem 1fr; }
+    .db-row.tasks    { grid-template-columns: 8px 1fr auto; align-items: center; }
+    .db-row.habits   { grid-template-columns: 8px 1fr auto; align-items: center; }
+    .db-row.inbox    { grid-template-columns: 8px 1fr auto; align-items: center; }
+    .db-row.stock    { grid-template-columns: 3rem 1fr auto; align-items: baseline; }
+    .db-row.sports   { grid-template-columns: 20px 1fr auto; align-items: center; }
+
+    .dot {
+      width: 6px; height: 6px; border-radius: 999px;
+      background: var(--color-text-faint); flex-shrink: 0;
+    }
+    .dot.high { background: var(--accent); }
+    .dot.done { background: var(--color-positive); }
+
+    .check-box {
+      width: 16px; height: 16px; border-radius: var(--r-1);
+      border: 1px solid var(--color-text-faint); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .check-box.checked { background: var(--accent); border-color: transparent; }
+    .check-box.checked::after { content: "✓"; font-size: 9px; color: oklch(18% 0.015 240); }
+
+    .text-faint { color: var(--color-text-faint); }
+    .text-muted { color: var(--color-text-muted); }
+    .text-accent { color: var(--accent); }
+    .text-positive { color: var(--color-positive); }
+    .text-danger { color: var(--color-danger); }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .strikethrough { text-decoration: line-through; color: var(--color-text-faint); }
+
+    /* ── Label ─── */
+    .badge {
+      font-size: 10px; padding: 1px 6px; border-radius: 3px;
+      background: var(--color-surface-raised); color: var(--color-text-faint);
+    }
+
+    /* Annotation callout */
+    .callout {
+      background: oklch(74% 0.14 70 / 0.12);
+      border-left: 3px solid var(--accent);
+      padding: 10px 14px;
+      border-radius: 0 var(--r-1) var(--r-1) 0;
+      font-size: var(--t-micro);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+    .callout strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+<button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'">Toggle theme</button>
+
+<div class="dashboard">
+
+  <!-- ── Masthead ─────────────────────────────────────────────── -->
+  <header class="masthead font-heading">
+    <span class="masthead-brand">Mr. Bridge</span>
+    <div class="masthead-right">
+      <span class="tnum text-faint" style="font-size:var(--t-micro)">Tuesday, April 29</span>
+      <div class="window-pills">
+        <button class="window-pill active">30D</button>
+        <button class="window-pill">90D</button>
+        <button class="window-pill">1Y</button>
+      </div>
+      <span class="text-faint" style="font-size:var(--t-micro)">↻ Refresh</span>
+    </div>
+  </header>
+
+  <!-- ── Greeting ───────────────────────────────────────────────── -->
+  <h1 class="greeting">Evening, Jason</h1>
+
+  <!-- ── Briefing ──────────────────────────────────────────────── -->
+  <p class="briefing">Currently <strong class="tnum">62°F</strong>, partly cloudy. High <strong class="tnum">68°F</strong>, low <strong class="tnum">51°F</strong>.</p>
+
+  <!-- ── Charts — full width, no card shell ─────────────────────── -->
+  <section>
+    <h2 class="db-section-label">Health breakdown <span class="meta">· readiness 82 · sleep 76 · HRV 54ms</span></h2>
+    <div class="chart-placeholder">[ HealthBreakdown chart — full width, no card shell ]</div>
+  </section>
+
+  <section>
+    <h2 class="db-section-label">Body &amp; fitness <span class="meta">· 30D trend</span></h2>
+    <div class="chart-placeholder" style="height:120px">[ BodyFitnessSummary chart — full width, no card shell ]</div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ROW 1: Schedule + Inbox — hairline below                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="row">
+
+    <!-- Schedule -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> flat section, no card wrapper. db-section-label + hairline rows.</div>
+      <h2 class="db-section-label">Schedule</h2>
+      <ul style="list-style:none">
+        <li class="db-row schedule">
+          <span class="tnum" style="font-weight:500">9:00 AM</span>
+          <span class="truncate">Standup · Engineering</span>
+        </li>
+        <li class="db-row schedule">
+          <span class="tnum" style="font-weight:500">12:30 PM</span>
+          <span class="truncate">Lunch with Marco</span>
+        </li>
+        <li class="db-row schedule">
+          <span class="tnum text-muted" style="font-weight:500">3:00 PM</span>
+          <span class="truncate text-muted">Design review <span class="text-faint" style="font-size:var(--t-micro)">· Zoom</span></span>
+        </li>
+        <li class="db-row schedule">
+          <span class="tnum text-faint" style="font-weight:500">5:30 PM</span>
+          <span class="truncate text-faint">Gym</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Inbox -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> db-section class removed; border moves to row wrapper.</div>
+      <h2 class="db-section-label">Inbox <span class="meta">· 2 unread</span></h2>
+      <ul style="list-style:none">
+        <li class="db-row inbox">
+          <span class="dot high" style="background:var(--accent)"></span>
+          <div style="min-width:0">
+            <div class="truncate">Q2 budget review — action required</div>
+            <div class="text-faint truncate" style="font-size:var(--t-micro)">finance@company.com</div>
+          </div>
+          <span class="tnum text-faint" style="font-size:var(--t-micro);white-space:nowrap">2:14 PM</span>
+        </li>
+        <li class="db-row inbox">
+          <span class="dot high" style="background:var(--accent)"></span>
+          <div style="min-width:0">
+            <div class="truncate">Invoice #4821 due Friday</div>
+            <div class="text-faint truncate" style="font-size:var(--t-micro)">billing@vendor.io · <span>work</span></div>
+          </div>
+          <span class="tnum text-faint" style="font-size:var(--t-micro);white-space:nowrap">Tue 4/28</span>
+        </li>
+      </ul>
+    </section>
+
+  </div><!-- /Row 1 -->
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ROW 2: Tasks + Habits — hairline below                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="row">
+
+    <!-- Tasks -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> already compliant — no change needed to component.</div>
+      <h2 class="db-section-label">Tasks <span class="meta">· 4 active</span></h2>
+      <ul style="list-style:none">
+        <li class="db-row tasks">
+          <span class="dot high"></span>
+          <span class="truncate">Finalize onboarding flow for SaaS launch</span>
+          <span class="tnum text-accent" style="font-size:var(--t-micro);white-space:nowrap">5/2</span>
+        </li>
+        <li class="db-row tasks">
+          <span class="dot high"></span>
+          <span class="truncate">Write docs for Supabase RLS policies</span>
+          <span class="tnum text-faint" style="font-size:var(--t-micro);white-space:nowrap">5/7</span>
+        </li>
+        <li class="db-row tasks">
+          <span class="dot"></span>
+          <span class="truncate">Review Phase B PR for habits page</span>
+          <span></span>
+        </li>
+        <li class="db-row tasks">
+          <span class="dot"></span>
+          <span class="truncate">Update weekly sync script to include new tables</span>
+          <span></span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Habits -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> already compliant — no change needed to component.</div>
+      <h2 class="db-section-label">Habits <span class="meta tnum">· 3/5</span></h2>
+      <ul style="list-style:none">
+        <li class="db-row habits">
+          <div class="check-box checked"></div>
+          <span class="strikethrough">Floss</span>
+          <span class="tnum text-muted" style="font-size:var(--t-micro)">14d</span>
+        </li>
+        <li class="db-row habits">
+          <div class="check-box checked"></div>
+          <span class="strikethrough">No alcohol</span>
+          <span class="tnum text-muted" style="font-size:var(--t-micro)">8d</span>
+        </li>
+        <li class="db-row habits">
+          <div class="check-box checked"></div>
+          <span class="strikethrough">Read 20 min</span>
+          <span class="tnum text-faint" style="font-size:var(--t-micro)">—</span>
+        </li>
+        <li class="db-row habits">
+          <div class="check-box"></div>
+          <span>Japanese study</span>
+          <span class="tnum text-faint" style="font-size:var(--t-micro)">3d</span>
+        </li>
+        <li class="db-row habits">
+          <div class="check-box"></div>
+          <span>Workout</span>
+          <span class="tnum text-faint" style="font-size:var(--t-micro)">—</span>
+        </li>
+      </ul>
+    </section>
+
+  </div><!-- /Row 2 -->
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ROW 3: Watchlist + Sports — LAST ROW, no hairline          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="row last">
+
+    <!-- Watchlist -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> already compliant — no change needed.</div>
+      <h2 class="db-section-label">Watchlist</h2>
+      <ul style="list-style:none">
+        <li class="db-row stock" style="grid-template-columns:3.5rem 1fr auto auto">
+          <span class="tnum" style="font-weight:500">AAPL</span>
+          <div style="width:60px;height:20px;display:inline-block">
+            <svg viewBox="0 0 60 20" width="60" height="20"><polyline points="0,15 10,12 20,14 30,8 40,10 50,6 60,9" fill="none" stroke="var(--color-text)" stroke-width="1.5"/></svg>
+          </div>
+          <span class="tnum">$189.30</span>
+          <span class="tnum text-positive" style="font-size:var(--t-micro)">+1.2%</span>
+        </li>
+        <li class="db-row stock" style="grid-template-columns:3.5rem 1fr auto auto">
+          <span class="tnum" style="font-weight:500">NVDA</span>
+          <div style="width:60px;height:20px;display:inline-block">
+            <svg viewBox="0 0 60 20" width="60" height="20"><polyline points="0,5 10,8 20,6 30,12 40,10 50,14 60,11" fill="none" stroke="var(--color-text)" stroke-width="1.5"/></svg>
+          </div>
+          <span class="tnum">$875.40</span>
+          <span class="tnum text-danger" style="font-size:var(--t-micro)">−2.8%</span>
+        </li>
+        <li class="db-row stock" style="grid-template-columns:3.5rem 1fr auto auto">
+          <span class="tnum" style="font-weight:500">BTC</span>
+          <div style="width:60px;height:20px;display:inline-block">
+            <svg viewBox="0 0 60 20" width="60" height="20"><polyline points="0,10 10,8 20,11 30,7 40,9 50,5 60,7" fill="none" stroke="var(--color-text)" stroke-width="1.5"/></svg>
+          </div>
+          <span class="tnum">$62,400</span>
+          <span class="tnum text-positive" style="font-size:var(--t-micro)">+0.4%</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Sports -->
+    <section>
+      <div class="callout"><strong>Phase B:</strong> already compliant — no change needed.</div>
+      <h2 class="db-section-label">Sports</h2>
+      <ul style="list-style:none">
+        <li class="db-row sports" style="grid-template-columns:20px 1fr auto">
+          <span style="font-size:16px">⚽</span>
+          <div style="min-width:0">
+            <div style="font-weight:500;font-size:var(--t-micro)">LAFC</div>
+            <div class="text-faint truncate" style="font-size:11px">vs Portland · Wed 5/1 7:30 PM</div>
+          </div>
+          <span class="text-positive" style="font-size:var(--t-micro);white-space:nowrap">W 2–0</span>
+        </li>
+        <li class="db-row sports" style="grid-template-columns:20px 1fr auto">
+          <span style="font-size:16px">🏀</span>
+          <div style="min-width:0">
+            <div style="font-weight:500;font-size:var(--t-micro)">Lakers</div>
+            <div class="text-faint truncate" style="font-size:11px">@ Golden State · Thu 5/2 10:00 PM</div>
+          </div>
+          <span class="text-danger" style="font-size:var(--t-micro);white-space:nowrap">L 108–114</span>
+        </li>
+      </ul>
+    </section>
+
+  </div><!-- /Row 3 -->
+
+</div><!-- /dashboard -->
+</body>
+</html>

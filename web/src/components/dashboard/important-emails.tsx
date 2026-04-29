@@ -25,7 +25,7 @@ export default function ImportantEmails() {
   }, []);
 
   return (
-    <section className="db-section">
+    <section>
       <h2 className="db-section-label">Inbox</h2>
 
       {loading ? (
