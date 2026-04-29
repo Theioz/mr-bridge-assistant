@@ -1,7 +1,7 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-04-29)
 
 ## Corpus Check
-- 265 files · ~651,314 words
+- 265 files · ~651,321 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -967,12 +967,12 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 3`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **Why does `createClient()` connect `Community 0` to `Community 3`, `Community 4`, `Community 38`, `Community 46`, `Community 27`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Why does `getUser()` connect `Community 0` to `Community 3`, `Community 4`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 3`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 101 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `AdminLayout()`) actually correct?**
   _`createClient()` has 101 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 80 inferred relationships involving `getUser()` (e.g. with `proxy()` and `GET@callback/route.ts`) actually correct?**

@@ -17,6 +17,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Pin Turbopack's workspace root to this directory (web/).
+  // Without this, Turbopack walks up to the repo root (which has its own
+  // package-lock.json) and tries to resolve modules from there — causing
+  // spurious "Can't resolve 'tailwindcss'" errors and wasted resolution work.
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       {
