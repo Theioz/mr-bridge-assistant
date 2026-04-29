@@ -154,7 +154,7 @@ export default async function HabitsPage() {
             className="tnum"
             style={{
               marginTop: "var(--space-1)",
-              fontSize: "var(--t-micro)",
+              fontSize: "var(--t-meta)",
               color: "var(--color-text-muted)",
             }}
           >
@@ -181,9 +181,9 @@ export default async function HabitsPage() {
 
       {habits.length > 0 && (
         <>
-          {/* Charts: Radial (1/3) + Momentum (2/3) */}
+          {/* Stats 2-col: Weekly Completion + Streaks */}
           <section
-            className="grid grid-cols-1 lg:grid-cols-3"
+            className="grid grid-cols-1 lg:grid-cols-2"
             style={{
               gap: "var(--space-7)",
               paddingTop: "var(--space-6)",
@@ -191,15 +191,11 @@ export default async function HabitsPage() {
               borderBottom: "1px solid var(--rule-soft)",
             }}
           >
-            <div>
-              <RadialCompletion habits={habits} weekLogs={weekLogs} />
-            </div>
-            <div className="lg:col-span-2">
-              <MomentumLine habits={habits} allCompleted={allCompleted} today={today} />
-            </div>
+            <RadialCompletion habits={habits} weekLogs={weekLogs} />
+            <LongestChainBadges habits={habits} streaks={streaks} />
           </section>
 
-          {/* Streaks — current + personal best per habit */}
+          {/* Momentum — full-width */}
           <section
             style={{
               paddingTop: "var(--space-6)",
@@ -207,7 +203,7 @@ export default async function HabitsPage() {
               borderBottom: "1px solid var(--rule-soft)",
             }}
           >
-            <LongestChainBadges habits={habits} streaks={streaks} />
+            <MomentumLine habits={habits} allCompleted={allCompleted} today={today} />
           </section>
 
           {/* History grid */}
