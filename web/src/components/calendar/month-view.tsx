@@ -30,7 +30,7 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   other: { bg: "oklch(30% 0.04 var(--hue) / 0.3)", text: "var(--color-text-muted)" },
 };
 
-const MAX_VISIBLE = 3;
+const MAX_VISIBLE = 2;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ export default function MonthView({
           gridAutoRows: "1fr",
           flex: 1,
           minHeight: 0,
-          overflow: "auto",
+          overflow: "hidden",
         }}
       >
         {days.map((day, idx) => {
@@ -97,7 +97,7 @@ export default function MonthView({
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
-                minHeight: 80,
+                overflow: "hidden",
                 background: isWeekend ? "var(--color-surface)" : "transparent",
               }}
             >
@@ -140,6 +140,7 @@ export default function MonthView({
                 return (
                   <button
                     key={e.eventId}
+                    title={e.title}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       onEventClick(e);
