@@ -47,6 +47,7 @@ interface SparklinePoint {
 }
 
 type SessionWithSets = StrengthSession & { sets: StrengthSessionSet[] };
+type Tab = "overview" | "workouts" | "records";
 
 interface Props {
   weeklyPlans: WorkoutPlan[];
@@ -75,7 +76,6 @@ interface Props {
   restTimerEnabled: boolean;
 }
 
-// Section label + optional scrollable content area
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="db-section-label" style={{ flexShrink: 0 }}>
@@ -83,6 +83,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     </h2>
   );
 }
+
+const sectionStyle: React.CSSProperties = {
+  paddingBottom: "var(--space-7)",
+  borderBottom: "1px solid var(--rule-soft)",
+};
 
 export function FitnessClient({
   weeklyPlans,
@@ -111,6 +116,7 @@ export function FitnessClient({
   restTimerEnabled,
 }: Props) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   const prsByExercise: Record<string, ExercisePR> = {};
   for (const pr of exercisePRs) {
@@ -142,86 +148,127 @@ export function FitnessClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMissingDescriptions]);
 
-  const rowStyle: React.CSSProperties = {
-    gap: "var(--space-7)",
-    paddingBottom: "var(--space-7)",
-    borderBottom: "1px solid var(--rule-soft)",
-  };
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "workouts", label: "This Week's Workouts" },
+    { id: "records", label: "Records" },
+  ];
 
   return (
-    <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
-      {/* ── Row 1: Body composition + Activity ─────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
-        <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-          <SectionLabel>Body composition</SectionLabel>
-          <BodyCompTrends
-            data={fitnessData}
-            windowKey={windowKey}
-            weightGoal={weightGoal}
-            bodyFatGoal={bodyFatGoal}
-          />
-        </section>
-        <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-          <SectionLabel>Activity</SectionLabel>
-          <ActivityTrends
-            sessions={allWorkouts.filter((w) => !/walk/i.test(w.activity))}
-            recovery={activeCalWindow}
-            days={days}
-            weeklyWorkoutGoal={weeklyWorkoutGoal}
-            weeklyActiveCalGoal={weeklyActiveCalGoal}
-            walkCount={walkCount}
-            walkDuration={walkDuration}
-          />
-        </section>
-      </div>
-
-      {/* ── Row 2: Recovery + Personal records ─────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
-        <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-          <SectionLabel>Recovery</SectionLabel>
-          <RecoveryTrends trends={recoveryAll} />
-        </section>
-        <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-          <SectionLabel>Personal records</SectionLabel>
-          {exercisePRs.length > 0 ? (
-            <PersonalRecords prs={exercisePRs} unit={weightUnit} />
-          ) : (
-            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)", margin: 0 }}>
-              No PRs logged yet.
-            </p>
-          )}
-        </section>
-      </div>
-
-      {/* ── Row 3: Workout program (full-width) ─────────────────────── */}
-      <section
-        className="flex flex-col"
+    <div className="flex flex-col" style={{ gap: "var(--space-5)" }}>
+      {/* ── Tab bar ── */}
+      <div
         style={{
-          gap: "var(--space-3)",
-          minWidth: 0,
-          paddingBottom: "var(--space-7)",
+          display: "flex",
           borderBottom: "1px solid var(--rule-soft)",
+          gap: 0,
         }}
       >
-        <SectionLabel>This week</SectionLabel>
-        <WeeklyWorkoutPlan
-          plans={weeklyPlans}
-          completedDates={completedDates}
-          todaySession={todaySession}
-          todaySets={todaySets}
-          weightUnit={weightUnit}
-          cancelAction={cancelAction}
-          prsByExercise={prsByExercise}
-          restTimerEnabled={restTimerEnabled}
-        />
-      </section>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              background: "none",
+              border: "none",
+              borderBottom:
+                activeTab === tab.id ? "2px solid var(--color-amber)" : "2px solid transparent",
+              marginBottom: "-1px",
+              padding: "var(--space-3) var(--space-5)",
+              fontSize: "var(--t-small)",
+              fontWeight: activeTab === tab.id ? 600 : 400,
+              color: activeTab === tab.id ? "var(--color-text)" : "var(--color-text-faint)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* ── Row 4: Top exercises + Recent sessions ──────────────────── */}
-      {(topExercises.length > 0 || recentSessions.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
+      {/* ══ Overview tab ══ */}
+      {activeTab === "overview" && (
+        <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
+          {/* Body Composition — full-width */}
+          <section className="flex flex-col" style={{ ...sectionStyle, gap: "var(--space-3)" }}>
+            <SectionLabel>Body Composition</SectionLabel>
+            <BodyCompTrends
+              data={fitnessData}
+              windowKey={windowKey}
+              weightGoal={weightGoal}
+              bodyFatGoal={bodyFatGoal}
+            />
+          </section>
+
+          {/* Activity — full-width */}
+          <section className="flex flex-col" style={{ ...sectionStyle, gap: "var(--space-3)" }}>
+            <SectionLabel>Activity</SectionLabel>
+            <ActivityTrends
+              sessions={allWorkouts.filter((w) => !/walk/i.test(w.activity))}
+              recovery={activeCalWindow}
+              days={days}
+              weeklyWorkoutGoal={weeklyWorkoutGoal}
+              weeklyActiveCalGoal={weeklyActiveCalGoal}
+              walkCount={walkCount}
+              walkDuration={walkDuration}
+            />
+          </section>
+
+          {/* Recovery — full-width */}
+          <section className="flex flex-col" style={{ ...sectionStyle, gap: "var(--space-3)" }}>
+            <SectionLabel>Recovery</SectionLabel>
+            <RecoveryTrends trends={recoveryAll} />
+          </section>
+
+          {/* Recent Sessions */}
+          {recentSessions.length > 0 && (
+            <section className="flex flex-col" style={{ gap: "var(--space-3)" }}>
+              <SectionLabel>Recent Sessions</SectionLabel>
+              <RecentSessionsList sessions={recentSessions} unit={weightUnit} />
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* ══ This Week's Workouts tab ══ */}
+      {activeTab === "workouts" && (
+        <section className="flex flex-col" style={{ gap: "var(--space-3)" }}>
+          <WeeklyWorkoutPlan
+            plans={weeklyPlans}
+            completedDates={completedDates}
+            todaySession={todaySession}
+            todaySets={todaySets}
+            weightUnit={weightUnit}
+            cancelAction={cancelAction}
+            prsByExercise={prsByExercise}
+            restTimerEnabled={restTimerEnabled}
+          />
+        </section>
+      )}
+
+      {/* ══ Records tab ══ */}
+      {activeTab === "records" && (
+        <div className="flex flex-col" style={{ gap: "var(--space-7)" }}>
+          {/* Personal Records */}
+          <section className="flex flex-col" style={{ ...sectionStyle, gap: "var(--space-3)" }}>
+            <SectionLabel>Personal Records</SectionLabel>
+            {exercisePRs.length > 0 ? (
+              <PersonalRecords prs={exercisePRs} unit={weightUnit} />
+            ) : (
+              <p
+                style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)", margin: 0 }}
+              >
+                No PRs logged yet.
+              </p>
+            )}
+          </section>
+
+          {/* Top Exercises */}
           {topExercises.length > 0 && (
-            <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-              <SectionLabel>Top exercises</SectionLabel>
+            <section className="flex flex-col" style={{ gap: "var(--space-3)" }}>
+              <SectionLabel>Top Exercises</SectionLabel>
               <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--space-5)" }}>
                 {topExercises.map((ex) => (
                   <ExerciseSparkline
@@ -234,20 +281,8 @@ export function FitnessClient({
               </div>
             </section>
           )}
-          {recentSessions.length > 0 && (
-            <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-              <SectionLabel>Recent sessions</SectionLabel>
-              <RecentSessionsList sessions={recentSessions} unit={weightUnit} />
-            </section>
-          )}
         </div>
       )}
-
-      {/* ── Row 5: Full workout history (full-width) ─────────────────── */}
-      <section className="flex flex-col" style={{ gap: "var(--space-3)", minWidth: 0 }}>
-        <SectionLabel>All workouts</SectionLabel>
-        <WorkoutHistoryTable workouts={allWorkouts} />
-      </section>
     </div>
   );
 }
