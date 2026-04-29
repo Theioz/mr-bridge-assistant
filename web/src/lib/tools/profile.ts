@@ -27,7 +27,8 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
       description:
         "Upsert one or more profile key/value pairs. Use when the user explicitly agrees to save a goal, preference, or personal target. " +
         "For known fitness/nutrition goals use the canonical flat keys (weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, " +
-        "weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal) so they surface in the web UI. " +
+        "weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal, " +
+        "goal_phase [cut|bulk|maintain|recomp]) so they surface in the web UI. " +
         "For other goals use dot-notation (sleep.goal.hrs, study.goal.mins_per_day, etc.). " +
         "Always tell the user what you are about to write before calling this tool, then confirm each key that was saved.",
       inputSchema: jsonSchema<{ updates: { key: string; value: string }[] }>({

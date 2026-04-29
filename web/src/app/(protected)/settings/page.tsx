@@ -345,6 +345,7 @@ async function SettingsContent({
           proactivityEnabled={values["proactivity_enabled"] !== "0"}
           updateAction={updateProfile}
           initialFitnessGoal={values["fitness_goal"] ?? ""}
+          initialGoalPhase={values["goal_phase"] ?? ""}
           initialFitnessLevel={values["fitness_level"] ?? ""}
           initialWorkoutDaysPerWeek={values["workout_days_per_week"] ?? ""}
           initialWorkoutPrefs={JSON.parse(values["workout_preferences"] ?? "[]") as string[]}

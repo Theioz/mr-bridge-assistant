@@ -10,6 +10,13 @@ const FITNESS_GOALS = [
   { id: "general_fitness", label: "General fitness" },
 ];
 
+const GOAL_PHASES = [
+  { id: "cut", label: "Cut", description: "Lose fat" },
+  { id: "bulk", label: "Bulk", description: "Gain muscle" },
+  { id: "maintain", label: "Maintain", description: "Hold weight" },
+  { id: "recomp", label: "Recomp", description: "Lose fat & gain muscle" },
+];
+
 const FITNESS_LEVELS = [
   { id: "beginner", label: "Beginner", description: "< 1 year" },
   { id: "intermediate", label: "Intermediate", description: "1–3 years" },
@@ -45,6 +52,7 @@ interface Props {
   proactivityEnabled: boolean;
   updateAction: (key: string, value: string) => Promise<void>;
   initialFitnessGoal: string;
+  initialGoalPhase: string;
   initialFitnessLevel: string;
   initialWorkoutDaysPerWeek: string;
   initialWorkoutPrefs: string[];
@@ -57,6 +65,7 @@ export function FitnessSettings({
   proactivityEnabled,
   updateAction,
   initialFitnessGoal,
+  initialGoalPhase,
   initialFitnessLevel,
   initialWorkoutDaysPerWeek,
   initialWorkoutPrefs,
@@ -69,6 +78,7 @@ export function FitnessSettings({
   const [, startSaveTransition] = useTransition();
 
   const [fitnessGoal, setFitnessGoal] = useState(initialFitnessGoal);
+  const [goalPhase, setGoalPhase] = useState(initialGoalPhase);
   const [fitnessLevel, setFitnessLevel] = useState(initialFitnessLevel);
   const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(initialWorkoutDaysPerWeek);
   const [workoutPrefs, setWorkoutPrefs] = useState<string[]>(initialWorkoutPrefs);
@@ -92,6 +102,14 @@ export function FitnessSettings({
     setFitnessGoal(next);
     startGoalTransition(() => {
       updateAction("fitness_goal", next);
+    });
+  }
+
+  function handleGoalPhaseSelect(id: string) {
+    const next = goalPhase === id ? "" : id;
+    setGoalPhase(next);
+    startGoalTransition(() => {
+      updateAction("goal_phase", next);
     });
   }
 
@@ -327,6 +345,32 @@ export function FitnessSettings({
                   style={chipStyle(fitnessGoal === g.id)}
                 >
                   {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={subLabelStyle}>Goal phase</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {GOAL_PHASES.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleGoalPhaseSelect(p.id)}
+                  style={chipStyle(goalPhase === p.id)}
+                >
+                  <span style={{ fontWeight: 600 }}>{p.label}</span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "var(--t-micro)",
+                      fontWeight: 400,
+                      opacity: 0.8,
+                      marginTop: 2,
+                    }}
+                  >
+                    {p.description}
+                  </span>
                 </button>
               ))}
             </div>
