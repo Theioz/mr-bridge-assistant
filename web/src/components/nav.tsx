@@ -34,7 +34,7 @@ const NAV_ITEMS = [
   { href: "/weekly", label: "Weekly", icon: BarChart2 },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/journal", label: "Journal", icon: BookOpen },
-  { href: "/backlog", label: "Backlog", icon: Library },
+  { href: "/library", label: "Library", icon: Library },
   { href: "/meals", label: "Meals", icon: UtensilsCrossed },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },

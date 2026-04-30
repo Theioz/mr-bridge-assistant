@@ -15,6 +15,10 @@ export async function searchOpenLibrary(query: string): Promise<MetadataSearchRe
       const workKey = (doc.key ?? "").replace("/works/", "");
       const coverId = doc.cover_i;
       const coverUrl = coverId ? `${OL_COVERS}/${coverId}-M.jpg` : "";
+      // Keep subjects short and simple (skip long compound subjects)
+      const genres = ((doc.subject ?? []) as string[])
+        .filter((s) => s.length < 25 && !s.includes(" / "))
+        .slice(0, 4);
 
       return {
         external_id: workKey,
@@ -28,6 +32,7 @@ export async function searchOpenLibrary(query: string): Promise<MetadataSearchRe
           page_count: doc.number_of_pages_median ?? undefined,
           isbn: (doc.isbn ?? [])[0] ?? undefined,
           publisher: (doc.publisher ?? [])[0] ?? undefined,
+          genres,
           ol_url: workKey ? `https://openlibrary.org/works/${workKey}` : undefined,
         },
       };
@@ -64,6 +69,7 @@ async function searchGoogleBooks(query: string): Promise<MetadataSearchResult[]>
         (info.industryIdentifiers ?? []).find(
           (i: { type: string }) => i.type === "ISBN_13" || i.type === "ISBN_10",
         )?.identifier ?? undefined;
+      const genres = ((info.categories ?? []) as string[]).slice(0, 4);
 
       return {
         external_id: item.id ?? "",
@@ -81,6 +87,7 @@ async function searchGoogleBooks(query: string): Promise<MetadataSearchResult[]>
           page_count: info.pageCount ?? undefined,
           isbn,
           publisher: info.publisher ?? undefined,
+          genres,
         },
       };
     },

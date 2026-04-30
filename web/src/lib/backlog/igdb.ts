@@ -58,6 +58,10 @@ export async function searchIgdb(query: string): Promise<MetadataSearchResult[]>
         : null;
       const coverUrl = g.cover?.image_id ? `${COVER_URL}/${g.cover.image_id}.jpg` : "";
       const platform = (g.platforms ?? []).map((p: { name: string }) => p.name).join(", ");
+      const genres = (g.genres ?? [])
+        .map((genre: { name: string }) => genre.name)
+        .filter(Boolean)
+        .slice(0, 4) as string[];
 
       return {
         external_id: String(g.id),
@@ -69,7 +73,7 @@ export async function searchIgdb(query: string): Promise<MetadataSearchResult[]>
         cover_url: coverUrl,
         metadata: {
           platform: platform || undefined,
-          genre: (g.genres ?? [])[0]?.name ?? undefined,
+          genres,
           igdb_url: `https://www.igdb.com/games/${(g.name ?? "").toLowerCase().replace(/\s+/g, "-")}`,
         },
       };

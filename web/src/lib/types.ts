@@ -266,7 +266,7 @@ export type BacklogStatus = "backlog" | "active" | "paused" | "finished" | "drop
 
 export interface GameMetadata {
   platform?: string;
-  genre?: string;
+  genres?: string[];
   igdb_url?: string;
 }
 
@@ -274,19 +274,21 @@ export interface ShowMetadata {
   episode_count?: number;
   season_count?: number;
   network?: string;
+  genres?: string[];
   tmdb_url?: string;
 }
 
 export interface MovieMetadata {
   runtime_minutes?: number;
+  genres?: string[];
   tmdb_url?: string;
-  genre?: string;
 }
 
 export interface BookMetadata {
   page_count?: number;
   isbn?: string;
   publisher?: string;
+  genres?: string[];
   ol_url?: string;
 }
 
