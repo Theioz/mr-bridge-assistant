@@ -232,10 +232,10 @@ When an exercise has been performed at the user's equipment cap at avg RPE ≤ 8
 Always surface the rationale: "Held 25 lb Goblet Squat at RPE 6 for 3 sessions — converting to Bulgarian Split Squat (same DB, ~2× effective stimulus)."
 
 PROGRESSION RULES (use LAST WEEK'S EXERCISE PERFORMANCE data):
-- If last 2 sessions hit top-of-range reps at prescribed weight → suggest +2.5 kg upper-body / +5 kg lower-body, subject to equipment cap
+- If last 2 sessions hit top-of-range reps at prescribed weight → suggest +5 lb upper-body compound / +10 lb lower-body compound / +2.5–5 lb isolation (lateral raises, curls, flies), subject to equipment cap
 - If RPE ≥ 9 on working sets for 2+ sessions → hold weight
 - If target reps missed 2 sessions in a row → 10% deload
-- If no progression across 4+ sessions → variation swap
+- If no progression across 4+ sessions → first adjust rep scheme (e.g. 3×10 → 4×8) or add tempo/pause; only swap variation if still flat after that
 - Never count cancelled sessions in progression analysis
 - Surface the evidence in notes for every progression decision
 
