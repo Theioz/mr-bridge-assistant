@@ -141,10 +141,22 @@ export async function syncPackages(
 
   const listRes = await gmail.users.messages.list({
     userId: "me",
-    q: 'newer_than:30d subject:(shipped OR "on its way" OR "out for delivery" OR "delivery update" OR "has been shipped" OR "your order is on its way")',
+    q: 'newer_than:30d subject:(shipped OR "on its way" OR "out for delivery" OR "delivery update" OR "has been shipped" OR "your order is on its way" OR "shipping confirmation" OR "shipment notification" OR "order shipped" OR "your shipment" OR dispatched)',
     maxResults: 30,
   });
   const messages = listRes.data.messages ?? [];
+
+  // Second pass: catch emails with ETA phrases that escaped the subject filter
+  const listRes2 = await gmail.users.messages.list({
+    userId: "me",
+    q: 'newer_than:30d ("estimated delivery" OR "estimated arrival" OR "arrives by" OR "delivery by" OR "shipping confirmation" OR dispatched) in:inbox',
+    maxResults: 30,
+  });
+  const seenMsgIds = new Set(messages.map((m) => m.id));
+  const allMessages = [
+    ...messages,
+    ...(listRes2.data.messages ?? []).filter((m) => m.id && !seenMsgIds.has(m.id)),
+  ];
 
   const { data: existingPkgs } = await db
     .from("packages")
@@ -163,7 +175,7 @@ export async function syncPackages(
 
   const newRows: PackageUpsert[] = [];
 
-  for (const msg of messages) {
+  for (const msg of allMessages) {
     if (!msg.id || processedMsgIds.has(msg.id)) continue;
     try {
       const full = await gmail.users.messages.get({
@@ -180,6 +192,30 @@ export async function syncPackages(
       const trackings = extractTrackingNumbers(bodyText, `${subject} ${from}`);
       const eta = extractEta(combined);
       const retailer = parseFrom(from);
+
+      if (trackings.length === 0) {
+        // No recognized carrier format — store as NOTRACK if the email has an ETA
+        if (eta !== null) {
+          const syntheticKey = `NOTRACK-${msg.id}`;
+          if (!knownTrackingNumbers.has(syntheticKey)) {
+            knownTrackingNumbers.add(syntheticKey);
+            newRows.push({
+              user_id: userId,
+              tracking_number: syntheticKey,
+              carrier: "unknown",
+              aftership_slug: null,
+              aftership_id: null,
+              description: subject,
+              retailer,
+              status: "intransit",
+              estimated_delivery: eta,
+              delivered_at: null,
+              gmail_message_id: msg.id,
+              last_synced_at: new Date().toISOString(),
+            });
+          }
+        }
+      }
 
       for (const t of trackings) {
         if (knownTrackingNumbers.has(t.tracking_number)) continue;

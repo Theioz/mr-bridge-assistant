@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **Packages: widen sync to catch missed shipping emails (#572).** The Gmail scan now runs two passes: the existing subject-keyword query (expanded with `"shipping confirmation"`, `"shipment notification"`, `"order shipped"`, `"your shipment"`, `"dispatched"`) plus a second ETA-body pass (`"estimated delivery" OR "estimated arrival" OR "arrives by" OR "delivery by"`) that catches emails whose subject lines don't match any known phrase. Emails that carry a delivery ETA but have no recognizable carrier tracking number (unregistered carriers, plain retailer links) are now stored as `NOTRACK-{gmail_message_id}` rows with `carrier = "unknown"` so they surface in the dashboard banner. Dedup continues via `processedMsgIds`; no schema migration required.
+
 ### Changed
 - **Meal Scanner: staged photo queue with submit gate (#574).** Photos no longer analyze immediately on select. Camera and library `onChange` handlers now stage photos into a `stagedPhotos` queue; a thumbnail preview is shown for camera captures. An "Analyze N photos" submit button moves staged items into the in-flight queue and fires analysis, passing the current context textarea value to each call. Tab order fixed: "Food Photo" is now first and the default mode. `analyzeOneFile` accepts an explicit `context` param instead of reading the global closure, enabling per-submit context snapshots.
 
