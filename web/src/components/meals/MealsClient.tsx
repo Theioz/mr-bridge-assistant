@@ -2,10 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, ChevronDown, ChevronUp, RefreshCw, Loader2, Trash2 } from "lucide-react";
+import {
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Loader2,
+  Trash2,
+  Camera,
+  AlertCircle,
+} from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { UndoToastProvider, useUndoToast } from "@/components/ui/undo-toast";
+import { compressImage } from "@/lib/meal-photo";
 import { ChartFrame, TrendLine } from "@/components/charts/primitives";
 import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
@@ -417,6 +427,105 @@ interface MealRowEditFields {
   sugar_g: string;
 }
 
+interface PhotoRescanResult {
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  fiber_g: number | null;
+  sugar_g: number | null;
+}
+
+function MealPhotoRescan({ onResult }: { onResult: (r: PhotoRescanResult) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (inputRef.current) inputRef.current.value = "";
+    if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
+      setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      let imageBlob: Blob;
+      try {
+        imageBlob = await compressImage(file);
+      } catch {
+        imageBlob = file;
+      }
+      const formData = new FormData();
+      formData.append("image", imageBlob, "photo.jpg");
+      formData.append("mode", "food");
+      const res = await fetch("/api/meals/analyze-photo", { method: "POST", body: formData });
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) throw new Error("Analysis failed");
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
+      onResult({
+        calories: data.calories ?? null,
+        protein_g: data.protein_g ?? null,
+        carbs_g: data.carbs_g ?? null,
+        fat_g: data.fat_g ?? null,
+        fiber_g: data.fiber_g ?? null,
+        sugar_g: data.sugar_g ?? null,
+      });
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Re-scan failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleChange}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={loading}
+        className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
+        style={{
+          gap: "var(--space-1)",
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-muted)",
+          background: "none",
+          border: "none",
+          cursor: loading ? "default" : "pointer",
+          padding: 0,
+        }}
+      >
+        {loading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+        Re-scan from photo
+      </button>
+      {errorMsg && (
+        <div
+          className="flex items-start"
+          style={{ gap: "var(--space-1)", marginTop: "var(--space-1)" }}
+        >
+          <AlertCircle
+            size={11}
+            style={{ color: "var(--color-danger)", flexShrink: 0, marginTop: 1 }}
+          />
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}>
+            {errorMsg}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MealRowEdit({
   fields,
   saving,
@@ -490,32 +599,47 @@ function MealRowEdit({
           style={{ ...inputStyle, width: 96 }}
         />
       </div>
-      <div className="flex" style={{ gap: "var(--space-2)" }}>
-        <button
-          onClick={onSave}
-          disabled={saving}
-          style={{
-            ...ctaStyle,
-            fontSize: "var(--t-micro)",
-            padding: "var(--space-1) var(--space-3)",
-            opacity: saving ? 0.5 : 1,
-          }}
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <button
-          onClick={onCancel}
-          style={{
-            fontSize: "var(--t-micro)",
-            padding: "var(--space-1) var(--space-3)",
-            color: "var(--color-text-muted)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          Cancel
-        </button>
+      <div className="flex items-center justify-between" style={{ gap: "var(--space-2)" }}>
+        <div className="flex" style={{ gap: "var(--space-2)" }}>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            style={{
+              ...ctaStyle,
+              fontSize: "var(--t-micro)",
+              padding: "var(--space-1) var(--space-3)",
+              opacity: saving ? 0.5 : 1,
+            }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              fontSize: "var(--t-micro)",
+              padding: "var(--space-1) var(--space-3)",
+              color: "var(--color-text-muted)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+        <MealPhotoRescan
+          onResult={(r) =>
+            onChange({
+              ...fields,
+              calories: r.calories != null ? String(r.calories) : fields.calories,
+              protein_g: r.protein_g != null ? String(r.protein_g) : fields.protein_g,
+              carbs_g: r.carbs_g != null ? String(r.carbs_g) : fields.carbs_g,
+              fat_g: r.fat_g != null ? String(r.fat_g) : fields.fat_g,
+              fiber_g: r.fiber_g != null ? String(r.fiber_g) : fields.fiber_g,
+              sugar_g: r.sugar_g != null ? String(r.sugar_g) : fields.sugar_g,
+            })
+          }
+        />
       </div>
     </div>
   );
