@@ -66,7 +66,30 @@ const ETA_PATTERNS = [
   /will\s+(?:arrive|be\s+delivered)\s+by:?\s*([A-Za-z,\s]+\d{1,2}(?:,\s*\d{4})?)/i,
 ];
 
+function relativeDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toLocaleDateString("en-CA");
+}
+
+// Phrases that use "today" / "tomorrow" rather than a calendar date
+const RELATIVE_ETA_PATTERNS: [RegExp, () => string][] = [
+  [
+    /\b(?:arrives?|arriving|delivered|delivering|be\s+delivered|scheduled\s+to\s+(?:arrive|be\s+delivered))\s+today\b/i,
+    () => relativeDate(0),
+  ],
+  [
+    /\b(?:arrives?|arriving|delivered|delivering|be\s+delivered|scheduled\s+to\s+(?:arrive|be\s+delivered))\s+tomorrow\b/i,
+    () => relativeDate(1),
+  ],
+  [/\byour\s+(?:package|order)\s+arrives?\s+today\b/i, () => relativeDate(0)],
+  [/\byour\s+(?:package|order)\s+arrives?\s+tomorrow\b/i, () => relativeDate(1)],
+];
+
 function extractEta(text: string): string | null {
+  for (const [pattern, resolve] of RELATIVE_ETA_PATTERNS) {
+    if (pattern.test(text)) return resolve();
+  }
   for (const pattern of ETA_PATTERNS) {
     const match = text.match(pattern);
     if (!match) continue;
@@ -141,7 +164,7 @@ export async function syncPackages(
 
   const listRes = await gmail.users.messages.list({
     userId: "me",
-    q: 'newer_than:30d subject:(shipped OR "on its way" OR "out for delivery" OR "delivery update" OR "has been shipped" OR "your order is on its way" OR "shipping confirmation" OR "shipment notification" OR "order shipped" OR "your shipment" OR dispatched)',
+    q: 'newer_than:30d subject:(shipped OR "on its way" OR "out for delivery" OR "delivery update" OR "has been shipped" OR "your order is on its way" OR "shipping confirmation" OR "shipment notification" OR "order shipped" OR "your shipment" OR dispatched OR "arrives tomorrow" OR "arrives today" OR "your package arrives" OR "order arrives")',
     maxResults: 30,
   });
   const messages = listRes.data.messages ?? [];
@@ -149,7 +172,7 @@ export async function syncPackages(
   // Second pass: catch emails with ETA phrases that escaped the subject filter
   const listRes2 = await gmail.users.messages.list({
     userId: "me",
-    q: 'newer_than:30d ("estimated delivery" OR "estimated arrival" OR "arrives by" OR "delivery by" OR "shipping confirmation" OR dispatched) in:inbox',
+    q: 'newer_than:30d ("estimated delivery" OR "estimated arrival" OR "arrives by" OR "delivery by" OR "shipping confirmation" OR dispatched OR "arrives tomorrow" OR "arrives today" OR "delivered tomorrow" OR "delivered today" OR "scheduled to be delivered") in:inbox',
     maxResults: 30,
   });
   const seenMsgIds = new Set(messages.map((m) => m.id));
