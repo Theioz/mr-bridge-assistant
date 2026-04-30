@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **Library: new items now appear immediately when navigating back from the detail page.** Added `router.refresh()` after import so the Next.js router cache for `/library` is invalidated before the push, preventing the stale cached page from being served on return.
+
 ### Changed
 - **Library: Add button shows a type picker (Game / Show / Movie / Book) when on the All tab**, preventing ambiguous imports where a title matches across multiple media types. Tabs other than All bypass the picker and go directly to search for that type.
 - **Library: Queued items now appear in the Completion progress bar and legend** as a distinct segment (muted slate), giving a full-picture breakdown of total items by lifecycle state.

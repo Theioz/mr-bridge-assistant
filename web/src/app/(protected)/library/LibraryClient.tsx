@@ -923,6 +923,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
     if (res.ok) {
       const newItem = await res.json();
       setItems((prev) => [...prev, newItem as BacklogItem]);
+      router.refresh();
       router.push(`/library/${(newItem as BacklogItem).id}`);
     }
   };
