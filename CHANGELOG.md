@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Chat: enable strict mode on `update_profile` and `create_calendar_event` (#343).** Enables `strict: true` on the two highest-blast-radius mutating tools whose schemas fit within Anthropic's compilation budget. Empirical testing confirmed the ceiling: ≤5 cumulative optional params across strict tools is safe; 10 cumulative triggers "Schema is too complex for compilation" (400). `update_profile` (0 optional params) and `create_calendar_event` (5 optional params) are enabled; `update_calendar_event`, `update_workout_exercise`, and `assign_workout` remain disabled pending a budget increase from Anthropic. All schema `additionalProperties: false` constraints from PRs #359/#360 remain in place regardless of the strict flag.
+
 ### Added
 - **Settings: add goal_phase selector to fitness settings UI (#564).** Surfaces the `goal_phase` profile key (Cut / Bulk / Maintain / Recomp) in the Fitness settings tab as a chip selector, matching the existing `fitness_goal` pattern. Reads from and writes to the `goal_phase` key via the existing `updateAction` server action — no schema changes. Also extends the `update_profile` chat tool description to list `goal_phase [cut|bulk|maintain|recomp]` as a canonical settable key, so Mr. Bridge can update it on the user's behalf during coaching conversations.
 - **Dev: switch to Turbopack, cap Node.js heap, fix workspace root.** `next dev --turbopack` replaces webpack in the dev script; `NODE_OPTIONS='--max-old-space-size=3072'` hard-caps the heap to prevent system OOM on battery; `turbopack.root: __dirname` in `next.config.ts` pins module resolution to `web/` and eliminates spurious tailwindcss resolution errors. Deleted the accumulated 847 MB webpack cache.
