@@ -216,9 +216,21 @@ export async function syncPackages(
       const eta = extractEta(combined);
       const retailer = parseFrom(from);
 
+      // Detect delivery confirmed from subject ("Delivered: item" pattern) or body
+      const isDelivered =
+        /^delivered[:\s]/i.test(subject) || /\bhas\s+been\s+delivered\b/i.test(bodyText);
+      const rowStatus = isDelivered ? "delivered" : "intransit";
+      const rowDeliveredAt = isDelivered ? new Date().toISOString() : null;
+
+      // Gate NOTRACK rows: require shipping-context keywords so Venmo transfers,
+      // newsletters, etc. don't get treated as packages
+      const SHIPPING_CONTEXT =
+        /\b(package|shipment|ship(?:ped|ping)|tracking(?:\s*(?:number|#|:))?|carrier|courier|dispatch(?:ed)?|fulfillment)\b/i;
+
       if (trackings.length === 0) {
         // No recognized carrier format — store as NOTRACK if the email has an ETA
-        if (eta !== null) {
+        // and looks like a genuine shipping notification
+        if (eta !== null && SHIPPING_CONTEXT.test(combined)) {
           const syntheticKey = `NOTRACK-${msg.id}`;
           if (!knownTrackingNumbers.has(syntheticKey)) {
             knownTrackingNumbers.add(syntheticKey);
@@ -230,9 +242,9 @@ export async function syncPackages(
               aftership_id: null,
               description: subject,
               retailer,
-              status: "intransit",
+              status: rowStatus,
               estimated_delivery: eta,
-              delivered_at: null,
+              delivered_at: rowDeliveredAt,
               gmail_message_id: msg.id,
               last_synced_at: new Date().toISOString(),
             });
@@ -251,9 +263,9 @@ export async function syncPackages(
           aftership_id: null,
           description: subject,
           retailer,
-          status: "intransit",
+          status: rowStatus,
           estimated_delivery: eta,
-          delivered_at: null,
+          delivered_at: rowDeliveredAt,
           gmail_message_id: msg.id,
           last_synced_at: new Date().toISOString(),
         });
