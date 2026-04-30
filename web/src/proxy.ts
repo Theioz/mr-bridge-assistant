@@ -25,7 +25,7 @@ function buildCSP(nonce: string): string {
     // (Radix UI portals set inline positioning styles that cannot carry a nonce).
     styleSrcElem,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://books.google.com",
+    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://*.archive.org https://books.google.com https://*.googleapis.com",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
     "frame-ancestors 'none'",
