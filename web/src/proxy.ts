@@ -25,7 +25,7 @@ function buildCSP(nonce: string): string {
     // (Radix UI portals set inline positioning styles that cannot carry a nonce).
     styleSrcElem,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co",
+    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://books.google.com",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
     "frame-ancestors 'none'",
@@ -76,7 +76,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/auth") ||
     request.nextUrl.pathname.startsWith("/api/auth/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
-    request.nextUrl.pathname.startsWith("/api/internal/");
+    request.nextUrl.pathname.startsWith("/api/internal/") ||
+    request.nextUrl.pathname.startsWith("/share/"); // Public share pages (backlog items, future)
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();

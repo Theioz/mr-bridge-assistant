@@ -20,6 +20,7 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals (calories, protein, carbs, fat, fiber, sugar running total); food photo analyzer (photo → client-side compression → Claude vision → macro estimate → inline-editable review → log) with Bridge chat logging via a propose-then-confirm action card scoped to the analyzer context; nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); soft calorie-consistency warning when manually entered calories diverge >10% from macro-derived kcal; HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
+- **Backlog** — Personal media tracker for games, shows, movies, and books. Four tabbed categories with drag-to-reorder stack ranking; automatic metadata import (cover, creator, release date, description) via TMDB (movies + shows), IGDB (games), and OpenLibrary / Google Books (books); status lifecycle (backlog → active → paused → finished / dropped) with lifecycle timestamps; session log for re-watches / re-reads / replays; 0–10 rating and free-form review; shareable public read-only link per item. Chat tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`.
 - **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
 - **Data export** — one-click JSON or CSV zip of all your data from Settings → Data; one file per user-authored table plus a `_manifest.json` with schema version, timestamp, and row counts; optional date-range filter; chat history and encrypted OAuth tokens are deliberately excluded
@@ -225,6 +226,10 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
 | `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — stock watchlist widget + `get_stock_quote` chat tool; free tier supports EOD data)* |
 | `SPORTSDB_API_KEY` | [thesportsdb.com](https://www.thesportsdb.com/api.php) → personal key *(optional — sports dashboard widget + `get_sports_data` chat tool; defaults to public test key `3` if unset)* |
+| `TMDB_API_KEY` | [themoviedb.org](https://www.themoviedb.org) → Settings → API → Create API key *(required for backlog movie + show metadata search)* |
+| `IGDB_CLIENT_ID` | [dev.twitch.tv](https://dev.twitch.tv/console/apps) → Register Your Application → Client ID *(required for backlog game metadata search)* |
+| `IGDB_CLIENT_SECRET` | Same Twitch app → New Secret *(required for backlog game metadata search)* |
+| `GOOGLE_BOOKS_API_KEY` | [console.cloud.google.com](https://console.cloud.google.com) → APIs → Books API → Credentials *(optional — fallback when OpenLibrary lacks covers)* |
 
 ### Step 8 — Deploy to Vercel
 
@@ -425,7 +430,8 @@ mr-bridge-assistant/
 │       ├── 20260424000005_add_feature_flags.sql
 │       ├── 20260424000006_increase_default_token_limit.sql
 │       ├── 20260424000007_fix_missing_cascade_tenant_delete.sql
-│       └── 20260426000000_db_generated_timestamps.sql
+│       ├── 20260426000000_db_generated_timestamps.sql
+│       └── 20260430000000_add_backlog.sql
 │
 ├── web/                                   # Next.js web interface (deployed on Vercel)
 │   ├── .env.local.example                 # Web app env var template
@@ -447,6 +453,10 @@ mr-bridge-assistant/
 │   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
 │   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: food photo or label scan, serving multiplier, daily macro context
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
+│   │   │   │   ├── backlog/page.tsx       # Media backlog — tabbed by type (Games/Shows/Movies/Books)
+│   │   │   │   ├── backlog/BacklogClient.tsx  # Tab UI, search-and-import, drag-to-reorder
+│   │   │   │   ├── backlog/[id]/page.tsx  # Item detail — status, rating, review, sessions, share
+│   │   │   │   ├── backlog/[id]/BacklogDetailClient.tsx  # Item detail client component
 │   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts          # Claude API tool use (26 tools)
@@ -455,6 +465,14 @@ mr-bridge-assistant/
 │   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts
 │   │   │   │   │   ├── googlefit/route.ts # POST — sync last 7d Google Fit body comp
 │   │   │   │   │   └── packages/route.ts  # POST — sync package deliveries from email → packages table
+│   │   │   │   ├── backlog/
+│   │   │   │   │   ├── search/route.ts          # GET — proxy TMDB/IGDB/OpenLibrary metadata search
+│   │   │   │   │   ├── route.ts                 # GET list, POST create
+│   │   │   │   │   └── [id]/
+│   │   │   │   │       ├── route.ts             # GET detail, PATCH update, DELETE
+│   │   │   │   │       ├── sessions/route.ts    # GET + POST sessions
+│   │   │   │   │       ├── share/route.ts       # POST generate token, DELETE revoke
+│   │   │   │   │       └── priority/route.ts    # PATCH priority (drag-to-reorder)
 │   │   │   │   ├── cron/
 │   │   │   │   │   ├── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
 │   │   │   │   │   └── reset-demo/route.ts # GET — nightly demo data wipe + reseed (CRON_SECRET auth)
@@ -499,6 +517,8 @@ mr-bridge-assistant/
 │   │   │   │       ├── calendar/range/route.ts        # GET — events over a date range (weekly workout plan sync)
 │   │   │   │       ├── calendar/upcoming-birthday/route.ts # GET — next birthday event from Calendar
 │   │   │   │       └── gmail/route.ts                # GET — important unread emails (dashboard widget)
+│   │   │   ├── share/
+│   │   │   │   └── backlog/[token]/page.tsx # Public read-only backlog item view (no auth; token = auth)
 │   │   │   ├── error.tsx                   # Top-level error boundary (friendly + retry)
 │   │   │   ├── (protected)/error.tsx       # Protected-route error boundary (retry + dashboard fallback)
 │   │   │   └── login/
@@ -530,6 +550,10 @@ mr-bridge-assistant/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       ├── types.ts                   # TypeScript interfaces for all DB tables
+│   │       ├── backlog/
+│   │       │   ├── tmdb.ts                # TMDB movie + show search (TMDB_API_KEY)
+│   │       │   ├── igdb.ts                # IGDB game search (Twitch OAuth client_credentials)
+│   │       │   └── openlibrary.ts         # OpenLibrary book search + Google Books fallback
 │   │       ├── export/
 │   │       │   ├── tables.ts              # Declarative registry of tables included in data export (#67)
 │   │       │   └── csv.ts                 # Deterministic CSV serializer (ordered columns, CRLF)
