@@ -24,6 +24,7 @@ Before any commit or PR:
 - Update `CHANGELOG.md` — add all changes under `[Unreleased]` or a new version block
 - Update `README.md` if file structure or usage changed
 - Run `graphify update .` after modifying code files
+- If a dev server was started for smoke testing, stop it with `preview_stop` before committing
 - Follow feature-branch + PR workflow (see `features.md`) — never commit directly to main
 
 ## Context-on-demand

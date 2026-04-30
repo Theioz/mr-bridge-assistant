@@ -58,6 +58,13 @@ interface FailedPhoto {
   errorMsg: string;
 }
 
+interface StagedPhoto {
+  tempId: string;
+  file: File;
+  fileName: string;
+  previewUrl: string | null; // object URL for camera captures; null for library
+}
+
 function roundOrDash(v: number | null, digits = 0): string {
   if (v === null) return "—";
   const m = 10 ** digits;
@@ -251,7 +258,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const [items, setItems] = useState<ScanItem[]>([]);
   const [scanPhase, setScanPhase] = useState<ScanPhase>("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [analyzerMode, setAnalyzerMode] = useState<AnalyzerMode>("label");
+  const [analyzerMode, setAnalyzerMode] = useState<AnalyzerMode>("food");
   const [activeSheet, setActiveSheet] = useState<"log" | "mealprep" | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [reestimatingId, setReestimatingId] = useState<string | null>(null);
@@ -259,6 +266,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   // ── Per-photo batch state (#545) ─────────────────────────────────────────
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [failedPhotos, setFailedPhotos] = useState<FailedPhoto[]>([]);
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([]);
 
   // ── Manual entry state ───────────────────────────────────────────────────
   const [manualLabel, setManualLabel] = useState("");
@@ -299,10 +307,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const combinedFiber = sumNullable(items, "fiber_g");
   const combinedSugar = sumNullable(items, "sugar_g");
 
-  // ── Unsaved count: completed items + in-flight analyses (#545) ────────────
+  // ── Unsaved count: completed items + in-flight analyses + staged (#545, #574) ──
   useEffect(() => {
-    onUnsavedItems?.(items.length + pendingPhotos.length);
-  }, [items.length, pendingPhotos.length, onUnsavedItems]);
+    onUnsavedItems?.(items.length + pendingPhotos.length + stagedPhotos.length);
+  }, [items.length, pendingPhotos.length, stagedPhotos.length, onUnsavedItems]);
 
   // ── Item helpers ─────────────────────────────────────────────────────────
   function addItem(item: ScanItem) {
@@ -322,6 +330,10 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     setItems([]);
     setPendingPhotos([]);
     setFailedPhotos([]);
+    for (const p of stagedPhotos) {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    }
+    setStagedPhotos([]);
     setActiveSheet(null);
   }
 
@@ -411,7 +423,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   }
 
   // ── Per-photo analysis — called once per file, compression included (#545) ─
-  async function analyzeOneFile(file: File, tempId: string) {
+  async function analyzeOneFile(file: File, tempId: string, context?: string) {
     let imageBlob: Blob;
     try {
       imageBlob = await compressImage(file);
@@ -434,7 +446,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     const formData = new FormData();
     formData.append("image", imageBlob, "photo.jpg");
     formData.append("mode", analyzerMode);
-    const trimmedContext = userContext.trim();
+    const trimmedContext = context?.trim() ?? "";
     if (trimmedContext) formData.append("user_context", trimmedContext);
 
     try {
@@ -507,13 +519,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   }
 
   // ── Camera capture — single file at a time, up to 6 total (#545) ─────────
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (libraryInputRef.current) libraryInputRef.current.value = "";
 
-    if (items.length + pendingPhotos.length >= 6) return;
+    if (items.length + pendingPhotos.length + stagedPhotos.length >= 6) return;
 
     if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
       setErrorMsg("In your iPhone Camera settings, set format to 'Most Compatible' and try again.");
@@ -521,14 +533,14 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       return;
     }
 
+    const previewUrl = URL.createObjectURL(file);
     const tempId = crypto.randomUUID();
-    setPendingPhotos((prev) => [...prev, { tempId, fileName: file.name }]);
-    await analyzeOneFile(file, tempId);
+    setStagedPhotos((prev) => [...prev, { tempId, file, fileName: file.name, previewUrl }]);
   }
 
   // ── Library multi-select — up to 6 photos at once (#545) ─────────────────
-  async function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const remaining = 6 - items.length - pendingPhotos.length;
+  function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const remaining = 6 - items.length - pendingPhotos.length - stagedPhotos.length;
     const files = Array.from(e.target.files ?? []).slice(0, remaining);
     if (libraryInputRef.current) libraryInputRef.current.value = "";
     if (files.length === 0) return;
@@ -542,9 +554,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
       return;
     }
 
-    const batch = files.map((f) => ({ tempId: crypto.randomUUID(), fileName: f.name }));
-    setPendingPhotos((prev) => [...prev, ...batch]);
-    await Promise.allSettled(files.map((file, idx) => analyzeOneFile(file, batch[idx].tempId)));
+    const batch = files.map((f) => ({
+      tempId: crypto.randomUUID(),
+      file: f,
+      fileName: f.name,
+      previewUrl: null,
+    }));
+    setStagedPhotos((prev) => [...prev, ...batch]);
   }
 
   // ── Retry a failed photo (#545) ───────────────────────────────────────────
@@ -553,7 +569,29 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     if (!entry) return;
     setFailedPhotos((prev) => prev.filter((f) => f.tempId !== tempId));
     setPendingPhotos((prev) => [...prev, { tempId, fileName: entry.file.name }]);
-    analyzeOneFile(entry.file, tempId);
+    analyzeOneFile(entry.file, tempId, userContext.trim() || undefined);
+  }
+
+  // ── Remove a staged photo before submit ───────────────────────────────────
+  function removeStagedPhoto(tempId: string, previewUrl: string | null) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setStagedPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
+  }
+
+  // ── Submit staged queue — moves staged → pending, fires analysis (#574) ──
+  function handleSubmitStaged() {
+    if (stagedPhotos.length === 0) return;
+    const ctx = userContext.trim() || undefined;
+    const toAnalyze = stagedPhotos;
+    setPendingPhotos((prev) => [
+      ...prev,
+      ...toAnalyze.map((p) => ({ tempId: p.tempId, fileName: p.fileName })),
+    ]);
+    setStagedPhotos([]);
+    for (const p of toAnalyze) {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+      analyzeOneFile(p.file, p.tempId, ctx);
+    }
   }
 
   // ── Per-item re-estimation ────────────────────────────────────────────────
@@ -724,7 +762,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         background: "transparent",
       }}
     >
-      {(["label", "food"] as AnalyzerMode[]).map((opt) => {
+      {(["food", "label"] as AnalyzerMode[]).map((opt) => {
         const active = opt === analyzerMode;
         return (
           <button
@@ -753,13 +791,106 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
 
   const s = parseFloat(servings) || 1;
   const n = parseInt(containers) || 1;
-  const photoCapReached = items.length + pendingPhotos.length >= 6;
+  const photoCapReached = items.length + pendingPhotos.length + stagedPhotos.length >= 6;
   const hasPhotos = items.length > 0 || pendingPhotos.length > 0 || failedPhotos.length > 0;
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--space-4)" }}>
       {/* Mode toggle — always visible */}
       {ModeToggle}
+
+      {/* ── STAGED QUEUE — photos waiting for submit (#574) ──────────────── */}
+      {stagedPhotos.length > 0 && (
+        <div className="flex flex-col" style={{ gap: "var(--space-3)" }}>
+          {/* Photo rows */}
+          {stagedPhotos.map((p, idx) => (
+            <div
+              key={p.tempId}
+              className="flex items-center"
+              style={{
+                borderTop: idx > 0 ? "1px solid var(--rule-soft)" : "none",
+                paddingTop: idx > 0 ? "var(--space-2)" : 0,
+                gap: "var(--space-2)",
+              }}
+            >
+              {p.previewUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.previewUrl}
+                  alt="preview"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    objectFit: "cover",
+                    borderRadius: "var(--r-1)",
+                    flexShrink: 0,
+                    border: "1px solid var(--rule-soft)",
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: "var(--t-meta)",
+                  color: "var(--color-text-muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                }}
+              >
+                {p.fileName}
+              </span>
+              <button
+                onClick={() => removeStagedPhoto(p.tempId, p.previewUrl)}
+                className="transition-opacity active:opacity-70 flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-muted)",
+                  width: 32,
+                  height: 32,
+                }}
+                title="Remove"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+
+          {/* Context textarea — same state as empty-state textarea */}
+          <textarea
+            value={userContext}
+            onChange={(e) => setUserContext(e.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder="Tell Bridge what's in the dish (optional)"
+            autoComplete="off"
+            autoCorrect="off"
+            style={{
+              ...inputStyle,
+              resize: "none",
+              lineHeight: 1.6,
+              fontSize: "var(--t-meta)",
+            }}
+          />
+
+          {/* Submit button */}
+          <button
+            onClick={handleSubmitStaged}
+            className="flex items-center justify-center transition-opacity active:opacity-70"
+            style={{
+              ...ctaStyle,
+              fontSize: "var(--t-body)",
+              padding: "var(--space-3) var(--space-5)",
+              minHeight: 48,
+            }}
+          >
+            Analyze {stagedPhotos.length} photo{stagedPhotos.length !== 1 ? "s" : ""}
+          </button>
+        </div>
+      )}
 
       {/* Hidden file inputs — camera (single) and library (multi-select) */}
       <input
