@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Changed
+- **Meal Scanner: staged photo queue with submit gate (#574).** Photos no longer analyze immediately on select. Camera and library `onChange` handlers now stage photos into a `stagedPhotos` queue; a thumbnail preview is shown for camera captures. An "Analyze N photos" submit button moves staged items into the in-flight queue and fires analysis, passing the current context textarea value to each call. Tab order fixed: "Food Photo" is now first and the default mode. `analyzeOneFile` accepts an explicit `context` param instead of reading the global closure, enabling per-submit context snapshots.
+
+### Changed
 - **Chat: enable strict mode on `update_profile` and `create_calendar_event` (#343).** Enables `strict: true` on the two highest-blast-radius mutating tools whose schemas fit within Anthropic's compilation budget. Empirical testing confirmed the ceiling: ≤5 cumulative optional params across strict tools is safe; 10 cumulative triggers "Schema is too complex for compilation" (400). `update_profile` (0 optional params) and `create_calendar_event` (5 optional params) are enabled; `update_calendar_event`, `update_workout_exercise`, and `assign_workout` remain disabled pending a budget increase from Anthropic. All schema `additionalProperties: false` constraints from PRs #359/#360 remain in place regardless of the strict flag.
 
 ### Added
