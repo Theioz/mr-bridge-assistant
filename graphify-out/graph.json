@@ -13087,8 +13087,8 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/calendar/events/[eventId]/route.ts",
       "source_location": "L80",
       "weight": 1.0,
-      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts_patch",
-      "_tgt": "librarydetailclient_patch",
+      "_src": "librarydetailclient_patch",
+      "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts_patch",
       "source": "librarydetailclient_patch",
       "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts_patch"
     },
@@ -13099,8 +13099,8 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/reschedule-workout.ts",
       "source_location": "L135",
       "weight": 1.0,
-      "_src": "reschedule_workout_rescheduleworkout",
-      "_tgt": "librarydetailclient_patch",
+      "_src": "librarydetailclient_patch",
+      "_tgt": "reschedule_workout_rescheduleworkout",
       "source": "librarydetailclient_patch",
       "target": "reschedule_workout_rescheduleworkout"
     },
