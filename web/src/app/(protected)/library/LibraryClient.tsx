@@ -3,13 +3,23 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, X, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  GripVertical,
+  ChevronDown,
+  ChevronRight,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 import type { BacklogItem, MediaType, MetadataSearchResult } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tab = "all" | MediaType;
 type SortKey = "priority" | "title" | "release_date" | "rating";
+type ViewMode = "list" | "grid";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "all", label: "All" },
@@ -818,6 +828,151 @@ function CollapsibleSection({
   );
 }
 
+// ── Cover grid ────────────────────────────────────────────────────────────────
+
+function CoverCard({ item, showType }: { item: BacklogItem; showType?: boolean }) {
+  const statusDot: Record<string, string> = {
+    active: "var(--color-primary)",
+    finished: "#22c55e",
+    paused: "#f59e0b",
+    dropped: "#ef4444",
+    backlog: "var(--color-text-muted)",
+  };
+
+  return (
+    <Link
+      href={`/library/${item.id}`}
+      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+    >
+      <div
+        style={{
+          position: "relative",
+          borderRadius: 8,
+          overflow: "hidden",
+          aspectRatio: "2/3",
+          background: "var(--color-bg-2)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+          transition: "transform 0.15s, box-shadow 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.6)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
+        }}
+      >
+        {item.cover_url ? (
+          <img
+            src={item.cover_url}
+            alt={item.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              color: "var(--color-text-muted)",
+            }}
+          >
+            ?
+          </div>
+        )}
+
+        {/* Status dot */}
+        <span
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: statusDot[item.status] ?? "var(--color-text-muted)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.6)",
+          }}
+        />
+
+        {/* Type badge — only on All tab */}
+        {showType && (
+          <span
+            style={{
+              position: "absolute",
+              top: 6,
+              left: 6,
+              fontSize: 9,
+              fontWeight: 700,
+              background: "rgba(0,0,0,0.75)",
+              color: "var(--color-primary)",
+              borderRadius: 4,
+              padding: "2px 5px",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {item.media_type}
+          </span>
+        )}
+
+        {/* Title overlay at bottom */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: "20px 8px 8px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#fff",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              lineHeight: 1.3,
+            }}
+          >
+            {item.title}
+          </p>
+          {item.release_date && (
+            <p style={{ margin: "1px 0 0", fontSize: 10, color: "rgba(255,255,255,0.55)" }}>
+              {item.release_date.slice(0, 4)}
+            </p>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function CoverGrid({ items, showType }: { items: BacklogItem[]; showType?: boolean }) {
+  if (items.length === 0) return null;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+        gap: 10,
+      }}
+    >
+      {items.map((item) => (
+        <CoverCard key={item.id} item={item} showType={showType} />
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const selectStyle = {
@@ -838,6 +993,7 @@ const selectStyle = {
 export default function LibraryClient({ initialItems }: { initialItems: BacklogItem[] }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [items, setItems] = useState<BacklogItem[]>(initialItems);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
@@ -1006,30 +1162,62 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
             Your personal media collection
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (activeTab === "all") {
-              setShowTypePicker(true);
-            } else {
-              setSearchMediaType(activeTab);
-            }
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            background: "var(--color-primary)",
-            color: "var(--color-text-on-primary, #fff)",
-            border: "none",
-            borderRadius: 8,
-            padding: "8px 14px",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          <Plus size={15} /> Add
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* View toggle */}
+          <div
+            style={{
+              display: "flex",
+              border: "1px solid var(--rule-soft)",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+          >
+            {(["list", "grid"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                style={{
+                  background: viewMode === mode ? "var(--color-bg-2)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "7px 10px",
+                  display: "flex",
+                  alignItems: "center",
+                  color: viewMode === mode ? "var(--color-text)" : "var(--color-text-muted)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+                title={mode === "list" ? "List view" : "Cover view"}
+              >
+                {mode === "list" ? <List size={15} /> : <LayoutGrid size={15} />}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              if (activeTab === "all") {
+                setShowTypePicker(true);
+              } else {
+                setSearchMediaType(activeTab);
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--color-primary)",
+              color: "var(--color-text-on-primary, #fff)",
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 14px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={15} /> Add
+          </button>
+        </div>
       </div>
 
       {/* Summary strip — shows stats for current tab */}
@@ -1332,93 +1520,99 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
       {/* Item sections */}
       {filteredItems.length > 0 && (
         <div>
-          {activeItems.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  color: "var(--color-text-muted)",
-                  margin: "0 0 4px",
-                }}
+          {viewMode === "grid" ? (
+            <CoverGrid items={filteredItems} showType={showType} />
+          ) : (
+            <>
+              {activeItems.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "var(--color-text-muted)",
+                      margin: "0 0 4px",
+                    }}
+                  >
+                    Active — {activeItems.length}
+                  </p>
+                  {activeItems.map((item) => (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      showType={showType}
+                      draggable={canDrag}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <CollapsibleSection
+                title="Queued"
+                count={queuedItems.length}
+                defaultOpen={activeItems.length === 0}
               >
-                Active — {activeItems.length}
-              </p>
-              {activeItems.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  showType={showType}
-                  draggable={canDrag}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                />
-              ))}
-            </div>
+                {queuedItems.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    showType={showType}
+                    draggable={canDrag}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  />
+                ))}
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Paused" count={pausedItems.length} defaultOpen={false}>
+                {pausedItems.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    showType={showType}
+                    draggable={canDrag}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  />
+                ))}
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Finished" count={finishedItems.length} defaultOpen={false}>
+                {finishedItems.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    showType={showType}
+                    draggable={false}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  />
+                ))}
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Dropped" count={droppedItems.length} defaultOpen={false}>
+                {droppedItems.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    showType={showType}
+                    draggable={false}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  />
+                ))}
+              </CollapsibleSection>
+            </>
           )}
-
-          <CollapsibleSection
-            title="Queued"
-            count={queuedItems.length}
-            defaultOpen={activeItems.length === 0}
-          >
-            {queuedItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                showType={showType}
-                draggable={canDrag}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              />
-            ))}
-          </CollapsibleSection>
-
-          <CollapsibleSection title="Paused" count={pausedItems.length} defaultOpen={false}>
-            {pausedItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                showType={showType}
-                draggable={canDrag}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              />
-            ))}
-          </CollapsibleSection>
-
-          <CollapsibleSection title="Finished" count={finishedItems.length} defaultOpen={false}>
-            {finishedItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                showType={showType}
-                draggable={false}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              />
-            ))}
-          </CollapsibleSection>
-
-          <CollapsibleSection title="Dropped" count={droppedItems.length} defaultOpen={false}>
-            {droppedItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                showType={showType}
-                draggable={false}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              />
-            ))}
-          </CollapsibleSection>
         </div>
       )}
 
