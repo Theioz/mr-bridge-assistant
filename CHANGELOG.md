@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Library: Add button shows a type picker (Game / Show / Movie / Book) when on the All tab**, preventing ambiguous imports where a title matches across multiple media types. Tabs other than All bypass the picker and go directly to search for that type.
+- **Library: Queued items now appear in the Completion progress bar and legend** as a distinct segment (muted slate), giving a full-picture breakdown of total items by lifecycle state.
+
 ### Added
 - **Backlog: track games, shows, movies, and books with metadata, ratings, and session logs (#582).** New `/backlog` page with four tabs (Games / Shows / Movies / Books), each showing stack-ranked items with drag-to-reorder. "Add" flow searches TMDB (movies + shows), IGDB via Twitch OAuth (games), and OpenLibrary with Google Books fallback (books) — cover art, creator, release date, and description are imported automatically. Items flow through a status lifecycle (backlog → active → paused → finished / dropped). Per-item detail page has a status chip row, 0–10 rating input, free-form review textarea, session log table with Add-session form (started_at / finished_at / notes), and a share section that generates a public read-only URL (`/share/backlog/[token]`) and revokes it by setting the token to null. Four new chat tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`. New Supabase tables: `backlog_items` (RLS, `updated_at` trigger via `set_updated_at()`) and `backlog_sessions` (RLS). New env vars required (server-side only, add to `web/.env.local` and Vercel): `TMDB_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`; optional: `GOOGLE_BOOKS_API_KEY`.
 

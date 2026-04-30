@@ -123,6 +123,7 @@ function SummaryStrip({ items }: { items: BacklogItem[] }) {
   const dropped = items.filter((i) => i.status === "dropped").length;
 
   const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
+  const QUEUED_COLOR = "rgba(148,163,184,0.5)";
 
   const cardStyle = {
     background: "var(--color-bg-1)",
@@ -225,6 +226,7 @@ function SummaryStrip({ items }: { items: BacklogItem[] }) {
           />
           <div style={{ width: pct(paused), background: "#f59e0b", transition: "width 0.3s" }} />
           <div style={{ width: pct(dropped), background: "#ef4444", transition: "width 0.3s" }} />
+          <div style={{ width: pct(queued), background: QUEUED_COLOR, transition: "width 0.3s" }} />
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
           {[
@@ -232,6 +234,7 @@ function SummaryStrip({ items }: { items: BacklogItem[] }) {
             { label: "Active", color: "var(--color-primary)", n: active },
             { label: "Paused", color: "#f59e0b", n: paused },
             { label: "Dropped", color: "#ef4444", n: dropped },
+            { label: "Queued", color: QUEUED_COLOR, n: queued },
           ]
             .filter(({ n }) => n > 0)
             .map(({ label, color, n }) => (
@@ -263,6 +266,116 @@ function SummaryStrip({ items }: { items: BacklogItem[] }) {
   );
 }
 
+// ── Type picker modal ─────────────────────────────────────────────────────────
+
+const TYPE_OPTIONS: { id: MediaType; label: string; emoji: string }[] = [
+  { id: "game", label: "Game", emoji: "🎮" },
+  { id: "show", label: "Show", emoji: "📺" },
+  { id: "movie", label: "Movie", emoji: "🎬" },
+  { id: "book", label: "Book", emoji: "📖" },
+];
+
+function TypePickerModal({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (type: MediaType) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        paddingTop: 60,
+        paddingLeft: 16,
+        paddingRight: 16,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: "var(--color-bg-1)",
+          border: "1px solid var(--rule-soft)",
+          borderRadius: 12,
+          width: "100%",
+          maxWidth: 360,
+          overflow: "hidden",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 16px 12px",
+            borderBottom: "1px solid var(--rule-soft)",
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 15 }}>What are you adding?</p>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              color: "var(--color-text-muted)",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: 16 }}>
+          {TYPE_OPTIONS.map(({ id, label, emoji }) => (
+            <button
+              key={id}
+              onClick={() => onSelect(id)}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                padding: "16px 12px",
+                background: "var(--color-bg-2)",
+                border: "1px solid var(--rule-soft)",
+                borderRadius: 10,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "var(--color-text)",
+                transition: "border-color 0.15s, background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "var(--color-primary-bg, rgba(99,102,241,0.08))";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--rule-soft)";
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-2)";
+              }}
+            >
+              <span style={{ fontSize: 24 }}>{emoji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Search modal ──────────────────────────────────────────────────────────────
 
 function SearchModal({
@@ -270,11 +383,11 @@ function SearchModal({
   onClose,
   onImport,
 }: {
-  type: Tab;
+  type: MediaType;
   onClose: () => void;
   onImport: (result: MetadataSearchResult) => Promise<void>;
 }) {
-  const searchType = type === "all" ? "game" : type;
+  const searchType = type;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MetadataSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -314,7 +427,6 @@ function SearchModal({
     show: "shows",
     movie: "movies",
     book: "books",
-    all: "media",
   };
 
   return (
@@ -727,7 +839,8 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [items, setItems] = useState<BacklogItem[]>(initialItems);
-  const [showSearch, setShowSearch] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
@@ -790,7 +903,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
   const showType = activeTab === "all";
 
   const handleImport = async (result: MetadataSearchResult) => {
-    const mediaType = activeTab === "all" ? "game" : activeTab;
+    const mediaType = searchMediaType ?? (activeTab === "all" ? "game" : activeTab);
     const res = await fetch("/api/backlog", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -893,7 +1006,13 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
           </p>
         </div>
         <button
-          onClick={() => setShowSearch(true)}
+          onClick={() => {
+            if (activeTab === "all") {
+              setShowTypePicker(true);
+            } else {
+              setSearchMediaType(activeTab);
+            }
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -1168,7 +1287,10 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
             yet.
           </p>
           <button
-            onClick={() => setShowSearch(true)}
+            onClick={() => {
+              if (activeTab === "all") setShowTypePicker(true);
+              else setSearchMediaType(activeTab);
+            }}
             style={{
               marginTop: 12,
               background: "none",
@@ -1299,11 +1421,22 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
         </div>
       )}
 
+      {/* Type picker — shown when adding from the All tab */}
+      {showTypePicker && (
+        <TypePickerModal
+          onSelect={(type) => {
+            setShowTypePicker(false);
+            setSearchMediaType(type);
+          }}
+          onClose={() => setShowTypePicker(false)}
+        />
+      )}
+
       {/* Search modal */}
-      {showSearch && (
+      {searchMediaType && (
         <SearchModal
-          type={activeTab}
-          onClose={() => setShowSearch(false)}
+          type={searchMediaType}
+          onClose={() => setSearchMediaType(null)}
           onImport={handleImport}
         />
       )}
