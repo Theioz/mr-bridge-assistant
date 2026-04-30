@@ -258,3 +258,80 @@ export interface Package {
   last_synced_at: string;
   created_at: string;
 }
+
+// ── Backlog ──────────────────────────────────────────────────────────────────
+
+export type MediaType = "game" | "show" | "movie" | "book";
+export type BacklogStatus = "backlog" | "active" | "paused" | "finished" | "dropped";
+
+export interface GameMetadata {
+  platform?: string;
+  genre?: string;
+  igdb_url?: string;
+}
+
+export interface ShowMetadata {
+  episode_count?: number;
+  season_count?: number;
+  network?: string;
+  tmdb_url?: string;
+}
+
+export interface MovieMetadata {
+  runtime_minutes?: number;
+  tmdb_url?: string;
+  genre?: string;
+}
+
+export interface BookMetadata {
+  page_count?: number;
+  isbn?: string;
+  publisher?: string;
+  ol_url?: string;
+}
+
+export type BacklogMetadata = GameMetadata | ShowMetadata | MovieMetadata | BookMetadata;
+
+export interface BacklogItem {
+  id: string;
+  user_id: string;
+  media_type: MediaType;
+  title: string;
+  creator: string | null;
+  release_date: string | null;
+  description: string | null;
+  cover_url: string | null;
+  external_id: string | null;
+  external_source: string | null;
+  metadata: BacklogMetadata | null;
+  status: BacklogStatus;
+  priority: number;
+  rating: number | null;
+  review: string | null;
+  share_token: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BacklogSession {
+  id: string;
+  item_id: string;
+  user_id: string;
+  started_at: string | null;
+  finished_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface MetadataSearchResult {
+  external_id: string;
+  external_source: string;
+  title: string;
+  creator: string;
+  release_date: string | null;
+  description: string;
+  cover_url: string;
+  metadata: BacklogMetadata;
+}

@@ -11,6 +11,7 @@ import { buildWorkoutTools } from "@/lib/tools/workouts";
 import { buildEquipmentTools } from "@/lib/tools/equipment";
 import { buildStocksTools } from "@/lib/tools/stocks";
 import { buildSportsTools } from "@/lib/tools/sports";
+import { buildBacklogTools } from "@/lib/tools/backlog";
 
 // Attach an Anthropic ephemeral cache breakpoint to the last entry in a tools
 // object. Anthropic caps requests at 4 cache breakpoints total — anchoring one
@@ -55,6 +56,7 @@ export function buildChatTools(context: ToolContext, isDemo: boolean) {
     ...buildEquipmentTools(context),
     ...buildStocksTools(context),
     ...buildSportsTools(context),
+    ...buildBacklogTools(context),
   };
   return isDemo ? baseTools : withTrailingCacheBreakpoint(baseTools);
 }
