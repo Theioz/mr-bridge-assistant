@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
+import { compressImage } from "@/lib/meal-photo";
 import InlineMealChat from "./InlineMealChat";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -253,6 +254,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const router = useRouter();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
+  const rescanInputRef = useRef<HTMLInputElement>(null);
+  const rescanTargetIdRef = useRef<string | null>(null);
 
   // ── Session state ─────────────────────────────────────────────────────────
   const [items, setItems] = useState<ScanItem[]>([]);
@@ -262,6 +265,8 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
   const [activeSheet, setActiveSheet] = useState<"log" | "mealprep" | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [reestimatingId, setReestimatingId] = useState<string | null>(null);
+  const [rescanningId, setRescanningId] = useState<string | null>(null);
+  const [rescanError, setRescanError] = useState<{ id: string; msg: string } | null>(null);
 
   // ── Per-photo batch state (#545) ─────────────────────────────────────────
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
@@ -335,91 +340,6 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     }
     setStagedPhotos([]);
     setActiveSheet(null);
-  }
-
-  // ── Image compression ────────────────────────────────────────────────────
-  // Skips canvas work for files already under 2 MB. For larger files, tries
-  // quality 0.82 first; if the result is still > 4.5 MB retries at 0.70.
-  // createImageBitmap is tried first — it handles Ultra HDR JPEGs (Pixel 9 Pro
-  // 50 MP / Google HDR Gain Map) that cause img.onerror or toBlob(null) in the
-  // standard <img>+canvas pipeline. Falls back to <img> for older browsers.
-  async function compressImage(file: File): Promise<Blob> {
-    const THRESHOLD = 2 * 1024 * 1024;
-    if (file.size <= THRESHOLD) return file;
-
-    const MAX_EDGE = 1920;
-
-    function scaleToCanvas(
-      source: HTMLImageElement | ImageBitmap,
-    ): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
-      let width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
-      let height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
-      if (width > MAX_EDGE || height > MAX_EDGE) {
-        if (width >= height) {
-          height = Math.round((height * MAX_EDGE) / width);
-          width = MAX_EDGE;
-        } else {
-          width = Math.round((width * MAX_EDGE) / height);
-          height = MAX_EDGE;
-        }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
-      ctx.drawImage(source, 0, 0, width, height);
-      return { canvas, ctx };
-    }
-
-    function blobFromCanvas(canvas: HTMLCanvasElement): Promise<Blob> {
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return reject(new Error("Compression failed"));
-            if (blob.size <= 4.5 * 1024 * 1024) return resolve(blob);
-            canvas.toBlob(
-              (blob2) => {
-                if (blob2) resolve(blob2);
-                else reject(new Error("Compression failed"));
-              },
-              "image/jpeg",
-              0.7,
-            );
-          },
-          "image/jpeg",
-          0.82,
-        );
-      });
-    }
-
-    if (typeof createImageBitmap !== "undefined") {
-      try {
-        const bitmap = await createImageBitmap(file);
-        const result = scaleToCanvas(bitmap);
-        bitmap.close();
-        if (!result) throw new Error("Canvas unavailable");
-        return blobFromCanvas(result.canvas);
-      } catch {
-        // fall through to <img> fallback
-      }
-    }
-
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        const result = scaleToCanvas(img);
-        if (!result) return reject(new Error("Canvas unavailable"));
-        blobFromCanvas(result.canvas).then(resolve).catch(reject);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error("Failed to load image for compression"));
-      };
-      img.src = objectUrl;
-    });
   }
 
   // ── Per-photo analysis — called once per file, compression included (#545) ─
@@ -628,6 +548,70 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     } finally {
       setReestimatingId(null);
     }
+  }
+
+  // ── Per-item photo re-scan ────────────────────────────────────────────────
+  async function rescanItem(file: File, itemId: string) {
+    setRescanningId(itemId);
+    setRescanError(null);
+    const item = items.find((i) => i.id === itemId);
+    let imageBlob: Blob;
+    try {
+      imageBlob = await compressImage(file);
+    } catch {
+      imageBlob = file;
+    }
+    const formData = new FormData();
+    formData.append("image", imageBlob, "photo.jpg");
+    formData.append("mode", "food");
+    const ctx = item?.user_context?.trim() ?? "";
+    if (ctx) formData.append("user_context", ctx);
+    try {
+      const res = await fetch("/api/meals/analyze-photo", { method: "POST", body: formData });
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) throw new Error("Analysis failed");
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Analysis failed");
+      // Respect per-field manual-edit flags — same contract as handleReestimateItem.
+      setItems((prev) =>
+        prev.map((it) => {
+          if (it.id !== itemId) return it;
+          return {
+            ...it,
+            label: it.labelManuallyEdited ? it.label : (data.food_name ?? it.label),
+            calories: it.caloriesManuallyEdited ? it.calories : (data.calories ?? it.calories),
+            protein_g: it.proteinManuallyEdited ? it.protein_g : (data.protein_g ?? it.protein_g),
+            carbs_g: it.carbsManuallyEdited ? it.carbs_g : (data.carbs_g ?? it.carbs_g),
+            fat_g: it.fatManuallyEdited ? it.fat_g : (data.fat_g ?? it.fat_g),
+            fiber_g: it.fiberManuallyEdited ? it.fiber_g : (data.fiber_g ?? null),
+            sugar_g: it.sugarManuallyEdited ? it.sugar_g : (data.sugar_g ?? null),
+          };
+        }),
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Re-scan failed";
+      setRescanError({ id: itemId, msg });
+    } finally {
+      setRescanningId(null);
+      rescanTargetIdRef.current = null;
+      if (rescanInputRef.current) rescanInputRef.current.value = "";
+    }
+  }
+
+  function handleRescanFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const targetId = rescanTargetIdRef.current;
+    if (!file || !targetId) return;
+    if (file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")) {
+      setRescanError({
+        id: targetId,
+        msg: "In your iPhone Camera settings, set format to 'Most Compatible' and try again.",
+      });
+      if (rescanInputRef.current) rescanInputRef.current.value = "";
+      rescanTargetIdRef.current = null;
+      return;
+    }
+    rescanItem(file, targetId);
   }
 
   // ── Manual entry ──────────────────────────────────────────────────────────
@@ -892,7 +876,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         </div>
       )}
 
-      {/* Hidden file inputs — camera (single) and library (multi-select) */}
+      {/* Hidden file inputs — camera (single), library (multi-select), and per-item re-scan */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -908,6 +892,13 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
         multiple
         className="hidden"
         onChange={handleFilesChange}
+      />
+      <input
+        ref={rescanInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleRescanFileChange}
       />
 
       {/* ── ERROR / recovery panel ───────────────────────────────────────── */}
@@ -1383,6 +1374,41 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
                           )}
                           Re-estimate macros
                         </button>
+                        <button
+                          onClick={() => {
+                            rescanTargetIdRef.current = item.id;
+                            rescanInputRef.current?.click();
+                          }}
+                          disabled={rescanningId === item.id}
+                          className="flex items-center transition-opacity active:opacity-70 disabled:opacity-40"
+                          style={{
+                            gap: "var(--space-1)",
+                            fontSize: "var(--t-meta)",
+                            color: "var(--color-text-muted)",
+                            padding: "var(--space-1) 0",
+                            background: "none",
+                            border: "none",
+                            cursor: rescanningId === item.id ? "default" : "pointer",
+                            alignSelf: "flex-start",
+                          }}
+                        >
+                          {rescanningId === item.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Camera size={13} />
+                          )}
+                          Re-scan with photo
+                        </button>
+                        {rescanError?.id === item.id && (
+                          <span
+                            style={{
+                              fontSize: "var(--t-micro)",
+                              color: "var(--color-danger)",
+                            }}
+                          >
+                            {rescanError.msg}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
