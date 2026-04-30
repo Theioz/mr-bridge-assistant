@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Plus, X, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import type { BacklogItem, MediaType, MetadataSearchResult } from "@/lib/types";
@@ -125,7 +126,9 @@ function SearchModal({
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        background: "rgba(0,0,0,0.6)",
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
@@ -148,6 +151,7 @@ function SearchModal({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
         }}
       >
         {/* Search input */}
@@ -363,26 +367,41 @@ function ItemRow({
         size={14}
         style={{ color: "var(--color-text-muted)", flexShrink: 0, cursor: "grab" }}
       />
-      <CoverThumb url={item.cover_url} title={item.title} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Link
-          href={`/backlog/${item.id}`}
-          style={{
-            fontWeight: 600,
-            fontSize: 14,
-            color: "var(--color-text)",
-            textDecoration: "none",
-          }}
-        >
-          {item.title}
-        </Link>
-        {item.creator && (
-          <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
-            {item.creator}
-            {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ""}
+      <Link
+        href={`/backlog/${item.id}`}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flex: 1,
+          minWidth: 0,
+          textDecoration: "none",
+          color: "inherit",
+        }}
+      >
+        <CoverThumb url={item.cover_url} title={item.title} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              margin: 0,
+              fontWeight: 600,
+              fontSize: 14,
+              color: "var(--color-text)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {item.title}
           </p>
-        )}
-      </div>
+          {item.creator && (
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
+              {item.creator}
+              {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ""}
+            </p>
+          )}
+        </div>
+      </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {item.rating != null && (
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-primary)" }}>
@@ -445,6 +464,7 @@ function CollapsibleSection({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BacklogClient({ initialItems }: { initialItems: BacklogItem[] }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("game");
   const [items, setItems] = useState<BacklogItem[]>(initialItems);
   const [showSearch, setShowSearch] = useState(false);
@@ -479,6 +499,7 @@ export default function BacklogClient({ initialItems }: { initialItems: BacklogI
     if (res.ok) {
       const newItem = await res.json();
       setItems((prev) => [...prev, newItem as BacklogItem]);
+      router.push(`/backlog/${(newItem as BacklogItem).id}`);
     }
   };
 
