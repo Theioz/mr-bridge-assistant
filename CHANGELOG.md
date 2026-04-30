@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Library: cover grid view.** A list/grid toggle (List · LayoutGrid icons) in the header switches between the existing list view and a cover art grid. Grid renders all filtered items as 2:3 aspect-ratio cards with a hover lift, gradient title overlay, status dot, and optional media-type badge on the All tab. Drag-to-reorder and status grouping remain list-only; the grid shows all filtered items flat.
+
 ### Fixed
 - **Library: new items now appear immediately when navigating back from the detail page.** Added `router.refresh()` after import so the Next.js router cache for `/library` is invalidated before the push, preventing the stale cached page from being served on return.
 
