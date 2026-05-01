@@ -3,16 +3,7 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Search,
-  Plus,
-  X,
-  GripVertical,
-  ChevronDown,
-  ChevronRight,
-  LayoutGrid,
-  List,
-} from "lucide-react";
+import { Search, Plus, X, GripVertical, LayoutGrid, List } from "lucide-react";
 import type { BacklogItem, MediaType, MetadataSearchResult } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -774,60 +765,6 @@ function ItemRow({
   );
 }
 
-// ── Collapsible section ───────────────────────────────────────────────────────
-
-function CollapsibleSection({
-  title,
-  count,
-  defaultOpen,
-  children,
-}: {
-  title: string;
-  count: number;
-  defaultOpen: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  if (count === 0) return null;
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 0",
-          width: "100%",
-          color: "var(--color-text-muted)",
-          fontSize: 12,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
-        {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        {title}
-        <span
-          style={{
-            marginLeft: "auto",
-            fontWeight: 400,
-            textTransform: "none",
-            letterSpacing: 0,
-            fontSize: 12,
-          }}
-        >
-          {count}
-        </span>
-      </button>
-      {open && <div>{children}</div>}
-    </div>
-  );
-}
-
 // ── Cover grid ────────────────────────────────────────────────────────────────
 
 function CoverCard({ item, showType }: { item: BacklogItem; showType?: boolean }) {
@@ -1524,93 +1461,29 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
             <CoverGrid items={filteredItems} showType={showType} />
           ) : (
             <>
-              {activeItems.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      color: "var(--color-text-muted)",
-                      margin: "0 0 4px",
-                    }}
-                  >
-                    Active — {activeItems.length}
-                  </p>
-                  {activeItems.map((item) => (
-                    <ItemRow
-                      key={item.id}
-                      item={item}
-                      showType={showType}
-                      draggable={canDrag}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                    />
-                  ))}
-                </div>
-              )}
+              {activeItems.map((item) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  showType={showType}
+                  draggable={canDrag}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                />
+              ))}
 
-              <CollapsibleSection
-                title="Queued"
-                count={queuedItems.length}
-                defaultOpen={activeItems.length === 0}
-              >
-                {queuedItems.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    showType={showType}
-                    draggable={canDrag}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  />
-                ))}
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Paused" count={pausedItems.length} defaultOpen={false}>
-                {pausedItems.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    showType={showType}
-                    draggable={canDrag}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  />
-                ))}
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Finished" count={finishedItems.length} defaultOpen={false}>
-                {finishedItems.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    showType={showType}
-                    draggable={false}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  />
-                ))}
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Dropped" count={droppedItems.length} defaultOpen={false}>
-                {droppedItems.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    showType={showType}
-                    draggable={false}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  />
-                ))}
-              </CollapsibleSection>
+              {[...queuedItems, ...pausedItems, ...finishedItems, ...droppedItems].map((item) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  showType={showType}
+                  draggable={canDrag && (item.status === "backlog" || item.status === "paused")}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                />
+              ))}
             </>
           )}
         </div>
