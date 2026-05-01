@@ -12,20 +12,28 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") as MediaType | null;
   const status = searchParams.get("status") as BacklogStatus | null;
+  const queryText = searchParams.get("q");
+  const year = searchParams.get("year");
+  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "50", 10), 1), 100);
+  const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10), 0);
 
   let q = supabase
     .from("backlog_items")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", user.id)
     .order("priority", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (type) q = q.eq("media_type", type);
   if (status) q = q.eq("status", status);
+  if (queryText) q = q.or(`title.ilike.%${queryText}%,creator.ilike.%${queryText}%`);
+  if (year) q = q.gte("release_date", `${year}-01-01`).lte("release_date", `${year}-12-31`);
 
-  const { data, error } = await q;
+  q = q.range(offset, offset + limit - 1);
+
+  const { data, count, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  return NextResponse.json({ items: data ?? [], total: count ?? 0 });
 }
 
 export async function POST(req: NextRequest) {

@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Plus, X, GripVertical, LayoutGrid, List } from "lucide-react";
-import type { BacklogItem, MediaType, MetadataSearchResult } from "@/lib/types";
+import type {
+  BacklogItem,
+  MediaType,
+  MetadataSearchResult,
+  AllCounts,
+  StatusCounts,
+} from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,6 +61,24 @@ function getGenres(item: BacklogItem): string[] {
       .slice(0, 4);
   }
   return [];
+}
+
+function buildApiUrl(
+  tab: Tab,
+  q: string | null,
+  status: string | null,
+  year: string | null,
+  offset: number,
+  limit = 50,
+): string {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  if (tab !== "all") params.set("type", tab);
+  if (status) params.set("status", status);
+  if (q) params.set("q", q);
+  if (year) params.set("year", year);
+  return `/api/backlog?${params.toString()}`;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -129,16 +153,11 @@ const TYPE_LABELS: Record<MediaType, string> = {
 
 const QUEUED_COLOR = "rgba(148,163,184,0.4)";
 
-function StatusBar({ items, height = 6 }: { items: BacklogItem[]; height?: number }) {
-  const n = items.length;
+function StatusBar({ statusCounts, height = 6 }: { statusCounts: StatusCounts; height?: number }) {
+  const n = statusCounts.total;
   if (n === 0)
     return <div style={{ height, borderRadius: 999, background: "var(--color-bg-2)" }} />;
   const pct = (count: number) => `${((count / n) * 100).toFixed(1)}%`;
-  const finished = items.filter((i) => i.status === "finished").length;
-  const active = items.filter((i) => i.status === "active").length;
-  const paused = items.filter((i) => i.status === "paused").length;
-  const dropped = items.filter((i) => i.status === "dropped").length;
-  const queued = items.filter((i) => i.status === "backlog").length;
   return (
     <div
       style={{
@@ -149,26 +168,45 @@ function StatusBar({ items, height = 6 }: { items: BacklogItem[]; height?: numbe
         background: "var(--color-bg-2)",
       }}
     >
-      <div style={{ width: pct(finished), background: "#22c55e", transition: "width 0.3s" }} />
       <div
-        style={{ width: pct(active), background: "var(--color-primary)", transition: "width 0.3s" }}
+        style={{
+          width: pct(statusCounts.finished),
+          background: "#22c55e",
+          transition: "width 0.3s",
+        }}
       />
-      <div style={{ width: pct(paused), background: "#f59e0b", transition: "width 0.3s" }} />
-      <div style={{ width: pct(dropped), background: "#ef4444", transition: "width 0.3s" }} />
-      <div style={{ width: pct(queued), background: QUEUED_COLOR, transition: "width 0.3s" }} />
+      <div
+        style={{
+          width: pct(statusCounts.active),
+          background: "var(--color-primary)",
+          transition: "width 0.3s",
+        }}
+      />
+      <div
+        style={{ width: pct(statusCounts.paused), background: "#f59e0b", transition: "width 0.3s" }}
+      />
+      <div
+        style={{
+          width: pct(statusCounts.dropped),
+          background: "#ef4444",
+          transition: "width 0.3s",
+        }}
+      />
+      <div
+        style={{
+          width: pct(statusCounts.backlog),
+          background: QUEUED_COLOR,
+          transition: "width 0.3s",
+        }}
+      />
     </div>
   );
 }
 
-function SummaryStrip({ items, activeTab }: { items: BacklogItem[]; activeTab: Tab }) {
-  const total = items.length;
+function SummaryStrip({ counts, activeTab }: { counts: AllCounts; activeTab: Tab }) {
+  const tabCounts = counts[activeTab];
+  const { total, active, finished, backlog: queued, paused, dropped } = tabCounts;
   if (total === 0) return null;
-
-  const active = items.filter((i) => i.status === "active").length;
-  const finished = items.filter((i) => i.status === "finished").length;
-  const queued = items.filter((i) => i.status === "backlog").length;
-  const paused = items.filter((i) => i.status === "paused").length;
-  const dropped = items.filter((i) => i.status === "dropped").length;
 
   const cardBase = {
     background: "var(--color-bg-1)",
@@ -197,8 +235,8 @@ function SummaryStrip({ items, activeTab }: { items: BacklogItem[]; activeTab: T
           }}
         >
           {(["game", "show", "movie", "book"] as MediaType[]).map((type) => {
-            const typeItems = items.filter((i) => i.media_type === type);
-            const count = typeItems.length;
+            const typeCounts = counts[type];
+            const count = typeCounts.total;
             const color = TYPE_COLORS[type];
             return (
               <div
@@ -242,7 +280,7 @@ function SummaryStrip({ items, activeTab }: { items: BacklogItem[]; activeTab: T
                     {count}
                   </span>
                 </div>
-                <StatusBar items={typeItems} height={4} />
+                <StatusBar statusCounts={typeCounts} height={4} />
               </div>
             );
           })}
@@ -268,7 +306,7 @@ function SummaryStrip({ items, activeTab }: { items: BacklogItem[]; activeTab: T
         {/* Completion bar */}
         <div style={{ ...cardBase, flex: 1, minWidth: 200, padding: "10px 14px" }}>
           <div style={{ ...statLabel, marginTop: 0, marginBottom: 8 }}>Completion</div>
-          <StatusBar items={items} height={8} />
+          <StatusBar statusCounts={tabCounts} height={8} />
           <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
             {[
               { label: "Finished", color: "#22c55e", n: finished },
@@ -969,11 +1007,18 @@ const selectStyle = {
   backgroundPosition: "right 8px center" as const,
 };
 
-export default function LibraryClient({ initialItems }: { initialItems: BacklogItem[] }) {
+export default function LibraryClient({
+  initialItems,
+  initialCounts,
+}: {
+  initialItems: BacklogItem[];
+  initialCounts: AllCounts;
+}) {
   const router = useRouter();
+
+  // ── UI state ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [items, setItems] = useState<BacklogItem[]>(initialItems);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -984,59 +1029,218 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
 
-  // Items for the current tab (before filtering)
-  const tabItems = useMemo(
-    () => (activeTab === "all" ? items : items.filter((i) => i.media_type === activeTab)),
-    [items, activeTab],
-  );
+  // ── Pagination + lazy-load state ────────────────────────────────────────────
+  // Global counts — used by SummaryStrip and tab badges (never stale from pagination)
+  const [counts, setCounts] = useState<AllCounts>(initialCounts);
 
-  // Unique genres + years for filter dropdowns
-  const availableGenres = useMemo(() => {
-    const set = new Set<string>();
-    tabItems.forEach((item) => getGenres(item).forEach((g) => set.add(g)));
-    return Array.from(set).sort();
-  }, [tabItems]);
+  // Per-tab item cache (ref — no renders triggered by cache writes)
+  const tabCacheRef = useRef<Partial<Record<Tab, BacklogItem[]>>>({ all: initialItems });
+  // Per-tab "has more pages" tracking (ref — only hasMore state triggers render)
+  const tabHasMoreRef = useRef<Record<Tab, boolean>>({
+    all: initialItems.length >= 50,
+    game: true,
+    show: true,
+    movie: true,
+    book: true,
+  });
+  // Current tab ref — lets effects read latest tab without depending on it
+  const activeTabRef = useRef<Tab>("all");
 
-  const availableYears = useMemo(() => {
-    const set = new Set<string>();
-    tabItems.forEach((item) => {
-      if (item.release_date) set.add(item.release_date.slice(0, 4));
-    });
-    return Array.from(set).sort().reverse();
-  }, [tabItems]);
+  // Displayed items + pagination
+  const [displayedItems, setDisplayedItems] = useState<BacklogItem[]>(initialItems);
+  // API-level offset (pre genre-filter); used for Load More requests
+  const [displayedOffset, setDisplayedOffset] = useState(initialItems.length);
+  const [hasMore, setHasMore] = useState(initialItems.length >= 50);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Filtered + sorted items
-  const filteredItems = useMemo(() => {
-    let result = tabItems;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (i) => i.title.toLowerCase().includes(q) || (i.creator?.toLowerCase().includes(q) ?? false),
-      );
-    }
-    if (filterStatus) result = result.filter((i) => i.status === filterStatus);
-    if (filterGenre) result = result.filter((i) => getGenres(i).includes(filterGenre));
-    if (filterYear) result = result.filter((i) => i.release_date?.slice(0, 4) === filterYear);
-
-    if (sortBy === "title") return [...result].sort((a, b) => a.title.localeCompare(b.title));
-    if (sortBy === "rating") return [...result].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    if (sortBy === "release_date")
-      return [...result].sort((a, b) => (b.release_date ?? "").localeCompare(a.release_date ?? ""));
-    return [...result].sort((a, b) => a.priority - b.priority);
-  }, [tabItems, searchQuery, filterStatus, filterGenre, filterYear, sortBy]);
-
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const hasServerFilter = !!(searchQuery || filterStatus || filterYear);
   const hasFilter = !!(searchQuery || filterStatus || filterGenre || filterYear);
-
-  // Grouped by status
-  const activeItems = filteredItems.filter((i) => i.status === "active");
-  const queuedItems = filteredItems.filter((i) => i.status === "backlog");
-  const pausedItems = filteredItems.filter((i) => i.status === "paused");
-  const finishedItems = filteredItems.filter((i) => i.status === "finished");
-  const droppedItems = filteredItems.filter((i) => i.status === "dropped");
-
   const canDrag = activeTab !== "all" && sortBy === "priority" && !hasFilter;
   const showType = activeTab === "all";
 
+  // Client-side sort applied on top of whatever the server returned
+  const sortedDisplayedItems = useMemo(() => {
+    if (sortBy === "title")
+      return [...displayedItems].sort((a, b) => a.title.localeCompare(b.title));
+    if (sortBy === "rating")
+      return [...displayedItems].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    if (sortBy === "release_date")
+      return [...displayedItems].sort((a, b) =>
+        (b.release_date ?? "").localeCompare(a.release_date ?? ""),
+      );
+    return displayedItems; // priority order already from server
+  }, [displayedItems, sortBy]);
+
+  // Genre + year dropdowns derived from loaded items
+  const availableGenres = useMemo(() => {
+    const set = new Set<string>();
+    displayedItems.forEach((item) => getGenres(item).forEach((g) => set.add(g)));
+    return Array.from(set).sort();
+  }, [displayedItems]);
+
+  const availableYears = useMemo(() => {
+    const set = new Set<string>();
+    displayedItems.forEach((item) => {
+      if (item.release_date) set.add(item.release_date.slice(0, 4));
+    });
+    return Array.from(set).sort().reverse();
+  }, [displayedItems]);
+
+  // ── Tab switch ──────────────────────────────────────────────────────────────
+  const handleTabSwitch = useCallback(
+    async (tab: Tab) => {
+      setActiveTab(tab);
+      activeTabRef.current = tab;
+      setFilterGenre(null);
+      setFilterYear(null);
+
+      // searchQuery + filterStatus may still be active — check them before clearing
+      const serverFilterActive = !!(searchQuery || filterStatus);
+
+      if (!serverFilterActive) {
+        // No server filter — use cache or fetch unfiltered
+        const cached = tabCacheRef.current[tab];
+        if (cached !== undefined) {
+          setDisplayedItems(cached);
+          setDisplayedOffset(cached.length);
+          setHasMore(tabHasMoreRef.current[tab] ?? false);
+          return;
+        }
+        setTabLoading(true);
+        try {
+          const url = `/api/backlog?limit=50&offset=0${tab !== "all" ? `&type=${tab}` : ""}`;
+          const data = (await fetch(url).then((r) => r.json())) as { items: BacklogItem[] };
+          tabCacheRef.current = { ...tabCacheRef.current, [tab]: data.items };
+          tabHasMoreRef.current = { ...tabHasMoreRef.current, [tab]: data.items.length >= 50 };
+          setDisplayedItems(data.items);
+          setDisplayedOffset(data.items.length);
+          setHasMore(data.items.length >= 50);
+        } catch {
+          // silent — display stays as-is
+        } finally {
+          setTabLoading(false);
+        }
+      } else {
+        // Server filter active — fetch with filter + new tab (filterYear/genre just cleared above)
+        setTabLoading(true);
+        try {
+          const url = buildApiUrl(tab, searchQuery || null, filterStatus, null, 0);
+          const data = (await fetch(url).then((r) => r.json())) as { items: BacklogItem[] };
+          setDisplayedItems(data.items);
+          setDisplayedOffset(data.items.length);
+          setHasMore(data.items.length >= 50);
+        } catch {
+          // silent
+        } finally {
+          setTabLoading(false);
+        }
+      }
+    },
+    [searchQuery, filterStatus],
+  );
+
+  // ── Filter effect ───────────────────────────────────────────────────────────
+  // Fires on filter value changes only (not on tab changes — those go through handleTabSwitch).
+  // Reads activeTabRef to get the current tab without creating a dependency on activeTab state.
+  useEffect(() => {
+    if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
+
+    const tab = activeTabRef.current;
+
+    if (!hasServerFilter && !filterGenre) {
+      // No filter — restore from cache (handles the "filter cleared" case)
+      const cached = tabCacheRef.current[tab];
+      if (cached !== undefined) {
+        setDisplayedItems(cached);
+        setDisplayedOffset(cached.length);
+        setHasMore(tabHasMoreRef.current[tab] ?? false);
+      } else {
+        // Cache miss (e.g. filter cleared on a tab that was only ever visited with a filter)
+        setTabLoading(true);
+        const url = `/api/backlog?limit=50&offset=0${tab !== "all" ? `&type=${tab}` : ""}`;
+        fetch(url)
+          .then((r) => r.json())
+          .then(({ items }: { items: BacklogItem[] }) => {
+            tabCacheRef.current = { ...tabCacheRef.current, [tab]: items };
+            tabHasMoreRef.current = { ...tabHasMoreRef.current, [tab]: items.length >= 50 };
+            setDisplayedItems(items);
+            setDisplayedOffset(items.length);
+            setHasMore(items.length >= 50);
+          })
+          .catch(() => {})
+          .finally(() => setTabLoading(false));
+      }
+      return;
+    }
+
+    if (!hasServerFilter && filterGenre) {
+      // Genre-only — client-side post-filter on cached items
+      const source = tabCacheRef.current[tab] ?? [];
+      setDisplayedItems(source.filter((i) => getGenres(i).includes(filterGenre)));
+      setDisplayedOffset(source.length);
+      // Show Load More based on whether there are more unfiltered pages (genre can't paginate server-side)
+      setHasMore(tabHasMoreRef.current[tab] ?? false);
+      return;
+    }
+
+    // Server filter — debounce text search, fire immediately for dropdowns
+    const delay = searchQuery ? 300 : 0;
+    filterTimerRef.current = setTimeout(async () => {
+      setTabLoading(true);
+      try {
+        const url = buildApiUrl(tab, searchQuery || null, filterStatus, filterYear, 0);
+        const data = (await fetch(url).then((r) => r.json())) as { items: BacklogItem[] };
+        const postFiltered = filterGenre
+          ? data.items.filter((i) => getGenres(i).includes(filterGenre))
+          : data.items;
+        setDisplayedItems(postFiltered);
+        setDisplayedOffset(data.items.length);
+        setHasMore(data.items.length >= 50);
+      } catch {
+        // silent
+      } finally {
+        setTabLoading(false);
+      }
+    }, delay);
+
+    return () => {
+      if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
+    };
+  }, [searchQuery, filterStatus, filterGenre, filterYear, hasServerFilter]);
+
+  // ── Load more ───────────────────────────────────────────────────────────────
+  const loadMoreItems = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const tab = activeTabRef.current;
+      const url = buildApiUrl(tab, searchQuery || null, filterStatus, filterYear, displayedOffset);
+      const data = (await fetch(url).then((r) => r.json())) as { items: BacklogItem[] };
+      const newItems = data.items;
+
+      if (!hasServerFilter) {
+        const existing = tabCacheRef.current[tab] ?? [];
+        tabCacheRef.current = { ...tabCacheRef.current, [tab]: [...existing, ...newItems] };
+        tabHasMoreRef.current = { ...tabHasMoreRef.current, [tab]: newItems.length >= 50 };
+      }
+
+      const postFiltered = filterGenre
+        ? newItems.filter((i) => getGenres(i).includes(filterGenre))
+        : newItems;
+      setDisplayedItems((prev) => [...prev, ...postFiltered]);
+      setDisplayedOffset((prev) => prev + newItems.length);
+      setHasMore(newItems.length >= 50);
+    } catch {
+      // silent
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // ── Import handler ──────────────────────────────────────────────────────────
   const handleImport = async (result: MetadataSearchResult) => {
     const mediaType = searchMediaType ?? (activeTab === "all" ? "game" : activeTab);
     const res = await fetch("/api/backlog", {
@@ -1056,13 +1260,33 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
       }),
     });
     if (res.ok) {
-      const newItem = await res.json();
-      setItems((prev) => [...prev, newItem as BacklogItem]);
+      const newItem = (await res.json()) as BacklogItem;
+      // Optimistic update — prepend to displayed list and both caches
+      setDisplayedItems((prev) => [newItem, ...prev]);
+      const allCached = tabCacheRef.current["all"];
+      if (allCached) tabCacheRef.current = { ...tabCacheRef.current, all: [newItem, ...allCached] };
+      const tab = activeTabRef.current;
+      if (tab !== "all") {
+        const tabCached = tabCacheRef.current[tab];
+        if (tabCached)
+          tabCacheRef.current = { ...tabCacheRef.current, [tab]: [newItem, ...tabCached] };
+      }
+      // Update global counts
+      setCounts((prev) => ({
+        ...prev,
+        all: { ...prev.all, backlog: prev.all.backlog + 1, total: prev.all.total + 1 },
+        [mediaType]: {
+          ...prev[mediaType as MediaType],
+          backlog: prev[mediaType as MediaType].backlog + 1,
+          total: prev[mediaType as MediaType].total + 1,
+        },
+      }));
       router.refresh();
-      router.push(`/library/${(newItem as BacklogItem).id}`);
+      // Stay on /library — do not navigate to detail page (#596)
     }
   };
 
+  // ── Drag reorder ────────────────────────────────────────────────────────────
   const handleDragStart = (id: string) => {
     dragId.current = id;
   };
@@ -1073,22 +1297,23 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
     const srcId = dragId.current;
     if (!srcId || srcId === targetId) return;
 
-    const tabList = items.filter((i) => i.media_type === activeTab);
-    const srcIdx = tabList.findIndex((i) => i.id === srcId);
-    const tgtIdx = tabList.findIndex((i) => i.id === targetId);
+    const srcIdx = displayedItems.findIndex((i) => i.id === srcId);
+    const tgtIdx = displayedItems.findIndex((i) => i.id === targetId);
     if (srcIdx < 0 || tgtIdx < 0) return;
 
-    const reordered = [...tabList];
+    const prevItems = [...displayedItems];
+    const reordered = [...displayedItems];
     const [moved] = reordered.splice(srcIdx, 1);
     reordered.splice(tgtIdx, 0, moved);
-
     const updated = reordered.map((item, idx) => ({ ...item, priority: idx }));
-    const otherItems = items.filter((i) => i.media_type !== activeTab);
-    setItems([...otherItems, ...updated]);
+
+    setDisplayedItems(updated);
+    const tab = activeTabRef.current;
+    tabCacheRef.current = { ...tabCacheRef.current, [tab]: updated };
 
     await Promise.all(
       updated
-        .filter((item, idx) => item.priority !== tabList[idx]?.priority)
+        .filter((item, idx) => item.priority !== prevItems[idx]?.priority)
         .map((item) =>
           fetch(`/api/backlog/${item.id}/priority`, {
             method: "PATCH",
@@ -1102,6 +1327,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
     dragOverId.current = null;
   };
 
+  // ── Filter helpers ──────────────────────────────────────────────────────────
   const clearFilters = () => {
     setSearchQuery("");
     setFilterStatus(null);
@@ -1124,6 +1350,16 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
     searchQuery && { key: "search", label: `"${searchQuery}"`, clear: () => setSearchQuery("") },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
+  // ── Grouped items for list view ─────────────────────────────────────────────
+  const activeItems = sortedDisplayedItems.filter((i) => i.status === "active");
+  const queuedItems = sortedDisplayedItems.filter((i) => i.status === "backlog");
+  const pausedItems = sortedDisplayedItems.filter((i) => i.status === "paused");
+  const finishedItems = sortedDisplayedItems.filter((i) => i.status === "finished");
+  const droppedItems = sortedDisplayedItems.filter((i) => i.status === "dropped");
+
+  const tabTotal = counts[activeTab].total;
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div>
       {/* Header */}
@@ -1199,8 +1435,8 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
         </div>
       </div>
 
-      {/* Summary strip — shows stats for current tab */}
-      <SummaryStrip items={tabItems} activeTab={activeTab} />
+      {/* Summary strip — always shows global totals, unaffected by filters */}
+      <SummaryStrip counts={counts} activeTab={activeTab} />
 
       {/* Tabs */}
       <div
@@ -1212,17 +1448,12 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
         }}
       >
         {TABS.map((tab) => {
-          const count =
-            tab.id === "all" ? items.length : items.filter((i) => i.media_type === tab.id).length;
+          const count = counts[tab.id].total;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setFilterGenre(null);
-                setFilterYear(null);
-              }}
+              onClick={() => handleTabSwitch(tab.id)}
               style={{
                 background: "none",
                 border: "none",
@@ -1336,7 +1567,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
           </select>
         </div>
 
-        {/* Genre filter */}
+        {/* Genre filter — client-side post-filter on loaded items */}
         {availableGenres.length > 0 && (
           <div style={{ position: "relative" }}>
             <select
@@ -1444,8 +1675,22 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
         </div>
       )}
 
-      {/* Empty state */}
-      {tabItems.length === 0 && (
+      {/* Tab loading indicator */}
+      {tabLoading && (
+        <p
+          style={{
+            padding: "16px 0",
+            color: "var(--color-text-muted)",
+            fontSize: 14,
+            textAlign: "center",
+          }}
+        >
+          Loading…
+        </p>
+      )}
+
+      {/* Empty state — no items in this tab at all */}
+      {!tabLoading && tabTotal === 0 && (
         <div style={{ textAlign: "center", padding: "48px 0", color: "var(--color-text-muted)" }}>
           <p style={{ fontSize: 15 }}>
             Nothing in your library
@@ -1476,7 +1721,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
       )}
 
       {/* No filter results */}
-      {tabItems.length > 0 && filteredItems.length === 0 && (
+      {!tabLoading && tabTotal > 0 && sortedDisplayedItems.length === 0 && hasFilter && (
         <div style={{ textAlign: "center", padding: "32px 0", color: "var(--color-text-muted)" }}>
           <p style={{ fontSize: 14 }}>No items match the current filters.</p>
           <button
@@ -1496,11 +1741,11 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
         </div>
       )}
 
-      {/* Item sections */}
-      {filteredItems.length > 0 && (
+      {/* Item list */}
+      {!tabLoading && sortedDisplayedItems.length > 0 && (
         <div>
           {viewMode === "grid" ? (
-            <CoverGrid items={filteredItems} showType={showType} />
+            <CoverGrid items={sortedDisplayedItems} showType={showType} />
           ) : (
             <>
               {activeItems.map((item) => (
@@ -1514,7 +1759,6 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
                   onDrop={handleDrop}
                 />
               ))}
-
               {[...queuedItems, ...pausedItems, ...finishedItems, ...droppedItems].map((item) => (
                 <ItemRow
                   key={item.id}
@@ -1528,6 +1772,29 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
               ))}
             </>
           )}
+        </div>
+      )}
+
+      {/* Load More */}
+      {!tabLoading && hasMore && sortedDisplayedItems.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "24px 0 8px" }}>
+          <button
+            onClick={loadMoreItems}
+            disabled={loadingMore}
+            style={{
+              background: "var(--color-bg-1)",
+              border: "1px solid var(--rule-soft)",
+              borderRadius: 8,
+              padding: "10px 24px",
+              fontSize: 14,
+              color: loadingMore ? "var(--color-text-muted)" : "var(--color-text)",
+              cursor: loadingMore ? "not-allowed" : "pointer",
+              opacity: loadingMore ? 0.7 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
 
