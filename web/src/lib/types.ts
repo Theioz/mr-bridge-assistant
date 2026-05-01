@@ -263,6 +263,14 @@ export interface Package {
 
 export type MediaType = "game" | "show" | "movie" | "book";
 export type BacklogStatus = "backlog" | "active" | "paused" | "finished" | "dropped";
+export type StatusCounts = Record<BacklogStatus, number> & { total: number };
+export type AllCounts = {
+  all: StatusCounts;
+  game: StatusCounts;
+  show: StatusCounts;
+  movie: StatusCounts;
+  book: StatusCounts;
+};
 
 export interface GameMetadata {
   platform?: string;

@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Library: server-side pagination (Load More, 50 items/page) (#589).** SSR now fetches only the first 50 items for the active tab; a Load More button appends the next slice from `/api/backlog`. Summary strip and tab badges use a separate lightweight count query and always reflect global totals, not just the loaded slice.
+- **Library: server-side search and filter params for library API (#590).** Search query (`?q=`), status, and year filters now round-trip to `/api/backlog` so results are correct on paginated data. Genre filter remains client-side (JSONB format inconsistency). Filter changes reset to offset 0; search is debounced at 300ms.
+- **Library: per-tab lazy loading with accurate count badges (#591).** SSR returns a lightweight `media_type + status` count query plus items for the All tab only. Switching to a type tab fetches that tab's items on demand; revisiting uses session-cached data. Tab count badges are accurate immediately from the SSR count query.
+
+### Fixed
+- **Library: add modal now stays on library page after saving (#596).** `handleImport` no longer calls `router.push()` after a successful POST. The new item appears immediately via optimistic state update; `router.refresh()` syncs SSR state in the background.
+
 ### Changed
 - **Library: summary strip redesigned with media type breakdown.** On the All tab, four type cards (Games / Shows / Movies / Books) each show a count, a distinct color accent on the top border, and a mini 4px status bar showing the active/finished/queued breakdown within that type. Status stat row cleaned up to only show Paused and Dropped when non-zero. Completion bar height increased to 8px. `StatusBar` extracted as a shared sub-component used by both the type cards and the main completion bar.
 - **Library: list view is now flat — no collapsible sections.** Items render in status order (Active → Queued → Paused → Finished → Dropped) as a continuous list; the status badge on each row already identifies the group. Section headers and expand/collapse toggles removed entirely.
