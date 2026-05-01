@@ -113,7 +113,54 @@ function CoverThumb({ url, title }: { url: string | null; title: string }) {
 
 // ── Summary strip ─────────────────────────────────────────────────────────────
 
-function SummaryStrip({ items }: { items: BacklogItem[] }) {
+const TYPE_COLORS: Record<MediaType, string> = {
+  game: "#818cf8",
+  show: "#a855f7",
+  movie: "#f43f5e",
+  book: "#34d399",
+};
+
+const TYPE_LABELS: Record<MediaType, string> = {
+  game: "Games",
+  show: "Shows",
+  movie: "Movies",
+  book: "Books",
+};
+
+const QUEUED_COLOR = "rgba(148,163,184,0.4)";
+
+function StatusBar({ items, height = 6 }: { items: BacklogItem[]; height?: number }) {
+  const n = items.length;
+  if (n === 0)
+    return <div style={{ height, borderRadius: 999, background: "var(--color-bg-2)" }} />;
+  const pct = (count: number) => `${((count / n) * 100).toFixed(1)}%`;
+  const finished = items.filter((i) => i.status === "finished").length;
+  const active = items.filter((i) => i.status === "active").length;
+  const paused = items.filter((i) => i.status === "paused").length;
+  const dropped = items.filter((i) => i.status === "dropped").length;
+  const queued = items.filter((i) => i.status === "backlog").length;
+  return (
+    <div
+      style={{
+        display: "flex",
+        height,
+        borderRadius: 999,
+        overflow: "hidden",
+        background: "var(--color-bg-2)",
+      }}
+    >
+      <div style={{ width: pct(finished), background: "#22c55e", transition: "width 0.3s" }} />
+      <div
+        style={{ width: pct(active), background: "var(--color-primary)", transition: "width 0.3s" }}
+      />
+      <div style={{ width: pct(paused), background: "#f59e0b", transition: "width 0.3s" }} />
+      <div style={{ width: pct(dropped), background: "#ef4444", transition: "width 0.3s" }} />
+      <div style={{ width: pct(queued), background: QUEUED_COLOR, transition: "width 0.3s" }} />
+    </div>
+  );
+}
+
+function SummaryStrip({ items, activeTab }: { items: BacklogItem[]; activeTab: Tab }) {
   const total = items.length;
   if (total === 0) return null;
 
@@ -123,144 +170,139 @@ function SummaryStrip({ items }: { items: BacklogItem[] }) {
   const paused = items.filter((i) => i.status === "paused").length;
   const dropped = items.filter((i) => i.status === "dropped").length;
 
-  const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
-  const QUEUED_COLOR = "rgba(148,163,184,0.5)";
-
-  const cardStyle = {
+  const cardBase = {
     background: "var(--color-bg-1)",
     border: "1px solid var(--rule-soft)",
     borderRadius: 10,
-    padding: "12px 16px",
-    minWidth: 88,
+  };
+
+  const statLabel = {
+    fontSize: 11 as const,
+    color: "var(--color-text-muted)",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    marginTop: 2,
   };
 
   return (
-    <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-      <div style={cardStyle}>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>{total}</div>
+    <div style={{ marginBottom: 24 }}>
+      {/* Media type breakdown — All tab only */}
+      {activeTab === "all" && (
         <div
           style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginTop: 2,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 10,
+            marginBottom: 10,
           }}
         >
-          Total
-        </div>
-      </div>
-      <div style={cardStyle}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-primary)" }}>{active}</div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginTop: 2,
-          }}
-        >
-          In Progress
-        </div>
-      </div>
-      <div style={cardStyle}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#22c55e" }}>{finished}</div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginTop: 2,
-          }}
-        >
-          Finished
-        </div>
-      </div>
-      <div style={cardStyle}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-muted)" }}>
-          {queued}
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginTop: 2,
-          }}
-        >
-          Queued
-        </div>
-      </div>
-
-      {/* Progress card */}
-      <div style={{ ...cardStyle, flex: 1, minWidth: 180 }}>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginBottom: 8,
-          }}
-        >
-          Completion
-        </div>
-        <div
-          style={{
-            display: "flex",
-            height: 6,
-            borderRadius: 999,
-            overflow: "hidden",
-            background: "var(--color-bg-2)",
-          }}
-        >
-          <div style={{ width: pct(finished), background: "#22c55e", transition: "width 0.3s" }} />
-          <div
-            style={{
-              width: pct(active),
-              background: "var(--color-primary)",
-              transition: "width 0.3s",
-            }}
-          />
-          <div style={{ width: pct(paused), background: "#f59e0b", transition: "width 0.3s" }} />
-          <div style={{ width: pct(dropped), background: "#ef4444", transition: "width 0.3s" }} />
-          <div style={{ width: pct(queued), background: QUEUED_COLOR, transition: "width 0.3s" }} />
-        </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-          {[
-            { label: "Finished", color: "#22c55e", n: finished },
-            { label: "Active", color: "var(--color-primary)", n: active },
-            { label: "Paused", color: "#f59e0b", n: paused },
-            { label: "Dropped", color: "#ef4444", n: dropped },
-            { label: "Queued", color: QUEUED_COLOR, n: queued },
-          ]
-            .filter(({ n }) => n > 0)
-            .map(({ label, color, n }) => (
-              <span
-                key={label}
+          {(["game", "show", "movie", "book"] as MediaType[]).map((type) => {
+            const typeItems = items.filter((i) => i.media_type === type);
+            const count = typeItems.length;
+            const color = TYPE_COLORS[type];
+            return (
+              <div
+                key={type}
                 style={{
+                  ...cardBase,
+                  borderTop: `3px solid ${count > 0 ? color : "var(--rule-soft)"}`,
+                  padding: "12px 14px",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 11,
-                  color: "var(--color-text-muted)",
+                  flexDirection: "column",
+                  gap: 10,
+                  opacity: count === 0 ? 0.5 : 1,
                 }}
               >
-                <span
+                <div
                   style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: color,
-                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
                   }}
-                />
-                {label} · {n}
-              </span>
-            ))}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--color-text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {TYPE_LABELS[type]}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: count > 0 ? color : "var(--color-text-muted)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {count}
+                  </span>
+                </div>
+                <StatusBar items={typeItems} height={4} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Status stats + completion */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {[
+          { label: "Total", value: total, color: "var(--color-text)" },
+          { label: "Active", value: active, color: "var(--color-primary)" },
+          { label: "Finished", value: finished, color: "#22c55e" },
+          { label: "Queued", value: queued, color: "var(--color-text-muted)" },
+          ...(paused > 0 ? [{ label: "Paused", value: paused, color: "#f59e0b" }] : []),
+          ...(dropped > 0 ? [{ label: "Dropped", value: dropped, color: "#ef4444" }] : []),
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ ...cardBase, padding: "10px 14px", minWidth: 72 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
+            <div style={statLabel}>{label}</div>
+          </div>
+        ))}
+
+        {/* Completion bar */}
+        <div style={{ ...cardBase, flex: 1, minWidth: 200, padding: "10px 14px" }}>
+          <div style={{ ...statLabel, marginTop: 0, marginBottom: 8 }}>Completion</div>
+          <StatusBar items={items} height={8} />
+          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "Finished", color: "#22c55e", n: finished },
+              { label: "Active", color: "var(--color-primary)", n: active },
+              { label: "Paused", color: "#f59e0b", n: paused },
+              { label: "Dropped", color: "#ef4444", n: dropped },
+              { label: "Queued", color: QUEUED_COLOR, n: queued },
+            ]
+              .filter(({ n }) => n > 0)
+              .map(({ label, color, n }) => (
+                <span
+                  key={label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 11,
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: color,
+                      flexShrink: 0,
+                      display: "inline-block",
+                    }}
+                  />
+                  {label} · {n}
+                </span>
+              ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1158,7 +1200,7 @@ export default function LibraryClient({ initialItems }: { initialItems: BacklogI
       </div>
 
       {/* Summary strip — shows stats for current tab */}
-      <SummaryStrip items={tabItems} />
+      <SummaryStrip items={tabItems} activeTab={activeTab} />
 
       {/* Tabs */}
       <div
