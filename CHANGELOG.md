@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Changed
+- **Library: summary strip redesigned with media type breakdown.** On the All tab, four type cards (Games / Shows / Movies / Books) each show a count, a distinct color accent on the top border, and a mini 4px status bar showing the active/finished/queued breakdown within that type. Status stat row cleaned up to only show Paused and Dropped when non-zero. Completion bar height increased to 8px. `StatusBar` extracted as a shared sub-component used by both the type cards and the main completion bar.
 - **Library: list view is now flat — no collapsible sections.** Items render in status order (Active → Queued → Paused → Finished → Dropped) as a continuous list; the status badge on each row already identifies the group. Section headers and expand/collapse toggles removed entirely.
 
 ### Added
