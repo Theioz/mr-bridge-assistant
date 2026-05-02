@@ -1477,10 +1477,16 @@ export default function LibraryClient({
     book: true,
   });
   // Current tab ref — lets effects read latest tab without depending on it
-  const activeTabRef = useRef<Tab>("all");
+  const activeTabRef = useRef<Tab>(
+    paramTab && validTabs.includes(paramTab) ? (paramTab as Tab) : "all",
+  );
 
   // Displayed items + pagination
-  const [displayedItems, setDisplayedItems] = useState<BacklogItem[]>(initialItems);
+  // initialItems is always the "all" tab SSR data; if URL lands on a specific tab we'll
+  // fetch the correct items in the mount effect below.
+  const [displayedItems, setDisplayedItems] = useState<BacklogItem[]>(
+    !paramTab || paramTab === "all" ? initialItems : [],
+  );
   // API-level offset (pre genre-filter); used for Load More requests
   const [displayedOffset, setDisplayedOffset] = useState(initialItems.length);
   const [hasMore, setHasMore] = useState(initialItems.length >= 50);
@@ -1521,6 +1527,31 @@ export default function LibraryClient({
     });
     return Array.from(set).sort().reverse();
   }, [displayedItems]);
+
+  // ── Mount effect — fetch correct items when URL lands on a non-"all" tab ────
+  useEffect(() => {
+    const tab = activeTabRef.current;
+    if (tab === "all") return; // initialItems already covers "all"
+    let cancelled = false;
+    setTabLoading(true);
+    fetch(`/api/backlog?limit=50&offset=0&type=${tab}`)
+      .then((r) => r.json())
+      .then((data: { items: BacklogItem[] }) => {
+        if (cancelled) return;
+        tabCacheRef.current = { ...tabCacheRef.current, [tab]: data.items };
+        tabHasMoreRef.current = { ...tabHasMoreRef.current, [tab]: data.items.length >= 50 };
+        setDisplayedItems(data.items);
+        setDisplayedOffset(data.items.length);
+        setHasMore(data.items.length >= 50);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setTabLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Tab switch ──────────────────────────────────────────────────────────────
   const handleTabSwitch = useCallback(
