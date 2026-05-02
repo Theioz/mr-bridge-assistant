@@ -24,15 +24,34 @@ const TYPE_LABEL: Record<string, string> = {
 
 // ── Session row ───────────────────────────────────────────────────────────────
 
-function SessionRow({ session }: { session: BacklogSession }) {
+function SessionRow({
+  session,
+  onDelete,
+}: {
+  session: BacklogSession;
+  onDelete: (id: string) => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
   const fmt = (ts: string | null) => {
     if (!ts) return "—";
-    return new Date(ts).toLocaleDateString(undefined, {
+    const [y, m, d] = ts.slice(0, 10).split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
   };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const res = await fetch(`/api/backlog/${session.item_id}/sessions/${session.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) onDelete(session.id);
+    else setDeleting(false);
+  };
+
   return (
     <div
       style={{
@@ -41,6 +60,7 @@ function SessionRow({ session }: { session: BacklogSession }) {
         padding: "8px 0",
         borderBottom: "1px solid var(--rule-soft)",
         fontSize: 13,
+        alignItems: "center",
       }}
     >
       <span style={{ color: "var(--color-text-muted)", minWidth: 90 }}>
@@ -51,6 +71,24 @@ function SessionRow({ session }: { session: BacklogSession }) {
         {fmt(session.finished_at)}
       </span>
       <span style={{ flex: 1, color: "var(--color-text)" }}>{session.notes ?? ""}</span>
+      <button
+        onClick={handleDelete}
+        disabled={deleting}
+        title="Delete session"
+        style={{
+          background: "none",
+          border: "none",
+          cursor: deleting ? "not-allowed" : "pointer",
+          color: "var(--color-text-muted)",
+          padding: "2px 4px",
+          opacity: deleting ? 0.4 : 0.6,
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Trash2 size={13} />
+      </button>
     </div>
   );
 }
@@ -204,11 +242,34 @@ export default function BacklogDetailClient({
   const [item, setItem] = useState(initialItem);
   const [sessions, setSessions] = useState(initialSessions);
   const [saving, setSaving] = useState(false);
+  const [draftStatus, setDraftStatus] = useState(initialItem.status);
+  const [draftRating, setDraftRating] = useState(
+    initialItem.rating != null ? String(initialItem.rating) : "0",
+  );
+  const [draftReview, setDraftReview] = useState(initialItem.review ?? "");
+  const [draftPaidPrice, setDraftPaidPrice] = useState(
+    String((initialItem.metadata as Record<string, unknown>)?.paid_price ?? ""),
+  );
+  const [draftPlayedOn, setDraftPlayedOn] = useState(
+    String((initialItem.metadata as Record<string, unknown>)?.played_on ?? ""),
+  );
   const [shareUrl, setShareUrl] = useState(
     item.share_token ? `${appUrl}/share/backlog/${item.share_token}` : "",
   );
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const parsedDraftRating =
+    draftRating === "" || draftRating === "0" ? null : parseFloat(draftRating);
+  const currentPaidPrice = String((item.metadata as Record<string, unknown>)?.paid_price ?? "");
+  const hasChanges =
+    draftStatus !== item.status ||
+    parsedDraftRating !== item.rating ||
+    (draftReview || null) !== item.review ||
+    ((item.media_type === "game" || item.media_type === "book") &&
+      draftPaidPrice !== currentPaidPrice) ||
+    (item.media_type === "game" &&
+      draftPlayedOn !== String((item.metadata as Record<string, unknown>)?.played_on ?? ""));
 
   const patch = async (fields: Partial<BacklogItem>) => {
     setSaving(true);
@@ -219,9 +280,37 @@ export default function BacklogDetailClient({
     });
     setSaving(false);
     if (res.ok) {
-      const updated = await res.json();
-      setItem(updated as BacklogItem);
+      const updated = (await res.json()) as BacklogItem;
+      setItem(updated);
+      setDraftStatus(updated.status);
+      setDraftRating(updated.rating != null ? String(updated.rating) : "0");
+      setDraftReview(updated.review ?? "");
+      setDraftPaidPrice(String((updated.metadata as Record<string, unknown>)?.paid_price ?? ""));
+      setDraftPlayedOn(String((updated.metadata as Record<string, unknown>)?.played_on ?? ""));
     }
+  };
+
+  const saveChanges = async () => {
+    const fields: Partial<BacklogItem> = {
+      status: draftStatus,
+      rating: parsedDraftRating,
+      review: draftReview || null,
+    };
+    if (item.media_type === "game" || item.media_type === "book") {
+      const meta = { ...((item.metadata as Record<string, unknown>) ?? {}) };
+      meta.paid_price = draftPaidPrice ? parseFloat(draftPaidPrice) : null;
+      if (item.media_type === "game") meta.played_on = draftPlayedOn || null;
+      fields.metadata = meta as BacklogItem["metadata"];
+    }
+    await patch(fields);
+  };
+
+  const revertChanges = () => {
+    setDraftStatus(item.status);
+    setDraftRating(item.rating != null ? String(item.rating) : "0");
+    setDraftReview(item.review ?? "");
+    setDraftPaidPrice(String((item.metadata as Record<string, unknown>)?.paid_price ?? ""));
+    setDraftPlayedOn(String((item.metadata as Record<string, unknown>)?.played_on ?? ""));
   };
 
   const generateShare = async () => {
@@ -359,11 +448,11 @@ export default function BacklogDetailClient({
         </p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {STATUSES.map((s) => {
-            const isActive = item.status === s;
+            const isActive = draftStatus === s;
             return (
               <button
                 key={s}
-                onClick={() => patch({ status: s })}
+                onClick={() => setDraftStatus(s)}
                 disabled={saving}
                 style={{
                   border: `1px solid ${isActive ? STATUS_COLORS[s] : "var(--rule-soft)"}`,
@@ -401,37 +490,64 @@ export default function BacklogDetailClient({
         >
           Rating & Review
         </p>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+            <span
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: parsedDraftRating ? "var(--color-primary)" : "var(--color-text-muted)",
+                minWidth: 48,
+              }}
+            >
+              {parsedDraftRating != null ? parsedDraftRating.toFixed(1) : "—"}
+            </span>
+            <span style={{ fontSize: 14, color: "var(--color-text-muted)" }}>/ 10</span>
+            {parsedDraftRating != null && (
+              <button
+                onClick={() => setDraftRating("0")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  color: "var(--color-text-muted)",
+                  textDecoration: "underline",
+                  marginLeft: 4,
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <input
-            type="number"
+            type="range"
             min={0}
             max={10}
             step={0.1}
-            defaultValue={item.rating ?? ""}
-            placeholder="0–10"
-            onBlur={(e) => {
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val) && val >= 0 && val <= 10) patch({ rating: val });
-              else if (e.target.value === "") patch({ rating: null as unknown as number });
-            }}
-            style={{
-              width: 80,
-              border: "1px solid var(--rule-soft)",
-              borderRadius: 6,
-              padding: "8px 12px",
-              fontSize: 15,
-              fontWeight: 700,
-              background: "var(--color-bg-1)",
-              color: "var(--color-text)",
-            }}
+            value={draftRating || 0}
+            onChange={(e) => setDraftRating(e.target.value)}
+            style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer" }}
           />
-          <span style={{ fontSize: 14, color: "var(--color-text-muted)" }}>/ 10</span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 11,
+              color: "var(--color-text-muted)",
+              marginTop: 2,
+            }}
+          >
+            <span>0</span>
+            <span>5</span>
+            <span>10</span>
+          </div>
         </div>
         <textarea
-          defaultValue={item.review ?? ""}
+          value={draftReview}
           placeholder="Write a review…"
           rows={4}
-          onBlur={(e) => patch({ review: e.target.value || (null as unknown as string) })}
+          onChange={(e) => setDraftReview(e.target.value)}
           style={{
             width: "100%",
             border: "1px solid var(--rule-soft)",
@@ -445,7 +561,152 @@ export default function BacklogDetailClient({
             boxSizing: "border-box",
           }}
         />
+
+        {/* Paid price — games + books only */}
+        {(item.media_type === "game" || item.media_type === "book") && (
+          <div style={{ marginTop: 16 }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--color-text-muted)",
+                marginBottom: 6,
+              }}
+            >
+              Paid
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14, color: "var(--color-text-muted)" }}>$</span>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder="0.00"
+                value={draftPaidPrice}
+                onChange={(e) => setDraftPaidPrice(e.target.value)}
+                style={{
+                  width: 100,
+                  border: "1px solid var(--rule-soft)",
+                  borderRadius: 6,
+                  padding: "7px 10px",
+                  fontSize: 14,
+                  background: "var(--color-bg-1)",
+                  color: "var(--color-text)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Played on — games only */}
+        {item.media_type === "game" && (
+          <div style={{ marginTop: 16 }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--color-text-muted)",
+                marginBottom: 6,
+              }}
+            >
+              Played on
+            </p>
+            {(() => {
+              const availablePlatforms = String(
+                (item.metadata as Record<string, unknown>)?.platform ?? "",
+              )
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              return (
+                <>
+                  {availablePlatforms.length > 0 && (
+                    <datalist id="platforms-list">
+                      {availablePlatforms.map((p) => (
+                        <option key={p} value={p} />
+                      ))}
+                    </datalist>
+                  )}
+                  <input
+                    type="text"
+                    list={availablePlatforms.length > 0 ? "platforms-list" : undefined}
+                    placeholder="e.g. PS5, Nintendo Switch"
+                    value={draftPlayedOn}
+                    onChange={(e) => setDraftPlayedOn(e.target.value)}
+                    style={{
+                      width: "100%",
+                      border: "1px solid var(--rule-soft)",
+                      borderRadius: 6,
+                      padding: "7px 10px",
+                      fontSize: 14,
+                      background: "var(--color-bg-1)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  {availablePlatforms.length > 0 && (
+                    <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 4 }}>
+                      Available on: {availablePlatforms.join(", ")}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
       </section>
+
+      {/* Save / Revert bar */}
+      {hasChanges && (
+        <div
+          style={{
+            position: "sticky",
+            bottom: 0,
+            background: "var(--color-bg-0, var(--color-bg-1))",
+            borderTop: "1px solid var(--rule-soft)",
+            padding: "12px 0",
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            zIndex: 10,
+          }}
+        >
+          <button
+            disabled={saving}
+            onClick={saveChanges}
+            style={{
+              background: "var(--color-primary)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 20px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+          <button
+            onClick={revertChanges}
+            style={{
+              background: "none",
+              border: "1px solid var(--rule-soft)",
+              borderRadius: 6,
+              padding: "8px 16px",
+              fontSize: 13,
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            Revert
+          </button>
+        </div>
+      )}
 
       {/* Sessions */}
       <section
@@ -466,7 +727,11 @@ export default function BacklogDetailClient({
         {sessions.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             {sessions.map((s) => (
-              <SessionRow key={s.id} session={s} />
+              <SessionRow
+                key={s.id}
+                session={s}
+                onDelete={(id) => setSessions((prev) => prev.filter((x) => x.id !== id))}
+              />
             ))}
           </div>
         )}

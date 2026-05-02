@@ -8,6 +8,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Library/Backlog: pre-add form before confirming import.** Clicking "Add" in search results now opens a step-2 form (status, rating slider 0–10, review, session start/finish/notes) before the item is created. "Confirm Add" submits; "Back" returns to search results.
+- **Library/Backlog: duplicate detection on add.** Items already in the collection show a yellow "Already in library/backlog" badge in search results and an amber warning banner in the pre-add form linking to the existing item. Server-side 409 guard prevents silent duplicates on concurrent adds.
+- **Library/Backlog: session-entry deletion.** Each row in the Sessions section has a trash icon; clicking deletes that individual session log entry via `DELETE /api/backlog/[id]/sessions/[sessionId]`.
+- **Library/Backlog: paid price field.** Games and books show a `$` price input on the detail page, stored as `metadata.paid_price` in the existing JSONB column.
+- **Library/Backlog: "Played on" field for games.** Game detail pages show a text input for the specific console the user played on (`metadata.played_on`). The input offers autocomplete suggestions from IGDB's list of platforms for that title. The value appears in the list row subtitle (e.g. "Naughty Dog · 2013 · PS5").
+- **Library: URL-based tab persistence.** Active tab is reflected in the URL (`?tab=book`). "Back to Library" from the detail page uses `router.back()` so the tab-bearing URL is restored.
+- **Library: delete button on list rows.** Each item row in the Library list now has a Trash2 icon button; clicking confirms and deletes the item, with optimistic UI removal and count updates.
+
+### Fixed
+- **Library/Backlog: session dates show correct local date.** Bare `YYYY-MM-DD` strings from Supabase are now parsed as `new Date(y, m-1, d)` (local time) instead of `new Date("YYYY-MM-DD")` (UTC midnight), preventing off-by-one shifts in US timezones.
+
+### Changed
+- **Library/Backlog: rating input replaced with slider.** The 0–10 rating field on both the detail page and the pre-add form is now a range slider with a numeric display and a Clear button. Step size 0.1.
+- **Library/Backlog: explicit Save/Revert bar on detail page.** Status, rating, review, and paid price no longer auto-save on interaction. A sticky "Save changes / Revert" bar appears at the bottom when there are unsaved edits; all fields are patched in a single request on save.
+
 - **Library: server-side pagination (Load More, 50 items/page) (#589).** SSR now fetches only the first 50 items for the active tab; a Load More button appends the next slice from `/api/backlog`. Summary strip and tab badges use a separate lightweight count query and always reflect global totals, not just the loaded slice.
 - **Library: server-side search and filter params for library API (#590).** Search query (`?q=`), status, and year filters now round-trip to `/api/backlog` so results are correct on paginated data. Genre filter remains client-side (JSONB format inconsistency). Filter changes reset to offset 0; search is debounced at 300ms.
 - **Library: per-tab lazy loading with accurate count badges (#591).** SSR returns a lightweight `media_type + status` count query plus items for the All tab only. Switching to a type tab fetches that tab's items on demand; revisiting uses session-cached data. Tab count badges are accurate immediately from the SSR count query.

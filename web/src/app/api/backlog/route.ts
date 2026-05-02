@@ -55,10 +55,29 @@ export async function POST(req: NextRequest) {
     external_source,
     metadata,
     status = "backlog",
+    rating = null,
+    review = null,
   } = body;
 
   if (!media_type || !title) {
     return NextResponse.json({ error: "media_type and title are required" }, { status: 400 });
+  }
+
+  // Duplicate check: same external_id + media_type for this user
+  if (external_id) {
+    const { data: dup } = await supabase
+      .from("backlog_items")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("external_id", external_id)
+      .eq("media_type", media_type)
+      .maybeSingle();
+    if (dup) {
+      return NextResponse.json(
+        { error: "Already in your collection", existing_id: dup.id },
+        { status: 409 },
+      );
+    }
   }
 
   // Assign priority = max+1 within (user_id, media_type)
@@ -88,6 +107,8 @@ export async function POST(req: NextRequest) {
       metadata: metadata ?? null,
       status,
       priority,
+      rating: rating ?? null,
+      review: review ?? null,
     })
     .select("*")
     .single();
