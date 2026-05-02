@@ -109,6 +109,7 @@ function getAllExerciseNames(plan: PlanPayload): string[] {
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 // Validate plan structure and return a correction prompt if issues exist, or null if clean
 function buildCorrectionPromptIfNeeded(plan: PlanPayload, hasPullUpBar: boolean): string | null {
@@ -286,13 +287,16 @@ export async function GET(req: Request) {
     equipmentRes.status === "fulfilled" ? (equipmentRes.value.data ?? []) : [];
 
   const profileMap = Object.fromEntries(profileRows.map((r) => [r.key, r.value]));
-  const workoutStart = profileMap.preferred_workout_time ?? DEFAULT_WORKOUT_TIME;
-  const workoutEnd = (() => {
-    if (profileMap.preferred_workout_end) return profileMap.preferred_workout_end;
-    const [h, m] = workoutStart.split(":").map(Number);
-    const endMins = h * 60 + m + DEFAULT_WORKOUT_DURATION_MINS;
-    return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+  const perDayTimes: Record<string, string> = (() => {
+    try {
+      return profileMap.preferred_workout_times
+        ? (JSON.parse(profileMap.preferred_workout_times) as Record<string, string>)
+        : {};
+    } catch {
+      return {};
+    }
   })();
+  const globalWorkoutTime = profileMap.preferred_workout_time ?? DEFAULT_WORKOUT_TIME;
   const hasPullUpBar = equipmentRows.some((r) => r.equipment_type.toLowerCase().includes("pull"));
 
   const recoveryFlags: string[] = [
@@ -385,6 +389,14 @@ export async function GET(req: Request) {
 
     for (const day of plan.workout_days ?? []) {
       if (!day.date) continue;
+      const dayKey = DAY_KEYS[new Date(`${day.date}T12:00:00Z`).getDay()];
+      const workoutStart = perDayTimes[dayKey] ?? globalWorkoutTime;
+      const workoutEnd = (() => {
+        if (profileMap.preferred_workout_end) return profileMap.preferred_workout_end;
+        const [h, m] = workoutStart.split(":").map(Number);
+        const endMins = h * 60 + m + DEFAULT_WORKOUT_DURATION_MINS;
+        return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+      })();
       const title = `Workout — ${new Date(`${day.date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long" })}`;
       const description = buildCalendarDescription(
         day.warmup ?? [],

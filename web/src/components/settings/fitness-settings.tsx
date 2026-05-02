@@ -57,6 +57,7 @@ interface Props {
   initialWorkoutDaysPerWeek: string;
   initialWorkoutPrefs: string[];
   initialEquipment: string[];
+  initialPreferredWorkoutTimes: Record<string, string>;
   saveWorkoutPrefsAction: (prefs: string[], equip: string[]) => Promise<void>;
 }
 
@@ -70,6 +71,7 @@ export function FitnessSettings({
   initialWorkoutDaysPerWeek,
   initialWorkoutPrefs,
   initialEquipment,
+  initialPreferredWorkoutTimes,
   saveWorkoutPrefsAction,
 }: Props) {
   const [, startTimerTransition] = useTransition();
@@ -81,6 +83,9 @@ export function FitnessSettings({
   const [goalPhase, setGoalPhase] = useState(initialGoalPhase);
   const [fitnessLevel, setFitnessLevel] = useState(initialFitnessLevel);
   const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(initialWorkoutDaysPerWeek);
+  const [workoutTimes, setWorkoutTimes] = useState<Record<string, string>>(
+    initialPreferredWorkoutTimes,
+  );
   const [workoutPrefs, setWorkoutPrefs] = useState<string[]>(initialWorkoutPrefs);
   const [equipment, setEquipment] = useState<string[]>(initialEquipment);
   const [equipmentDraft, setEquipmentDraft] = useState("");
@@ -126,6 +131,14 @@ export function FitnessSettings({
     setWorkoutDaysPerWeek(next);
     startGoalTransition(() => {
       updateAction("workout_days_per_week", next);
+    });
+  }
+
+  function handleWorkoutTimeChange(day: string, val: string) {
+    const next = { ...workoutTimes, [day]: val };
+    setWorkoutTimes(next);
+    startGoalTransition(() => {
+      updateAction("preferred_workout_times", JSON.stringify(next));
     });
   }
 
@@ -415,6 +428,70 @@ export function FitnessSettings({
                 </button>
               ))}
             </div>
+          </div>
+          <div>
+            <p style={subLabelStyle}>Preferred workout time by day</p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(7, 1fr)",
+                gap: "var(--space-2)",
+              }}
+            >
+              {(
+                [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                  "sunday",
+                ] as const
+              ).map((day) => (
+                <div
+                  key={day}
+                  style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "var(--t-micro)",
+                      color: "var(--color-text-muted)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                  </span>
+                  <input
+                    type="time"
+                    value={workoutTimes[day] ?? ""}
+                    onChange={(e) => handleWorkoutTimeChange(day, e.target.value)}
+                    className="focus:outline-none input-focus-ring"
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--rule)",
+                      borderRadius: "var(--r-1)",
+                      color: "var(--color-text)",
+                      fontSize: "var(--t-micro)",
+                      padding: "0 var(--space-1)",
+                      minHeight: 40,
+                      width: "100%",
+                      textAlign: "center",
+                      transition: "border-color var(--motion-fast) var(--ease-out-quart)",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <p
+              style={{
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                marginTop: "var(--space-2)",
+              }}
+            >
+              Start time per day for Google Calendar workout events. Blank days default to 16:00.
+            </p>
           </div>
         </div>
       </section>

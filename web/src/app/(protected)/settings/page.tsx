@@ -350,6 +350,9 @@ async function SettingsContent({
           initialWorkoutDaysPerWeek={values["workout_days_per_week"] ?? ""}
           initialWorkoutPrefs={JSON.parse(values["workout_preferences"] ?? "[]") as string[]}
           initialEquipment={JSON.parse(values["equipment_preference"] ?? "[]") as string[]}
+          initialPreferredWorkoutTimes={
+            JSON.parse(values["preferred_workout_times"] ?? "{}") as Record<string, string>
+          }
           saveWorkoutPrefsAction={saveWorkoutPrefs}
         />
         <EquipmentSettings
