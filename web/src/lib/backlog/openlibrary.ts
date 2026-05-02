@@ -1,6 +1,28 @@
 import type { MetadataSearchResult } from "@/lib/types";
 
 const OL_BASE = "https://openlibrary.org";
+
+function toTitleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeBookGenres(subjects: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const s of subjects) {
+    // Skip series tags, slash-separated compound subjects, and long phrases
+    if (s.startsWith("series:") || s.includes(" / ") || s.length > 30) continue;
+    const normalized = toTitleCase(s.trim());
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    // Skip near-duplicates: if a shorter version already in set covers this term
+    if ([...seen].some((k) => key.includes(k) || k.includes(key))) continue;
+    seen.add(key);
+    result.push(normalized);
+    if (result.length === 5) break;
+  }
+  return result;
+}
 const OL_COVERS = "https://covers.openlibrary.org/b/id";
 
 export async function searchOpenLibrary(query: string): Promise<MetadataSearchResult[]> {
@@ -15,10 +37,7 @@ export async function searchOpenLibrary(query: string): Promise<MetadataSearchRe
       const workKey = (doc.key ?? "").replace("/works/", "");
       const coverId = doc.cover_i;
       const coverUrl = coverId ? `${OL_COVERS}/${coverId}-M.jpg` : "";
-      // Keep subjects short and simple (skip long compound subjects)
-      const genres = ((doc.subject ?? []) as string[])
-        .filter((s) => s.length < 25 && !s.includes(" / "))
-        .slice(0, 4);
+      const genres = normalizeBookGenres((doc.subject ?? []) as string[]);
 
       return {
         external_id: workKey,
@@ -69,7 +88,7 @@ async function searchGoogleBooks(query: string): Promise<MetadataSearchResult[]>
         (info.industryIdentifiers ?? []).find(
           (i: { type: string }) => i.type === "ISBN_13" || i.type === "ISBN_10",
         )?.identifier ?? undefined;
-      const genres = ((info.categories ?? []) as string[]).slice(0, 4);
+      const genres = normalizeBookGenres((info.categories ?? []) as string[]);
 
       return {
         external_id: item.id ?? "",
