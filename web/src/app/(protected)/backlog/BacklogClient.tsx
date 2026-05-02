@@ -736,7 +736,21 @@ function ItemRow({
           {item.creator && (
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
               {item.creator}
-              {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ""}
+              {item.release_date
+                ? ` · ${(() => {
+                    const startYear = item.release_date!.slice(0, 4);
+                    if (item.media_type !== "show") return startYear;
+                    const meta = item.metadata as Record<string, unknown> | null;
+                    const inProd = meta?.in_production as boolean | undefined;
+                    const lastAir = meta?.last_air_date as string | undefined;
+                    if (inProd) return `${startYear}–present`;
+                    if (lastAir) {
+                      const endYear = lastAir.slice(0, 4);
+                      return endYear !== startYear ? `${startYear}–${endYear}` : startYear;
+                    }
+                    return startYear;
+                  })()}`
+                : ""}
               {item.media_type === "game" &&
               (item.metadata as Record<string, unknown> | null)?.played_on
                 ? ` · ${String((item.metadata as Record<string, unknown>).played_on)}`

@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Library/Backlog: shows display air date range.** Show subtitles now render `2015–2022` for ended series and `2015–present` for ongoing shows. Data comes from `metadata.last_air_date` and `metadata.in_production`, populated at import time via a parallel TMDB TV detail fetch. Existing items without these fields fall back to start year only.
 - **Library: public share page.** A "Share library" button in the Library header generates a public `/share/library/[token]` URL (no login required). The page shows the owner's full library grouped by media type (Games / Shows / Movies / Books), with cover art, ratings, status badges, played-on info for games, and a stats summary. Token is stored as `profile.library_share_token`. "Copy link" and "Revoke" controls in the share panel. Share button highlights when a link is active.
 
 - **Library/Backlog: pre-add form before confirming import.** Clicking "Add" in search results now opens a step-2 form (status, rating slider 0–10, review, session start/finish/notes) before the item is created. "Confirm Add" submits; "Back" returns to search results.

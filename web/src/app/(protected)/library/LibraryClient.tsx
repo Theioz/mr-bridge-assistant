@@ -1165,7 +1165,21 @@ function ItemRow({
           </p>
           <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
             {item.creator}
-            {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ""}
+            {item.release_date
+              ? ` · ${(() => {
+                  const startYear = item.release_date!.slice(0, 4);
+                  if (item.media_type !== "show") return startYear;
+                  const meta = item.metadata as Record<string, unknown> | null;
+                  const inProd = meta?.in_production as boolean | undefined;
+                  const lastAir = meta?.last_air_date as string | undefined;
+                  if (inProd) return `${startYear}–present`;
+                  if (lastAir) {
+                    const endYear = lastAir.slice(0, 4);
+                    return endYear !== startYear ? `${startYear}–${endYear}` : startYear;
+                  }
+                  return startYear;
+                })()}`
+              : ""}
             {item.media_type === "game" &&
             (item.metadata as Record<string, unknown> | null)?.played_on
               ? ` · ${String((item.metadata as Record<string, unknown>).played_on)}`
@@ -1437,8 +1451,10 @@ export default function LibraryClient({
       : (process.env.NEXT_PUBLIC_APP_URL ?? "");
   const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [sharePanelPos, setSharePanelPos] = useState<{ top: number; right: number } | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const shareBtnRef = useRef<HTMLButtonElement>(null);
   const shareUrl = shareToken ? `${appUrl}/share/library/${shareToken}` : null;
 
   const generateShareLink = async () => {
@@ -1915,9 +1931,20 @@ export default function LibraryClient({
           </div>
 
           {/* Share button */}
-          <div style={{ position: "relative" }}>
+          <div>
             <button
-              onClick={() => setShowSharePanel((p) => !p)}
+              ref={shareBtnRef}
+              onClick={() => {
+                if (!showSharePanel) {
+                  const rect = shareBtnRef.current?.getBoundingClientRect();
+                  setSharePanelPos(
+                    rect
+                      ? { top: rect.bottom + 8, right: window.innerWidth - rect.right }
+                      : { top: 60, right: 16 },
+                  );
+                }
+                setShowSharePanel((p) => !p);
+              }}
               title="Share library"
               style={{
                 display: "flex",
@@ -1938,19 +1965,19 @@ export default function LibraryClient({
               <Share2 size={15} />
             </button>
 
-            {showSharePanel && (
+            {showSharePanel && sharePanelPos && (
               <div
                 style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  right: 0,
+                  position: "fixed",
+                  top: sharePanelPos.top,
+                  right: sharePanelPos.right,
                   width: 340,
                   background: "var(--color-bg-1)",
                   border: "1px solid var(--rule-soft)",
                   borderRadius: 10,
                   padding: 16,
                   boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
-                  zIndex: 100,
+                  zIndex: 9999,
                 }}
               >
                 <div

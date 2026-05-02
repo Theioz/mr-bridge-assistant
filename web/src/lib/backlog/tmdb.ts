@@ -80,6 +80,24 @@ function normalize(item: any, type: "movie" | "show"): MetadataSearchResult {
   };
 }
 
+async function fetchTvDetail(
+  id: number,
+): Promise<{ last_air_date?: string; in_production?: boolean } | null> {
+  try {
+    const url = `${BASE}/tv/${id}?api_key=${apiKey()}`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d: any = await res.json();
+    return {
+      last_air_date: d.last_air_date ?? undefined,
+      in_production: d.in_production ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function searchTmdb(
   query: string,
   type: "movie" | "show",
@@ -89,5 +107,21 @@ export async function searchTmdb(
   const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) throw new Error(`TMDB ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  return (data.results ?? []).slice(0, 8).map((item: unknown) => normalize(item, type));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results: any[] = (data.results ?? []).slice(0, 8);
+
+  if (type === "show") {
+    const details = await Promise.all(results.map((r) => fetchTvDetail(r.id as number)));
+    return results.map((item, i) => {
+      const base = normalize(item, "show");
+      const detail = details[i];
+      if (detail) {
+        (base.metadata as Record<string, unknown>).last_air_date = detail.last_air_date;
+        (base.metadata as Record<string, unknown>).in_production = detail.in_production;
+      }
+      return base;
+    });
+  }
+
+  return results.map((item) => normalize(item, type));
 }
