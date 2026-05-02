@@ -52,6 +52,10 @@
   --color-bg: oklch(15.5% 0.012 var(--hue));
   --color-surface: oklch(19% 0.015 var(--hue));
   --color-surface-raised: oklch(22% 0.017 var(--hue));
+  /* Layered bg aliases used in card/panel surfaces */
+  --color-bg-0: var(--color-bg);
+  --color-bg-1: var(--color-surface);
+  --color-bg-2: var(--color-surface-raised);
   --color-border: oklch(28% 0.013 var(--hue));
   --color-border-subtle: oklch(24% 0.013 var(--hue));
 
@@ -112,6 +116,9 @@
   --color-bg: oklch(98.5% 0.005 var(--hue));
   --color-surface: oklch(96.5% 0.008 var(--hue));
   --color-surface-raised: oklch(94% 0.011 var(--hue));
+  --color-bg-0: var(--color-bg);
+  --color-bg-1: var(--color-surface);
+  --color-bg-2: var(--color-surface-raised);
   --color-border: oklch(88% 0.01 var(--hue));
   --color-border-subtle: oklch(92% 0.008 var(--hue));
 
