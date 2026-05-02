@@ -10,6 +10,8 @@ interface ImportExtras {
   status: BacklogStatus;
   rating: number | null;
   review: string | null;
+  platform: string | null;
+  price_paid: number | null;
   session: { started_at: string | null; finished_at: string | null; notes: string | null } | null;
 }
 
@@ -118,6 +120,8 @@ function SearchModal({
   const [preStatus, setPreStatus] = useState<BacklogStatus>("backlog");
   const [preRating, setPreRating] = useState("");
   const [preReview, setPreReview] = useState("");
+  const [prePlatform, setPrePlatform] = useState("");
+  const [prePricePaid, setPrePricePaid] = useState("");
   const [preStarted, setPreStarted] = useState("");
   const [preFinished, setPreFinished] = useState("");
   const [preNotes, setPreNotes] = useState("");
@@ -157,6 +161,8 @@ function SearchModal({
     setPreStatus("backlog");
     setPreRating("");
     setPreReview("");
+    setPrePlatform("");
+    setPrePricePaid("");
     setPreStarted("");
     setPreFinished("");
     setPreNotes("");
@@ -170,6 +176,8 @@ function SearchModal({
       status: preStatus,
       rating: preRating ? parseFloat(preRating) : null,
       review: preReview || null,
+      platform: prePlatform || null,
+      price_paid: prePricePaid ? parseFloat(prePricePaid) : null,
       session:
         preStarted || preFinished || preNotes
           ? {
@@ -606,6 +614,36 @@ function SearchModal({
                   style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
                 />
               </div>
+
+              {/* Console (games only) */}
+              {type === "game" && (
+                <div>
+                  <label style={labelStyle}>Console / Platform</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. PS5, PC, Switch"
+                    value={prePlatform}
+                    onChange={(e) => setPrePlatform(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+
+              {/* Price paid (games + books) */}
+              {(type === "game" || type === "book") && (
+                <div>
+                  <label style={labelStyle}>Price Paid ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="0.00"
+                    value={prePricePaid}
+                    onChange={(e) => setPrePricePaid(e.target.value)}
+                    style={{ ...inputStyle, width: "auto", maxWidth: 120 }}
+                  />
+                </div>
+              )}
 
               {/* Session dates */}
               <div>

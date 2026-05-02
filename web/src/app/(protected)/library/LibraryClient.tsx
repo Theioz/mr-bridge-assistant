@@ -29,6 +29,8 @@ interface ImportExtras {
   status: BacklogStatus;
   rating: number | null;
   review: string | null;
+  platform: string | null;
+  price_paid: number | null;
   session: { started_at: string | null; finished_at: string | null; notes: string | null } | null;
 }
 
@@ -71,12 +73,16 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function toTitleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function getGenres(item: BacklogItem): string[] {
   const m = item.metadata as Record<string, unknown> | null;
   if (!m) return [];
   if (Array.isArray(m.genres)) {
     return (m.genres as Array<string | { name?: string }>)
-      .map((g) => (typeof g === "string" ? g : (g.name ?? "")))
+      .map((g) => toTitleCase(typeof g === "string" ? g : (g.name ?? "")))
       .filter(Boolean)
       .slice(0, 4);
   }
@@ -518,6 +524,8 @@ function SearchModal({
   const [preStatus, setPreStatus] = useState<BacklogStatus>("backlog");
   const [preRating, setPreRating] = useState("");
   const [preReview, setPreReview] = useState("");
+  const [prePlatform, setPrePlatform] = useState("");
+  const [prePricePaid, setPrePricePaid] = useState("");
   const [preStarted, setPreStarted] = useState("");
   const [preFinished, setPreFinished] = useState("");
   const [preNotes, setPreNotes] = useState("");
@@ -564,6 +572,8 @@ function SearchModal({
     setPreStatus("backlog");
     setPreRating("");
     setPreReview("");
+    setPrePlatform("");
+    setPrePricePaid("");
     setPreStarted("");
     setPreFinished("");
     setPreNotes("");
@@ -577,6 +587,8 @@ function SearchModal({
       status: preStatus,
       rating: preRating ? parseFloat(preRating) : null,
       review: preReview || null,
+      platform: prePlatform || null,
+      price_paid: prePricePaid ? parseFloat(prePricePaid) : null,
       session:
         preStarted || preFinished || preNotes
           ? {
@@ -1014,6 +1026,36 @@ function SearchModal({
                 />
               </div>
 
+              {/* Console (games only) */}
+              {type === "game" && (
+                <div>
+                  <label style={labelStyle}>Console / Platform</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. PS5, PC, Switch"
+                    value={prePlatform}
+                    onChange={(e) => setPrePlatform(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+
+              {/* Price paid (games + books) */}
+              {(type === "game" || type === "book") && (
+                <div>
+                  <label style={labelStyle}>Price Paid ($)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="0.00"
+                    value={prePricePaid}
+                    onChange={(e) => setPrePricePaid(e.target.value)}
+                    style={{ ...inputStyle, width: "auto", maxWidth: 120 }}
+                  />
+                </div>
+              )}
+
               {/* Session dates */}
               <div>
                 <label style={labelStyle}>Session</label>
@@ -1440,7 +1482,7 @@ export default function LibraryClient({
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
   const [filterYear, setFilterYear] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortKey>("priority");
+  const [sortBy, setSortBy] = useState<SortKey>("rating");
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
 
@@ -1739,7 +1781,11 @@ export default function LibraryClient({
         cover_url: result.cover_url || null,
         external_id: result.external_id || null,
         external_source: result.external_source || "manual",
-        metadata: result.metadata,
+        metadata: {
+          ...result.metadata,
+          ...(extras.platform ? { played_on: extras.platform } : {}),
+          ...(extras.price_paid != null ? { price_paid: extras.price_paid } : {}),
+        },
         status: extras.status,
         rating: extras.rating,
         review: extras.review,

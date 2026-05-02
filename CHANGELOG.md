@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+- **Library/Backlog: console/platform and price paid fields in pre-add form.** When adding a game, the step-2 modal now includes "Console / Platform" (maps to `metadata.played_on`) and "Price Paid" fields. Books show "Price Paid" only. Both fields are optional and merged into the item's metadata on save.
+
+### Changed
+- **Library: default sort is now Highest Rated** (was Priority order). Unrated items sort to the bottom.
+- **Library/Backlog: book genre tags are normalized.** `series:` prefixed tags are stripped, near-duplicate subjects (e.g. "sci-fi" / "science-fiction") are deduplicated, and all genres are title-cased at import time and at display time for existing items.
+
 ### Fixed
 - **Chat: 400 "tool_use without tool_result" on sessions with deadline-cut turns.** When the turn deadline fired mid-tool-call, the AI SDK emitted a trailing text block ("I ran out of time...") after the `tool_use` in the same assistant message. `convertToModelMessages` then split this into two consecutive assistant messages, inserting one between the `tool_use` and its `tool_result` and causing Anthropic to reject the next request with a 400. Added Pass 3 to `sanitizeIncompleteToolCalls` in `route.ts` to collapse the extra trailing-text assistant message.
 - **Share panel opaque background.** Defined `--color-bg-1` and `--color-bg-2` as aliases for `--color-surface` / `--color-surface-raised` in `globals.css` — these tokens were referenced throughout the codebase but never declared, causing all panel/card backgrounds to resolve to transparent. The share panel was the most visible breakage since it floats over other content.
