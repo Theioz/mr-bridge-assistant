@@ -47,7 +47,7 @@ export default async function LibraryPage() {
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const [{ data: countRows }, { data: items }] = await Promise.all([
+  const [{ data: countRows }, { data: items }, { data: shareRow }] = await Promise.all([
     // Lightweight count query — only two string columns, no metadata
     supabase.from("backlog_items").select("media_type, status").eq("user_id", user.id),
     // First page of items for the "all" tab
@@ -58,11 +58,22 @@ export default async function LibraryPage() {
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false })
       .range(0, 49),
+    supabase
+      .from("profile")
+      .select("value")
+      .eq("user_id", user.id)
+      .eq("key", "library_share_token")
+      .maybeSingle(),
   ]);
 
   const initialCounts = buildCounts(countRows ?? []);
+  const initialShareToken = (shareRow?.value as string | null) ?? null;
 
   return (
-    <LibraryClient initialItems={(items ?? []) as BacklogItem[]} initialCounts={initialCounts} />
+    <LibraryClient
+      initialItems={(items ?? []) as BacklogItem[]}
+      initialCounts={initialCounts}
+      initialShareToken={initialShareToken}
+    />
   );
 }

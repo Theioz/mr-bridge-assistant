@@ -1,16 +1,36 @@
 "use client";
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, X, GripVertical, LayoutGrid, List } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  GripVertical,
+  LayoutGrid,
+  List,
+  Trash2,
+  Share2,
+  Copy,
+  Check,
+  Link as LinkIcon,
+} from "lucide-react";
 import type {
   BacklogItem,
+  BacklogStatus,
   MediaType,
   MetadataSearchResult,
   AllCounts,
   StatusCounts,
 } from "@/lib/types";
+
+interface ImportExtras {
+  status: BacklogStatus;
+  rating: number | null;
+  review: string | null;
+  session: { started_at: string | null; finished_at: string | null; notes: string | null } | null;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -459,22 +479,53 @@ function TypePickerModal({
 
 // ── Search modal ──────────────────────────────────────────────────────────────
 
+const LIB_STATUSES: BacklogStatus[] = ["backlog", "active", "paused", "finished", "dropped"];
+const LIB_STATUS_LABELS: Record<string, string> = {
+  backlog: "Queued",
+  active: "Active",
+  paused: "Paused",
+  finished: "Finished",
+  dropped: "Dropped",
+};
+const LIB_STATUS_COLORS: Record<string, string> = {
+  backlog: "var(--color-text-muted)",
+  active: "var(--color-primary)",
+  paused: "#f59e0b",
+  finished: "#22c55e",
+  dropped: "#ef4444",
+};
+
 function SearchModal({
   type,
   onClose,
   onImport,
+  existingItems,
 }: {
   type: MediaType;
   onClose: () => void;
-  onImport: (result: MetadataSearchResult) => Promise<void>;
+  onImport: (result: MetadataSearchResult, extras: ImportExtras) => Promise<void>;
+  existingItems: BacklogItem[];
 }) {
-  const searchType = type;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MetadataSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Step 2 state
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selected, setSelected] = useState<MetadataSearchResult | null>(null);
+  const [preStatus, setPreStatus] = useState<BacklogStatus>("backlog");
+  const [preRating, setPreRating] = useState("");
+  const [preReview, setPreReview] = useState("");
+  const [preStarted, setPreStarted] = useState("");
+  const [preFinished, setPreFinished] = useState("");
+  const [preNotes, setPreNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const existingMap = new Map(
+    existingItems.filter((i) => i.external_id).map((i) => [i.external_id!, i.id]),
+  );
 
   const search = useCallback(
     (q: string) => {
@@ -487,9 +538,7 @@ function SearchModal({
         setLoading(true);
         setError("");
         try {
-          const res = await fetch(
-            `/api/backlog/search?type=${searchType}&q=${encodeURIComponent(q)}`,
-          );
+          const res = await fetch(`/api/backlog/search?type=${type}&q=${encodeURIComponent(q)}`);
           const data = await res.json();
           if (!res.ok) throw new Error(data.error ?? "Search failed");
           setResults(data.results ?? []);
@@ -500,7 +549,7 @@ function SearchModal({
         }
       }, 400);
     },
-    [searchType],
+    [type],
   );
 
   const labelMap: Record<string, string> = {
@@ -508,6 +557,57 @@ function SearchModal({
     show: "shows",
     movie: "movies",
     book: "books",
+  };
+
+  const openPreAdd = (r: MetadataSearchResult) => {
+    setSelected(r);
+    setPreStatus("backlog");
+    setPreRating("");
+    setPreReview("");
+    setPreStarted("");
+    setPreFinished("");
+    setPreNotes("");
+    setStep(2);
+  };
+
+  const submitPreAdd = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    await onImport(selected, {
+      status: preStatus,
+      rating: preRating ? parseFloat(preRating) : null,
+      review: preReview || null,
+      session:
+        preStarted || preFinished || preNotes
+          ? {
+              started_at: preStarted || null,
+              finished_at: preFinished || null,
+              notes: preNotes || null,
+            }
+          : null,
+    });
+    setSubmitting(false);
+  };
+
+  const inputStyle = {
+    border: "1px solid var(--rule-soft)",
+    borderRadius: 6,
+    padding: "6px 10px",
+    fontSize: 13,
+    background: "var(--color-bg-1)",
+    color: "var(--color-text)",
+    width: "100%",
+    boxSizing: "border-box" as const,
+  };
+
+  const labelStyle = {
+    fontSize: 11,
+    color: "var(--color-text-muted)",
+    fontWeight: 600 as const,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    display: "block" as const,
+    marginBottom: 4,
   };
 
   return (
@@ -544,175 +644,432 @@ function SearchModal({
           boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
         }}
       >
-        <div style={{ padding: "16px 16px 8px", display: "flex", gap: 8, alignItems: "center" }}>
-          <Search size={16} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
-          <input
-            autoFocus
-            type="text"
-            placeholder={`Search ${labelMap[type] ?? type}…`}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              search(e.target.value);
-            }}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              fontSize: 15,
-              color: "var(--color-text)",
-            }}
-          />
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              color: "var(--color-text-muted)",
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div style={{ borderBottom: "1px solid var(--rule-soft)" }} />
-
-        <div style={{ overflowY: "auto", flex: 1 }}>
-          {loading && (
-            <p
-              style={{
-                padding: 20,
-                textAlign: "center",
-                color: "var(--color-text-muted)",
-                fontSize: 14,
-              }}
-            >
-              Searching…
-            </p>
-          )}
-          {!loading && error && (
-            <p style={{ padding: 20, color: "var(--color-danger, #ef4444)", fontSize: 14 }}>
-              {error}
-            </p>
-          )}
-          {!loading && !error && results.length === 0 && query && (
-            <p
-              style={{
-                padding: 20,
-                textAlign: "center",
-                color: "var(--color-text-muted)",
-                fontSize: 14,
-              }}
-            >
-              No results for &ldquo;{query}&rdquo;
-            </p>
-          )}
-          {results.map((r) => (
+        {step === 1 && (
+          <>
             <div
-              key={r.external_id}
+              style={{ padding: "16px 16px 8px", display: "flex", gap: 8, alignItems: "center" }}
+            >
+              <Search size={16} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+              <input
+                autoFocus
+                type="text"
+                placeholder={`Search ${labelMap[type] ?? type}…`}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  search(e.target.value);
+                }}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  fontSize: 15,
+                  color: "var(--color-text)",
+                }}
+              />
+              <button
+                onClick={onClose}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ borderBottom: "1px solid var(--rule-soft)" }} />
+
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {loading && (
+                <p
+                  style={{
+                    padding: 20,
+                    textAlign: "center",
+                    color: "var(--color-text-muted)",
+                    fontSize: 14,
+                  }}
+                >
+                  Searching…
+                </p>
+              )}
+              {!loading && error && (
+                <p style={{ padding: 20, color: "var(--color-danger, #ef4444)", fontSize: 14 }}>
+                  {error}
+                </p>
+              )}
+              {!loading && !error && results.length === 0 && query && (
+                <p
+                  style={{
+                    padding: 20,
+                    textAlign: "center",
+                    color: "var(--color-text-muted)",
+                    fontSize: 14,
+                  }}
+                >
+                  No results for &ldquo;{query}&rdquo;
+                </p>
+              )}
+              {results.map((r) => {
+                const isDup = r.external_id ? existingMap.has(r.external_id) : false;
+                return (
+                  <div
+                    key={r.external_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 16px",
+                      borderBottom: "1px solid var(--rule-soft)",
+                    }}
+                  >
+                    {r.cover_url ? (
+                      <img
+                        src={r.cover_url}
+                        alt={r.title}
+                        width={36}
+                        height={52}
+                        style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 52,
+                          borderRadius: 4,
+                          background: "var(--color-bg-2)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontWeight: 600,
+                          fontSize: 14,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {r.title}
+                      </p>
+                      <p
+                        style={{
+                          margin: "2px 0 0",
+                          fontSize: 12,
+                          color: "var(--color-text-muted)",
+                        }}
+                      >
+                        {r.creator}
+                        {r.release_date ? ` · ${r.release_date.slice(0, 4)}` : ""}
+                      </p>
+                      {isDup && (
+                        <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>
+                          Already in library
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openPreAdd(r)}
+                      style={{
+                        background: "var(--color-primary)",
+                        color: "var(--color-text-on-primary, #fff)",
+                        border: "none",
+                        borderRadius: 6,
+                        padding: "6px 14px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ padding: "10px 16px", borderTop: "1px solid var(--rule-soft)" }}>
+              <button
+                onClick={() => {
+                  if (!query.trim()) return;
+                  openPreAdd({
+                    external_id: "",
+                    external_source: "manual",
+                    title: query.trim(),
+                    creator: "",
+                    release_date: null,
+                    description: "",
+                    cover_url: "",
+                    metadata: {},
+                  });
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--color-text-muted)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                {query ? `Add "${query}" manually` : "Add manually"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 2 && selected && (
+          <>
+            {/* Step 2 header */}
+            <div
               style={{
+                padding: "12px 16px",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
-                padding: "10px 16px",
+                gap: 8,
                 borderBottom: "1px solid var(--rule-soft)",
               }}
             >
-              {r.cover_url ? (
-                <img
-                  src={r.cover_url}
-                  alt={r.title}
-                  width={36}
-                  height={52}
-                  style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
-                />
-              ) : (
+              <button
+                onClick={() => setStep(1)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-muted)",
+                  fontSize: 13,
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                ← Back
+              </button>
+              <span style={{ fontSize: 14, fontWeight: 600, flex: 1, textAlign: "center" }}>
+                Add to Library
+              </span>
+              <button
+                onClick={onClose}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                overflowY: "auto",
+                flex: 1,
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              {/* Item preview */}
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                {selected.cover_url && (
+                  <img
+                    src={selected.cover_url}
+                    alt={selected.title}
+                    width={48}
+                    height={68}
+                    style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
+                  />
+                )}
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{selected.title}</p>
+                  {selected.release_date && (
+                    <p
+                      style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}
+                    >
+                      {selected.release_date.slice(0, 4)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Duplicate warning */}
+              {selected.external_id && existingMap.has(selected.external_id) && (
                 <div
                   style={{
-                    width: 36,
-                    height: 52,
-                    borderRadius: 4,
-                    background: "var(--color-bg-2)",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontWeight: 600,
-                    fontSize: 14,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    background: "rgba(245,158,11,0.12)",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                    borderRadius: 6,
+                    padding: "10px 12px",
+                    fontSize: 13,
                   }}
                 >
-                  {r.title}
-                </p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
-                  {r.creator}
-                  {r.release_date ? ` · ${r.release_date.slice(0, 4)}` : ""}
-                </p>
+                  <strong>Already in your library.</strong>{" "}
+                  <a
+                    href={`/library/${existingMap.get(selected.external_id)}`}
+                    style={{ color: "var(--color-primary)" }}
+                  >
+                    View existing item →
+                  </a>
+                </div>
+              )}
+
+              {/* Status */}
+              <div>
+                <label style={labelStyle}>Status</label>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {LIB_STATUSES.map((s) => {
+                    const active = preStatus === s;
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setPreStatus(s)}
+                        style={{
+                          border: `1px solid ${active ? LIB_STATUS_COLORS[s] : "var(--rule-soft)"}`,
+                          borderRadius: 999,
+                          padding: "4px 12px",
+                          fontSize: 12,
+                          fontWeight: active ? 700 : 400,
+                          cursor: "pointer",
+                          background: active ? LIB_STATUS_COLORS[s] : "none",
+                          color: active
+                            ? "var(--color-text-on-primary, #fff)"
+                            : "var(--color-text)",
+                        }}
+                      >
+                        {LIB_STATUS_LABELS[s]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Rating */}
+              <div>
+                <label style={labelStyle}>Rating</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, minWidth: 36, textAlign: "right" }}>
+                    {preRating ? Number(preRating).toFixed(1) : "—"}
+                  </span>
+                  <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>/ 10</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={preRating || 0}
+                    onChange={(e) => setPreRating(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPreRating("")}
+                    style={{
+                      fontSize: 12,
+                      color: "var(--color-text-muted)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 11,
+                    color: "var(--color-text-muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  <span>0</span>
+                  <span>5</span>
+                  <span>10</span>
+                </div>
+              </div>
+
+              {/* Review */}
+              <div>
+                <label style={labelStyle}>Review</label>
+                <textarea
+                  placeholder="Write a review…"
+                  rows={3}
+                  value={preReview}
+                  onChange={(e) => setPreReview(e.target.value)}
+                  style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
+                />
+              </div>
+
+              {/* Session dates */}
+              <div>
+                <label style={labelStyle}>Session</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: 10 }}>Started</label>
+                    <input
+                      type="date"
+                      value={preStarted}
+                      onChange={(e) => setPreStarted(e.target.value)}
+                      style={{ ...inputStyle, width: "auto" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: 10 }}>Finished</label>
+                    <input
+                      type="date"
+                      value={preFinished}
+                      onChange={(e) => setPreFinished(e.target.value)}
+                      style={{ ...inputStyle, width: "auto" }}
+                    />
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Notes (e.g. 2nd playthrough, Nightmare difficulty)"
+                  value={preNotes}
+                  onChange={(e) => setPreNotes(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            {/* Submit */}
+            <div style={{ padding: "12px 16px", borderTop: "1px solid var(--rule-soft)" }}>
               <button
-                disabled={importing === r.external_id}
-                onClick={async () => {
-                  setImporting(r.external_id);
-                  await onImport(r);
-                  setImporting(null);
-                  onClose();
-                }}
+                disabled={submitting}
+                onClick={submitPreAdd}
                 style={{
+                  width: "100%",
                   background: "var(--color-primary)",
                   color: "var(--color-text-on-primary, #fff)",
                   border: "none",
                   borderRadius: 6,
-                  padding: "6px 14px",
-                  fontSize: 13,
+                  padding: "10px",
+                  fontSize: 14,
                   fontWeight: 600,
-                  cursor: importing === r.external_id ? "not-allowed" : "pointer",
-                  opacity: importing === r.external_id ? 0.6 : 1,
-                  flexShrink: 0,
+                  cursor: submitting ? "not-allowed" : "pointer",
+                  opacity: submitting ? 0.6 : 1,
                 }}
               >
-                {importing === r.external_id ? "Adding…" : "Add"}
+                {submitting ? "Adding…" : "Confirm Add"}
               </button>
             </div>
-          ))}
-        </div>
-
-        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--rule-soft)" }}>
-          <button
-            onClick={async () => {
-              if (!query.trim()) return;
-              await onImport({
-                external_id: "",
-                external_source: "manual",
-                title: query.trim(),
-                creator: "",
-                release_date: null,
-                description: "",
-                cover_url: "",
-                metadata: {},
-              });
-              onClose();
-            }}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--color-text-muted)",
-              fontSize: 13,
-              cursor: "pointer",
-              textDecoration: "underline",
-            }}
-          >
-            {query ? `Add "${query}" manually` : "Add manually"}
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -727,6 +1084,7 @@ function ItemRow({
   onDragStart,
   onDragOver,
   onDrop,
+  onDelete,
 }: {
   item: BacklogItem;
   showType?: boolean;
@@ -734,8 +1092,20 @@ function ItemRow({
   onDragStart: (id: string) => void;
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDrop: (targetId: string) => void;
+  onDelete: (id: string) => void;
 }) {
+  const [deleting, setDeleting] = useState(false);
   const genres = getGenres(item);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Remove "${item.title}" from your library?`)) return;
+    setDeleting(true);
+    const res = await fetch(`/api/backlog/${item.id}`, { method: "DELETE" });
+    if (res.ok) onDelete(item.id);
+    else setDeleting(false);
+  };
 
   return (
     <div
@@ -796,6 +1166,10 @@ function ItemRow({
           <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
             {item.creator}
             {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ""}
+            {item.media_type === "game" &&
+            (item.metadata as Record<string, unknown> | null)?.played_on
+              ? ` · ${String((item.metadata as Record<string, unknown>).played_on)}`
+              : ""}
           </p>
           {(genres.length > 0 || showType) && (
             <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
@@ -840,6 +1214,23 @@ function ItemRow({
           </span>
         )}
         <StatusBadge status={item.status} />
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          title="Remove from library"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: deleting ? "not-allowed" : "pointer",
+            color: "var(--color-text-muted)",
+            padding: "4px",
+            opacity: deleting ? 0.3 : 0.5,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );
@@ -1010,14 +1401,21 @@ const selectStyle = {
 export default function LibraryClient({
   initialItems,
   initialCounts,
+  initialShareToken,
 }: {
   initialItems: BacklogItem[];
   initialCounts: AllCounts;
+  initialShareToken: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ── UI state ────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<Tab>("all");
+  const validTabs: Tab[] = ["all", "game", "show", "movie", "book"];
+  const paramTab = searchParams.get("tab") as Tab | null;
+  const [activeTab, setActiveTab] = useState<Tab>(
+    paramTab && validTabs.includes(paramTab) ? paramTab : "all",
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
@@ -1028,6 +1426,41 @@ export default function LibraryClient({
   const [sortBy, setSortBy] = useState<SortKey>("priority");
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
+
+  // ── Share state ──────────────────────────────────────────────────────────────
+  const appUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL ?? "");
+  const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const shareUrl = shareToken ? `${appUrl}/share/library/${shareToken}` : null;
+
+  const generateShareLink = async () => {
+    setShareLoading(true);
+    const res = await fetch("/api/library/share", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setShareToken(data.share_token as string);
+    }
+    setShareLoading(false);
+  };
+
+  const revokeShareLink = async () => {
+    setShareLoading(true);
+    const res = await fetch("/api/library/share", { method: "DELETE" });
+    if (res.ok) setShareToken(null);
+    setShareLoading(false);
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
 
   // ── Pagination + lazy-load state ────────────────────────────────────────────
   // Global counts — used by SummaryStrip and tab badges (never stale from pagination)
@@ -1094,6 +1527,7 @@ export default function LibraryClient({
     async (tab: Tab) => {
       setActiveTab(tab);
       activeTabRef.current = tab;
+      router.replace(tab === "all" ? "/library" : `/library?tab=${tab}`, { scroll: false });
       setFilterGenre(null);
       setFilterYear(null);
 
@@ -1241,7 +1675,7 @@ export default function LibraryClient({
   };
 
   // ── Import handler ──────────────────────────────────────────────────────────
-  const handleImport = async (result: MetadataSearchResult) => {
+  const handleImport = async (result: MetadataSearchResult, extras: ImportExtras) => {
     const mediaType = searchMediaType ?? (activeTab === "all" ? "game" : activeTab);
     const res = await fetch("/api/backlog", {
       method: "POST",
@@ -1256,34 +1690,43 @@ export default function LibraryClient({
         external_id: result.external_id || null,
         external_source: result.external_source || "manual",
         metadata: result.metadata,
-        status: "backlog",
+        status: extras.status,
+        rating: extras.rating,
+        review: extras.review,
       }),
     });
-    if (res.ok) {
-      const newItem = (await res.json()) as BacklogItem;
-      // Optimistic update — prepend to displayed list and both caches
-      setDisplayedItems((prev) => [newItem, ...prev]);
-      const allCached = tabCacheRef.current["all"];
-      if (allCached) tabCacheRef.current = { ...tabCacheRef.current, all: [newItem, ...allCached] };
-      const tab = activeTabRef.current;
-      if (tab !== "all") {
-        const tabCached = tabCacheRef.current[tab];
-        if (tabCached)
-          tabCacheRef.current = { ...tabCacheRef.current, [tab]: [newItem, ...tabCached] };
-      }
-      // Update global counts
-      setCounts((prev) => ({
-        ...prev,
-        all: { ...prev.all, backlog: prev.all.backlog + 1, total: prev.all.total + 1 },
-        [mediaType]: {
-          ...prev[mediaType as MediaType],
-          backlog: prev[mediaType as MediaType].backlog + 1,
-          total: prev[mediaType as MediaType].total + 1,
-        },
-      }));
-      router.refresh();
-      // Stay on /library — do not navigate to detail page (#596)
+    if (!res.ok) return;
+    const newItem = (await res.json()) as BacklogItem;
+    if (extras.session) {
+      await fetch(`/api/backlog/${newItem.id}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(extras.session),
+      });
     }
+    // Optimistic update — prepend to displayed list and both caches
+    setDisplayedItems((prev) => [newItem, ...prev]);
+    const allCached = tabCacheRef.current["all"];
+    if (allCached) tabCacheRef.current = { ...tabCacheRef.current, all: [newItem, ...allCached] };
+    const tab = activeTabRef.current;
+    if (tab !== "all") {
+      const tabCached = tabCacheRef.current[tab];
+      if (tabCached)
+        tabCacheRef.current = { ...tabCacheRef.current, [tab]: [newItem, ...tabCached] };
+    }
+    // Update global counts
+    const st = extras.status as BacklogStatus;
+    setCounts((prev) => ({
+      ...prev,
+      all: { ...prev.all, [st]: (prev.all[st] as number) + 1, total: prev.all.total + 1 },
+      [mediaType]: {
+        ...prev[mediaType as MediaType],
+        [st]: ((prev[mediaType as MediaType] as Record<string, number>)[st] ?? 0) + 1,
+        total: prev[mediaType as MediaType].total + 1,
+      },
+    }));
+    router.refresh();
+    router.push(`/library/${newItem.id}`);
   };
 
   // ── Drag reorder ────────────────────────────────────────────────────────────
@@ -1325,6 +1768,35 @@ export default function LibraryClient({
 
     dragId.current = null;
     dragOverId.current = null;
+  };
+
+  // ── Delete item ─────────────────────────────────────────────────────────────
+  const handleDeleteItem = (id: string) => {
+    setDisplayedItems((prev) => prev.filter((i) => i.id !== id));
+    const tab = activeTabRef.current;
+    tabCacheRef.current = {
+      ...tabCacheRef.current,
+      all: (tabCacheRef.current.all ?? []).filter((i) => i.id !== id),
+      [tab]: (tabCacheRef.current[tab] ?? []).filter((i) => i.id !== id),
+    };
+    const deletedItem = displayedItems.find((i) => i.id === id);
+    if (deletedItem) {
+      const mt = deletedItem.media_type as MediaType;
+      const st = deletedItem.status as BacklogStatus;
+      setCounts((prev) => ({
+        ...prev,
+        all: {
+          ...prev.all,
+          [st]: Math.max(0, (prev.all[st] as number) - 1),
+          total: Math.max(0, prev.all.total - 1),
+        },
+        [mt]: {
+          ...prev[mt],
+          [st]: Math.max(0, (prev[mt][st] as number) - 1),
+          total: Math.max(0, prev[mt].total - 1),
+        },
+      }));
+    }
   };
 
   // ── Filter helpers ──────────────────────────────────────────────────────────
@@ -1406,6 +1878,193 @@ export default function LibraryClient({
                 {mode === "list" ? <List size={15} /> : <LayoutGrid size={15} />}
               </button>
             ))}
+          </div>
+
+          {/* Share button */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowSharePanel((p) => !p)}
+              title="Share library"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: shareToken
+                  ? "var(--color-primary-bg, rgba(99,102,241,0.12))"
+                  : "transparent",
+                color: shareToken ? "var(--color-primary)" : "var(--color-text-muted)",
+                border: "1px solid var(--rule-soft)",
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Share2 size={15} />
+            </button>
+
+            {showSharePanel && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  width: 340,
+                  background: "var(--color-bg-1)",
+                  border: "1px solid var(--rule-soft)",
+                  borderRadius: 10,
+                  padding: 16,
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+                  zIndex: 100,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>Public Library Link</p>
+                  <button
+                    onClick={() => setShowSharePanel(false)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-muted)",
+                      padding: 2,
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: 13,
+                    color: "var(--color-text-muted)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {shareToken
+                    ? "Anyone with this link can view your full library."
+                    : "Generate a public link to share your entire library — no account needed to view."}
+                </p>
+
+                {shareToken ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "var(--color-bg-2)",
+                        border: "1px solid var(--rule-soft)",
+                        borderRadius: 6,
+                        padding: "7px 10px",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <LinkIcon
+                        size={12}
+                        style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "var(--color-text-muted)",
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {shareUrl}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={copyShareUrl}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          background: "var(--color-primary)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "8px 12px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {shareCopied ? (
+                          <>
+                            <Check size={13} /> Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={13} /> Copy link
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={revokeShareLink}
+                        disabled={shareLoading}
+                        style={{
+                          background: "none",
+                          border: "1px solid var(--rule-soft)",
+                          borderRadius: 6,
+                          padding: "8px 12px",
+                          fontSize: 13,
+                          color: "var(--color-text-muted)",
+                          cursor: shareLoading ? "not-allowed" : "pointer",
+                          opacity: shareLoading ? 0.5 : 1,
+                        }}
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={generateShareLink}
+                    disabled={shareLoading}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      background: "var(--color-primary)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "9px 14px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: shareLoading ? "not-allowed" : "pointer",
+                      opacity: shareLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {shareLoading ? (
+                      "Generating…"
+                    ) : (
+                      <>
+                        <Share2 size={14} /> Generate link
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <button
@@ -1757,6 +2416,7 @@ export default function LibraryClient({
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
+                  onDelete={handleDeleteItem}
                 />
               ))}
               {[...queuedItems, ...pausedItems, ...finishedItems, ...droppedItems].map((item) => (
@@ -1768,6 +2428,7 @@ export default function LibraryClient({
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
+                  onDelete={handleDeleteItem}
                 />
               ))}
             </>
@@ -1815,6 +2476,7 @@ export default function LibraryClient({
           type={searchMediaType}
           onClose={() => setSearchMediaType(null)}
           onImport={handleImport}
+          existingItems={displayedItems}
         />
       )}
     </div>

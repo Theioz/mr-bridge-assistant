@@ -135,7 +135,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/specs/gate-b.spec.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_smoke_specs_gate_b_spec_ts",
-      "community": 51,
+      "community": 50,
       "norm_label": "gate-b.spec.ts"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/specs/gate-b.spec.ts",
       "source_location": "L46",
       "id": "gate_b_spec_waitsettled",
-      "community": 51,
+      "community": 50,
       "norm_label": "waitsettled()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/specs/gate-b.spec.ts",
       "source_location": "L57",
       "id": "gate_b_spec_hasnohorizontaloverflow",
-      "community": 51,
+      "community": 50,
       "norm_label": "hasnohorizontaloverflow()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/utils/supabase-verify.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_smoke_utils_supabase_verify_ts",
-      "community": 47,
+      "community": 46,
       "norm_label": "supabase-verify.ts"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/utils/supabase-verify.ts",
       "source_location": "L3",
       "id": "supabase_verify_requireenv",
-      "community": 47,
+      "community": 46,
       "norm_label": "requireenv()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/utils/supabase-verify.ts",
       "source_location": "L13",
       "id": "supabase_verify_createsmokeadminclient",
-      "community": 47,
+      "community": 46,
       "norm_label": "createsmokeadminclient()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/smoke/utils/supabase-verify.ts",
       "source_location": "L30",
       "id": "supabase_verify_getmessagesforsession",
-      "community": 47,
+      "community": 46,
       "norm_label": "getmessagesforsession()"
     },
     {
@@ -774,70 +774,79 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
-      "community": 23,
+      "community": 21,
       "norm_label": "backlogclient.tsx"
     },
     {
       "label": "StatusBadge()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L30",
+      "source_location": "L37",
       "id": "backlogclient_statusbadge",
-      "community": 23,
+      "community": 21,
       "norm_label": "statusbadge()"
     },
     {
       "label": "CoverThumb()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L49",
+      "source_location": "L56",
       "id": "backlogclient_coverthumb",
-      "community": 23,
+      "community": 21,
       "norm_label": "coverthumb()"
     },
     {
-      "label": "async()",
+      "label": "openPreAdd()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L273",
-      "id": "backlogclient_async",
-      "community": 23,
-      "norm_label": "async()"
+      "source_location": "L155",
+      "id": "backlogclient_openpreadd",
+      "community": 21,
+      "norm_label": "openpreadd()"
+    },
+    {
+      "label": "submitPreAdd()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
+      "source_location": "L166",
+      "id": "backlogclient_submitpreadd",
+      "community": 21,
+      "norm_label": "submitpreadd()"
     },
     {
       "label": "handleImport()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L482",
+      "source_location": "L825",
       "id": "backlogclient_handleimport",
-      "community": 23,
+      "community": 21,
       "norm_label": "handleimport()"
     },
     {
       "label": "handleDragStart()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L507",
+      "source_location": "L858",
       "id": "backlogclient_handledragstart",
-      "community": 23,
+      "community": 21,
       "norm_label": "handledragstart()"
     },
     {
       "label": "handleDragOver()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L510",
+      "source_location": "L861",
       "id": "backlogclient_handledragover",
-      "community": 23,
+      "community": 21,
       "norm_label": "handledragover()"
     },
     {
       "label": "handleDrop()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L513",
+      "source_location": "L864",
       "id": "backlogclient_handledrop",
-      "community": 23,
+      "community": 21,
       "norm_label": "handledrop()"
     },
     {
@@ -864,70 +873,97 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
-      "community": 7,
+      "community": 6,
       "norm_label": "backlogdetailclient.tsx"
     },
     {
       "label": "fmt()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L28",
+      "source_location": "L36",
       "id": "backlogdetailclient_fmt",
-      "community": 7,
+      "community": 6,
       "norm_label": "fmt()"
+    },
+    {
+      "label": "handleDelete()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L46",
+      "id": "backlogdetailclient_handledelete",
+      "community": 6,
+      "norm_label": "handledelete()"
     },
     {
       "label": "submit()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L73",
+      "source_location": "L111",
       "id": "backlogdetailclient_submit",
-      "community": 7,
+      "community": 6,
       "norm_label": "submit()"
     },
     {
       "label": "patch()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L213",
+      "source_location": "L274",
       "id": "backlogdetailclient_patch",
-      "community": 7,
+      "community": 6,
       "norm_label": "patch()"
+    },
+    {
+      "label": "saveChanges()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L293",
+      "id": "backlogdetailclient_savechanges",
+      "community": 6,
+      "norm_label": "savechanges()"
+    },
+    {
+      "label": "revertChanges()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L308",
+      "id": "backlogdetailclient_revertchanges",
+      "community": 6,
+      "norm_label": "revertchanges()"
     },
     {
       "label": "generateShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L227",
+      "source_location": "L316",
       "id": "backlogdetailclient_generateshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "generateshare()"
     },
     {
       "label": "revokeShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L236",
+      "source_location": "L325",
       "id": "backlogdetailclient_revokeshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "revokeshare()"
     },
     {
       "label": "copyShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L242",
+      "source_location": "L331",
       "id": "backlogdetailclient_copyshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "copyshare()"
     },
     {
       "label": "deleteItem()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L249",
+      "source_location": "L338",
       "id": "backlogdetailclient_deleteitem",
-      "community": 7,
+      "community": 6,
       "norm_label": "deleteitem()"
     },
     {
@@ -1008,53 +1044,152 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
-      "community": 31,
+      "community": 13,
       "norm_label": "libraryclient.tsx"
     },
     {
       "label": "getGenres()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L48",
+      "source_location": "L62",
       "id": "libraryclient_getgenres",
-      "community": 31,
+      "community": 13,
       "norm_label": "getgenres()"
     },
     {
       "label": "buildApiUrl()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L60",
+      "source_location": "L74",
       "id": "libraryclient_buildapiurl",
-      "community": 31,
+      "community": 13,
       "norm_label": "buildapiurl()"
     },
     {
       "label": "StatusBadge()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L80",
+      "source_location": "L94",
       "id": "libraryclient_statusbadge",
-      "community": 31,
+      "community": 13,
       "norm_label": "statusbadge()"
     },
     {
-      "label": "async()",
+      "label": "openPreAdd()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L633",
-      "id": "libraryclient_async",
-      "community": 31,
-      "norm_label": "async()"
+      "source_location": "L550",
+      "id": "libraryclient_openpreadd",
+      "community": 13,
+      "norm_label": "openpreadd()"
     },
     {
-      "label": "setLoadingMore()",
+      "label": "submitPreAdd()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L1185",
-      "id": "libraryclient_setloadingmore",
-      "community": 31,
-      "norm_label": "setloadingmore()"
+      "source_location": "L561",
+      "id": "libraryclient_submitpreadd",
+      "community": 13,
+      "norm_label": "submitpreadd()"
+    },
+    {
+      "label": "handleDelete()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1088",
+      "id": "libraryclient_handledelete",
+      "community": 13,
+      "norm_label": "handledelete()"
+    },
+    {
+      "label": "generateShareLink()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1429",
+      "id": "libraryclient_generatesharelink",
+      "community": 13,
+      "norm_label": "generatesharelink()"
+    },
+    {
+      "label": "revokeShareLink()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1439",
+      "id": "libraryclient_revokesharelink",
+      "community": 13,
+      "norm_label": "revokesharelink()"
+    },
+    {
+      "label": "copyShareUrl()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1446",
+      "id": "libraryclient_copyshareurl",
+      "community": 13,
+      "norm_label": "copyshareurl()"
+    },
+    {
+      "label": "loadMoreItems()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1637",
+      "id": "libraryclient_loadmoreitems",
+      "community": 13,
+      "norm_label": "loadmoreitems()"
+    },
+    {
+      "label": "handleImport()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1666",
+      "id": "libraryclient_handleimport",
+      "community": 13,
+      "norm_label": "handleimport()"
+    },
+    {
+      "label": "handleDragStart()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1721",
+      "id": "libraryclient_handledragstart",
+      "community": 13,
+      "norm_label": "handledragstart()"
+    },
+    {
+      "label": "handleDragOver()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1724",
+      "id": "libraryclient_handledragover",
+      "community": 13,
+      "norm_label": "handledragover()"
+    },
+    {
+      "label": "handleDrop()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1727",
+      "id": "libraryclient_handledrop",
+      "community": 13,
+      "norm_label": "handledrop()"
+    },
+    {
+      "label": "handleDeleteItem()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1762",
+      "id": "libraryclient_handledeleteitem",
+      "community": 13,
+      "norm_label": "handledeleteitem()"
+    },
+    {
+      "label": "clearFilters()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1791",
+      "id": "libraryclient_clearfilters",
+      "community": 13,
+      "norm_label": "clearfilters()"
     },
     {
       "label": "page.tsx",
@@ -1080,70 +1215,97 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
-      "community": 7,
+      "community": 6,
       "norm_label": "librarydetailclient.tsx"
     },
     {
       "label": "fmt()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L36",
+      "source_location": "L44",
       "id": "librarydetailclient_fmt",
-      "community": 7,
+      "community": 6,
       "norm_label": "fmt()"
+    },
+    {
+      "label": "handleDelete()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L54",
+      "id": "librarydetailclient_handledelete",
+      "community": 6,
+      "norm_label": "handledelete()"
     },
     {
       "label": "submit()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L81",
+      "source_location": "L119",
       "id": "librarydetailclient_submit",
-      "community": 7,
+      "community": 6,
       "norm_label": "submit()"
     },
     {
       "label": "patch()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L196",
+      "source_location": "L257",
       "id": "librarydetailclient_patch",
-      "community": 7,
+      "community": 6,
       "norm_label": "patch()"
+    },
+    {
+      "label": "saveChanges()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L276",
+      "id": "librarydetailclient_savechanges",
+      "community": 6,
+      "norm_label": "savechanges()"
+    },
+    {
+      "label": "revertChanges()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L291",
+      "id": "librarydetailclient_revertchanges",
+      "community": 6,
+      "norm_label": "revertchanges()"
     },
     {
       "label": "generateShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L210",
+      "source_location": "L299",
       "id": "librarydetailclient_generateshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "generateshare()"
     },
     {
       "label": "revokeShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L219",
+      "source_location": "L308",
       "id": "librarydetailclient_revokeshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "revokeshare()"
     },
     {
       "label": "copyShare()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L225",
+      "source_location": "L314",
       "id": "librarydetailclient_copyshare",
-      "community": 7,
+      "community": 6,
       "norm_label": "copyshare()"
     },
     {
       "label": "deleteItem()",
       "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L232",
+      "source_location": "L321",
       "id": "librarydetailclient_deleteitem",
-      "community": 7,
+      "community": 6,
       "norm_label": "deleteitem()"
     },
     {
@@ -1224,7 +1386,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_meals_foodphotoanalyzer_tsx",
-      "community": 6,
+      "community": 7,
       "norm_label": "foodphotoanalyzer.tsx"
     },
     {
@@ -1233,7 +1395,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L69",
       "id": "foodphotoanalyzer_roundordash",
-      "community": 6,
+      "community": 7,
       "norm_label": "roundordash()"
     },
     {
@@ -1242,7 +1404,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L75",
       "id": "foodphotoanalyzer_sumnullable",
-      "community": 6,
+      "community": 7,
       "norm_label": "sumnullable()"
     },
     {
@@ -1251,7 +1413,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L132",
       "id": "foodphotoanalyzer_portionpicker",
-      "community": 6,
+      "community": 7,
       "norm_label": "portionpicker()"
     },
     {
@@ -1260,7 +1422,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L209",
       "id": "foodphotoanalyzer_commit",
-      "community": 6,
+      "community": 7,
       "norm_label": "commit()"
     },
     {
@@ -1269,7 +1431,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L321",
       "id": "foodphotoanalyzer_additem",
-      "community": 6,
+      "community": 7,
       "norm_label": "additem()"
     },
     {
@@ -1287,7 +1449,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L330",
       "id": "foodphotoanalyzer_updateitem",
-      "community": 6,
+      "community": 7,
       "norm_label": "updateitem()"
     },
     {
@@ -1296,7 +1458,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L334",
       "id": "foodphotoanalyzer_clearall",
-      "community": 6,
+      "community": 7,
       "norm_label": "clearall()"
     },
     {
@@ -1305,7 +1467,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L346",
       "id": "foodphotoanalyzer_analyzeonefile",
-      "community": 6,
+      "community": 7,
       "norm_label": "analyzeonefile()"
     },
     {
@@ -1314,7 +1476,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L442",
       "id": "foodphotoanalyzer_handlefilechange",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlefilechange()"
     },
     {
@@ -1323,7 +1485,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L462",
       "id": "foodphotoanalyzer_handlefileschange",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlefileschange()"
     },
     {
@@ -1332,7 +1494,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L487",
       "id": "foodphotoanalyzer_retryfailedphoto",
-      "community": 6,
+      "community": 7,
       "norm_label": "retryfailedphoto()"
     },
     {
@@ -1341,7 +1503,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L496",
       "id": "foodphotoanalyzer_removestagedphoto",
-      "community": 6,
+      "community": 7,
       "norm_label": "removestagedphoto()"
     },
     {
@@ -1350,7 +1512,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L502",
       "id": "foodphotoanalyzer_handlesubmitstaged",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlesubmitstaged()"
     },
     {
@@ -1359,7 +1521,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L518",
       "id": "foodphotoanalyzer_handlereestimateitem",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlereestimateitem()"
     },
     {
@@ -1368,7 +1530,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L554",
       "id": "foodphotoanalyzer_rescanitem",
-      "community": 6,
+      "community": 7,
       "norm_label": "rescanitem()"
     },
     {
@@ -1377,7 +1539,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L601",
       "id": "foodphotoanalyzer_handlerescanfilechange",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlerescanfilechange()"
     },
     {
@@ -1386,7 +1548,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L618",
       "id": "foodphotoanalyzer_handleaddmanual",
-      "community": 6,
+      "community": 7,
       "norm_label": "handleaddmanual()"
     },
     {
@@ -1395,7 +1557,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L641",
       "id": "foodphotoanalyzer_handlelogmeal",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlelogmeal()"
     },
     {
@@ -1404,7 +1566,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L675",
       "id": "foodphotoanalyzer_handlemealprep",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlemealprep()"
     },
     {
@@ -1413,7 +1575,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/FoodPhotoAnalyzer.tsx",
       "source_location": "L714",
       "id": "foodphotoanalyzer_buildnutritioncontext",
-      "community": 6,
+      "community": 7,
       "norm_label": "buildnutritioncontext()"
     },
     {
@@ -1431,7 +1593,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_meals_inlinemealchat_tsx",
-      "community": 32,
+      "community": 31,
       "norm_label": "inlinemealchat.tsx"
     },
     {
@@ -1440,7 +1602,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L63",
       "id": "inlinemealchat_round",
-      "community": 32,
+      "community": 31,
       "norm_label": "round()"
     },
     {
@@ -1449,7 +1611,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L67",
       "id": "inlinemealchat_dashor",
-      "community": 32,
+      "community": 31,
       "norm_label": "dashor()"
     },
     {
@@ -1458,7 +1620,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L87",
       "id": "inlinemealchat_sendmessage",
-      "community": 32,
+      "community": 31,
       "norm_label": "sendmessage()"
     },
     {
@@ -1467,7 +1629,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L206",
       "id": "inlinemealchat_confirmproposal",
-      "community": 32,
+      "community": 31,
       "norm_label": "confirmproposal()"
     },
     {
@@ -1476,7 +1638,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/meals/InlineMealChat.tsx",
       "source_location": "L255",
       "id": "inlinemealchat_cancelproposal",
-      "community": 32,
+      "community": 31,
       "norm_label": "cancelproposal()"
     },
     {
@@ -1530,7 +1692,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_weekly_page_tsx",
-      "community": 21,
+      "community": 22,
       "norm_label": "page.tsx"
     },
     {
@@ -1539,7 +1701,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L18",
       "id": "page_fmtdate",
-      "community": 21,
+      "community": 22,
       "norm_label": "fmtdate()"
     },
     {
@@ -1548,7 +1710,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L25",
       "id": "page_fmtdayshort",
-      "community": 21,
+      "community": 22,
       "norm_label": "fmtdayshort()"
     },
     {
@@ -1557,7 +1719,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L31",
       "id": "page_avg",
-      "community": 21,
+      "community": 22,
       "norm_label": "avg()"
     },
     {
@@ -1566,7 +1728,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L37",
       "id": "page_fmtnum",
-      "community": 21,
+      "community": 22,
       "norm_label": "fmtnum()"
     },
     {
@@ -1575,7 +1737,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L42",
       "id": "page_deltatext",
-      "community": 21,
+      "community": 22,
       "norm_label": "deltatext()"
     },
     {
@@ -1584,7 +1746,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L49",
       "id": "page_deltaclass",
-      "community": 21,
+      "community": 22,
       "norm_label": "deltaclass()"
     },
     {
@@ -1593,7 +1755,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L57",
       "id": "page_fmtduration",
-      "community": 21,
+      "community": 22,
       "norm_label": "fmtduration()"
     },
     {
@@ -1602,7 +1764,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/weekly/page.tsx",
       "source_location": "L73",
       "id": "page_panel",
-      "community": 21,
+      "community": 22,
       "norm_label": "panel()"
     },
     {
@@ -2094,6 +2256,24 @@
     {
       "label": "route.ts",
       "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L1",
+      "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "DELETE@[sessionId]/route.ts",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L6",
+      "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "community": 0,
+      "norm_label": "delete@[sessionid]/route.ts"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/priority/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_priority_route_ts",
@@ -2241,7 +2421,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/calendar/events/[eventId]/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts",
-      "community": 7,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -2250,7 +2430,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/calendar/events/[eventId]/route.ts",
       "source_location": "L8",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts_delete",
-      "community": 7,
+      "community": 0,
       "norm_label": "delete@[eventid]/route.ts"
     },
     {
@@ -2259,7 +2439,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/calendar/events/[eventId]/route.ts",
       "source_location": "L34",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_calendar_events_eventid_route_ts_patch",
-      "community": 7,
+      "community": 0,
       "norm_label": "patch@[eventid]/route.ts"
     },
     {
@@ -2304,7 +2484,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/gmail/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_gmail_route_ts",
-      "community": 7,
+      "community": 0,
       "norm_label": "route.ts"
     },
     {
@@ -2313,7 +2493,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/gmail/route.ts",
       "source_location": "L14",
       "id": "route_parsefrom",
-      "community": 7,
+      "community": 0,
       "norm_label": "parsefrom()"
     },
     {
@@ -2322,7 +2502,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/gmail/route.ts",
       "source_location": "L22",
       "id": "route_getheader",
-      "community": 7,
+      "community": 0,
       "norm_label": "getheader()"
     },
     {
@@ -2331,7 +2511,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/google/gmail/route.ts",
       "source_location": "L64",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_gmail_route_ts_get",
-      "community": 7,
+      "community": 0,
       "norm_label": "get@gmail/route.ts"
     },
     {
@@ -2340,7 +2520,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_internal_plan_route_ts",
-      "community": 13,
+      "community": 8,
       "norm_label": "route.ts"
     },
     {
@@ -2349,7 +2529,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L49",
       "id": "route_checkauth",
-      "community": 13,
+      "community": 8,
       "norm_label": "checkauth()"
     },
     {
@@ -2358,7 +2538,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L36",
       "id": "route_getcomingmonday",
-      "community": 13,
+      "community": 8,
       "norm_label": "getcomingmonday()"
     },
     {
@@ -2367,7 +2547,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L46",
       "id": "route_todatestr",
-      "community": 13,
+      "community": 8,
       "norm_label": "todatestr()"
     },
     {
@@ -2376,7 +2556,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L50",
       "id": "route_adddays",
-      "community": 13,
+      "community": 8,
       "norm_label": "adddays()"
     },
     {
@@ -2385,7 +2565,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L56",
       "id": "route_fmthrs",
-      "community": 13,
+      "community": 8,
       "norm_label": "fmthrs()"
     },
     {
@@ -2394,7 +2574,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L64",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_internal_plan_route_ts_get",
-      "community": 13,
+      "community": 8,
       "norm_label": "get@plan/route.ts"
     },
     {
@@ -2403,8 +2583,44 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/internal/plan/route.ts",
       "source_location": "L418",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_internal_plan_route_ts_post",
-      "community": 13,
+      "community": 8,
       "norm_label": "post@plan/route.ts"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L1",
+      "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "community": 0,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "appUrl()",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L4",
+      "id": "route_appurl",
+      "community": 0,
+      "norm_label": "appurl()"
+    },
+    {
+      "label": "POST@share/route.ts",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L12",
+      "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "community": 0,
+      "norm_label": "post@share/route.ts"
+    },
+    {
+      "label": "DELETE@share/route.ts",
+      "file_type": "code",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L31",
+      "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "community": 0,
+      "norm_label": "delete@share/route.ts"
     },
     {
       "label": "route.ts",
@@ -2835,7 +3051,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_cron_weekly_plan_route_ts",
-      "community": 13,
+      "community": 8,
       "norm_label": "route.ts"
     },
     {
@@ -2844,7 +3060,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L54",
       "id": "route_buildcalendardescription",
-      "community": 13,
+      "community": 8,
       "norm_label": "buildcalendardescription()"
     },
     {
@@ -2853,7 +3069,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L72",
       "id": "route_extractjson",
-      "community": 13,
+      "community": 8,
       "norm_label": "extractjson()"
     },
     {
@@ -2862,7 +3078,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L81",
       "id": "route_sendntfy",
-      "community": 13,
+      "community": 8,
       "norm_label": "sendntfy()"
     },
     {
@@ -2871,7 +3087,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L92",
       "id": "route_todayplans",
-      "community": 13,
+      "community": 8,
       "norm_label": "todayplans()"
     },
     {
@@ -2880,7 +3096,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L105",
       "id": "route_getallexercisenames",
-      "community": 13,
+      "community": 8,
       "norm_label": "getallexercisenames()"
     },
     {
@@ -2889,7 +3105,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L114",
       "id": "route_buildcorrectionpromptifneeded",
-      "community": 13,
+      "community": 8,
       "norm_label": "buildcorrectionpromptifneeded()"
     },
     {
@@ -2898,7 +3114,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L167",
       "id": "route_buildplannerprompt",
-      "community": 13,
+      "community": 8,
       "norm_label": "buildplannerprompt()"
     },
     {
@@ -2907,7 +3123,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/weekly-plan/route.ts",
       "source_location": "L264",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_cron_weekly_plan_route_ts_get",
-      "community": 13,
+      "community": 8,
       "norm_label": "get@weekly-plan/route.ts"
     },
     {
@@ -2916,7 +3132,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/reset-demo/route.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_cron_reset_demo_route_ts",
-      "community": 9,
+      "community": 3,
       "norm_label": "route.ts"
     },
     {
@@ -2925,7 +3141,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/reset-demo/route.ts",
       "source_location": "L22",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_cron_reset_demo_route_ts_get",
-      "community": 9,
+      "community": 3,
       "norm_label": "get@reset-demo/route.ts"
     },
     {
@@ -2934,7 +3150,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/reset-demo/route.ts",
       "source_location": "L57",
       "id": "route_runblock",
-      "community": 9,
+      "community": 3,
       "norm_label": "runblock()"
     },
     {
@@ -2943,7 +3159,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/cron/reset-demo/route.ts",
       "source_location": "L68",
       "id": "route_seeddemodata",
-      "community": 9,
+      "community": 3,
       "norm_label": "seeddemodata()"
     },
     {
@@ -3069,7 +3285,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_nav_tsx",
-      "community": 39,
+      "community": 38,
       "norm_label": "nav.tsx"
     },
     {
@@ -3078,7 +3294,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx",
       "source_location": "L49",
       "id": "nav_isactive",
-      "community": 39,
+      "community": 38,
       "norm_label": "isactive()"
     },
     {
@@ -3087,7 +3303,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx",
       "source_location": "L74",
       "id": "nav_load",
-      "community": 39,
+      "community": 38,
       "norm_label": "load()"
     },
     {
@@ -3096,7 +3312,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx",
       "source_location": "L87",
       "id": "nav_onvisibility",
-      "community": 39,
+      "community": 38,
       "norm_label": "onvisibility()"
     },
     {
@@ -3105,7 +3321,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/nav.tsx",
       "source_location": "L485",
       "id": "nav_async",
-      "community": 39,
+      "community": 38,
       "norm_label": "async()"
     },
     {
@@ -3132,7 +3348,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/theme-toggle.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_theme_toggle_tsx",
-      "community": 40,
+      "community": 39,
       "norm_label": "theme-toggle.tsx"
     },
     {
@@ -3141,7 +3357,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/theme-toggle.tsx",
       "source_location": "L20",
       "id": "theme_toggle_subscribemounted",
-      "community": 40,
+      "community": 39,
       "norm_label": "subscribemounted()"
     },
     {
@@ -3150,7 +3366,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/theme-toggle.tsx",
       "source_location": "L21",
       "id": "theme_toggle_getmountedsnapshot",
-      "community": 40,
+      "community": 39,
       "norm_label": "getmountedsnapshot()"
     },
     {
@@ -3159,7 +3375,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/theme-toggle.tsx",
       "source_location": "L22",
       "id": "theme_toggle_getmountedserversnapshot",
-      "community": 40,
+      "community": 39,
       "norm_label": "getmountedserversnapshot()"
     },
     {
@@ -3168,7 +3384,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/theme-toggle.tsx",
       "source_location": "L41",
       "id": "theme_toggle_handleclick",
-      "community": 40,
+      "community": 39,
       "norm_label": "handleclick()"
     },
     {
@@ -3177,7 +3393,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-tabs.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_journal_journal_tabs_tsx",
-      "community": 52,
+      "community": 51,
       "norm_label": "journal-tabs.tsx"
     },
     {
@@ -3186,7 +3402,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-tabs.tsx",
       "source_location": "L37",
       "id": "journal_tabs_handleeditentry",
-      "community": 52,
+      "community": 51,
       "norm_label": "handleeditentry()"
     },
     {
@@ -3195,7 +3411,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-tabs.tsx",
       "source_location": "L42",
       "id": "journal_tabs_handlesubmit",
-      "community": 52,
+      "community": 51,
       "norm_label": "handlesubmit()"
     },
     {
@@ -3204,7 +3420,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-history.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_journal_journal_history_tsx",
-      "community": 53,
+      "community": 52,
       "norm_label": "journal-history.tsx"
     },
     {
@@ -3213,7 +3429,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-history.tsx",
       "source_location": "L29",
       "id": "journal_history_toggle",
-      "community": 53,
+      "community": 52,
       "norm_label": "toggle()"
     },
     {
@@ -3222,7 +3438,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-history.tsx",
       "source_location": "L38",
       "id": "journal_history_togglepreview",
-      "community": 53,
+      "community": 52,
       "norm_label": "togglepreview()"
     },
     {
@@ -3231,7 +3447,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-editor.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_journal_journal_editor_tsx",
-      "community": 41,
+      "community": 40,
       "norm_label": "journal-editor.tsx"
     },
     {
@@ -3240,7 +3456,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-editor.tsx",
       "source_location": "L83",
       "id": "journal_editor_scheduleautosave",
-      "community": 41,
+      "community": 40,
       "norm_label": "scheduleautosave()"
     },
     {
@@ -3249,7 +3465,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-editor.tsx",
       "source_location": "L88",
       "id": "journal_editor_handleresponsechange",
-      "community": 41,
+      "community": 40,
       "norm_label": "handleresponsechange()"
     },
     {
@@ -3258,7 +3474,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-editor.tsx",
       "source_location": "L94",
       "id": "journal_editor_handlefreewritechange",
-      "community": 41,
+      "community": 40,
       "norm_label": "handlefreewritechange()"
     },
     {
@@ -3267,7 +3483,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/journal/journal-editor.tsx",
       "source_location": "L99",
       "id": "journal_editor_handlesubmit",
-      "community": 41,
+      "community": 40,
       "norm_label": "handlesubmit()"
     },
     {
@@ -3294,7 +3510,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/metric-card.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_ui_metric_card_tsx",
-      "community": 54,
+      "community": 53,
       "norm_label": "metric-card.tsx"
     },
     {
@@ -3303,7 +3519,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/metric-card.tsx",
       "source_location": "L14",
       "id": "metric_card_deltacolor",
-      "community": 54,
+      "community": 53,
       "norm_label": "deltacolor()"
     },
     {
@@ -3312,7 +3528,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/metric-card.tsx",
       "source_location": "L21",
       "id": "metric_card_deltaicon",
-      "community": 54,
+      "community": 53,
       "norm_label": "deltaicon()"
     },
     {
@@ -3384,7 +3600,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/skeleton.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_ui_skeleton_tsx",
-      "community": 55,
+      "community": 54,
       "norm_label": "skeleton.tsx"
     },
     {
@@ -3393,7 +3609,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/skeleton.tsx",
       "source_location": "L6",
       "id": "skeleton_skeleton",
-      "community": 55,
+      "community": 54,
       "norm_label": "skeleton()"
     },
     {
@@ -3402,7 +3618,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/ui/skeleton.tsx",
       "source_location": "L20",
       "id": "skeleton_skeletonchart",
-      "community": 55,
+      "community": 54,
       "norm_label": "skeletonchart()"
     },
     {
@@ -3411,7 +3627,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/appearance-settings.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_settings_appearance_settings_tsx",
-      "community": 42,
+      "community": 41,
       "norm_label": "appearance-settings.tsx"
     },
     {
@@ -3420,7 +3636,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/appearance-settings.tsx",
       "source_location": "L18",
       "id": "appearance_settings_subscribemounted",
-      "community": 42,
+      "community": 41,
       "norm_label": "subscribemounted()"
     },
     {
@@ -3429,7 +3645,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/appearance-settings.tsx",
       "source_location": "L19",
       "id": "appearance_settings_getmountedsnapshot",
-      "community": 42,
+      "community": 41,
       "norm_label": "getmountedsnapshot()"
     },
     {
@@ -3438,7 +3654,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/appearance-settings.tsx",
       "source_location": "L20",
       "id": "appearance_settings_getmountedserversnapshot",
-      "community": 42,
+      "community": 41,
       "norm_label": "getmountedserversnapshot()"
     },
     {
@@ -3447,7 +3663,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/appearance-settings.tsx",
       "source_location": "L34",
       "id": "appearance_settings_handlechange",
-      "community": 42,
+      "community": 41,
       "norm_label": "handlechange()"
     },
     {
@@ -3582,7 +3798,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/equipment-settings.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_settings_equipment_settings_tsx",
-      "community": 43,
+      "community": 42,
       "norm_label": "equipment-settings.tsx"
     },
     {
@@ -3591,7 +3807,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/equipment-settings.tsx",
       "source_location": "L39",
       "id": "equipment_settings_titlecase",
-      "community": 43,
+      "community": 42,
       "norm_label": "titlecase()"
     },
     {
@@ -3600,7 +3816,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/equipment-settings.tsx",
       "source_location": "L43",
       "id": "equipment_settings_formatitem",
-      "community": 43,
+      "community": 42,
       "norm_label": "formatitem()"
     },
     {
@@ -3609,7 +3825,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/equipment-settings.tsx",
       "source_location": "L67",
       "id": "equipment_settings_handleadd",
-      "community": 43,
+      "community": 42,
       "norm_label": "handleadd()"
     },
     {
@@ -3618,7 +3834,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/equipment-settings.tsx",
       "source_location": "L99",
       "id": "equipment_settings_handleremove",
-      "community": 43,
+      "community": 42,
       "norm_label": "handleremove()"
     },
     {
@@ -3627,7 +3843,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/sports-settings.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_settings_sports_settings_tsx",
-      "community": 56,
+      "community": 55,
       "norm_label": "sports-settings.tsx"
     },
     {
@@ -3636,7 +3852,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/sports-settings.tsx",
       "source_location": "L45",
       "id": "sports_settings_handleadd",
-      "community": 56,
+      "community": 55,
       "norm_label": "handleadd()"
     },
     {
@@ -3645,7 +3861,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/sports-settings.tsx",
       "source_location": "L67",
       "id": "sports_settings_handleremove",
-      "community": 56,
+      "community": 55,
       "norm_label": "handleremove()"
     },
     {
@@ -3654,7 +3870,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_settings_profile_form_tsx",
-      "community": 33,
+      "community": 32,
       "norm_label": "profile-form.tsx"
     },
     {
@@ -3663,7 +3879,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L80",
       "id": "profile_form_cmtoftin",
-      "community": 33,
+      "community": 32,
       "norm_label": "cmtoftin()"
     },
     {
@@ -3672,7 +3888,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L91",
       "id": "profile_form_ftintocm",
-      "community": 33,
+      "community": 32,
       "norm_label": "ftintocm()"
     },
     {
@@ -3681,7 +3897,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L183",
       "id": "profile_form_suggestmacros",
-      "community": 33,
+      "community": 32,
       "norm_label": "suggestmacros()"
     },
     {
@@ -3690,7 +3906,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L273",
       "id": "profile_form_applyall",
-      "community": 33,
+      "community": 32,
       "norm_label": "applyall()"
     },
     {
@@ -3699,7 +3915,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/profile-form.tsx",
       "source_location": "L287",
       "id": "profile_form_dismiss",
-      "community": 33,
+      "community": 32,
       "norm_label": "dismiss()"
     },
     {
@@ -3726,7 +3942,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/watchlist-settings.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_settings_watchlist_settings_tsx",
-      "community": 57,
+      "community": 56,
       "norm_label": "watchlist-settings.tsx"
     },
     {
@@ -3735,7 +3951,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/watchlist-settings.tsx",
       "source_location": "L19",
       "id": "watchlist_settings_handleadd",
-      "community": 57,
+      "community": 56,
       "norm_label": "handleadd()"
     },
     {
@@ -3744,7 +3960,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/settings/watchlist-settings.tsx",
       "source_location": "L54",
       "id": "watchlist_settings_handleremove",
-      "community": 57,
+      "community": 56,
       "norm_label": "handleremove()"
     },
     {
@@ -3933,7 +4149,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_calendar_week_view_tsx",
-      "community": 22,
+      "community": 23,
       "norm_label": "week-view.tsx"
     },
     {
@@ -3942,7 +4158,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L11",
       "id": "week_view_tominutes",
-      "community": 22,
+      "community": 23,
       "norm_label": "tominutes()"
     },
     {
@@ -3951,7 +4167,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L18",
       "id": "week_view_formathour",
-      "community": 22,
+      "community": 23,
       "norm_label": "formathour()"
     },
     {
@@ -3960,7 +4176,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L24",
       "id": "week_view_isodate",
-      "community": 22,
+      "community": 23,
       "norm_label": "isodate()"
     },
     {
@@ -3969,7 +4185,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L28",
       "id": "week_view_startofweek",
-      "community": 22,
+      "community": 23,
       "norm_label": "startofweek()"
     },
     {
@@ -3978,7 +4194,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L35",
       "id": "week_view_addday",
-      "community": 22,
+      "community": 23,
       "norm_label": "addday()"
     },
     {
@@ -3987,7 +4203,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L41",
       "id": "week_view_formatdayheader",
-      "community": 22,
+      "community": 23,
       "norm_label": "formatdayheader()"
     },
     {
@@ -3996,7 +4212,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L58",
       "id": "week_view_layoutdayevents",
-      "community": 22,
+      "community": 23,
       "norm_label": "layoutdayevents()"
     },
     {
@@ -4005,7 +4221,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/week-view.tsx",
       "source_location": "L98",
       "id": "week_view_eventcolors",
-      "community": 22,
+      "community": 23,
       "norm_label": "eventcolors()"
     },
     {
@@ -4014,7 +4230,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/month-view.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_calendar_month_view_tsx",
-      "community": 58,
+      "community": 57,
       "norm_label": "month-view.tsx"
     },
     {
@@ -4023,7 +4239,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/month-view.tsx",
       "source_location": "L7",
       "id": "month_view_isodate",
-      "community": 58,
+      "community": 57,
       "norm_label": "isodate()"
     },
     {
@@ -4032,7 +4248,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/month-view.tsx",
       "source_location": "L11",
       "id": "month_view_buildmonthgrid",
-      "community": 58,
+      "community": 57,
       "norm_label": "buildmonthgrid()"
     },
     {
@@ -4185,7 +4401,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/event-detail-dialog.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_calendar_event_detail_dialog_tsx",
-      "community": 59,
+      "community": 58,
       "norm_label": "event-detail-dialog.tsx"
     },
     {
@@ -4194,7 +4410,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/event-detail-dialog.tsx",
       "source_location": "L16",
       "id": "event_detail_dialog_formatdatetime",
-      "community": 59,
+      "community": 58,
       "norm_label": "formatdatetime()"
     },
     {
@@ -4203,7 +4419,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/calendar/event-detail-dialog.tsx",
       "source_location": "L63",
       "id": "event_detail_dialog_handledelete",
-      "community": 59,
+      "community": 58,
       "norm_label": "handledelete()"
     },
     {
@@ -4590,7 +4806,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-today-section.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_habits_habit_today_section_tsx",
-      "community": 60,
+      "community": 59,
       "norm_label": "habit-today-section.tsx"
     },
     {
@@ -4599,7 +4815,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-today-section.tsx",
       "source_location": "L42",
       "id": "habit_today_section_handleadd",
-      "community": 60,
+      "community": 59,
       "norm_label": "handleadd()"
     },
     {
@@ -4608,7 +4824,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-today-section.tsx",
       "source_location": "L55",
       "id": "habit_today_section_handlecancel",
-      "community": 60,
+      "community": 59,
       "norm_label": "handlecancel()"
     },
     {
@@ -4617,7 +4833,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_habits_habit_history_tsx",
-      "community": 34,
+      "community": 33,
       "norm_label": "habit-history.tsx"
     },
     {
@@ -4626,7 +4842,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L14",
       "id": "habit_history_formatheader",
-      "community": 34,
+      "community": 33,
       "norm_label": "formatheader()"
     },
     {
@@ -4635,7 +4851,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L21",
       "id": "habit_history_groupbyweek",
-      "community": 34,
+      "community": 33,
       "norm_label": "groupbyweek()"
     },
     {
@@ -4644,7 +4860,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L30",
       "id": "habit_history_counttoopacity",
-      "community": 34,
+      "community": 33,
       "norm_label": "counttoopacity()"
     },
     {
@@ -4653,7 +4869,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L62",
       "id": "habit_history_getcompleted",
-      "community": 34,
+      "community": 33,
       "norm_label": "getcompleted()"
     },
     {
@@ -4662,7 +4878,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-history.tsx",
       "source_location": "L67",
       "id": "habit_history_handlecellclick",
-      "community": 34,
+      "community": 33,
       "norm_label": "handlecellclick()"
     },
     {
@@ -4680,7 +4896,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-toggle.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_habits_habit_toggle_tsx",
-      "community": 61,
+      "community": 60,
       "norm_label": "habit-toggle.tsx"
     },
     {
@@ -4689,7 +4905,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-toggle.tsx",
       "source_location": "L45",
       "id": "habit_toggle_handletoggle",
-      "community": 61,
+      "community": 60,
       "norm_label": "handletoggle()"
     },
     {
@@ -4698,7 +4914,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/habits/habit-toggle.tsx",
       "source_location": "L57",
       "id": "habit_toggle_handlearchive",
-      "community": 61,
+      "community": 60,
       "norm_label": "handlearchive()"
     },
     {
@@ -4860,7 +5076,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/use-sync-all.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_use_sync_all_ts",
-      "community": 48,
+      "community": 47,
       "norm_label": "use-sync-all.ts"
     },
     {
@@ -4869,7 +5085,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/use-sync-all.ts",
       "source_location": "L17",
       "id": "use_sync_all_usesyncall",
-      "community": 48,
+      "community": 47,
       "norm_label": "usesyncall()"
     },
     {
@@ -4878,7 +5094,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_sports_card_tsx",
-      "community": 35,
+      "community": 34,
       "norm_label": "sports-card.tsx"
     },
     {
@@ -4887,7 +5103,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L26",
       "id": "sports_card_fmtday",
-      "community": 35,
+      "community": 34,
       "norm_label": "fmtday()"
     },
     {
@@ -4896,7 +5112,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L33",
       "id": "sports_card_fmtdaytime",
-      "community": 35,
+      "community": 34,
       "norm_label": "fmtdaytime()"
     },
     {
@@ -4905,7 +5121,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L48",
       "id": "sports_card_nextgamelabel",
-      "community": 35,
+      "community": 34,
       "norm_label": "nextgamelabel()"
     },
     {
@@ -4914,7 +5130,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L55",
       "id": "sports_card_lastresultlabel",
-      "community": 35,
+      "community": 34,
       "norm_label": "lastresultlabel()"
     },
     {
@@ -4923,7 +5139,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/sports-card.tsx",
       "source_location": "L117",
       "id": "sports_card_if",
-      "community": 35,
+      "community": 34,
       "norm_label": "if()"
     },
     {
@@ -5022,7 +5238,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/today-scores-strip.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_today_scores_strip_tsx",
-      "community": 44,
+      "community": 43,
       "norm_label": "today-scores-strip.tsx"
     },
     {
@@ -5031,7 +5247,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/today-scores-strip.tsx",
       "source_location": "L5",
       "id": "today_scores_strip_scorecolor",
-      "community": 44,
+      "community": 43,
       "norm_label": "scorecolor()"
     },
     {
@@ -5040,7 +5256,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/today-scores-strip.tsx",
       "source_location": "L12",
       "id": "today_scores_strip_statustext",
-      "community": 44,
+      "community": 43,
       "norm_label": "statustext()"
     },
     {
@@ -5049,7 +5265,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/today-scores-strip.tsx",
       "source_location": "L21",
       "id": "today_scores_strip_fmtdate",
-      "community": 44,
+      "community": 43,
       "norm_label": "fmtdate()"
     },
     {
@@ -5058,7 +5274,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/today-scores-strip.tsx",
       "source_location": "L51",
       "id": "today_scores_strip_todayscoresstrip",
-      "community": 44,
+      "community": 43,
       "norm_label": "todayscoresstrip()"
     },
     {
@@ -5085,7 +5301,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/packages-banner.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_packages_banner_tsx",
-      "community": 45,
+      "community": 44,
       "norm_label": "packages-banner.tsx"
     },
     {
@@ -5094,7 +5310,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/packages-banner.tsx",
       "source_location": "L10",
       "id": "packages_banner_todaydatestring",
-      "community": 45,
+      "community": 44,
       "norm_label": "todaydatestring()"
     },
     {
@@ -5103,7 +5319,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/packages-banner.tsx",
       "source_location": "L14",
       "id": "packages_banner_adddays",
-      "community": 45,
+      "community": 44,
       "norm_label": "adddays()"
     },
     {
@@ -5112,7 +5328,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/packages-banner.tsx",
       "source_location": "L20",
       "id": "packages_banner_carriertrackingurl",
-      "community": 45,
+      "community": 44,
       "norm_label": "carriertrackingurl()"
     },
     {
@@ -5121,7 +5337,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/packages-banner.tsx",
       "source_location": "L44",
       "id": "packages_banner_computebannercontent",
-      "community": 45,
+      "community": 44,
       "norm_label": "computebannercontent()"
     },
     {
@@ -5130,7 +5346,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_body_fitness_summary_tsx",
-      "community": 9,
+      "community": 3,
       "norm_label": "body-fitness-summary.tsx"
     },
     {
@@ -5139,7 +5355,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L12",
       "id": "body_fitness_summary_avg",
-      "community": 9,
+      "community": 3,
       "norm_label": "avg()"
     },
     {
@@ -5148,7 +5364,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L18",
       "id": "body_fitness_summary_last7",
-      "community": 9,
+      "community": 3,
       "norm_label": "last7()"
     },
     {
@@ -5157,7 +5373,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L28",
       "id": "body_fitness_summary_lastnonnull",
-      "community": 9,
+      "community": 3,
       "norm_label": "lastnonnull()"
     },
     {
@@ -5166,7 +5382,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L41",
       "id": "body_fitness_summary_deltaclass",
-      "community": 9,
+      "community": 3,
       "norm_label": "deltaclass()"
     },
     {
@@ -5175,7 +5391,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L47",
       "id": "body_fitness_summary_arrow",
-      "community": 9,
+      "community": 3,
       "norm_label": "arrow()"
     },
     {
@@ -5184,7 +5400,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L51",
       "id": "body_fitness_summary_direction",
-      "community": 9,
+      "community": 3,
       "norm_label": "direction()"
     },
     {
@@ -5193,7 +5409,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L57",
       "id": "body_fitness_summary_formatnumber",
-      "community": 9,
+      "community": 3,
       "norm_label": "formatnumber()"
     },
     {
@@ -5202,7 +5418,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/body-fitness-summary.tsx",
       "source_location": "L69",
       "id": "body_fitness_summary_latestlabel",
-      "community": 9,
+      "community": 3,
       "norm_label": "latestlabel()"
     },
     {
@@ -5256,7 +5472,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/masthead-refresh.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_dashboard_masthead_refresh_tsx",
-      "community": 48,
+      "community": 47,
       "norm_label": "masthead-refresh.tsx"
     },
     {
@@ -5265,7 +5481,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/dashboard/masthead-refresh.tsx",
       "source_location": "L11",
       "id": "masthead_refresh_mastheadrefresh",
-      "community": 48,
+      "community": 47,
       "norm_label": "mastheadrefresh()"
     },
     {
@@ -5337,7 +5553,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MacroSummaryCard.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_meals_macrosummarycard_tsx",
-      "community": 68,
+      "community": 61,
       "norm_label": "macrosummarycard.tsx"
     },
     {
@@ -5346,7 +5562,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MacroSummaryCard.tsx",
       "source_location": "L20",
       "id": "macrosummarycard_progresscolor",
-      "community": 68,
+      "community": 61,
       "norm_label": "progresscolor()"
     },
     {
@@ -5355,7 +5571,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MacroSummaryCard.tsx",
       "source_location": "L26",
       "id": "macrosummarycard_progressbar",
-      "community": 68,
+      "community": 61,
       "norm_label": "progressbar()"
     },
     {
@@ -5364,7 +5580,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_meals_mealsclient_tsx",
-      "community": 6,
+      "community": 7,
       "norm_label": "mealsclient.tsx"
     },
     {
@@ -5373,7 +5589,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L124",
       "id": "mealsclient_normalizename",
-      "community": 6,
+      "community": 7,
       "norm_label": "normalizename()"
     },
     {
@@ -5382,7 +5598,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L168",
       "id": "mealsclient_progresscolor",
-      "community": 6,
+      "community": 7,
       "norm_label": "progresscolor()"
     },
     {
@@ -5391,7 +5607,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L444",
       "id": "mealsclient_handlechange",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlechange()"
     },
     {
@@ -5400,7 +5616,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L678",
       "id": "mealsclient_prefilllog",
-      "community": 6,
+      "community": 7,
       "norm_label": "prefilllog()"
     },
     {
@@ -5409,7 +5625,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L697",
       "id": "mealsclient_handlereanalyze",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlereanalyze()"
     },
     {
@@ -5418,7 +5634,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L755",
       "id": "mealsclient_startedit",
-      "community": 6,
+      "community": 7,
       "norm_label": "startedit()"
     },
     {
@@ -5427,7 +5643,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L769",
       "id": "mealsclient_saveedit",
-      "community": 6,
+      "community": 7,
       "norm_label": "saveedit()"
     },
     {
@@ -5436,7 +5652,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L801",
       "id": "mealsclient_handlelog",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlelog()"
     },
     {
@@ -5445,7 +5661,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1157",
       "id": "mealsclient_handleuserecipe",
-      "community": 6,
+      "community": 7,
       "norm_label": "handleuserecipe()"
     },
     {
@@ -5454,7 +5670,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1323",
       "id": "mealsclient_logging",
-      "community": 6,
+      "community": 7,
       "norm_label": "logging()"
     },
     {
@@ -5463,7 +5679,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1377",
       "id": "mealsclient_handlesuggest",
-      "community": 6,
+      "community": 7,
       "norm_label": "handlesuggest()"
     },
     {
@@ -5472,7 +5688,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1412",
       "id": "mealsclient_getlogstate",
-      "community": 6,
+      "community": 7,
       "norm_label": "getlogstate()"
     },
     {
@@ -5481,7 +5697,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1416",
       "id": "mealsclient_setlogstate",
-      "community": 6,
+      "community": 7,
       "norm_label": "setlogstate()"
     },
     {
@@ -5490,7 +5706,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1975",
       "id": "mealsclient_handletabclick",
-      "community": 6,
+      "community": 7,
       "norm_label": "handletabclick()"
     },
     {
@@ -5499,7 +5715,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1983",
       "id": "mealsclient_confirmleave",
-      "community": 6,
+      "community": 7,
       "norm_label": "confirmleave()"
     },
     {
@@ -5508,7 +5724,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/meals/MealsClient.tsx",
       "source_location": "L1991",
       "id": "mealsclient_cancelleave",
-      "community": 6,
+      "community": 7,
       "norm_label": "cancelleave()"
     },
     {
@@ -5589,7 +5805,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/activity-trends.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_fitness_activity_trends_tsx",
-      "community": 9,
+      "community": 3,
       "norm_label": "activity-trends.tsx"
     },
     {
@@ -5598,7 +5814,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/activity-trends.tsx",
       "source_location": "L22",
       "id": "activity_trends_getisoweekkey",
-      "community": 9,
+      "community": 3,
       "norm_label": "getisoweekkey()"
     },
     {
@@ -5607,7 +5823,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/activity-trends.tsx",
       "source_location": "L28",
       "id": "activity_trends_getisoweeklabel",
-      "community": 9,
+      "community": 3,
       "norm_label": "getisoweeklabel()"
     },
     {
@@ -5625,7 +5841,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_fitness_weekly_workout_plan_tsx",
-      "community": 9,
+      "community": 3,
       "norm_label": "weekly-workout-plan.tsx"
     },
     {
@@ -5634,7 +5850,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L36",
       "id": "weekly_workout_plan_buildweekdays",
-      "community": 9,
+      "community": 3,
       "norm_label": "buildweekdays()"
     },
     {
@@ -5643,7 +5859,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L53",
       "id": "weekly_workout_plan_fmtshortdate",
-      "community": 9,
+      "community": 3,
       "norm_label": "fmtshortdate()"
     },
     {
@@ -5652,7 +5868,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L60",
       "id": "weekly_workout_plan_fmtweekrange",
-      "community": 9,
+      "community": 3,
       "norm_label": "fmtweekrange()"
     },
     {
@@ -5661,7 +5877,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L65",
       "id": "weekly_workout_plan_isrecentpr",
-      "community": 9,
+      "community": 3,
       "norm_label": "isrecentpr()"
     },
     {
@@ -5670,7 +5886,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L71",
       "id": "weekly_workout_plan_notationlabel",
-      "community": 9,
+      "community": 3,
       "norm_label": "notationlabel()"
     },
     {
@@ -5679,7 +5895,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L80",
       "id": "weekly_workout_plan_resolvenotation",
-      "community": 9,
+      "community": 3,
       "norm_label": "resolvenotation()"
     },
     {
@@ -5688,7 +5904,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L349",
       "id": "weekly_workout_plan_toggle",
-      "community": 9,
+      "community": 3,
       "norm_label": "toggle()"
     },
     {
@@ -5697,7 +5913,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/weekly-workout-plan.tsx",
       "source_location": "L353",
       "id": "weekly_workout_plan_handlecancel",
-      "community": 9,
+      "community": 3,
       "norm_label": "handlecancel()"
     },
     {
@@ -5751,7 +5967,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_fitness_workout_history_table_tsx",
-      "community": 36,
+      "community": 35,
       "norm_label": "workout-history-table.tsx"
     },
     {
@@ -5760,7 +5976,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L16",
       "id": "workout_history_table_fmtdate",
-      "community": 36,
+      "community": 35,
       "norm_label": "fmtdate()"
     },
     {
@@ -5769,7 +5985,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L24",
       "id": "workout_history_table_fmttime",
-      "community": 36,
+      "community": 35,
       "norm_label": "fmttime()"
     },
     {
@@ -5778,7 +5994,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L32",
       "id": "workout_history_table_calcendtime",
-      "community": 36,
+      "community": 35,
       "norm_label": "calcendtime()"
     },
     {
@@ -5787,7 +6003,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L43",
       "id": "workout_history_table_sorticon",
-      "community": 36,
+      "community": 35,
       "norm_label": "sorticon()"
     },
     {
@@ -5796,7 +6012,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/workout-history-table.tsx",
       "source_location": "L54",
       "id": "workout_history_table_handlesort",
-      "community": 36,
+      "community": 35,
       "norm_label": "handlesort()"
     },
     {
@@ -5805,7 +6021,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/recovery-trends.tsx",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_components_fitness_recovery_trends_tsx",
-      "community": 9,
+      "community": 3,
       "norm_label": "recovery-trends.tsx"
     },
     {
@@ -5814,7 +6030,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/recovery-trends.tsx",
       "source_location": "L13",
       "id": "recovery_trends_mean",
-      "community": 9,
+      "community": 3,
       "norm_label": "mean()"
     },
     {
@@ -5823,7 +6039,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/recovery-trends.tsx",
       "source_location": "L18",
       "id": "recovery_trends_hourstohm",
-      "community": 9,
+      "community": 3,
       "norm_label": "hourstohm()"
     },
     {
@@ -5832,7 +6048,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/components/fitness/recovery-trends.tsx",
       "source_location": "L24",
       "id": "recovery_trends_slicebydate",
-      "community": 9,
+      "community": 3,
       "norm_label": "slicebydate()"
     },
     {
@@ -6075,7 +6291,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/timezone.ts",
       "source_location": "L25",
       "id": "timezone_daysagostring",
-      "community": 3,
+      "community": 8,
       "norm_label": "daysagostring()"
     },
     {
@@ -6129,7 +6345,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/timezone.ts",
       "source_location": "L85",
       "id": "timezone_adddays",
-      "community": 9,
+      "community": 3,
       "norm_label": "adddays()"
     },
     {
@@ -6138,7 +6354,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/meal-photo.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_meal_photo_ts",
-      "community": 6,
+      "community": 7,
       "norm_label": "meal-photo.ts"
     },
     {
@@ -6147,7 +6363,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/meal-photo.ts",
       "source_location": "L7",
       "id": "meal_photo_compressimage",
-      "community": 6,
+      "community": 7,
       "norm_label": "compressimage()"
     },
     {
@@ -6210,7 +6426,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/metric-preferences.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_metric_preferences_ts",
-      "community": 0,
+      "community": 65,
       "norm_label": "metric-preferences.ts"
     },
     {
@@ -6219,7 +6435,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/metric-preferences.ts",
       "source_location": "L31",
       "id": "metric_preferences_loadmetricpreferences",
-      "community": 0,
+      "community": 65,
       "norm_label": "loadmetricpreferences()"
     },
     {
@@ -6228,7 +6444,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/metric-preferences.ts",
       "source_location": "L49",
       "id": "metric_preferences_savemetricpreference",
-      "community": 0,
+      "community": 65,
       "norm_label": "savemetricpreference()"
     },
     {
@@ -6264,7 +6480,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/google-auth.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_google_auth_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "google-auth.ts"
     },
     {
@@ -6273,7 +6489,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/google-auth.ts",
       "source_location": "L5",
       "id": "google_auth_googlenotconnectederror",
-      "community": 7,
+      "community": 6,
       "norm_label": "googlenotconnectederror"
     },
     {
@@ -6282,7 +6498,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/google-auth.ts",
       "source_location": "L6",
       "id": "google_auth_googlenotconnectederror_constructor",
-      "community": 7,
+      "community": 6,
       "norm_label": ".constructor()"
     },
     {
@@ -6291,7 +6507,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/google-auth.ts",
       "source_location": "L16",
       "id": "google_auth_getgoogleauthclient",
-      "community": 7,
+      "community": 6,
       "norm_label": "getgoogleauthclient()"
     },
     {
@@ -6390,7 +6606,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/relative-time.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_relative_time_ts",
-      "community": 46,
+      "community": 45,
       "norm_label": "relative-time.ts"
     },
     {
@@ -6399,7 +6615,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/relative-time.ts",
       "source_location": "L1",
       "id": "relative_time_issameday",
-      "community": 46,
+      "community": 45,
       "norm_label": "issameday()"
     },
     {
@@ -6408,7 +6624,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/relative-time.ts",
       "source_location": "L9",
       "id": "relative_time_formatrelative",
-      "community": 46,
+      "community": 45,
       "norm_label": "formatrelative()"
     },
     {
@@ -6417,7 +6633,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/relative-time.ts",
       "source_location": "L40",
       "id": "relative_time_formatdayseparator",
-      "community": 46,
+      "community": 45,
       "norm_label": "formatdayseparator()"
     },
     {
@@ -6426,7 +6642,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/relative-time.ts",
       "source_location": "L55",
       "id": "relative_time_daysuntilpurge",
-      "community": 46,
+      "community": 45,
       "norm_label": "daysuntilpurge()"
     },
     {
@@ -6525,7 +6741,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_chart_colors_ts",
-      "community": 37,
+      "community": 36,
       "norm_label": "chart-colors.ts"
     },
     {
@@ -6534,7 +6750,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L67",
       "id": "chart_colors_readcolors",
-      "community": 37,
+      "community": 36,
       "norm_label": "readcolors()"
     },
     {
@@ -6543,7 +6759,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L83",
       "id": "chart_colors_getsnapshot",
-      "community": 37,
+      "community": 36,
       "norm_label": "getsnapshot()"
     },
     {
@@ -6552,7 +6768,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L93",
       "id": "chart_colors_getserversnapshot",
-      "community": 37,
+      "community": 36,
       "norm_label": "getserversnapshot()"
     },
     {
@@ -6561,7 +6777,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L97",
       "id": "chart_colors_subscribe",
-      "community": 37,
+      "community": 36,
       "norm_label": "subscribe()"
     },
     {
@@ -6570,7 +6786,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chart-colors.ts",
       "source_location": "L107",
       "id": "chart_colors_usechartcolors",
-      "community": 37,
+      "community": 36,
       "norm_label": "usechartcolors()"
     },
     {
@@ -6579,7 +6795,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/streaks.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_streaks_ts",
-      "community": 65,
+      "community": 66,
       "norm_label": "streaks.ts"
     },
     {
@@ -6588,7 +6804,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/streaks.ts",
       "source_location": "L9",
       "id": "streaks_datetodaynum",
-      "community": 65,
+      "community": 66,
       "norm_label": "datetodaynum()"
     },
     {
@@ -6597,7 +6813,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/streaks.ts",
       "source_location": "L24",
       "id": "streaks_computestreaks",
-      "community": 65,
+      "community": 66,
       "norm_label": "computestreaks()"
     },
     {
@@ -6606,7 +6822,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/tools/_contract.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_tools_contract_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "_contract.ts"
     },
     {
@@ -6615,7 +6831,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/tools/_contract.ts",
       "source_location": "L16",
       "id": "contract_ok",
-      "community": 7,
+      "community": 6,
       "norm_label": "ok()"
     },
     {
@@ -6624,7 +6840,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/tools/_contract.ts",
       "source_location": "L20",
       "id": "contract_err",
-      "community": 7,
+      "community": 6,
       "norm_label": "err()"
     },
     {
@@ -6984,7 +7200,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_chat_synthesis_ts",
-      "community": 38,
+      "community": 37,
       "norm_label": "synthesis.ts"
     },
     {
@@ -6993,7 +7209,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L44",
       "id": "synthesis_istoolresultok",
-      "community": 38,
+      "community": 37,
       "norm_label": "istoolresultok()"
     },
     {
@@ -7002,7 +7218,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L58",
       "id": "synthesis_effectivetokensforquota",
-      "community": 38,
+      "community": 37,
       "norm_label": "effectivetokensforquota()"
     },
     {
@@ -7011,7 +7227,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L71",
       "id": "synthesis_synthesizefallbacksummary",
-      "community": 38,
+      "community": 37,
       "norm_label": "synthesizefallbacksummary()"
     },
     {
@@ -7020,7 +7236,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L117",
       "id": "synthesis_extractcompletedsteps",
-      "community": 38,
+      "community": 37,
       "norm_label": "extractcompletedsteps()"
     },
     {
@@ -7029,7 +7245,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/synthesis.ts",
       "source_location": "L141",
       "id": "synthesis_computecachemetrics",
-      "community": 38,
+      "community": 37,
       "norm_label": "computecachemetrics()"
     },
     {
@@ -7056,7 +7272,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_chat_proactivity_context_ts",
-      "community": 3,
+      "community": 8,
       "norm_label": "proactivity-context.ts"
     },
     {
@@ -7065,7 +7281,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L9",
       "id": "proactivity_context_rulehrvdecline",
-      "community": 3,
+      "community": 8,
       "norm_label": "rulehrvdecline()"
     },
     {
@@ -7074,7 +7290,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L48",
       "id": "proactivity_context_rulehighrpe",
-      "community": 3,
+      "community": 8,
       "norm_label": "rulehighrpe()"
     },
     {
@@ -7083,7 +7299,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L88",
       "id": "proactivity_context_ruleoverduetasks",
-      "community": 3,
+      "community": 8,
       "norm_label": "ruleoverduetasks()"
     },
     {
@@ -7092,7 +7308,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L106",
       "id": "proactivity_context_rulehabitatrisk",
-      "community": 3,
+      "community": 8,
       "norm_label": "rulehabitatrisk()"
     },
     {
@@ -7101,7 +7317,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L150",
       "id": "proactivity_context_rulesleepdeficit",
-      "community": 3,
+      "community": 8,
       "norm_label": "rulesleepdeficit()"
     },
     {
@@ -7110,7 +7326,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L173",
       "id": "proactivity_context_ruleweightvsgoal",
-      "community": 3,
+      "community": 8,
       "norm_label": "ruleweightvsgoal()"
     },
     {
@@ -7119,7 +7335,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/chat/proactivity-context.ts",
       "source_location": "L218",
       "id": "proactivity_context_buildproactivitycontext",
-      "community": 3,
+      "community": 8,
       "norm_label": "buildproactivitycontext()"
     },
     {
@@ -7344,7 +7560,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/movement-patterns.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_fitness_movement_patterns_ts",
-      "community": 13,
+      "community": 8,
       "norm_label": "movement-patterns.ts"
     },
     {
@@ -7353,7 +7569,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/movement-patterns.ts",
       "source_location": "L107",
       "id": "movement_patterns_validateweeklycoverage",
-      "community": 13,
+      "community": 8,
       "norm_label": "validateweeklycoverage()"
     },
     {
@@ -7362,7 +7578,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/movement-patterns.ts",
       "source_location": "L133",
       "id": "movement_patterns_checksamedayredundancy",
-      "community": 13,
+      "community": 8,
       "norm_label": "checksamedayredundancy()"
     },
     {
@@ -7371,7 +7587,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/cancel-workout.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_fitness_cancel_workout_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "cancel-workout.ts"
     },
     {
@@ -7380,7 +7596,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/cancel-workout.ts",
       "source_location": "L12",
       "id": "cancel_workout_cancelworkout",
-      "community": 7,
+      "community": 6,
       "norm_label": "cancelworkout()"
     },
     {
@@ -7416,7 +7632,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/reschedule-workout.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_fitness_reschedule_workout_ts",
-      "community": 7,
+      "community": 6,
       "norm_label": "reschedule-workout.ts"
     },
     {
@@ -7425,7 +7641,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/reschedule-workout.ts",
       "source_location": "L13",
       "id": "reschedule_workout_rescheduleworkout",
-      "community": 7,
+      "community": 6,
       "norm_label": "rescheduleworkout()"
     },
     {
@@ -7434,7 +7650,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/equipment-validation.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_fitness_equipment_validation_ts",
-      "community": 49,
+      "community": 48,
       "norm_label": "equipment-validation.ts"
     },
     {
@@ -7443,7 +7659,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/equipment-validation.ts",
       "source_location": "L45",
       "id": "equipment_validation_inferequipmenttype",
-      "community": 49,
+      "community": 48,
       "norm_label": "inferequipmenttype()"
     },
     {
@@ -7452,7 +7668,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/equipment-validation.ts",
       "source_location": "L53",
       "id": "equipment_validation_validateweights",
-      "community": 49,
+      "community": 48,
       "norm_label": "validateweights()"
     },
     {
@@ -7461,7 +7677,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/equipment-validation.ts",
       "source_location": "L164",
       "id": "equipment_validation_getcappedexerciseprogression",
-      "community": 49,
+      "community": 48,
       "norm_label": "getcappedexerciseprogression()"
     },
     {
@@ -7470,7 +7686,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/recovery-rules.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_fitness_recovery_rules_ts",
-      "community": 13,
+      "community": 8,
       "norm_label": "recovery-rules.ts"
     },
     {
@@ -7479,7 +7695,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/recovery-rules.ts",
       "source_location": "L112",
       "id": "recovery_rules_totalsetsformuscle",
-      "community": 13,
+      "community": 8,
       "norm_label": "totalsetsformuscle()"
     },
     {
@@ -7488,7 +7704,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/fitness/recovery-rules.ts",
       "source_location": "L118",
       "id": "recovery_rules_validaterecovery",
-      "community": 13,
+      "community": 8,
       "norm_label": "validaterecovery()"
     },
     {
@@ -7497,7 +7713,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_packages_ts",
-      "community": 11,
+      "community": 6,
       "norm_label": "packages.ts"
     },
     {
@@ -7506,7 +7722,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L22",
       "id": "packages_getheader",
-      "community": 11,
+      "community": 6,
       "norm_label": "getheader()"
     },
     {
@@ -7515,7 +7731,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L26",
       "id": "packages_parsefrom",
-      "community": 11,
+      "community": 6,
       "norm_label": "parsefrom()"
     },
     {
@@ -7524,7 +7740,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L32",
       "id": "packages_decodebase64url",
-      "community": 11,
+      "community": 6,
       "norm_label": "decodebase64url()"
     },
     {
@@ -7533,7 +7749,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L36",
       "id": "packages_extractbodytext",
-      "community": 11,
+      "community": 6,
       "norm_label": "extractbodytext()"
     },
     {
@@ -7542,7 +7758,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L69",
       "id": "packages_relativedate",
-      "community": 11,
+      "community": 6,
       "norm_label": "relativedate()"
     },
     {
@@ -7551,7 +7767,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L89",
       "id": "packages_extracteta",
-      "community": 11,
+      "community": 6,
       "norm_label": "extracteta()"
     },
     {
@@ -7560,7 +7776,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L118",
       "id": "packages_extracttrackingnumbers",
-      "community": 11,
+      "community": 6,
       "norm_label": "extracttrackingnumbers()"
     },
     {
@@ -7569,7 +7785,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/packages.ts",
       "source_location": "L158",
       "id": "packages_syncpackages",
-      "community": 11,
+      "community": 6,
       "norm_label": "syncpackages()"
     },
     {
@@ -7578,7 +7794,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_oura_ts",
-      "community": 3,
+      "community": 12,
       "norm_label": "oura.ts"
     },
     {
@@ -7587,7 +7803,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L12",
       "id": "oura_secstohrs",
-      "community": 3,
+      "community": 12,
       "norm_label": "secstohrs()"
     },
     {
@@ -7596,7 +7812,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L17",
       "id": "oura_secstomins",
-      "community": 3,
+      "community": 12,
       "norm_label": "secstomins()"
     },
     {
@@ -7605,7 +7821,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L22",
       "id": "oura_fmttime",
-      "community": 3,
+      "community": 12,
       "norm_label": "fmttime()"
     },
     {
@@ -7614,7 +7830,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L27",
       "id": "oura_ouraget",
-      "community": 3,
+      "community": 12,
       "norm_label": "ouraget()"
     },
     {
@@ -7623,7 +7839,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/oura.ts",
       "source_location": "L54",
       "id": "oura_syncoura",
-      "community": 3,
+      "community": 12,
       "norm_label": "syncoura()"
     },
     {
@@ -7632,7 +7848,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/googlefit.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_googlefit_ts",
-      "community": 11,
+      "community": 12,
       "norm_label": "googlefit.ts"
     },
     {
@@ -7641,7 +7857,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/googlefit.ts",
       "source_location": "L21",
       "id": "googlefit_getgoogleaccesstoken",
-      "community": 11,
+      "community": 12,
       "norm_label": "getgoogleaccesstoken()"
     },
     {
@@ -7650,7 +7866,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/googlefit.ts",
       "source_location": "L59",
       "id": "googlefit_fitget",
-      "community": 11,
+      "community": 12,
       "norm_label": "fitget()"
     },
     {
@@ -7659,7 +7875,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/googlefit.ts",
       "source_location": "L71",
       "id": "googlefit_fitpost",
-      "community": 11,
+      "community": 12,
       "norm_label": "fitpost()"
     },
     {
@@ -7668,7 +7884,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/googlefit.ts",
       "source_location": "L97",
       "id": "googlefit_syncgooglefit",
-      "community": 11,
+      "community": 12,
       "norm_label": "syncgooglefit()"
     },
     {
@@ -7677,7 +7893,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_fitbit_ts",
-      "community": 11,
+      "community": 12,
       "norm_label": "fitbit.ts"
     },
     {
@@ -7686,7 +7902,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L16",
       "id": "fitbit_refreshfitbittoken",
-      "community": 11,
+      "community": 12,
       "norm_label": "refreshfitbittoken()"
     },
     {
@@ -7695,7 +7911,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L50",
       "id": "fitbit_fitbitget",
-      "community": 11,
+      "community": 12,
       "norm_label": "fitbitget()"
     },
     {
@@ -7704,7 +7920,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L62",
       "id": "fitbit_fitbitgetoptional",
-      "community": 11,
+      "community": 12,
       "norm_label": "fitbitgetoptional()"
     },
     {
@@ -7713,7 +7929,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L79",
       "id": "fitbit_fmthrzones",
-      "community": 11,
+      "community": 12,
       "norm_label": "fmthrzones()"
     },
     {
@@ -7722,7 +7938,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L100",
       "id": "fitbit_normalizeactivity",
-      "community": 11,
+      "community": 12,
       "norm_label": "normalizeactivity()"
     },
     {
@@ -7731,7 +7947,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L104",
       "id": "fitbit_timetomins",
-      "community": 11,
+      "community": 12,
       "norm_label": "timetomins()"
     },
     {
@@ -7740,7 +7956,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L110",
       "id": "fitbit_isbetter",
-      "community": 11,
+      "community": 12,
       "norm_label": "isbetter()"
     },
     {
@@ -7749,7 +7965,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L122",
       "id": "fitbit_daterange",
-      "community": 11,
+      "community": 12,
       "norm_label": "daterange()"
     },
     {
@@ -7758,7 +7974,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/fitbit.ts",
       "source_location": "L142",
       "id": "fitbit_syncfitbit",
-      "community": 11,
+      "community": 12,
       "norm_label": "syncfitbit()"
     },
     {
@@ -7767,7 +7983,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/log.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_log_ts",
-      "community": 11,
+      "community": 12,
       "norm_label": "log.ts"
     },
     {
@@ -7776,7 +7992,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/log.ts",
       "source_location": "L3",
       "id": "log_logsync",
-      "community": 11,
+      "community": 12,
       "norm_label": "logsync()"
     },
     {
@@ -7794,7 +8010,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/log.ts",
       "source_location": "L30",
       "id": "log_lastsyncstatus",
-      "community": 11,
+      "community": 12,
       "norm_label": "lastsyncstatus()"
     },
     {
@@ -7803,7 +8019,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/stocks.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_sync_stocks_ts",
-      "community": 3,
+      "community": 8,
       "norm_label": "stocks.ts"
     },
     {
@@ -7812,7 +8028,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/stocks.ts",
       "source_location": "L18",
       "id": "stocks_ratelimiterror",
-      "community": 3,
+      "community": 8,
       "norm_label": "ratelimiterror"
     },
     {
@@ -7821,7 +8037,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/stocks.ts",
       "source_location": "L19",
       "id": "stocks_ratelimiterror_constructor",
-      "community": 3,
+      "community": 8,
       "norm_label": ".constructor()"
     },
     {
@@ -7830,7 +8046,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/stocks.ts",
       "source_location": "L25",
       "id": "stocks_polygonget",
-      "community": 3,
+      "community": 8,
       "norm_label": "polygonget()"
     },
     {
@@ -7839,7 +8055,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/sync/stocks.ts",
       "source_location": "L40",
       "id": "stocks_syncstocks",
-      "community": 3,
+      "community": 8,
       "norm_label": "syncstocks()"
     },
     {
@@ -8037,7 +8253,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/export/csv.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_web_src_lib_export_csv_ts",
-      "community": 50,
+      "community": 49,
       "norm_label": "csv.ts"
     },
     {
@@ -8046,7 +8262,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/export/csv.ts",
       "source_location": "L4",
       "id": "csv_serializecell",
-      "community": 50,
+      "community": 49,
       "norm_label": "serializecell()"
     },
     {
@@ -8055,7 +8271,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/export/csv.ts",
       "source_location": "L11",
       "id": "csv_escapecell",
-      "community": 50,
+      "community": 49,
       "norm_label": "escapecell()"
     },
     {
@@ -8064,7 +8280,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/lib/export/csv.ts",
       "source_location": "L18",
       "id": "csv_tocsv",
-      "community": 50,
+      "community": 49,
       "norm_label": "tocsv()"
     },
     {
@@ -8631,7 +8847,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_scripts_integrations_py",
-      "community": 8,
+      "community": 9,
       "norm_label": "_integrations.py"
     },
     {
@@ -8640,7 +8856,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L15",
       "id": "integrations_require_encryption_key",
-      "community": 8,
+      "community": 9,
       "norm_label": "_require_encryption_key()"
     },
     {
@@ -8649,7 +8865,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L23",
       "id": "integrations_load_integration",
-      "community": 8,
+      "community": 9,
       "norm_label": "load_integration()"
     },
     {
@@ -8658,7 +8874,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L52",
       "id": "integrations_persist_rotated_token",
-      "community": 8,
+      "community": 9,
       "norm_label": "persist_rotated_token()"
     },
     {
@@ -8667,7 +8883,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L68",
       "id": "integrations_now_iso",
-      "community": 8,
+      "community": 9,
       "norm_label": "_now_iso()"
     },
     {
@@ -8675,7 +8891,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L1",
-      "community": 8,
+      "community": 9,
       "norm_label": "per-user integration token helpers \u2014 mirrors web/src/lib/integrations/tokens.ts.",
       "id": "integrations_rationale_1"
     },
@@ -8684,7 +8900,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L24",
-      "community": 8,
+      "community": 9,
       "norm_label": "return {refresh_token, scopes, connected_at} for (user_id, provider), or none if",
       "id": "integrations_rationale_24"
     },
@@ -8693,7 +8909,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/_integrations.py",
       "source_location": "L53",
-      "community": 8,
+      "community": 9,
       "norm_label": "encrypt and save a rotated refresh token back to user_integrations.",
       "id": "integrations_rationale_53"
     },
@@ -8910,7 +9126,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_scripts_sync_fitbit_py",
-      "community": 8,
+      "community": 9,
       "norm_label": "sync-fitbit.py"
     },
     {
@@ -8919,7 +9135,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L74",
       "id": "sync_fitbit_normalize_activity",
-      "community": 8,
+      "community": 9,
       "norm_label": "normalize_activity()"
     },
     {
@@ -8928,7 +9144,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L80",
       "id": "sync_fitbit_pkce_pair",
-      "community": 8,
+      "community": 9,
       "norm_label": "pkce_pair()"
     },
     {
@@ -8937,7 +9153,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L88",
       "id": "sync_fitbit_run_local_server",
-      "community": 8,
+      "community": 9,
       "norm_label": "run_local_server()"
     },
     {
@@ -8946,7 +9162,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L108",
       "id": "sync_fitbit_exchange_code",
-      "community": 8,
+      "community": 9,
       "norm_label": "exchange_code()"
     },
     {
@@ -8955,7 +9171,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L124",
       "id": "sync_fitbit_refresh_access_token",
-      "community": 8,
+      "community": 9,
       "norm_label": "refresh_access_token()"
     },
     {
@@ -8964,7 +9180,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L148",
       "id": "sync_fitbit_setup_oauth",
-      "community": 8,
+      "community": 9,
       "norm_label": "setup_oauth()"
     },
     {
@@ -8973,7 +9189,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L177",
       "id": "sync_fitbit_fitbit_get",
-      "community": 8,
+      "community": 9,
       "norm_label": "fitbit_get()"
     },
     {
@@ -8982,7 +9198,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L187",
       "id": "sync_fitbit_fmt_hr_zones",
-      "community": 8,
+      "community": 9,
       "norm_label": "fmt_hr_zones()"
     },
     {
@@ -8991,7 +9207,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L200",
       "id": "sync_fitbit_fetch_workouts",
-      "community": 8,
+      "community": 9,
       "norm_label": "fetch_workouts()"
     },
     {
@@ -9000,7 +9216,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L234",
       "id": "sync_fitbit_existing_keys",
-      "community": 8,
+      "community": 9,
       "norm_label": "existing_keys()"
     },
     {
@@ -9009,7 +9225,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L251",
       "id": "sync_fitbit_fetch_existing_workouts",
-      "community": 8,
+      "community": 9,
       "norm_label": "fetch_existing_workouts()"
     },
     {
@@ -9018,7 +9234,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L267",
       "id": "sync_fitbit_time_to_mins",
-      "community": 8,
+      "community": 9,
       "norm_label": "_time_to_mins()"
     },
     {
@@ -9027,7 +9243,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L275",
       "id": "sync_fitbit_is_better",
-      "community": 8,
+      "community": 9,
       "norm_label": "_is_better()"
     },
     {
@@ -9036,7 +9252,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L289",
       "id": "sync_fitbit_filter_overlapping",
-      "community": 8,
+      "community": 9,
       "norm_label": "filter_overlapping()"
     },
     {
@@ -9045,7 +9261,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L334",
       "id": "sync_fitbit_fetch_body_data",
-      "community": 8,
+      "community": 9,
       "norm_label": "fetch_body_data()"
     },
     {
@@ -9054,7 +9270,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L385",
       "id": "sync_fitbit_existing_body_dates",
-      "community": 8,
+      "community": 9,
       "norm_label": "existing_body_dates()"
     },
     {
@@ -9063,7 +9279,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L390",
       "id": "sync_fitbit_print_body_probe",
-      "community": 8,
+      "community": 9,
       "norm_label": "print_body_probe()"
     },
     {
@@ -9072,7 +9288,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L407",
       "id": "sync_fitbit_main",
-      "community": 8,
+      "community": 9,
       "norm_label": "main()"
     },
     {
@@ -9080,7 +9296,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L125",
-      "community": 8,
+      "community": 9,
       "norm_label": "returns (access_token, new_refresh_token_or_none).",
       "id": "sync_fitbit_rationale_125"
     },
@@ -9089,7 +9305,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L235",
-      "community": 8,
+      "community": 9,
       "norm_label": "build dedup keys from supabase to avoid re-inserting the same workout.      norm",
       "id": "sync_fitbit_rationale_235"
     },
@@ -9098,7 +9314,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L252",
-      "community": 8,
+      "community": 9,
       "norm_label": "fetch existing workout rows for a set of dates (for overlap detection).",
       "id": "sync_fitbit_rationale_252"
     },
@@ -9107,7 +9323,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L268",
-      "community": 8,
+      "community": 9,
       "norm_label": "convert hh:mm:ss string to total minutes past midnight.",
       "id": "sync_fitbit_rationale_268"
     },
@@ -9116,7 +9332,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L276",
-      "community": 8,
+      "community": 9,
       "norm_label": "return true if new_row is preferable to existing_row.      priority: has hr data",
       "id": "sync_fitbit_rationale_276"
     },
@@ -9125,7 +9341,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L293",
-      "community": 8,
+      "community": 9,
       "norm_label": "compare new workouts against existing rows for time-overlap (\u00b15 min).      retur",
       "id": "sync_fitbit_rationale_293"
     },
@@ -9134,7 +9350,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/sync-fitbit.py",
       "source_location": "L335",
-      "community": 8,
+      "community": 9,
       "norm_label": "fetch weight, body fat %, and bmi from fitbit for the given date range.      act",
       "id": "sync_fitbit_rationale_335"
     },
@@ -9486,7 +9702,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/dev-watchdog.mjs",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_scripts_dev_watchdog_mjs",
-      "community": 66,
+      "community": 67,
       "norm_label": "dev-watchdog.mjs"
     },
     {
@@ -9495,7 +9711,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/dev-watchdog.mjs",
       "source_location": "L30",
       "id": "dev_watchdog_rssmb",
-      "community": 66,
+      "community": 67,
       "norm_label": "rssmb()"
     },
     {
@@ -9504,7 +9720,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/dev-watchdog.mjs",
       "source_location": "L42",
       "id": "dev_watchdog_killtree",
-      "community": 66,
+      "community": 67,
       "norm_label": "killtree()"
     },
     {
@@ -9693,7 +9909,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed-owner-google-integration.ts",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_scripts_seed_owner_google_integration_ts",
-      "community": 67,
+      "community": 68,
       "norm_label": "seed-owner-google-integration.ts"
     },
     {
@@ -9702,7 +9918,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed-owner-google-integration.ts",
       "source_location": "L50",
       "id": "seed_owner_google_integration_getgrantedscopes",
-      "community": 67,
+      "community": 68,
       "norm_label": "getgrantedscopes()"
     },
     {
@@ -9711,7 +9927,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed-owner-google-integration.ts",
       "source_location": "L70",
       "id": "seed_owner_google_integration_main",
-      "community": 67,
+      "community": 68,
       "norm_label": "main()"
     },
     {
@@ -9720,7 +9936,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L1",
       "id": "users_jason_code_projects_mr_bridge_assistant_scripts_seed_demo_py",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_demo.py"
     },
     {
@@ -9729,7 +9945,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L48",
       "id": "seed_demo_require_demo_user_id",
-      "community": 12,
+      "community": 11,
       "norm_label": "require_demo_user_id()"
     },
     {
@@ -9738,7 +9954,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L54",
       "id": "seed_demo_today_minus",
-      "community": 12,
+      "community": 11,
       "norm_label": "today_minus()"
     },
     {
@@ -9747,7 +9963,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L58",
       "id": "seed_demo_seed_profile",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_profile()"
     },
     {
@@ -9756,7 +9972,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L79",
       "id": "seed_demo_seed_habits",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_habits()"
     },
     {
@@ -9765,7 +9981,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L140",
       "id": "seed_demo_seed_tasks",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_tasks()"
     },
     {
@@ -9774,7 +9990,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L188",
       "id": "seed_demo_seed_fitness",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_fitness()"
     },
     {
@@ -9783,7 +9999,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L214",
       "id": "seed_demo_seed_workouts",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_workouts()"
     },
     {
@@ -9792,7 +10008,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L253",
       "id": "seed_demo_seed_recovery",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_recovery()"
     },
     {
@@ -9801,7 +10017,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L292",
       "id": "seed_demo_seed_study_log",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_study_log()"
     },
     {
@@ -9810,7 +10026,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L305",
       "id": "seed_demo_seed_journal",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_journal()"
     },
     {
@@ -9819,7 +10035,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L333",
       "id": "seed_demo_seed_recipes",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_recipes()"
     },
     {
@@ -9828,7 +10044,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L378",
       "id": "seed_demo_seed_meal_log",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_meal_log()"
     },
     {
@@ -9837,7 +10053,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L434",
       "id": "seed_demo_seed_notifications",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_notifications()"
     },
     {
@@ -9846,7 +10062,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L490",
       "id": "seed_demo_seed_workout_plans",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_workout_plans()"
     },
     {
@@ -9855,7 +10071,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L616",
       "id": "seed_demo_seed_chat",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_chat()"
     },
     {
@@ -9864,7 +10080,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L684",
       "id": "seed_demo_seed_stocks",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_stocks()"
     },
     {
@@ -9873,7 +10089,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L716",
       "id": "seed_demo_seed_sports",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_sports()"
     },
     {
@@ -9882,7 +10098,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L760",
       "id": "seed_demo_seed_strength",
-      "community": 12,
+      "community": 11,
       "norm_label": "seed_strength()"
     },
     {
@@ -9891,7 +10107,7 @@
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L841",
       "id": "seed_demo_main",
-      "community": 12,
+      "community": 11,
       "norm_label": "main()"
     },
     {
@@ -9899,7 +10115,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L379",
-      "community": 12,
+      "community": 11,
       "norm_label": "14 days of meals with realistic macros. some entries reference saved recipes.",
       "id": "seed_demo_rationale_379"
     },
@@ -9908,7 +10124,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L435",
-      "community": 12,
+      "community": 11,
       "norm_label": "recent notifications spanning the past week \u2014 mix of types, some read.",
       "id": "seed_demo_rationale_435"
     },
@@ -9917,7 +10133,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L491",
-      "community": 12,
+      "community": 11,
       "norm_label": "one week of structured workout plans (mon\u2013fri) anchored around today.",
       "id": "seed_demo_rationale_491"
     },
@@ -9926,7 +10142,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L617",
-      "community": 12,
+      "community": 11,
       "norm_label": "3 sample conversations covering meal q&a, scheduling, and workout tweaks.     ch",
       "id": "seed_demo_rationale_617"
     },
@@ -9935,7 +10151,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L685",
-      "community": 12,
+      "community": 11,
       "norm_label": "watchlist cache \u2014 3 tickers with recent quote + 20-point sparkline.",
       "id": "seed_demo_rationale_685"
     },
@@ -9944,7 +10160,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L717",
-      "community": 12,
+      "community": 11,
       "norm_label": "favorites cache \u2014 3 teams across nba / nfl / mls.",
       "id": "seed_demo_rationale_717"
     },
@@ -9953,7 +10169,7 @@
       "file_type": "rationale",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/scripts/seed_demo.py",
       "source_location": "L761",
-      "community": 12,
+      "community": 11,
       "norm_label": "logged strength sessions + sets (issue #249) \u2014 6 sessions over 3 weeks.     stre",
       "id": "seed_demo_rationale_761"
     },
@@ -12586,7 +12802,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L30",
+      "source_location": "L37",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_statusbadge",
@@ -12598,7 +12814,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L49",
+      "source_location": "L56",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_coverthumb",
@@ -12610,19 +12826,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L273",
+      "source_location": "L155",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
-      "_tgt": "backlogclient_async",
+      "_tgt": "backlogclient_openpreadd",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
-      "target": "backlogclient_async",
+      "target": "backlogclient_openpreadd",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L482",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
+      "_tgt": "backlogclient_submitpreadd",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
+      "target": "backlogclient_submitpreadd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
+      "source_location": "L825",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_handleimport",
@@ -12634,7 +12862,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L507",
+      "source_location": "L858",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_handledragstart",
@@ -12646,7 +12874,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L510",
+      "source_location": "L861",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_handledragover",
@@ -12658,7 +12886,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/BacklogClient.tsx",
-      "source_location": "L513",
+      "source_location": "L864",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_backlogclient_tsx",
       "_tgt": "backlogclient_handledrop",
@@ -12682,7 +12910,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L28",
+      "source_location": "L36",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_fmt",
@@ -12694,7 +12922,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L73",
+      "source_location": "L46",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "_tgt": "backlogdetailclient_handledelete",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "target": "backlogdetailclient_handledelete",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L111",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_submit",
@@ -12706,7 +12946,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L213",
+      "source_location": "L274",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_patch",
@@ -12718,7 +12958,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L227",
+      "source_location": "L293",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "_tgt": "backlogdetailclient_savechanges",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "target": "backlogdetailclient_savechanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L308",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "_tgt": "backlogdetailclient_revertchanges",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
+      "target": "backlogdetailclient_revertchanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L316",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_generateshare",
@@ -12730,7 +12994,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L236",
+      "source_location": "L325",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_revokeshare",
@@ -12742,7 +13006,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L242",
+      "source_location": "L331",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_copyshare",
@@ -12754,12 +13018,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
-      "source_location": "L249",
+      "source_location": "L338",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "_tgt": "backlogdetailclient_deleteitem",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_backlog_id_backlogdetailclient_tsx",
       "target": "backlogdetailclient_deleteitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/backlog/[id]/BacklogDetailClient.tsx",
+      "source_location": "L305",
+      "weight": 1.0,
+      "_src": "backlogdetailclient_savechanges",
+      "_tgt": "backlogdetailclient_patch",
+      "source": "backlogdetailclient_patch",
+      "target": "backlogdetailclient_savechanges",
       "confidence_score": 1.0
     },
     {
@@ -12958,7 +13234,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L48",
+      "source_location": "L62",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
       "_tgt": "libraryclient_getgenres",
@@ -12970,7 +13246,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L60",
+      "source_location": "L74",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
       "_tgt": "libraryclient_buildapiurl",
@@ -12982,7 +13258,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L80",
+      "source_location": "L94",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
       "_tgt": "libraryclient_statusbadge",
@@ -12994,24 +13270,168 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L633",
+      "source_location": "L550",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
-      "_tgt": "libraryclient_async",
+      "_tgt": "libraryclient_openpreadd",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
-      "target": "libraryclient_async",
+      "target": "libraryclient_openpreadd",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
-      "source_location": "L1185",
+      "source_location": "L561",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
-      "_tgt": "libraryclient_setloadingmore",
+      "_tgt": "libraryclient_submitpreadd",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
-      "target": "libraryclient_setloadingmore",
+      "target": "libraryclient_submitpreadd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1088",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handledelete",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handledelete",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1429",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_generatesharelink",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_generatesharelink",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1439",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_revokesharelink",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_revokesharelink",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1446",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_copyshareurl",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_copyshareurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1637",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_loadmoreitems",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_loadmoreitems",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1666",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handleimport",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handleimport",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1721",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handledragstart",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handledragstart",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1724",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handledragover",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handledragover",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1727",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handledrop",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handledrop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1762",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_handledeleteitem",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_handledeleteitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1791",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "_tgt": "libraryclient_clearfilters",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_libraryclient_tsx",
+      "target": "libraryclient_clearfilters",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/LibraryClient.tsx",
+      "source_location": "L1642",
+      "weight": 1.0,
+      "_src": "libraryclient_loadmoreitems",
+      "_tgt": "libraryclient_buildapiurl",
+      "source": "libraryclient_buildapiurl",
+      "target": "libraryclient_loadmoreitems",
       "confidence_score": 1.0
     },
     {
@@ -13042,7 +13462,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L36",
+      "source_location": "L44",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_fmt",
@@ -13054,7 +13474,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L81",
+      "source_location": "L54",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "_tgt": "librarydetailclient_handledelete",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "target": "librarydetailclient_handledelete",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L119",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_submit",
@@ -13066,7 +13498,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L196",
+      "source_location": "L257",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_patch",
@@ -13078,7 +13510,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L210",
+      "source_location": "L276",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "_tgt": "librarydetailclient_savechanges",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "target": "librarydetailclient_savechanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L291",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "_tgt": "librarydetailclient_revertchanges",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
+      "target": "librarydetailclient_revertchanges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L299",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_generateshare",
@@ -13090,7 +13546,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L219",
+      "source_location": "L308",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_revokeshare",
@@ -13102,7 +13558,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L225",
+      "source_location": "L314",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_copyshare",
@@ -13114,12 +13570,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
-      "source_location": "L232",
+      "source_location": "L321",
       "weight": 1.0,
       "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "_tgt": "librarydetailclient_deleteitem",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_protected_library_id_librarydetailclient_tsx",
       "target": "librarydetailclient_deleteitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/(protected)/library/[id]/LibraryDetailClient.tsx",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_src": "librarydetailclient_savechanges",
+      "_tgt": "librarydetailclient_patch",
+      "source": "librarydetailclient_patch",
+      "target": "librarydetailclient_savechanges",
       "confidence_score": 1.0
     },
     {
@@ -14662,6 +15130,18 @@
       "relation": "calls",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_src": "page_getuser",
+      "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "source": "page_getuser",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/priority/route.ts",
       "source_location": "L10",
       "weight": 1.0,
@@ -14777,6 +15257,30 @@
       "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_gmail_route_ts_get",
       "source": "page_getuser",
       "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_google_gmail_route_ts_get"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "_tgt": "page_getuser",
+      "source": "page_getuser",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "_tgt": "page_getuser",
+      "source": "page_getuser",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete"
     },
     {
       "relation": "calls",
@@ -16317,6 +16821,42 @@
     {
       "relation": "imports_from",
       "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts",
+      "_tgt": "server",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts",
+      "target": "server",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts",
+      "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/sessions/[sessionId]/route.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "_tgt": "client_createclient",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_backlog_id_sessions_sessionid_route_ts_delete",
+      "target": "client_createclient"
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
       "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/backlog/[id]/priority/route.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -17225,6 +17765,90 @@
       "_tgt": "service_createserviceclient",
       "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_internal_plan_route_ts_post",
       "target": "service_createserviceclient"
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "_tgt": "server",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "target": "server",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "_tgt": "route_appurl",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "target": "route_appurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "_tgt": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "_tgt": "route_appurl",
+      "source": "route_appurl",
+      "target": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "_tgt": "client_createclient",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_post",
+      "target": "client_createclient"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/jason/Code Projects/mr-bridge-assistant/web/src/app/api/library/share/route.ts",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_src": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "_tgt": "client_createclient",
+      "source": "users_jason_code_projects_mr_bridge_assistant_web_src_app_api_library_share_route_ts_delete",
+      "target": "client_createclient"
     },
     {
       "relation": "imports_from",

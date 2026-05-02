@@ -1,12 +1,12 @@
 # Graph Report - /Users/jason/Code Projects/mr-bridge-assistant  (2026-05-01)
 
 ## Corpus Check
-- 285 files · ~674,567 words
+- 287 files · ~680,517 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1181 nodes · 1701 edges · 155 communities detected
-- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 441 edges (avg confidence: 0.8)
+- 1205 nodes · 1735 edges · 155 communities detected
+- Extraction: 74% EXTRACTED · 26% INFERRED · 0% AMBIGUOUS · INFERRED: 447 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -167,8 +167,8 @@
 - [[_COMMUNITY_Community 154|Community 154]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `createClient()` - 114 edges
-2. `getUser()` - 104 edges
+1. `createClient()` - 117 edges
+2. `getUser()` - 107 edges
 3. `createServiceClient()` - 31 edges
 4. `Mr. Bridge — Personal AI Assistant` - 29 edges
 5. `POST@chat/route.ts` - 27 edges
@@ -193,8 +193,8 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.03
-Nodes (115): createClient(), backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), AdminLayout(), lastSyncAgeSecs(), loadMetricPreferences() (+107 more)
+Cohesion: 0.02
+Nodes (121): createClient(), backfillAllPRs(), upsertExercisePRs(), getSportsProvider(), syncSports(), AdminLayout(), lastSyncAgeSecs(), addEquipment() (+113 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
@@ -205,8 +205,8 @@ Cohesion: 0.05
 Nodes (57): get_credentials(), is_birthday_event(), main(), person_name(), Strip "'s birthday" suffix to get just the person's name., Return (timeMin, timeMax) RFC3339 strings spanning today in UTC., today_rfc3339_range(), get_profile_value() (+49 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.06
-Nodes (33): formatDate(), getExcludedCalendarIds(), MomentumLine(), fmtTime(), ouraGet(), secsToHrs(), secsToMins(), syncOura() (+25 more)
+Cohesion: 0.04
+Nodes (29): getISOWeekKey(), getISOWeekLabel(), latestLabel(), formatDate(), getExcludedCalendarIds(), MomentumLine(), sliceByDate(), buildDemoEvents() (+21 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
@@ -218,35 +218,35 @@ Nodes (47): discover_body_datasources(), existing_dates(), fetch_body_compositio
 
 ### Community 6 - "Community 6"
 Cohesion: 0.06
-Nodes (17): addItem(), analyzeOneFile(), buildNutritionContext(), clearAll(), handleAddManual(), handleLogMeal(), handleMealPrep(), handleRescanFileChange() (+9 more)
+Nodes (17): patch(), saveChanges(), cancelWorkout(), err(), ok(), getGoogleAuthClient(), GoogleNotConnectedError, patch() (+9 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.07
-Nodes (11): patch(), cancelWorkout(), err(), ok(), getGoogleAuthClient(), GoogleNotConnectedError, patch(), rescheduleWorkout() (+3 more)
+Cohesion: 0.06
+Nodes (17): addItem(), analyzeOneFile(), buildNutritionContext(), clearAll(), handleAddManual(), handleLogMeal(), handleMealPrep(), handleRescanFileChange() (+9 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.1
-Nodes (32): load_integration(), _now_iso(), persist_rotated_token(), Per-user integration token helpers — mirrors web/src/lib/integrations/tokens.ts., Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if, Encrypt and save a rotated refresh token back to user_integrations., _require_encryption_key(), exchange_code() (+24 more)
+Cohesion: 0.09
+Nodes (28): validateWeeklyCoverage(), buildProactivityContext(), ruleHabitAtRisk(), ruleHighRpe(), ruleHrvDecline(), ruleOverdueTasks(), ruleSleepDeficit(), ruleWeightVsGoal() (+20 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.08
-Nodes (11): getISOWeekKey(), getISOWeekLabel(), latestLabel(), sliceByDate(), runBlock(), seedDemoData(), addDays(), GET@reset-demo/route.ts (+3 more)
+Cohesion: 0.1
+Nodes (32): load_integration(), _now_iso(), persist_rotated_token(), Per-user integration token helpers — mirrors web/src/lib/integrations/tokens.ts., Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if, Encrypt and save a rotated refresh token back to user_integrations., _require_encryption_key(), exchange_code() (+24 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.08
 Nodes (11): clearChatPrefill(), toggleDesktopHistory(), writeHistoryOpen(), removeItem(), dismissTimer(), logSet(), startTimer(), displayToKg() (+3 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.12
-Nodes (21): dateRange(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+13 more)
-
-### Community 12 - "Community 12"
 Cohesion: 0.15
 Nodes (26): main(), 14 days of meals with realistic macros. Some entries reference saved recipes., Recent notifications spanning the past week — mix of types, some read., One week of structured workout plans (Mon–Fri) anchored around today., 3 sample conversations covering meal Q&A, scheduling, and workout tweaks.     ch, Watchlist cache — 3 tickers with recent quote + 20-point sparkline., Favorites cache — 3 teams across NBA / NFL / MLS., Logged strength sessions + sets (issue #249) — 6 sessions over 3 weeks.     stre (+18 more)
 
+### Community 12 - "Community 12"
+Cohesion: 0.13
+Nodes (19): dateRange(), fitbitGet(), fmtHrZones(), isBetter(), normalizeActivity(), refreshFitbitToken(), syncFitbit(), timeToMins() (+11 more)
+
 ### Community 13 - "Community 13"
-Cohesion: 0.16
-Nodes (18): validateWeeklyCoverage(), totalSetsForMuscle(), validateRecovery(), addDays(), buildCalendarDescription(), buildCorrectionPromptIfNeeded(), buildPlannerPrompt(), checkAuth() (+10 more)
+Cohesion: 0.12
+Nodes (2): buildApiUrl(), loadMoreItems()
 
 ### Community 14 - "Community 14"
 Cohesion: 0.14
@@ -285,7 +285,7 @@ Cohesion: 0.22
 Nodes (0): 
 
 ### Community 23 - "Community 23"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (0): 
 
 ### Community 24 - "Community 24"
@@ -317,84 +317,84 @@ Cohesion: 0.29
 Nodes (0): 
 
 ### Community 31 - "Community 31"
-Cohesion: 0.33
-Nodes (0): 
-
-### Community 32 - "Community 32"
 Cohesion: 0.47
 Nodes (3): confirmProposal(), dashOr(), round()
 
-### Community 33 - "Community 33"
+### Community 32 - "Community 32"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 34 - "Community 34"
+### Community 33 - "Community 33"
 Cohesion: 0.47
 Nodes (4): formatHeader(), getCompleted(), groupByWeek(), handleCellClick()
 
-### Community 35 - "Community 35"
+### Community 34 - "Community 34"
 Cohesion: 0.47
 Nodes (4): fmtDay(), fmtDayTime(), lastResultLabel(), nextGameLabel()
 
-### Community 36 - "Community 36"
+### Community 35 - "Community 35"
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 37 - "Community 37"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (2): getSnapshot(), readColors()
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.4
 Nodes (2): extractCompletedSteps(), isToolResultOk()
 
-### Community 39 - "Community 39"
+### Community 38 - "Community 38"
 Cohesion: 0.5
 Nodes (3): async(), load(), onVisibility()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 41 - "Community 41"
+### Community 40 - "Community 40"
 Cohesion: 0.6
 Nodes (3): handleFreeWriteChange(), handleResponseChange(), scheduleAutoSave()
 
-### Community 42 - "Community 42"
+### Community 41 - "Community 41"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.5
 Nodes (2): formatItem(), titleCase()
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.6
 Nodes (3): scoreColor(), statusText(), TodayScoresStrip()
 
-### Community 45 - "Community 45"
+### Community 44 - "Community 44"
 Cohesion: 0.6
 Nodes (3): addDays(), computeBannerContent(), todayDateString()
 
-### Community 46 - "Community 46"
+### Community 45 - "Community 45"
 Cohesion: 0.6
 Nodes (3): formatDaySeparator(), formatRelative(), isSameDay()
 
-### Community 47 - "Community 47"
+### Community 46 - "Community 46"
 Cohesion: 0.67
 Nodes (2): createSmokeAdminClient(), requireEnv()
 
-### Community 48 - "Community 48"
+### Community 47 - "Community 47"
 Cohesion: 0.5
 Nodes (2): MastheadRefresh(), useSyncAll()
 
-### Community 49 - "Community 49"
+### Community 48 - "Community 48"
 Cohesion: 0.67
 Nodes (2): inferEquipmentType(), validateWeights()
 
-### Community 50 - "Community 50"
+### Community 49 - "Community 49"
 Cohesion: 0.5
 Nodes (1): toCSV()
+
+### Community 50 - "Community 50"
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 51 - "Community 51"
 Cohesion: 0.67
@@ -453,20 +453,20 @@ Cohesion: 0.67
 Nodes (0): 
 
 ### Community 65 - "Community 65"
+Cohesion: 0.67
+Nodes (1): loadMetricPreferences()
+
+### Community 66 - "Community 66"
 Cohesion: 1.0
 Nodes (2): computeStreaks(), dateToDayNum()
 
-### Community 66 - "Community 66"
+### Community 67 - "Community 67"
 Cohesion: 0.67
 Nodes (0): 
-
-### Community 67 - "Community 67"
-Cohesion: 1.0
-Nodes (2): getGrantedScopes(), main()
 
 ### Community 68 - "Community 68"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): getGrantedScopes(), main()
 
 ### Community 69 - "Community 69"
 Cohesion: 1.0
@@ -991,16 +991,16 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Community 0` to `Community 3`, `Community 4`, `Community 7`, `Community 39`, `Community 47`, `Community 19`, `Community 27`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `getUser()` connect `Community 0` to `Community 3`, `Community 19`, `Community 4`, `Community 7`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 3`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **Are the 113 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `AdminLayout()`) actually correct?**
-  _`createClient()` has 113 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 92 inferred relationships involving `getUser()` (e.g. with `proxy()` and `GET@callback/route.ts`) actually correct?**
-  _`getUser()` has 92 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `createClient()` connect `Community 0` to `Community 3`, `Community 4`, `Community 38`, `Community 46`, `Community 19`, `Community 27`?**
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `getUser()` connect `Community 0` to `Community 3`, `Community 19`, `Community 4`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `POST@chat/route.ts` connect `Community 4` to `Community 0`, `Community 8`, `Community 3`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Are the 116 inferred relationships involving `createClient()` (e.g. with `createSmokeAdminClient()` and `AdminLayout()`) actually correct?**
+  _`createClient()` has 116 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 95 inferred relationships involving `getUser()` (e.g. with `proxy()` and `GET@callback/route.ts`) actually correct?**
+  _`getUser()` has 95 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 30 inferred relationships involving `createServiceClient()` (e.g. with `createTenant()` and `deleteTenant()`) actually correct?**
   _`createServiceClient()` has 30 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Load CLAUDE.md rules + all memory files into system prompt.`, `Transcribe audio bytes using faster-whisper.`, `Speak text using configured TTS engine.` to the rest of the system?**
