@@ -8,6 +8,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- **Library: public share page.** A "Share library" button in the Library header generates a public `/share/library/[token]` URL (no login required). The page shows the owner's full library grouped by media type (Games / Shows / Movies / Books), with cover art, ratings, status badges, played-on info for games, and a stats summary. Token is stored as `profile.library_share_token`. "Copy link" and "Revoke" controls in the share panel. Share button highlights when a link is active.
+
 - **Library/Backlog: pre-add form before confirming import.** Clicking "Add" in search results now opens a step-2 form (status, rating slider 0–10, review, session start/finish/notes) before the item is created. "Confirm Add" submits; "Back" returns to search results.
 - **Library/Backlog: duplicate detection on add.** Items already in the collection show a yellow "Already in library/backlog" badge in search results and an amber warning banner in the pre-add form linking to the existing item. Server-side 409 guard prevents silent duplicates on concurrent adds.
 - **Library/Backlog: session-entry deletion.** Each row in the Sessions section has a trash icon; clicking deletes that individual session log entry via `DELETE /api/backlog/[id]/sessions/[sessionId]`.

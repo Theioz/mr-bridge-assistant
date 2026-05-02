@@ -64,7 +64,7 @@ fi
 # layout.tsx (viewport.themeColor must be a static hex — can't reference CSS vars),
 # BacklogClient.tsx / LibraryClient.tsx (semantic status colors: paused/finished/dropped have no CSS var),
 # BacklogDetailClient.tsx / LibraryDetailClient.tsx (same status color set),
-# share/backlog/[token]/page.tsx (CSS var fallbacks — var(--token, #hex) for SSR public page).
+# share/backlog/[token]/page.tsx + share/library/[token]/page.tsx (standalone public pages — no app shell, CSS vars unavailable).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
 HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
@@ -80,6 +80,7 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'LibraryClient' \
   | grep -v 'LibraryDetailClient' \
   | grep -v 'share/backlog' \
+  | grep -v 'share/library' \
   || true)
 
 if [[ -n "$HEX_HITS" ]]; then

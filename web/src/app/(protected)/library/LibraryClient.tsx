@@ -3,7 +3,19 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, X, GripVertical, LayoutGrid, List, Trash2 } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  GripVertical,
+  LayoutGrid,
+  List,
+  Trash2,
+  Share2,
+  Copy,
+  Check,
+  Link as LinkIcon,
+} from "lucide-react";
 import type {
   BacklogItem,
   BacklogStatus,
@@ -1389,9 +1401,11 @@ const selectStyle = {
 export default function LibraryClient({
   initialItems,
   initialCounts,
+  initialShareToken,
 }: {
   initialItems: BacklogItem[];
   initialCounts: AllCounts;
+  initialShareToken: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1412,6 +1426,41 @@ export default function LibraryClient({
   const [sortBy, setSortBy] = useState<SortKey>("priority");
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
+
+  // ── Share state ──────────────────────────────────────────────────────────────
+  const appUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL ?? "");
+  const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const shareUrl = shareToken ? `${appUrl}/share/library/${shareToken}` : null;
+
+  const generateShareLink = async () => {
+    setShareLoading(true);
+    const res = await fetch("/api/library/share", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setShareToken(data.share_token as string);
+    }
+    setShareLoading(false);
+  };
+
+  const revokeShareLink = async () => {
+    setShareLoading(true);
+    const res = await fetch("/api/library/share", { method: "DELETE" });
+    if (res.ok) setShareToken(null);
+    setShareLoading(false);
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
 
   // ── Pagination + lazy-load state ────────────────────────────────────────────
   // Global counts — used by SummaryStrip and tab badges (never stale from pagination)
@@ -1829,6 +1878,193 @@ export default function LibraryClient({
                 {mode === "list" ? <List size={15} /> : <LayoutGrid size={15} />}
               </button>
             ))}
+          </div>
+
+          {/* Share button */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowSharePanel((p) => !p)}
+              title="Share library"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: shareToken
+                  ? "var(--color-primary-bg, rgba(99,102,241,0.12))"
+                  : "transparent",
+                color: shareToken ? "var(--color-primary)" : "var(--color-text-muted)",
+                border: "1px solid var(--rule-soft)",
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Share2 size={15} />
+            </button>
+
+            {showSharePanel && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  width: 340,
+                  background: "var(--color-bg-1)",
+                  border: "1px solid var(--rule-soft)",
+                  borderRadius: 10,
+                  padding: 16,
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+                  zIndex: 100,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>Public Library Link</p>
+                  <button
+                    onClick={() => setShowSharePanel(false)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-muted)",
+                      padding: 2,
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: 13,
+                    color: "var(--color-text-muted)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {shareToken
+                    ? "Anyone with this link can view your full library."
+                    : "Generate a public link to share your entire library — no account needed to view."}
+                </p>
+
+                {shareToken ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "var(--color-bg-2)",
+                        border: "1px solid var(--rule-soft)",
+                        borderRadius: 6,
+                        padding: "7px 10px",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <LinkIcon
+                        size={12}
+                        style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "var(--color-text-muted)",
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {shareUrl}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={copyShareUrl}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          background: "var(--color-primary)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "8px 12px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {shareCopied ? (
+                          <>
+                            <Check size={13} /> Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={13} /> Copy link
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={revokeShareLink}
+                        disabled={shareLoading}
+                        style={{
+                          background: "none",
+                          border: "1px solid var(--rule-soft)",
+                          borderRadius: 6,
+                          padding: "8px 12px",
+                          fontSize: 13,
+                          color: "var(--color-text-muted)",
+                          cursor: shareLoading ? "not-allowed" : "pointer",
+                          opacity: shareLoading ? 0.5 : 1,
+                        }}
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={generateShareLink}
+                    disabled={shareLoading}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      background: "var(--color-primary)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "9px 14px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: shareLoading ? "not-allowed" : "pointer",
+                      opacity: shareLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {shareLoading ? (
+                      "Generating…"
+                    ) : (
+                      <>
+                        <Share2 size={14} /> Generate link
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <button
