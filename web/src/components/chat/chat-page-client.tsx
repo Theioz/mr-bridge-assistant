@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { History, Plus } from "lucide-react";
 import type { UIMessage } from "ai";
 import ChatInterface from "./chat-interface";
@@ -255,6 +256,34 @@ function ChatPageClientInner({
   useEffect(() => {
     if (chatPrefill !== null) clearChatPrefill();
   }, [chatPrefill]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`chat-messages-${activeSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `session_id=eq.${activeSessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as SessionMessageRow;
+          if (!["user", "assistant"].includes(row.role)) return;
+          setActiveMessages((prev) => {
+            if (prev.some((m) => m.id === row.id)) return prev;
+            return [...prev, hydrateMessage(row)];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeSessionId]);
 
   const handleNewChat = useCallback(() => {
     setActiveSessionId(newSessionId());
