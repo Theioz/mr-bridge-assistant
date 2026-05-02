@@ -124,7 +124,34 @@ function sanitizeIncompleteToolCalls(messages: ModelMessage[], sessionId?: strin
     out.push(msg);
     i++;
   }
-  return out;
+
+  // Pass 3: collapse consecutive assistant messages where the first contains a
+  // tool_use. This happens when the SDK splits an assistant message that has text
+  // after a tool_use into two separate assistant messages — the extra assistant
+  // message lands between the tool_use and its tool_result, causing a 400 from
+  // Anthropic ("tool_use without tool_result immediately after").
+  const collapsed: ModelMessage[] = [];
+  for (let j = 0; j < out.length; j++) {
+    const cur = out[j];
+    const next = out[j + 1];
+    if (
+      cur.role === "assistant" &&
+      Array.isArray(cur.content) &&
+      (cur.content as AnyPart[]).some(isToolCallPart) &&
+      next?.role === "assistant" &&
+      Array.isArray(next.content) &&
+      !(next.content as AnyPart[]).some(isToolCallPart)
+    ) {
+      // Drop the trailing-text-only assistant message — it was emitted after the
+      // tool_use by the deadline handler and should not appear in the history.
+      console.log(
+        `[chat] sanitize: dropping extra assistant message after tool_use msg[${j + 1}] session=${sessionId ?? "?"}`,
+      );
+      j++; // skip next
+    }
+    collapsed.push(cur);
+  }
+  return collapsed;
 }
 
 export async function POST(req: Request) {
