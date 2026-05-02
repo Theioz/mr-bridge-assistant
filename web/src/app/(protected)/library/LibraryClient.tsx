@@ -1419,6 +1419,9 @@ export default function LibraryClient({
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
+  // Snapshot frozen when the search modal opens — prevents false-positive duplicate badges
+  // when handleImport prepends the new item to displayedItems before navigating away.
+  const [existingItemsSnapshot, setExistingItemsSnapshot] = useState<BacklogItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
@@ -2103,6 +2106,7 @@ export default function LibraryClient({
               if (activeTab === "all") {
                 setShowTypePicker(true);
               } else {
+                setExistingItemsSnapshot(displayedItems);
                 setSearchMediaType(activeTab);
               }
             }}
@@ -2392,7 +2396,10 @@ export default function LibraryClient({
           <button
             onClick={() => {
               if (activeTab === "all") setShowTypePicker(true);
-              else setSearchMediaType(activeTab);
+              else {
+                setExistingItemsSnapshot(displayedItems);
+                setSearchMediaType(activeTab);
+              }
             }}
             style={{
               marginTop: 12,
@@ -2495,6 +2502,7 @@ export default function LibraryClient({
         <TypePickerModal
           onSelect={(type) => {
             setShowTypePicker(false);
+            setExistingItemsSnapshot(displayedItems);
             setSearchMediaType(type);
           }}
           onClose={() => setShowTypePicker(false)}
@@ -2507,7 +2515,7 @@ export default function LibraryClient({
           type={searchMediaType}
           onClose={() => setSearchMediaType(null)}
           onImport={handleImport}
-          existingItems={displayedItems}
+          existingItems={existingItemsSnapshot}
         />
       )}
     </div>

@@ -811,6 +811,7 @@ export default function BacklogClient({ initialItems }: { initialItems: BacklogI
   const [activeTab, setActiveTab] = useState<Tab>("game");
   const [items, setItems] = useState<BacklogItem[]>(initialItems);
   const [showSearch, setShowSearch] = useState(false);
+  const [existingItemsSnapshot, setExistingItemsSnapshot] = useState<BacklogItem[]>([]);
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
 
@@ -917,7 +918,10 @@ export default function BacklogClient({ initialItems }: { initialItems: BacklogI
           </p>
         </div>
         <button
-          onClick={() => setShowSearch(true)}
+          onClick={() => {
+            setExistingItemsSnapshot(items);
+            setShowSearch(true);
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -993,7 +997,10 @@ export default function BacklogClient({ initialItems }: { initialItems: BacklogI
             No {TABS.find((t) => t.id === activeTab)?.label.toLowerCase()} tracked yet.
           </p>
           <button
-            onClick={() => setShowSearch(true)}
+            onClick={() => {
+              setExistingItemsSnapshot(items);
+              setShowSearch(true);
+            }}
             style={{
               marginTop: 12,
               background: "none",
@@ -1080,7 +1087,7 @@ export default function BacklogClient({ initialItems }: { initialItems: BacklogI
           type={activeTab}
           onClose={() => setShowSearch(false)}
           onImport={handleImport}
-          existingItems={items}
+          existingItems={existingItemsSnapshot}
         />
       )}
     </div>
