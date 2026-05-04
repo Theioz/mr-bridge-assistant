@@ -437,10 +437,11 @@ export async function GET(req: Request) {
 
   // 6. Push notification
   const workoutCount = (plan.workout_days ?? []).filter((d) => d.date).length;
-  const weekStart = plan.meal_prep_task?.metadata?.week_start ?? plan.workout_days?.[0]?.date ?? "";
+  const notifyWeekStart =
+    weekStart ?? plan.meal_prep_task?.metadata?.week_start ?? plan.workout_days?.[0]?.date ?? "";
   await sendNtfy(
     "Weekly Plan Ready",
-    `${workoutCount} workout${workoutCount !== 1 ? "s" : ""} + meal prep scheduled for week of ${weekStart}.`,
+    `${workoutCount} workout${workoutCount !== 1 ? "s" : ""} + meal prep scheduled for week of ${notifyWeekStart}.`,
   );
 
   return NextResponse.json({
