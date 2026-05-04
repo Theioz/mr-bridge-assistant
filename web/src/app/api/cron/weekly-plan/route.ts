@@ -267,6 +267,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const weekStart = new URL(req.url).searchParams.get("week_start") ?? undefined;
+
   const uid = process.env.OWNER_USER_ID;
   if (!uid) return NextResponse.json({ error: "OWNER_USER_ID not configured" }, { status: 500 });
 
@@ -306,7 +308,9 @@ export async function GET(req: Request) {
   ].filter((s): s is string => s !== null);
 
   // 1. Fetch prior-week planning context from internal endpoint
-  const contextRes = await fetch(`${APP_URL}/api/internal/plan`, {
+  const internalUrl = new URL(`${APP_URL}/api/internal/plan`);
+  if (weekStart) internalUrl.searchParams.set("week_start", weekStart);
+  const contextRes = await fetch(internalUrl.toString(), {
     headers: { Authorization: `Bearer ${CRON_SECRET}` },
   });
   if (!contextRes.ok) {
@@ -357,7 +361,7 @@ export async function GET(req: Request) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${CRON_SECRET}`,
     },
-    body: JSON.stringify(plan),
+    body: JSON.stringify(weekStart ? { ...plan, week_start: weekStart } : plan),
   });
   const writeBody = (await writeRes.json()) as {
     ok?: boolean;
@@ -433,10 +437,11 @@ export async function GET(req: Request) {
 
   // 6. Push notification
   const workoutCount = (plan.workout_days ?? []).filter((d) => d.date).length;
-  const weekStart = plan.meal_prep_task?.metadata?.week_start ?? plan.workout_days?.[0]?.date ?? "";
+  const notifyWeekStart =
+    weekStart ?? plan.meal_prep_task?.metadata?.week_start ?? plan.workout_days?.[0]?.date ?? "";
   await sendNtfy(
     "Weekly Plan Ready",
-    `${workoutCount} workout${workoutCount !== 1 ? "s" : ""} + meal prep scheduled for week of ${weekStart}.`,
+    `${workoutCount} workout${workoutCount !== 1 ? "s" : ""} + meal prep scheduled for week of ${notifyWeekStart}.`,
   );
 
   return NextResponse.json({

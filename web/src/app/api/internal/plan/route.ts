@@ -33,7 +33,11 @@ function checkAuth(request: NextRequest): boolean {
   return !!(process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`);
 }
 
-function getComingMonday(): Date {
+function getComingMonday(weekStart?: string): Date {
+  if (weekStart) {
+    const [y, m, d] = weekStart.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const pyDow = (today.getDay() + 6) % 7; // 0=Mon … 6=Sun
@@ -70,7 +74,8 @@ export async function GET(request: NextRequest) {
   if (!uid) return NextResponse.json({ error: "OWNER_USER_ID not configured" }, { status: 500 });
 
   const db = createServiceClient();
-  const nextMonday = getComingMonday();
+  const weekStartParam = request.nextUrl.searchParams.get("week_start") ?? undefined;
+  const nextMonday = getComingMonday(weekStartParam);
   const priorMonday = addDays(nextMonday, -7);
   const priorSunday = addDays(nextMonday, -1);
   const nextSunday = addDays(nextMonday, 6);
@@ -423,14 +428,14 @@ export async function POST(request: NextRequest) {
   const uid = process.env.OWNER_USER_ID;
   if (!uid) return NextResponse.json({ error: "OWNER_USER_ID not configured" }, { status: 500 });
 
-  let body: { workout_days?: WorkoutDay[]; meal_prep_task?: MealPrepTask };
+  let body: { workout_days?: WorkoutDay[]; meal_prep_task?: MealPrepTask; week_start?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { workout_days = [], meal_prep_task } = body;
+  const { workout_days = [], meal_prep_task, week_start } = body;
   if (!workout_days.length && !meal_prep_task) {
     return NextResponse.json(
       { error: "payload has neither workout_days nor meal_prep_task" },
@@ -439,7 +444,7 @@ export async function POST(request: NextRequest) {
   }
 
   const db = createServiceClient();
-  const nextMonday = getComingMonday();
+  const nextMonday = getComingMonday(week_start);
   const nextMondayStr = toDateStr(nextMonday);
   const nextSundayStr = toDateStr(addDays(nextMonday, 6));
 
