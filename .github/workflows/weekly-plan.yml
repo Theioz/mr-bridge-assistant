@@ -1,0 +1,47 @@
+name: Weekly Plan
+
+on:
+  schedule:
+    - cron: '15 15 * * 0'  # Sunday 15:15 UTC — fallback if Vercel dispatch fires at 15:00
+  workflow_dispatch:
+    inputs:
+      week_start:
+        description: 'Coming Monday YYYY-MM-DD. Leave blank to auto-compute.'
+        required: false
+        default: ''
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install anthropic
+
+      - name: Compute week_start
+        id: week
+        run: |
+          WS="${{ inputs.week_start }}"
+          if [ -z "$WS" ]; then
+            WS=$(python3 -c "
+from datetime import date, timedelta
+today = date.today()
+dow = today.weekday()  # 0=Mon
+days = (7 - dow) % 7 or 7
+print(today + timedelta(days=days))
+")
+          fi
+          echo "week_start=$WS" >> "$GITHUB_OUTPUT"
+
+      - name: Run weekly planner
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          python3 scripts/run_weekly_plan.py --week-start "${{ steps.week.outputs.week_start }}"

@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Weekly planning cron: fire-and-forget via GitHub Actions dispatch (#604).** `/api/cron/weekly-plan` is now a thin endpoint that fires a `workflow_dispatch` event to `.github/workflows/weekly-plan.yml` and returns 202 immediately. The actual planning work (two Claude AI passes, Supabase writes) runs in GitHub Actions with a 30-minute timeout, eliminating Vercel's 60-second function limit. Requires a `GITHUB_PAT` (workflow scope) in Vercel env vars. The GHA workflow also runs on a fallback schedule (`15 15 * * 0`) in case the Vercel dispatch fails; the duplicate-skip guard in `/api/internal/plan` prevents double-writes. `scripts/run_weekly_plan.py` updated to load `APP_URL` from env and guard the `.env.local` loader so it runs cleanly in GHA.
+
 ### Added
 - **Weekly planning cron: `week_start` override param.** Both `/api/cron/weekly-plan` and `/api/internal/plan` now accept a `week_start=YYYY-MM-DD` parameter, enabling catch-up runs when the Sunday cron is missed. The cron route forwards it to the internal plan endpoint for both context fetch and write.
 - **Library/Backlog: console/platform and price paid fields in pre-add form.** When adding a game, the step-2 modal now includes "Console / Platform" (maps to `metadata.played_on`) and "Price Paid" fields. Books show "Price Paid" only. Both fields are optional and merged into the item's metadata on save.

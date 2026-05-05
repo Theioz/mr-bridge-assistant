@@ -223,6 +223,7 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 | `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
 | `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py`. Required for cron sync. |
 | `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
+| `GITHUB_PAT` | GitHub Personal Access Token with `workflow` scope — used by `/api/cron/weekly-plan` to dispatch the `weekly-plan.yml` GitHub Actions workflow. Create at GitHub → Settings → Developer settings → Personal access tokens (fine-grained or classic with `workflow`). |
 | `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
 | `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — stock watchlist widget + `get_stock_quote` chat tool; free tier supports EOD data)* |
 | `SPORTSDB_API_KEY` | [thesportsdb.com](https://www.thesportsdb.com/api.php) → personal key *(optional — sports dashboard widget + `get_sports_data` chat tool; defaults to public test key `3` if unset)* |
@@ -235,10 +236,12 @@ Fill in each file using the values collected in steps 2–6. Every variable has 
 
 1. Go to [vercel.com](https://vercel.com) → **New Project** → import your GitHub fork.
 2. Set the **Root Directory** to `web`.
-3. Go to **Settings → Environment Variables** and add every variable from `web/.env.local`, including `CRON_SECRET` and optionally `APP_URL`.
+3. Go to **Settings → Environment Variables** and add every variable from `web/.env.local`, including `CRON_SECRET`, `APP_URL`, and `GITHUB_PAT`.
 4. Click **Deploy**. Vercel will auto-deploy on every push to `main` going forward.
 
 The `vercel.json` in `web/` schedules a daily sync cron at 6am PST (`0 14 * * *`) that calls `/api/cron/sync` to pull overnight Oura, Fitbit, and Google Fit data before you open the dashboard.
+
+The weekly planning cron (`0 15 * * 0` — Sunday 8am PST) now fires a GitHub Actions `workflow_dispatch` event rather than running the planning logic directly. The actual work (Claude AI passes + Supabase writes) runs in `.github/workflows/weekly-plan.yml`, which has a 30-minute timeout instead of Vercel's 60-second function limit. Requires `GITHUB_PAT`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, and `APP_URL` stored as GitHub Actions secrets in your fork.
 
 ### Step 9 — Connect Google Calendar + Gmail in Claude Code
 
