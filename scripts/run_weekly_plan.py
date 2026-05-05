@@ -16,17 +16,18 @@ import sys
 import urllib.request
 from pathlib import Path
 
-# Load .env.local
+# Load .env.local when running locally
 env_file = Path(__file__).parent.parent / "web" / ".env.local"
-for line in env_file.read_text().splitlines():
-    line = line.strip()
-    if line and not line.startswith("#") and "=" in line:
-        k, _, v = line.partition("=")
-        os.environ[k.strip()] = v.strip()
+if env_file.exists():
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ[k.strip()] = v.strip()
 
 import anthropic  # noqa: E402 — loaded after env
 
-APP_URL = "https://mr-bridge-assistant.vercel.app"
+APP_URL = os.environ.get("APP_URL", "https://mr-bridge-assistant.vercel.app")
 CRON_SECRET = os.environ["CRON_SECRET"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 
