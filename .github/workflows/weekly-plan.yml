@@ -28,13 +28,7 @@ jobs:
         run: |
           WS="${{ inputs.week_start }}"
           if [ -z "$WS" ]; then
-            WS=$(python3 -c "
-from datetime import date, timedelta
-today = date.today()
-dow = today.weekday()  # 0=Mon
-days = (7 - dow) % 7 or 7
-print(today + timedelta(days=days))
-")
+            WS=$(python3 -c "from datetime import date,timedelta; today=date.today(); d=(7-today.weekday())%7 or 7; print(today+timedelta(days=d))")
           fi
           echo "week_start=$WS" >> "$GITHUB_OUTPUT"
 
