@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+- **Weekly planner: `run_weekly_plan.py` now runs full two-pass validation matching the Vercel route.** Ported `validateWeeklyCoverage`, `checkSameDayRedundancy`, and `validateRecovery` from TypeScript to Python. First-pass plan is validated for missing movement patterns (pull_vertical mandatory when pull-up bar in inventory), same-day redundant exercise pairs, and 48h muscle group recovery conflicts. A correction prompt is sent to Claude if issues are found; the script logs whether the correction pass resolved all issues. Also updated `PLANNER_PROMPT` to use the full prompt from the Vercel route (was a stripped-down version that omitted progression ladder, goal phase, and movement pattern rules).
+- **This week's plan (May 4–10): patched pull_vertical gap and Wed pull_horizontal redundancy.** Pull-Up (3×3-5) inserted on Wed May 6 Pull Day between DB Bent-Over Row and DB Single-Arm Row (fixes both missing pull_vertical and back-to-back pull_horizontal). Pull-Up (2×3-5) inserted on Sat May 10 Full Body after DB Arnold Press.
+
 ### Changed
 - **Weekly planning cron: fire-and-forget via GitHub Actions dispatch (#604).** `/api/cron/weekly-plan` is now a thin endpoint that fires a `workflow_dispatch` event to `.github/workflows/weekly-plan.yml` and returns 202 immediately. The actual planning work (two Claude AI passes, Supabase writes) runs in GitHub Actions with a 30-minute timeout, eliminating Vercel's 60-second function limit. Requires a `GITHUB_PAT` (workflow scope) in Vercel env vars. The GHA workflow also runs on a fallback schedule (`15 15 * * 0`) in case the Vercel dispatch fails; the duplicate-skip guard in `/api/internal/plan` prevents double-writes. `scripts/run_weekly_plan.py` updated to load `APP_URL` from env and guard the `.env.local` loader so it runs cleanly in GHA.
 
