@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
     habitsR,
     priorPlansR,
     strengthSessionsR,
+    equipmentR,
   ] = await Promise.allSettled([
     db.from("profile").select("key,value").eq("user_id", uid),
     db
@@ -145,6 +146,11 @@ export async function GET(request: NextRequest) {
       .gte("performed_on", pMon)
       .lte("performed_on", pSun)
       .order("performed_on"),
+    db
+      .from("user_equipment")
+      .select("equipment_type,weight_lbs,count,notes")
+      .eq("user_id", uid)
+      .order("equipment_type"),
   ]);
 
   const get = <T>(r: PromiseSettledResult<{ data: T[] | null }>): T[] =>
@@ -159,6 +165,12 @@ export async function GET(request: NextRequest) {
   const habits = get<{ habit_id: string; date: string; completed: boolean }>(habitsR);
   const priorPlans = get<Record<string, unknown>>(priorPlansR);
   const strengthSessions = get<{ id: string; performed_on: string }>(strengthSessionsR);
+  const equipment = get<{
+    equipment_type: string;
+    weight_lbs: number | null;
+    count: number | null;
+    notes: string | null;
+  }>(equipmentR);
 
   // Fetch set-level detail for strength sessions from prior week
   interface StrengthSet {
@@ -201,6 +213,24 @@ export async function GET(request: NextRequest) {
   lines.push("\n## PROFILE");
   if (profile.length > 0) profile.forEach((r) => lines.push(`- ${r.key}: ${r.value}`));
   else lines.push("No profile data.");
+
+  lines.push("\n## EQUIPMENT");
+  if (equipment.length > 0) {
+    // Group dumbbell pairs by weight for compact display
+    const dbWeights = equipment
+      .filter((e) => e.equipment_type === "dumbbell pair" && e.weight_lbs != null)
+      .map((e) => e.weight_lbs as number)
+      .sort((a, b) => a - b);
+    if (dbWeights.length > 0) {
+      lines.push(`- Dumbbell pairs: ${dbWeights.join(", ")} lb`);
+    }
+    for (const e of equipment.filter((e) => e.equipment_type !== "dumbbell pair")) {
+      const notePart = e.notes ? ` — NOTE: ${e.notes}` : "";
+      lines.push(`- ${e.equipment_type}${notePart}`);
+    }
+  } else {
+    lines.push("No equipment data — assume bodyweight only.");
+  }
 
   lines.push("\n## BODY COMPOSITION (most recent entry)");
   if (fitnessLog.length > 0) {
