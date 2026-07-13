@@ -35,14 +35,14 @@ function model(): string {
   return process.env.OLLAMA_MODEL || "qwen2.5vl:7b";
 }
 
-type ChatMessage = {
+export type ChatMessage = {
   role: "system" | "user";
   content: string;
   /** base64 images, for the vision path */
   images?: string[];
 };
 
-async function chatJSON<T>(
+export async function chatJSON<T>(
   messages: ChatMessage[],
   schema: Record<string, unknown>,
   timeoutMs = 120_000,
