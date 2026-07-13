@@ -66,6 +66,11 @@ fi
 # BacklogDetailClient.tsx / LibraryDetailClient.tsx (same status color set),
 # share/backlog/[token]/page.tsx + share/library/[token]/page.tsx (standalone public pages — no app shell, CSS vars unavailable).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
+#
+# Comment lines are skipped: an issue reference like #609 IS a valid 3-digit hex, so any
+# comment citing one failed this guard. That is what the .ts exclusion above was working
+# around; it does not help once the comment is in a .tsx. Skipping comments fixes the
+# actual defect — a colour in a comment styles nothing.
 HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
   | grep -v 'globals\.css' \
@@ -81,6 +86,7 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'LibraryDetailClient' \
   | grep -v 'share/backlog' \
   | grep -v 'share/library' \
+  | awk '{ body = $0; sub(/^[^:]+:[0-9]+:/, "", body); if (body !~ /^[[:space:]]*(\/\/|\/\*|\*)/) print }' \
   || true)
 
 if [[ -n "$HEX_HITS" ]]; then

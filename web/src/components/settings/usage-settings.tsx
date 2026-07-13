@@ -2,18 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-interface QuotaData {
-  is_demo: boolean;
-  chat: {
-    tokens_used: number;
-    tokens_cap: number;
-    tool_calls_used: number;
-    tool_calls_cap: number;
-  };
-  demo: { turns_used: number; turns_cap: number };
-  resets_at: string;
-}
-
 interface StorageCategory {
   rows: number;
   bytes: number;
@@ -25,7 +13,6 @@ interface StorageData {
   fitness: StorageCategory;
   meals: StorageCategory;
   journal: StorageCategory;
-  chat: StorageCategory;
   watchlists: StorageCategory;
   total_all_bytes: number;
 }
@@ -122,24 +109,17 @@ function SkeletonBlock({ width = "100%" }: { width?: string }) {
 }
 
 export function UsageSettings() {
-  const [quota, setQuota] = useState<QuotaData | null>(null);
   const [storage, setStorage] = useState<StorageData | null>(null);
-  const [quotaError, setQuotaError] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchQuota = fetch("/api/quota")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((q) => setQuota(q as QuotaData))
-      .catch(() => setQuotaError(true));
-
     const fetchStorage = fetch("/api/usage/storage")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((s) => setStorage(s as StorageData))
       .catch(() => setStorageError(true));
 
-    Promise.all([fetchQuota, fetchStorage]).finally(() => setLoading(false));
+    fetchStorage.finally(() => setLoading(false));
   }, []);
 
   const sectionStyle: React.CSSProperties = {
@@ -184,53 +164,13 @@ export function UsageSettings() {
     "fitness",
     "meals",
     "journal",
-    "chat",
     "watchlists",
   ];
   const totalRows = storage ? categories.reduce((sum, k) => sum + storage[k].rows, 0) : 0;
   const totalBytes = storage ? storage.total_all_bytes : 0;
 
-  const resetLabel = quota
-    ? new Date(quota.resets_at).toLocaleString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short",
-      })
-    : null;
-
   return (
     <>
-      <section aria-labelledby="usage-quota-heading" style={sectionStyle}>
-        <h2 id="usage-quota-heading" className="db-section-label">
-          Daily usage
-        </h2>
-
-        {quotaError || !quota ? errorLine : null}
-
-        {quota && quota.is_demo ? (
-          <ProgressRow
-            label="Conversation turns"
-            used={quota.demo.turns_used}
-            cap={quota.demo.turns_cap}
-          />
-        ) : quota ? (
-          <>
-            <ProgressRow label="Tokens" used={quota.chat.tokens_used} cap={quota.chat.tokens_cap} />
-            <ProgressRow
-              label="Tool calls"
-              used={quota.chat.tool_calls_used}
-              cap={quota.chat.tool_calls_cap}
-            />
-          </>
-        ) : null}
-
-        {quota && resetLabel ? (
-          <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-            Resets at {resetLabel}
-          </p>
-        ) : null}
-      </section>
-
       <section aria-labelledby="usage-storage-heading" style={sectionStyle}>
         <h2 id="usage-storage-heading" className="db-section-label">
           Stored data
@@ -247,7 +187,6 @@ export function UsageSettings() {
                 { label: "Fitness", cat: storage.fitness },
                 { label: "Meals", cat: storage.meals },
                 { label: "Journal", cat: storage.journal },
-                { label: "Chat", cat: storage.chat },
                 { label: "Watchlists", cat: storage.watchlists },
               ] as { label: string; cat: StorageCategory }[]
             )

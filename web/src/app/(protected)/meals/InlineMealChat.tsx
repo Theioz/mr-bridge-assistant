@@ -126,72 +126,27 @@ export default function InlineMealChat({
           mealType: defaultMealType,
         }),
       });
-      if (!res.ok || !res.body) throw new Error("Request failed");
+      if (!res.ok) throw new Error("Request failed");
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantText = "";
-      let textMessageIndex: number | null = null;
-      let buffer = "";
+      // Plain JSON now, not a stream.
+      //
+      // The route used to emit the AI SDK data protocol and this client hand-parsed
+      // `0:` (text token) and `a:` (tool result) line prefixes — an entire wire format
+      // reimplemented by hand. The route is a single structured call now (#609), so the
+      // parser is gone. We lose a typing animation; we gain determinism, no tool-calling
+      // on a 7B model, and macros that come from USDA rather than from the model.
+      const data = (await res.json()) as { reply: string; card: LogMealProposal | null };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+      if (data.reply) {
+        setMessages((prev) => [...prev, { role: "assistant", kind: "text", content: data.reply }]);
+      }
 
-        // Process complete lines; the last partial line stays in buffer.
-        let nl = buffer.indexOf("\n");
-        while (nl !== -1) {
-          const line = buffer.slice(0, nl);
-          buffer = buffer.slice(nl + 1);
-          nl = buffer.indexOf("\n");
-          if (!line) continue;
-
-          // AI SDK data-protocol prefixes:
-          //   0:"..."    → text token
-          //   a:{...}    → tool result (our action card)
-          if (line.startsWith("0:")) {
-            try {
-              const token = JSON.parse(line.slice(2));
-              assistantText += token;
-              setMessages((prev) => {
-                if (textMessageIndex === null) {
-                  textMessageIndex = prev.length;
-                  return [...prev, { role: "assistant", kind: "text", content: assistantText }];
-                }
-                const copy = prev.slice();
-                copy[textMessageIndex] = {
-                  role: "assistant",
-                  kind: "text",
-                  content: assistantText,
-                };
-                return copy;
-              });
-            } catch {
-              // ignore malformed chunks
-            }
-          } else if (line.startsWith("a:")) {
-            try {
-              const payload = JSON.parse(line.slice(2)) as {
-                toolCallId?: string;
-                result?: unknown;
-              };
-              const result = payload.result as { kind?: string } | undefined;
-              if (result?.kind === "log_meal_proposal") {
-                const proposal = result as unknown as LogMealProposal;
-                setMessages((prev) => [
-                  ...prev,
-                  { role: "assistant", kind: "proposal", proposal, status: "pending" },
-                ]);
-                textMessageIndex = null; // any subsequent text opens a new message
-                assistantText = "";
-              }
-            } catch {
-              // ignore malformed tool-result chunks
-            }
-          }
-          // Other prefixes (f:, e:, d:, 9:, 2:, ...) are intentionally ignored.
-        }
+      const card = data.card;
+      if (card) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", kind: "proposal", proposal: card, status: "pending" },
+        ]);
       }
     } catch {
       setMessages((prev) => [
