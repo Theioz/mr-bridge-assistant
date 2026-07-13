@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { supabaseServerUrl } from "@/lib/supabase/urls";
 import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -15,9 +16,6 @@ const SUPABASE_ORIGIN = (() => {
     return "";
   }
 })();
-
-// Realtime (the one chat_messages subscription) needs the ws(s) origin too.
-const SUPABASE_WS_ORIGIN = SUPABASE_ORIGIN.replace(/^http/, "ws");
 
 function buildCSP(nonce: string): string {
   // 'strict-dynamic' trusts scripts loaded by nonce-bearing scripts; host allowlists
@@ -43,7 +41,9 @@ function buildCSP(nonce: string): string {
     "style-src-attr 'unsafe-inline'",
     `img-src 'self' data: https://a.espncdn.com ${SUPABASE_ORIGIN} https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://*.googleapis.com https://books.googleusercontent.com`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE_ORIGIN} ${SUPABASE_WS_ORIGIN}`,
+    // No wss:// — the only Realtime subscription was the chat, which is gone (#476),
+    // so the realtime container is not deployed at all.
+    `connect-src 'self' ${SUPABASE_ORIGIN}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -62,7 +62,10 @@ export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeadersWithNonce } });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // Middleware runs on the SERVER — same routing constraint as every other
+    // server-side client. The CSP below still uses the PUBLIC origin, because that
+    // is what the browser connects to.
+    supabaseServerUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
