@@ -22,10 +22,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const nextParam = searchParams.get("next");
-  const next =
-    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
-      ? nextParam
-      : "/dashboard";
+  const explicitNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+  const next = explicitNext ?? "/dashboard";
 
   // NOT `new URL(request.url).origin`. Behind Caddy, Next standalone sees its own
   // bind address, so every redirect from this route sent the browser to
@@ -38,18 +37,26 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: flagRow } = await supabase
-          .from("profile")
-          .select("value")
-          .eq("user_id", user.id)
-          .eq("key", "onboarding_completed")
-          .maybeSingle();
-        if (!flagRow) {
-          return NextResponse.redirect(`${origin}/onboarding`);
+      // The onboarding gate only applies to a PLAIN sign-in. When the caller asked for
+      // somewhere specific it is because the link means something specific — a password
+      // reset asks for /reset-password — and diverting it strands the user in onboarding
+      // with a live session and no way to finish what they clicked. (It sent the owner
+      // there: an account with 49 profile keys that simply predates the flag, because
+      // ordinary password login never reads it.)
+      if (!explicitNext) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: flagRow } = await supabase
+            .from("profile")
+            .select("value")
+            .eq("user_id", user.id)
+            .eq("key", "onboarding_completed")
+            .maybeSingle();
+          if (!flagRow) {
+            return NextResponse.redirect(`${origin}/onboarding`);
+          }
         }
       }
       return NextResponse.redirect(`${origin}${next}`);
