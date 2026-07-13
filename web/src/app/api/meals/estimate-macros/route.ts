@@ -1,48 +1,56 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { Output, ToolLoopAgent } from "ai";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { estimateFromText } from "@/lib/nutrition/estimate";
+import type { Macros } from "@/lib/nutrition/fdc";
 
-export const maxDuration = 20;
+/**
+ * Text -> macros. Was: an Anthropic (claude-haiku) call that recalled nutrition
+ * facts from memory. Now: the local model parses the text into foods + quantities,
+ * and USDA FoodData Central supplies the measured macros (#476).
+ *
+ * More accurate than before, not less — the numbers are read from data rather
+ * than recalled by a language model.
+ */
 
-const MacroEstimateSchema = z.object({
-  food_name: z.string().describe("Cleaned-up name of the dish or food item"),
-  meal_type_guess: z
-    .enum(["breakfast", "lunch", "dinner", "snack"])
-    .describe("Best guess for meal type based on the food"),
-  calories: z.number().describe("Estimated total calories for the described portion (integer)"),
-  protein_g: z.number().describe("Estimated protein in grams"),
-  carbs_g: z.number().describe("Estimated carbohydrates in grams"),
-  fat_g: z.number().describe("Estimated fat in grams"),
-  fiber_g: z
-    .number()
-    .nullable()
-    .describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
-  sugar_g: z
-    .number()
-    .nullable()
-    .describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
-  sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
-  confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the estimate"),
-  notes: z.string().describe("Brief caveats, e.g. 'portion size assumed standard serving'"),
-});
+export type MacroEstimate = {
+  food_name: string;
+  meal_type_guess: "breakfast" | "lunch" | "dinner" | "snack";
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number;
+  confidence: "high" | "medium" | "low";
+  notes: string;
+};
 
-export type MacroEstimate = z.infer<typeof MacroEstimateSchema>;
+/** Local-clock meal guess. The old prompt asked the model to infer this; a clock is better. */
+function mealTypeByHour(): MacroEstimate["meal_type_guess"] {
+  const tz = process.env.USER_TIMEZONE || "America/Los_Angeles";
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(
+      new Date(),
+    ),
+  );
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 21) return "dinner";
+  return "snack";
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: {
     ingredients: string;
     dish_name?: string;
     user_context?: string;
-    current_macros?: { calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number };
+    current_macros?: Partial<Macros>;
   };
   try {
     body = await req.json();
@@ -63,55 +71,62 @@ export async function POST(req: Request) {
 
   const cm = body.current_macros;
   const hasCurrent =
-    cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
-
-  const userContextSuffix = userContext
-    ? `\n\nUser-provided description of the dish (for reference; may be inaccurate): ${userContext}`
-    : "";
-
-  const prompt =
-    (hasCurrent && dishName
-      ? `A user already logged a meal and now wants to adjust its macros.
-
-Base dish: "${dishName}"
-Current macros: ${cm!.calories ?? "?"} cal, P ${cm!.protein_g ?? "?"}g, C ${cm!.carbs_g ?? "?"}g, F ${cm!.fat_g ?? "?"}g
-
-User's modification / additional ingredients:
-"${ingredients || "(none — just re-estimate the base dish)"}"
-
-Instructions:
-- Treat the user's modification as ADDITIONS or CHANGES to the base dish, not a full replacement
-- Start from the current macros and adjust up or down based on what the user added/removed/changed
-- If the modification text is vague (e.g. "added some chicken"), assume a reasonable single-serving quantity (e.g. ~3-4oz for chicken)
-- Use conservative estimates — do not inflate
-- Return the NEW TOTAL macros for the adjusted meal, not just the delta
-- Set confidence to "medium" for vague modifications, "high" for specific quantities
-- Include what you assumed for the modification in notes`
-      : `Estimate the nutritional content of a meal with these ingredients:
-
-"${ingredients || dishName}"
-
-Instructions:
-- Use the listed ingredients and quantities to estimate macros
-- If quantities are missing, assume a standard single serving
-- Use conservative estimates — do not inflate
-- Set confidence to "high" if ingredients and quantities are clearly specified
-- Set confidence to "low" if ingredients are vague or quantities are absent
-- Include any key assumptions in notes`) + userContextSuffix;
+    !!cm && (cm.calories != null || cm.protein_g != null || cm.carbs_g != null || cm.fat_g != null);
 
   try {
-    const agent = new ToolLoopAgent({
-      model: anthropic("claude-haiku-4-5-20251001"),
-      instructions: "Estimate the nutritional content of meals conservatively and accurately.",
-      output: Output.object({ schema: MacroEstimateSchema }),
-    });
-    const { output } = await agent.generate({
-      messages: [{ role: "user", content: prompt }],
-    });
+    // Adjustment path ("added some chicken" on an already-logged meal): estimate
+    // ONLY the addition, then add it to what's already there. The old prompt asked
+    // the model to "return the NEW TOTAL" — i.e. to do arithmetic on macros it had
+    // itself invented. Estimating the delta and summing it is exact.
+    const estimate = await estimateFromText(ingredients || dishName, dishName || undefined);
 
-    return Response.json(output);
+    let calories = estimate.totals.calories;
+    let protein_g = estimate.totals.protein_g;
+    let carbs_g = estimate.totals.carbs_g;
+    let fat_g = estimate.totals.fat_g;
+    let fiber_g: number | null = estimate.totals.fiber_g;
+    let sugar_g: number | null = estimate.totals.sugar_g;
+    let sodium_mg = estimate.totals.sodium_mg;
+    let notes = estimate.notes;
+
+    if (hasCurrent && ingredients) {
+      calories = Math.round((cm!.calories ?? 0) + calories);
+      protein_g = Math.round(((cm!.protein_g ?? 0) + protein_g) * 10) / 10;
+      carbs_g = Math.round(((cm!.carbs_g ?? 0) + carbs_g) * 10) / 10;
+      fat_g = Math.round(((cm!.fat_g ?? 0) + fat_g) * 10) / 10;
+      fiber_g = cm!.fiber_g != null ? Math.round((cm!.fiber_g + (fiber_g ?? 0)) * 10) / 10 : fiber_g;
+      sugar_g = cm!.sugar_g != null ? Math.round((cm!.sugar_g + (sugar_g ?? 0)) * 10) / 10 : sugar_g;
+      sodium_mg = Math.round((cm!.sodium_mg ?? 0) + sodium_mg);
+      notes = `Added to the existing meal. ${estimate.notes}`;
+    }
+
+    if (estimate.items.length === 0) {
+      return Response.json(
+        { error: "Could not match any food to USDA data. Try naming the foods more plainly." },
+        { status: 422 },
+      );
+    }
+
+    const out: MacroEstimate & { items: typeof estimate.items } = {
+      food_name: estimate.food_name,
+      meal_type_guess: mealTypeByHour(),
+      calories,
+      protein_g,
+      carbs_g,
+      fat_g,
+      fiber_g,
+      sugar_g,
+      sodium_mg,
+      confidence: estimate.confidence,
+      notes,
+      // Per-food breakdown with the USDA entry actually used. The old route was a
+      // black box; now the user can see WHY the number is what it is.
+      items: estimate.items,
+    };
+
+    return Response.json(out);
   } catch (err) {
-    console.error("[estimate-macros] Claude error:", err);
+    console.error("[estimate-macros] failed:", err);
     return Response.json(
       { error: err instanceof Error ? err.message : "Estimation failed" },
       { status: 500 },
