@@ -7,6 +7,71 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- **Self-hosted.** Mr. Bridge is off **Vercel** and off **Supabase Cloud**, running on a
+  homelab node behind a tailnet ([#476](https://github.com/Theioz/jl-homelab/issues/476)).
+  Three hostnames: the app and Supabase are **tailnet-only**; only token-gated `/share/*`
+  is public, behind a default-deny path allowlist. Supabase is **three containers**
+  (Postgres 17.6 + GoTrue + PostgREST) rather than the upstream ten — no Kong, Realtime,
+  Storage, imgproxy, edge-runtime, analytics or pooler, none of which were used.
+
+- **Macros now come from data, not from a model.** `estimate-macros`, `analyze-photo`,
+  `scan-chat` (label mode) and `suggest` no longer ask Claude to *recall* nutrition facts.
+  **USDA FoodData Central** supplies every gram and calorie; a local model
+  (`qwen2.5vl:7b` via Ollama) only identifies the food and reads quantity+unit. This is
+  **more** accurate than before: the model was measured ~2x off on portion weight (a large
+  egg at 105g; real ~50g), so it is never asked to weigh anything. The photo analyzer now
+  treats your **description as authoritative** — a stated "6oz" is used verbatim rather
+  than re-guessed from pixels.
+
+- **Onboarding macro targets use the Mifflin-St Jeor equation**, not an LLM. The model was
+  being handed exactly the inputs to a formula and asked to approximate its output. It now
+  returns nothing on insufficient input rather than inventing targets.
+
+### Removed
+
+- **The in-app chat.** `/chat`, `/api/chat`, `lib/chat/*`, `components/chat/*` and
+  `/api/quota` are gone. Conversation moves to an **MCP server** (`web/mcp/`) exposing the
+  same **30 tools** to Claude Code on the existing subscription — no API key, no metered
+  chat. Most of what went was not chat but **Vercel scar tissue**: an 80s hand-rolled
+  abort, a four-pass `tool_use`/`tool_result` orphan sanitizer, a fabricated "I ran out of
+  time" message and a user-facing Continue button — all built to survive the 90s Lambda
+  kill. MCP has no serverless deadline, so that entire bug class ceases to exist rather
+  than being ported.
+
+- `ANTHROPIC_API_KEY` and `GROQ_API_KEY`. One residual call site remains
+  (`api/meals/scan-chat`).
+
+- `voice/` — already broken; its config pointed at `memory/*.md` and a rules file that no
+  longer exist.
+
+- `web/vercel.json`. Cron runs from the node's crontab, using the same `CRON_SECRET`
+  bearer auth the handlers already had.
+
+### Fixed
+
+- **Push notifications had been silently dead in production.** Vercel had `NFTY_TOPIC`
+  while the code reads `NTFY_TOPIC`, so `/api/notifications/push` returned
+  `503 "NTFY_TOPIC unset"`. Found only by reading the real production env.
+
+- **Google Fit sync failed intermittently.** It passed `metadata: null` into a
+  `NOT NULL DEFAULT '{}'` column — a column default only applies when the column is
+  *omitted*, so an explicit null violates the constraint. This was failing on Supabase
+  Cloud too.
+
+- Share links derived the app's public origin from the *database* URL
+  (`NEXT_PUBLIC_SUPABASE_URL.replace(".supabase.co", ".vercel.app")`), which produced a
+  garbage hostname anywhere but Vercel. Now `SHARE_BASE_URL`.
+
+### Added
+
+- `web/Dockerfile` (standalone output), `web/mcp/` (the MCP server), `web/src/lib/nutrition/*`
+  (USDA + local-model pipeline), `scripts/weekly_plan.py` and a `/weekly-plan` Claude Code
+  command — the planner's deterministic validators stay in Python because they are *rules*,
+  not judgement.
+
+
 ### Fixed
 - **Weekly planner: equipment context now included in planner prompt.** `/api/internal/plan` now fetches `user_equipment` (type, weight, count, notes) and injects an `## EQUIPMENT` section into the planning context. Dumbbell pairs are summarised as a weight list; other equipment (pull-up bar, slider) includes any notes from the `notes` field — e.g. `"Available 5 minute walk from me"`. Previously the model had no knowledge of available weights or equipment location.
 - **Weekly planner: `run_weekly_plan.py` now runs full two-pass validation matching the Vercel route.** Ported `validateWeeklyCoverage`, `checkSameDayRedundancy`, and `validateRecovery` from TypeScript to Python. First-pass plan is validated for missing movement patterns (pull_vertical mandatory when pull-up bar in inventory), same-day redundant exercise pairs, and 48h muscle group recovery conflicts. A correction prompt is sent to Claude if issues are found; the script logs whether the correction pass resolved all issues. Also updated `PLANNER_PROMPT` to use the full prompt from the Vercel route (was a stripped-down version that omitted progression ladder, goal phase, and movement pattern rules).
