@@ -8,7 +8,6 @@ import {
   Activity,
   CheckSquare,
   UtensilsCrossed,
-  MessageSquare,
   Settings,
   ListTodo,
   BookOpen,
@@ -36,13 +35,12 @@ const NAV_ITEMS = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/library", label: "Library", icon: Library },
   { href: "/meals", label: "Meals", icon: UtensilsCrossed },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 // 4 primary tabs always visible; the rest live in the More sheet
-const PRIMARY_HREFS = ["/dashboard", "/habits", "/tasks", "/chat"];
+const PRIMARY_HREFS = ["/dashboard", "/habits", "/tasks", "/meals"];
 const MOBILE_PRIMARY = NAV_ITEMS.filter((item) => PRIMARY_HREFS.includes(item.href));
 const MOBILE_MORE = NAV_ITEMS.filter((item) => !PRIMARY_HREFS.includes(item.href));
 
@@ -263,8 +261,8 @@ export default function Nav() {
         </div>
       </nav>
 
-      {/* Demo banner — mobile (above tab bar). Hidden on /chat to avoid overlapping the composer. */}
-      {isDemo && !pathname?.startsWith("/chat") && (
+      {/* Demo banner — mobile (above tab bar). */}
+      {isDemo && (
         <div
           className="lg:hidden fixed left-0 right-0 z-40 text-center overflow-hidden text-ellipsis whitespace-nowrap print:hidden"
           style={{

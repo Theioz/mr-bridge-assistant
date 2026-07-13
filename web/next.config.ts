@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 
@@ -17,6 +18,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Self-host (#476): emit a minimal standalone server bundle (server.js + only
+  // the node_modules actually traced as reachable) so the Docker image doesn't
+  // need the full dependency tree. Ignored by `next dev`.
+  output: "standalone",
+  // The standalone trace is rooted at the monorepo root, not web/, or it misses
+  // files hoisted to the repo-root node_modules.
+  outputFileTracingRoot: path.join(__dirname, ".."),
   // Pin Turbopack's workspace root to this directory (web/).
   // Without this, Turbopack walks up to the repo root (which has its own
   // package-lock.json) and tries to resolve modules from there — causing

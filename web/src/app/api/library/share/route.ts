@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-function appUrl() {
-  return (
-    process.env.APP_URL ??
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(".supabase.co", ".vercel.app") ??
-    ""
-  );
-}
+import { shareBaseUrl } from "@/lib/share-url";
 
 export async function POST() {
   const supabase = await createClient();
@@ -28,7 +21,10 @@ export async function POST() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ share_token: token, share_url: `${appUrl()}/share/library/${token}` });
+  return NextResponse.json({
+    share_token: token,
+    share_url: `${shareBaseUrl()}/share/library/${token}`,
+  });
 }
 
 export async function DELETE() {

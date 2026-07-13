@@ -1,7 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
+import { supabaseServerUrl, SUPABASE_COOKIE_NAME } from "@/lib/supabase/urls";
 import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV !== "production";
+
+// Derive the Supabase origin from config rather than hardcoding `*.supabase.co`.
+// The browser talks to Supabase directly (anon-key client: auth + RLS-scoped
+// queries), so its origin must be in connect-src or every request is blocked.
+// Self-hosted Supabase lives on our own domain, so a hardcoded *.supabase.co
+// allowlist would silently break the whole app after the migration.
+const SUPABASE_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
 
 function buildCSP(nonce: string): string {
   // 'strict-dynamic' trusts scripts loaded by nonce-bearing scripts; host allowlists
@@ -25,9 +39,11 @@ function buildCSP(nonce: string): string {
     // (Radix UI portals set inline positioning styles that cannot carry a nonce).
     styleSrcElem,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://*.googleapis.com https://books.googleusercontent.com",
+    `img-src 'self' data: https://a.espncdn.com ${SUPABASE_ORIGIN} https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://*.googleapis.com https://books.googleusercontent.com`,
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    // No wss:// — the only Realtime subscription was the chat, which is gone (#476),
+    // so the realtime container is not deployed at all.
+    `connect-src 'self' ${SUPABASE_ORIGIN}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -46,9 +62,14 @@ export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeadersWithNonce } });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // Middleware runs on the SERVER — same routing constraint as every other
+    // server-side client. The CSP below still uses the PUBLIC origin, because that
+    // is what the browser connects to.
+    supabaseServerUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Must match the browser's cookie name — see urls.ts.
+      cookieOptions: { name: SUPABASE_COOKIE_NAME },
       cookies: {
         getAll: () => request.cookies.getAll(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

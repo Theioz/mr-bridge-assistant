@@ -1,7 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
-import { z } from "zod";
+import { chatJSON } from "@/lib/nutrition/parse";
 import { todayString, addDays } from "@/lib/timezone";
 import type { WorkoutExercise } from "@/lib/types";
 
@@ -45,24 +43,44 @@ export async function POST() {
 
   const exerciseList = [...missing];
 
-  // Single Haiku call — generate description + tips for all missing exercises at once
-  const { object } = await generateObject({
-    model: anthropic("claude-haiku-4-5-20251001"),
-    schema: z.object({
-      exercises: z.array(
-        z.object({
-          exercise: z.string(),
-          description: z.string(),
-          tips: z.array(z.string()),
-        }),
-      ),
-    }),
-    prompt:
-      `For each of the following exercises, write a 1–3 sentence description of how to perform it ` +
-      `and 2–4 short tips covering form cues, muscles targeted, or common mistakes. ` +
-      `Return them in the same order as the input list.\n\n` +
-      `Exercises: ${exerciseList.join(", ")}`,
-  });
+  // Local model (#476). This is a pure WRITING task — there is no database of
+  // ground truth to look up, so unlike the macro paths there is nothing better to
+  // defer to. It also runs at most once per new exercise and the result is stored,
+  // so it is never on a hot path.
+  const object = await chatJSON<{
+    exercises: { exercise: string; description: string; tips: string[] }[];
+  }>(
+    [
+      {
+        role: "system",
+        content:
+          "You write concise, accurate strength-training exercise descriptions. " +
+          "For each exercise: a 1-3 sentence description of how to perform it, and 2-4 " +
+          "short tips covering form cues, muscles targeted, or common mistakes. " +
+          "Return them in the same order as the input list. No motivational filler.",
+      },
+      { role: "user", content: `Exercises: ${exerciseList.join(", ")}` },
+    ],
+    {
+      type: "object",
+      properties: {
+        exercises: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              exercise: { type: "string" },
+              description: { type: "string" },
+              tips: { type: "array", items: { type: "string" } },
+            },
+            required: ["exercise", "description", "tips"],
+          },
+        },
+      },
+      required: ["exercises"],
+    },
+    180_000,
+  );
 
   // Build lookup map from the generated results
   const descByExercise = new Map<string, { description: string; tips: string[] }>();

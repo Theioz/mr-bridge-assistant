@@ -1,70 +1,77 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { Output, ToolLoopAgent } from "ai";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { estimateFromPhoto } from "@/lib/nutrition/estimate";
+import { readNutritionLabel } from "@/lib/nutrition/parse";
 
-export const maxDuration = 30;
+/**
+ * Meal photo -> macros, and nutrition label -> macros. Was Anthropic vision (#476).
+ *
+ * Two very different jobs behind one endpoint:
+ *
+ * - mode=food   The local VLM identifies the foods and portions; USDA FoodData
+ *               Central supplies the macros. The model never produces a calorie.
+ *               The user's `prompt`/`user_context` is AUTHORITATIVE — a stated
+ *               "6oz" is used verbatim rather than re-guessed from pixels, and a
+ *               stated dish name settles identification. Portion-from-pixels is
+ *               the weakest link, so letting the user hand us what they know is
+ *               the single biggest accuracy lever here.
+ *
+ * - mode=label  Pure OCR. The manufacturer already did the measuring; we just
+ *               transcribe. No USDA lookup, no estimation — the most reliable
+ *               path in the feature.
+ */
 
-const FoodAnalysisSchema = z.object({
-  food_name: z.string().describe("Name of the dish or food item"),
-  ingredients: z
-    .string()
-    .describe(
-      "Comma-separated list of visible ingredients and their estimated quantities, e.g. 'chicken breast ~150g, white rice ~1 cup, broccoli ~½ cup, olive oil ~1 tbsp'",
+export type FoodAnalysis = {
+  food_name: string;
+  ingredients: string;
+  meal_type_guess: "breakfast" | "lunch" | "dinner" | "snack";
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number;
+  confidence: "high" | "medium" | "low";
+  notes: string;
+};
+
+export type NutritionLabel = {
+  product_name: string;
+  serving_size: string;
+  servings_per_container: number | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number | null;
+  readable: boolean;
+  notes: string;
+};
+
+function mealTypeByHour(): FoodAnalysis["meal_type_guess"] {
+  const tz = process.env.USER_TIMEZONE || "America/Los_Angeles";
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(
+      new Date(),
     ),
-  meal_type_guess: z
-    .enum(["breakfast", "lunch", "dinner", "snack"])
-    .describe("Best guess for meal type based on the food"),
-  calories: z.number().describe("Estimated total calories for the visible portion (integer)"),
-  protein_g: z.number().describe("Estimated protein in grams"),
-  carbs_g: z.number().describe("Estimated carbohydrates in grams"),
-  fat_g: z.number().describe("Estimated fat in grams"),
-  fiber_g: z
-    .number()
-    .nullable()
-    .describe("Estimated dietary fiber in grams, or null if not applicable (e.g. pure fat/oil)"),
-  sugar_g: z
-    .number()
-    .nullable()
-    .describe("Estimated sugar in grams, or null if not applicable (e.g. plain protein/fat)"),
-  sodium_mg: z.number().describe("Estimated sodium in milligrams (integer)"),
-  confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the analysis"),
-  notes: z
-    .string()
-    .describe("Brief caveats or assumptions, e.g. 'portion size estimated from plate context'"),
-});
+  );
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 21) return "dinner";
+  return "snack";
+}
 
-export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema>;
-
-const NutritionLabelSchema = z.object({
-  product_name: z.string().describe("Product or food name if visible on the label"),
-  serving_size: z.string().describe("Serving size as printed, e.g. '1 cup (240ml)' or '28g'"),
-  servings_per_container: z.number().nullable().describe("Servings per container if printed"),
-  calories: z.number().describe("Calories per serving as printed (integer)"),
-  protein_g: z.number().describe("Protein in grams per serving"),
-  carbs_g: z.number().describe("Total carbohydrates in grams per serving"),
-  fat_g: z.number().describe("Total fat in grams per serving"),
-  fiber_g: z.number().nullable().describe("Dietary fiber in grams per serving"),
-  sugar_g: z.number().nullable().describe("Total sugars in grams per serving"),
-  sodium_mg: z.number().nullable().describe("Sodium in milligrams per serving"),
-  readable: z.boolean().describe("Whether the label was clearly readable"),
-  notes: z
-    .string()
-    .describe(
-      "Any caveats, e.g. 'label partially obscured' or 'daily value % used where grams not shown'",
-    ),
-});
-
-export type NutritionLabel = z.infer<typeof NutritionLabelSchema>;
+const MAX_SIZE = 5 * 1024 * 1024;
+const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   let formData: FormData;
   try {
@@ -77,103 +84,70 @@ export async function POST(req: Request) {
   if (!imageFile || !(imageFile instanceof File)) {
     return Response.json({ error: "No image file provided" }, { status: 400 });
   }
-
-  const userPromptRaw = formData.get("prompt");
-  const userPrompt = typeof userPromptRaw === "string" ? userPromptRaw.trim() : "";
-
-  const userContextRaw = formData.get("user_context");
-  const userContextStr =
-    typeof userContextRaw === "string" ? userContextRaw.trim().slice(0, 500) : "";
-  if (typeof userContextRaw === "string" && userContextRaw.length > 500) {
-    return Response.json({ error: "user_context must be ≤ 500 characters" }, { status: 400 });
-  }
-
-  const modeRaw = formData.get("mode");
-  const mode = modeRaw === "label" ? "label" : "food";
-
-  // Validate file type
-  if (!imageFile.type.startsWith("image/")) {
-    return Response.json({ error: "File must be an image" }, { status: 400 });
-  }
-
-  // Reject unsupported formats (e.g. HEIC) that Claude cannot process
-  const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  if (!SUPPORTED_TYPES.includes(imageFile.type)) {
+  if (!imageFile.type.startsWith("image/") || !SUPPORTED_TYPES.includes(imageFile.type)) {
     return Response.json(
       { error: `Unsupported format: ${imageFile.type}. Use JPEG, PNG, or WebP.` },
-      { status: 415 },
+      { status: 400 },
     );
   }
-
-  // 10 MB safety net — client-side compression targets < 4.5 MB before upload
-  const MAX_SIZE = 10 * 1024 * 1024;
   if (imageFile.size > MAX_SIZE) {
-    return Response.json({ error: "Image must be under 10 MB" }, { status: 413 });
+    return Response.json({ error: "Image too large (max 5MB)" }, { status: 400 });
   }
 
-  // Read into memory — never stored, analyzed in-transit only
-  const arrayBuffer = await imageFile.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-  const mimeType = imageFile.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  // The user's own words about the dish. Either field may carry it depending on
+  // which surface posted; both are size-capped.
+  const promptRaw = String(formData.get("prompt") ?? "").trim();
+  const contextRaw = String(formData.get("user_context") ?? "").trim();
+  if (promptRaw.length > 500 || contextRaw.length > 500) {
+    return Response.json({ error: "description must be ≤ 500 characters" }, { status: 400 });
+  }
+  const description = [promptRaw, contextRaw].filter(Boolean).join(". ");
+
+  const mode = formData.get("mode") === "label" ? "label" : "food";
+
+  const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
 
   try {
     if (mode === "label") {
-      const agent = new ToolLoopAgent({
-        model: anthropic("claude-sonnet-4-6"),
-        instructions:
-          "Read the nutrition facts label in this image precisely. Extract the exact printed values — do not estimate. If a value is not clearly legible, set it to null. Set readable to false if the label is too blurry, obscured, or not a nutrition facts label.",
-        output: Output.object({ schema: NutritionLabelSchema }),
-      });
-      const { output } = await agent.generate({
-        messages: [
-          {
-            role: "user",
-            content: [{ type: "image", image: base64, mediaType: mimeType }],
-          },
-        ],
-      });
-
-      return Response.json({ mode: "label", ...output });
+      const label = await readNutritionLabel(base64);
+      return Response.json(label satisfies NutritionLabel);
     }
 
-    const foodAgent = new ToolLoopAgent({
-      model: anthropic("claude-sonnet-4-6"),
-      instructions: `Analyze this food photo and estimate its nutritional content.
-Instructions:
-- Identify the dish name and list all visible ingredients with estimated quantities
-- Estimate macros and micros for the total visible portion (what would be eaten)
-- Use conservative estimates — do not inflate
-- If multiple items are present, sum the totals
-- If the user provided context below, use it to improve accuracy (e.g. specific ingredients, portion size, cooking method)
-- Set confidence to "high" only if the food is clearly identifiable and portion is estimable
-- Set confidence to "low" if the image is unclear, the food is ambiguous, or portion size is very uncertain
-- Include any key assumptions in notes (e.g. "sauce not included", "estimated half-plate portion")
-- If this is not a food image, set food_name to "Unknown", ingredients to "unknown", and all numeric values to 0`,
-      output: Output.object({ schema: FoodAnalysisSchema }),
-    });
-    const { output } = await foodAgent.generate({
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", image: base64, mediaType: mimeType },
-            ...(userContextStr
-              ? [
-                  {
-                    type: "text" as const,
-                    text: `User-provided description of the dish (for reference; may be inaccurate): ${userContextStr}`,
-                  },
-                ]
-              : []),
-            ...(userPrompt ? [{ type: "text" as const, text: `User context: ${userPrompt}` }] : []),
-          ],
-        },
-      ],
-    });
+    const est = await estimateFromPhoto(base64, { description: description || undefined });
 
-    return Response.json({ mode: "food", ...output });
+    if (est.items.length === 0) {
+      return Response.json(
+        {
+          error:
+            "Could not identify any food. Try describing the dish in the box below the photo " +
+            "(e.g. 'beef bolognese with parmesan, about 300g') — a description is used verbatim.",
+        },
+        { status: 422 },
+      );
+    }
+
+    const out: FoodAnalysis & { items: typeof est.items } = {
+      food_name: est.food_name,
+      // Human-readable breakdown of what we actually matched and weighed.
+      ingredients: est.items.map((i) => `${i.matched} ~${i.grams}g`).join(", "),
+      meal_type_guess: mealTypeByHour(),
+      calories: est.totals.calories,
+      protein_g: est.totals.protein_g,
+      carbs_g: est.totals.carbs_g,
+      fat_g: est.totals.fat_g,
+      fiber_g: est.totals.fiber_g,
+      sugar_g: est.totals.sugar_g,
+      sodium_mg: est.totals.sodium_mg,
+      confidence: est.confidence,
+      notes: description
+        ? `${est.notes} Your description was used for identification and any quantities you stated.`
+        : `${est.notes} Portions estimated from the image — describe the dish for a better estimate.`,
+      items: est.items,
+    };
+
+    return Response.json(out);
   } catch (err) {
-    console.error("[analyze-photo] Claude error:", err);
+    console.error("[analyze-photo] failed:", err);
     return Response.json(
       { error: err instanceof Error ? err.message : "Analysis failed" },
       { status: 500 },

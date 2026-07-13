@@ -10,18 +10,19 @@ For a live map of code relationships, see [graphify-out/GRAPH_REPORT.md](../grap
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Frontend | Next.js 16 App Router | Deployed on Vercel; SSR + RSC; `web/` subdirectory |
+| Frontend | Next.js 16 App Router | Self-hosted Docker on compute-core (web/Dockerfile, standalone output); SSR + RSC; `web/` subdirectory |
 | Database | Supabase Postgres | RLS enforced; pgcrypto for token encryption |
-| AI | Anthropic Claude API (AI SDK v4) | Sonnet/Haiku routing; Opus not in hot path |
+| Nutrition | **USDA FoodData Central** (measured data) + a local Ollama model (`qwen2.5vl:7b`) that only identifies foods and reads qty+unit — it is never asked for grams or calories. One residual Anthropic call site remains: `api/meals/scan-chat`. |
+| Conversation | **MCP server** (`web/mcp/`) → Claude Code, on the existing subscription. No API key. The in-app chat was deleted (#476). |
 | Auth | Supabase Auth | JWT; SSR cookie-based via `@supabase/ssr` |
-| Hosting / Cron | Vercel | Daily sync cron at 06:00 PST via `vercel.json` |
+| Hosting / Cron | Self-hosted on compute-core. Cron is the **node's crontab** — `web/vercel.json` is deleted. |
 | External APIs | Google Calendar, Gmail, Oura, Fitbit, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
 
 ---
 
 ## Schema — grouped by domain
 
-All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern](#rls-pattern) below). 27 tables total are user-scoped; `sync_log` is the single exception.
+All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern](#rls-pattern) below). 30 live tables (31 created, `timer_state` dropped in 20260427000001) total are user-scoped; `sync_log` is the single exception.
 
 ### Identity & Profile
 
@@ -95,8 +96,7 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 | Table | Purpose |
 |-------|---------|
 | `stocks_cache` | Stock quote + sparkline data from Polygon.io; refreshed on-demand |
-| `sports_cache` | Sports scores/schedules from TheSportsDB/ESPN; refreshed on-demand |
-| `timer_state` | Single-row upsert: active study timer state |
+| `sports_cache` | Sports scores/schedules from ESPN (TheSportsDB removed in #368); refreshed on-demand |
 
 ### SaaS / Multi-tenant Infrastructure
 
@@ -153,30 +153,36 @@ OAuth refresh tokens are long-lived credentials. They are stored encrypted at re
 
 ---
 
-## Prompt-Caching Architecture
+## Nutrition Architecture
 
-`POST /api/chat/route.ts` places two Anthropic cache breakpoints in every request:
+Macros are **not** produced by a language model. The pipeline splits the job by competence:
 
-1. **System prompt breakpoint** — at the end of the system prompt block, using `cache_control: { type: "ephemeral", ttl: "1h" }`.
-2. **Trailing tool breakpoint** — a synthetic tool result appended to the message array via `withTrailingCacheBreakpoint()`, also `ttl: "1h"`. This ensures the full conversation context up to the trailing message is cached even when the system prompt hasn't changed.
+1. **Identify** — the local model (`qwen2.5vl:7b` via Ollama) turns text or a photo into a
+   food list: name, quantity, unit. Nothing else.
+2. **Quantify** — USDA FoodData Central supplies the measured portion weights and the macros.
 
-**Why 1-hour TTL:** The Anthropic default is 5 minutes. On an active session, a 5-minute TTL causes 10–30 cache re-writes per hour at $3.75/MTok each. Switching to 1-hour TTL reduces that to 1 re-write/hr at $6/MTok — roughly 60–80% reduction in cache-write cost on active days.
+This is more accurate than what it replaced, not less: the previous implementation asked
+Claude to *recall* nutrition facts. Measured failure modes that motivated the split:
 
-**Model routing (`selectModel`):**
+- The model put a large egg at **105g** (real ~50g) and a cup of cooked rice at **284g**
+  (real ~158g) — roughly 2x on both. So it is never asked to weigh anything.
+- USDA's top search hit for "chicken breast, cooked" is **breaded microwaved tenders**
+  (252 kcal, 17.6g carbs vs ~165/0 for plain). So candidates are ranked to demote processed
+  forms, and the model *picks* from the cleaned list — selection is a task models are
+  reliable at, even when recall is not.
+- Some USDA records report energy only under Atwater codes (957/958), not the classic 208,
+  and some carry no nutrition at all. Both yield a plausible-looking **0 kcal** if unhandled.
 
-| Tier | Model | Criteria |
-|------|-------|---------|
-| Simple reads | Claude Haiku | 34 recognized read-only intent patterns (habits, calendar lookup, recovery, body stats, stocks, sports, streaks) |
-| Default | Claude Sonnet | All mutations, complex queries, anything not matched above |
-| Planning / Opus | Not in hot path | Available for session planning commands only |
+Onboarding macro targets use the **Mifflin-St Jeor** equation (`lib/nutrition/targets.ts`) —
+the model was being handed exactly the inputs to a formula and asked to approximate its
+output. It now returns `null` on insufficient input rather than inventing targets.
 
-Mutations (`assign_workout`, `create_calendar_event`, `reschedule_workout`, etc.) are never routed to Haiku regardless of phrasing — they have no simple-pattern match and fall through to Sonnet.
+Code: `web/src/lib/nutrition/{parse,fdc,estimate,suggest,targets}.ts`.
 
----
 
 ## Verified-Success Contract
 
-All state-mutating chat tools return a typed result shape:
+All state-mutating MCP tools return a typed result shape:
 
 ```typescript
 { ok: true } | { ok: false, error: string }
@@ -248,3 +254,60 @@ Planned: email invitations, `tenant_members.role` (owner/member/viewer), per-rol
 | [docs/SECURITY.md](SECURITY.md) | CSP hardening, nonce injection, auth guard patterns |
 | [graphify-out/GRAPH_REPORT.md](../graphify-out/GRAPH_REPORT.md) | Live code graph — god nodes, community clusters, surprising connections |
 | [supabase/migrations/](../supabase/migrations/) | Authoritative schema history — every table creation and RLS policy is here |
+
+## Deployment (self-hosted, #476 / ADR 0017)
+
+Runs on `compute-core`, a homelab node. **Three hostnames, three exposure levels:**
+
+| Hostname | Reach | What |
+|---|---|---|
+| `mr-bridge.jl-infra-lab.com` | tailnet only | The full app. Health data is never publicly routable. |
+| `supabase.jl-infra-lab.com` | tailnet only | The database gateway. It **must** be a real hostname — the browser talks to Supabase directly (anon-key client), so it cannot hide on the Docker network. |
+| `share.jl-infra-lab.com` | **public** | Only token-gated `/share/*`, behind a Caddy default-deny path allowlist. Dashboard, meals, journal, fitness, settings, admin and the whole API return 404 from the internet. |
+
+**Supabase is three containers**, not the upstream ten: Postgres 17.6 + GoTrue + PostgREST,
+plus a small node-local Caddy gateway. Dropped as verified-unused: kong, realtime,
+storage-api, imgproxy, edge-runtime, analytics, supavisor, studio.
+
+**Realtime is not deployed.** Migration `20260502000000_chat_messages_realtime.sql` added
+`chat_messages` to the realtime publication; its only consumer was the chat, which is gone.
+
+### Why the browser and the server use different Supabase URLs
+
+This is the single most important thing to understand about the deployment, and the source
+of four separate runtime-only bugs during the migration.
+
+Vercel + Supabase Cloud put both sides of the app on the public internet, so one URL served
+both. Self-hosted, they are on opposite sides of a network boundary:
+
+- **browser** → `https://supabase.jl-infra-lab.com` (tailnet vhost, via Caddy on the edge host)
+- **server** → `http://supabase-gateway:8000` (`SUPABASE_INTERNAL_URL`) — because the app's
+  node has **no route** to the edge host's tailnet IP. Using the public URL server-side fails
+  with `TypeError: fetch failed` on every service-role call, cron run and RSC page.
+
+Consequences that follow from that split, each of which broke something:
+
+1. **CORS** — GoTrue answers `OPTIONS` with a bare 204 and no `Access-Control-Allow-Origin`;
+   upstream, *Kong* adds it. Caddy now answers the `/auth/v1` preflight. (PostgREST handles
+   its own, which is why only login broke.)
+2. **Cookie name** — `@supabase/ssr` derives it from the URL's *hostname*, so browser and
+   server disagreed. Login **succeeded**, then middleware found no session and bounced to
+   `/login` forever. `cookieOptions.name` is now pinned (`lib/supabase/urls.ts`).
+
+## The MCP server
+
+`web/mcp/server.ts` exposes the same **30 tools** the chat had, to Claude Code / Claude
+Desktop, over the existing Claude subscription. It is a thin **adapter**, not a rewrite:
+`lib/tools/*` already defines each tool as an AI SDK `tool()` with a plain JSON Schema and an
+async `execute()` — structurally already an MCP tool. So each tool keeps **one**
+implementation and the app and Claude Code cannot drift apart.
+
+It also inherits none of the old chat route's bug class. There is no serverless deadline, no
+streaming wire format and no message history to reconstruct — so the orphaned
+`tool_use`/`tool_result` 400s, the fabricated "I ran out of time" message and the Continue
+button do not exist rather than being ported. Those were artifacts of running a tool loop
+inside a 90-second Lambda, not of the tools.
+
+**Laptop/desktop only.** claude.ai and the mobile app can only reach *remote* MCP servers over
+HTTPS; a stdio server is invisible to them. The web app remains the phone client — phone for
+logging, laptop for thinking.

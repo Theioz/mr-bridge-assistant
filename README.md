@@ -1,6 +1,12 @@
 # Mr. Bridge — Personal AI Assistant
 
-Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs fitness, habit, task, and health data from external services into your own Supabase database, delivers a live structured briefing when you open a session, and surfaces everything through a Next.js web interface you can access from any device.
+Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, habit, task and health data from external services into your own Supabase database, and surfaces it through a Next.js web app.
+
+**It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and it uses **no Anthropic API key**:
+
+- **Macros come from data, not from a model.** USDA FoodData Central supplies every gram and calorie; a small local model (Ollama) only identifies the food and reads the quantity. Measured: the model was ~2x off on portion weight (a large egg at 105g; real ~50g), so it is never asked to weigh anything.
+- **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing the same 30 tools — on your existing subscription, with no metered API.
+- **Only share links are public.** The app itself is tailnet-only.
 
 ## Architecture
 
@@ -13,70 +19,68 @@ Mr. Bridge is a self-hosted personal AI assistant built on Claude Code. It syncs
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Chat** — Conversational interface to Mr. Bridge; streams Claude responses with 26 built-in tools (tasks, habits, fitness, profile, Gmail, Calendar read/create/update/delete, recipes, meals, workout plans, workout history, equipment inventory, cancel/reschedule workouts, stock quotes, sports data, session history); conflict detection and deduplication pre-flight before every calendar create; every state-mutating tool returns a verified `{ ok, error? }` shape with read-after-write verification on calendar mutations, so Bridge surfaces real errors instead of falsely confirming actions; slash command autocomplete; **citation sources** — completed assistant messages show a collapsible "N sources" row listing each tool called, its result summary, and a ✕ marker on failures; **proactive in-session intelligence** — HRV decline, high RPE fatigue, overdue tasks, habit-at-risk, sleep deficit, and weight-vs-goal signals are checked on each session start and surfaced unprompted when data supports it (toggle in Settings → Fitness; off = no change to prompt)
+- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **30 tools** (tasks, habits, fitness, meals, calendar, Gmail read/search, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
 - **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, optional ntfy.sh push on completion, kill-switch in Settings → Fitness)
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
-- **Meals** — Daily macro summary vs goals (calories, protein, carbs, fat, fiber, sugar running total); food photo analyzer (photo → client-side compression → Claude vision → macro estimate → inline-editable review → log) with Bridge chat logging via a propose-then-confirm action card scoped to the analyzer context; nutrition label scanner (photo → Claude reads exact printed values → serving multiplier → log); soft calorie-consistency warning when manually entered calories diverge >10% from macro-derived kcal; HEIC detection with user-friendly guidance; 7-day meal history; "how this fits today" macro context on every scan result
-- **Backlog** — Personal media tracker for games, shows, movies, and books. Four tabbed categories with drag-to-reorder stack ranking; automatic metadata import (cover, creator, release date, description) via TMDB (movies + shows), IGDB (games), and OpenLibrary / Google Books (books); status lifecycle (backlog → active → paused → finished / dropped) with lifecycle timestamps; session log for re-watches / re-reads / replays; 0–10 rating and free-form review; shareable public read-only link per item. Chat tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`.
+- **Meals** — Daily macro summary vs goals. **Food photo analyzer** and **nutrition-label scanner**, both powered by a local model + USDA FoodData Central rather than a cloud API. Describe the dish alongside the photo and your words win: a stated "6oz" is used verbatim rather than re-guessed from pixels, and naming the dish settles identification. Inline-editable review before anything is logged. 7-day meal history and macro trends.
+- **Backlog** — Personal media tracker for games, shows, movies, and books. Four tabbed categories with drag-to-reorder stack ranking; automatic metadata import (cover, creator, release date, description) via TMDB (movies + shows), IGDB (games), and OpenLibrary / Google Books (books); status lifecycle (backlog → active → paused → finished / dropped) with lifecycle timestamps; session log for re-watches / re-reads / replays; 0–10 rating and free-form review; shareable public read-only link per item. MCP tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`.
 - **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
 - **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
-- **Data export** — one-click JSON or CSV zip of all your data from Settings → Data; one file per user-authored table plus a `_manifest.json` with schema version, timestamp, and row counts; optional date-range filter; chat history and encrypted OAuth tokens are deliberately excluded
+- **Data export** — one-click JSON or CSV zip of all your data from Settings → Data; one file per user-authored table plus a `_manifest.json` with schema version, timestamp, and row counts; optional date-range filter; encrypted OAuth tokens are deliberately excluded
 
 ---
 
 ## Prerequisites
 
-Have these accounts and tools ready before you start. You do not need to install anything in the repo yet.
+This runs on your own hardware. You need:
 
-| What | Where | Notes |
-|------|-------|-------|
-| **Claude Code CLI** | `npm install -g @anthropic-ai/claude-code` | Requires Node 20.9+ (Next.js 16 minimum) |
-| **Anthropic API key** | [console.anthropic.com](https://console.anthropic.com) → API Keys | Billing must be enabled (Settings → Billing) |
-| **Supabase account** | [supabase.com](https://supabase.com) | Free tier is fine |
-| **Vercel account** | [vercel.com](https://vercel.com) | Free tier is fine |
-| **Google account** | [console.cloud.google.com](https://console.cloud.google.com) | For Calendar, Gmail, and optionally Google Fit |
-| **Oura account** *(optional)* | [cloud.ouraring.com](https://cloud.ouraring.com) | For sleep and recovery data |
-| **Fitbit account** *(optional)* | [dev.fitbit.com](https://dev.fitbit.com) | For body composition and workouts |
-| **ntfy app** *(optional)* | ntfy.sh | For push notifications on Android/iOS |
+| What | Notes |
+|------|-------|
+| **A Linux host with Docker** | The reference deployment is a homelab node (`compute-core`). ~5 GB RAM for the app + Supabase + a 7B model. |
+| **Tailscale** (or equivalent) | The app and its database are **tailnet-only** — never publicly routable. Every device you use it from must be on the tailnet. |
+| **A domain** | For TLS + hostnames. The reference uses `jl-infra-lab.com` via Cloudflare. |
+| **Google Cloud project** | Calendar + Gmail + Fit OAuth. Free. |
+| **USDA FoodData Central key** | Free, instant: <https://fdc.nal.usda.gov/api-key-signup.html>. This is where macros come from. |
+| **Ollama** | Local model for food identification. CPU is fine. |
+| Fitbit / Oura *(optional)* | See [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607) — Fitbit's Web API is deprecated in 2026. |
 
----
+**No Anthropic API key. No Vercel account. No Supabase Cloud account.** Conversation runs through Claude Code on your existing subscription (see the MCP section).
 
 ## Setup guide
 
-### Step 1 — Fork and clone the repo
-
-Fork the repo to your GitHub account, then clone it:
+### Step 1 — Clone the repo
 
 ```bash
-git clone --recurse-submodules https://github.com/<your-username>/mr-bridge-assistant.git
+git clone https://github.com/Theioz/mr-bridge-assistant.git
 cd mr-bridge-assistant
 ```
 
-### Step 2 — Create a Supabase project
+### Step 2 — Stand up Supabase (self-hosted)
 
-1. Go to [supabase.com](https://supabase.com) → **New project**. Give it any name and choose a region close to you.
-2. Once created, go to **Settings → API**. Note these three values — you'll need them for every env file:
-   - **Project URL** — looks like `https://abcdefgh.supabase.co`
-   - **anon key** — the `anon` / `public` key (safe to use in the browser)
-   - **service_role key** — keep this secret; never expose it in client-side code
-3. Install the Supabase CLI and push the schema:
+The Supabase stack lives in the [jl-homelab](https://github.com/Theioz/jl-homelab) repo at `docker/supabase/` — three containers (Postgres 17.6 + GoTrue + PostgREST) plus a tiny local Caddy gateway. See its README for the full bring-up; the short version:
 
 ```bash
-brew install supabase/tap/supabase   # macOS; see supabase.com/docs/guides/cli for other OS
-supabase login
-supabase link --project-ref <your-project-ref>   # ref is the part of the URL after https://
-supabase db push
+cd docker/supabase
+./gen-keys.sh                # mint JWT_SECRET + anon + service_role keys
+docker compose up -d db      # 1. Postgres
+docker compose up -d auth    # 2. GoTrue creates the auth schema
+./restore.sh                 # 3. restore a dump, if migrating
+docker compose up -d rest    # 4. PostgREST
 ```
 
-This creates all tables (habits, tasks, fitness_log, recovery_metrics, workout_sessions, strength_sessions, strength_session_sets, meal_log, recipes, profile, journal_entries, notifications, workout_plans, stocks_cache, sports_cache, user_integrations, etc.).
+Then apply this repo's migrations (`supabase/migrations/`) with `psql` or the Supabase CLI.
 
-### Step 3 — Get your Anthropic API key
+**The keys are not interchangeable with Cloud's.** Supabase Cloud issues `sb_publishable_`/`sb_secret_` keys, which are a Cloud-only auth system; self-hosted GoTrue and PostgREST verify **legacy JWTs**. `gen-keys.sh` mints the right kind.
 
-1. Go to [console.anthropic.com](https://console.anthropic.com) → **API Keys** → **Create key**. Copy the key — it's only shown once.
-2. If you haven't added billing yet: **Settings → Billing → Add payment method**. The API requires an active billing method even on free-tier usage.
+### Step 3 — Get a USDA FoodData Central key
+
+<https://fdc.nal.usda.gov/api-key-signup.html> — free, arrives by email immediately. Set `FDC_API_KEY`.
+
+This is what replaced Claude for nutrition. The macros are read from measured data rather than recalled by a model, which is *more* accurate, not less.
+
 
 ### Step 4 — Set up Google Cloud OAuth
 
@@ -125,7 +129,7 @@ Skip any integrations you don't use. The app works with none, one, or all of the
 3. Copy your `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` into `.env`.
 4. Set `FITBIT_OAUTH_REDIRECT_URI` in `.env`:
    - Local: `http://localhost:3000/api/auth/fitbit/callback`
-   - Production (Vercel): `https://your-app.vercel.app/api/auth/fitbit/callback`
+   - Production: `https://mr-bridge.jl-infra-lab.com/api/auth/fitbit/callback`
    - Register the same URL under your app's **Callback URL** on dev.fitbit.com.
 5. In your running app, go to **Settings → Integrations → Connect Fitbit** and complete the OAuth flow. The refresh token is stored encrypted in `user_integrations` and rotates automatically.
 
@@ -138,7 +142,7 @@ Skip any integrations you don't use. The app works with none, one, or all of the
 
 For platform-specific setup (macOS banners, Android background delivery, Windows) see [docs/notifications-setup.md](docs/notifications-setup.md).
 
-Also set `APP_URL` in `.env` to your Vercel deployment URL (e.g. `https://your-app.vercel.app`). Without it, tap-to-open is silently skipped on all notifications.
+Also set `APP_URL` in `.env` to your app's hostname (e.g. `https://mr-bridge.jl-infra-lab.com`), and `SHARE_BASE_URL` to the public share host.
 
 #### Notification Setup (local cron)
 
@@ -174,74 +178,53 @@ tail -f ~/.mr-bridge/notify.log
 
 ### Step 7 — Configure environment variables
 
-Two env files are required: one for Python sync scripts (root), one for the Next.js web app.
-
 ```bash
 cp .env.example .env
-cp web/.env.local.example web/.env.local
 ```
 
-Fill in each file using the values collected in steps 2–6. Every variable has a comment explaining where it comes from.
+`.env.example` documents every variable, including which ones are load-bearing. The ones worth reading twice:
 
-**Root `.env`** — used by Python scripts (`sync-oura.py`, `sync-fitbit.py`, `check_hrv_alert.py`, etc.):
+| Variable | Why it matters |
+|---|---|
+| `ENCRYPTION_KEY` | The pgcrypto key for `user_integrations.refresh_token_encrypted` — your Google/Fitbit/Oura **refresh tokens**. Lose it and every integration must be re-authorised by hand. **Prove it decrypts a real row before trusting any restore**: the wrong key restores a healthy-looking database in which every integration silently fails. |
+| `SUPABASE_URL` vs `SUPABASE_INTERNAL_URL` | The browser and the server reach Supabase on **different** URLs. The app container has no route to the tailnet vhost, so it uses a node-local gateway. Collapsing these into one breaks every server-side call with `TypeError: fetch failed`. |
+| `NTFY_TOPIC` | Mind the spelling. Production once had `NFTY_TOPIC`, and push notifications silently 503'd for months. |
+| `SHARE_BASE_URL` | Share links go to people *outside* the tailnet, so they must resolve on the public host. Using `APP_URL` hands recipients an unreachable link. |
 
-| Variable | Where to get it |
-|----------|----------------|
-| `SUPABASE_URL` | Supabase → Settings → API → Project URL |
-| `SUPABASE_ANON_KEY` | Supabase → Settings → API → anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
-| `GOOGLE_CLIENT_ID` | Google Cloud → Credentials (from downloaded JSON) |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials (from downloaded JSON) |
-| `OURA_ACCESS_TOKEN` | cloud.ouraring.com → Personal Access Tokens *(optional)* |
-| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app *(optional)* |
-| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app *(optional)* |
-| `FITBIT_REFRESH_TOKEN` | Output of `scripts/sync-fitbit.py --setup` *(optional; also stored in Supabase)* |
-| `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` — must match your Fitbit profile unit setting |
-| `GOOGLE_FIT_REFRESH_TOKEN` | Output of `scripts/sync-googlefit.py --setup` *(optional)* |
-| `NTFY_TOPIC` | Your chosen ntfy topic string *(optional)* |
-| `APP_URL` | Your Vercel deployment URL, e.g. `https://your-app.vercel.app` *(optional — enables notification tap-to-open)* |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
-| `PICOVOICE_ACCESS_KEY` | picovoice.ai *(optional — voice interface only)* |
+`NEXT_PUBLIC_*` values are inlined into the **client bundle at build time**, not read at runtime — so they must be right when the image is built, or the browser silently talks to `undefined`.
 
-**`web/.env.local`** — used by the Next.js app and Vercel:
+### Step 8 — Deploy
 
-| Variable | Where to get it |
-|----------|----------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
-| `GOOGLE_CLIENT_ID` | Google Cloud → Credentials |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud → Credentials |
-| `GOOGLE_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/google/callback` (dev) / `https://your-app.vercel.app/api/auth/google/callback` (prod) — must match Google Cloud Console |
-| `ENCRYPTION_KEY` | 32-byte hex key for `pgp_sym_encrypt` — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `OURA_ACCESS_TOKEN` | Owner fallback during migration — new users connect via /settings *(optional)* |
-| `FITBIT_CLIENT_ID` | dev.fitbit.com → Your app — app-level credential, required for Fitbit OAuth |
-| `FITBIT_CLIENT_SECRET` | dev.fitbit.com → Your app — app-level credential, required for Fitbit OAuth |
-| `FITBIT_OAUTH_REDIRECT_URI` | `http://localhost:3000/api/auth/fitbit/callback` (dev) / `https://your-app.vercel.app/api/auth/fitbit/callback` (prod) — must match the **Redirect URL** field in your Fitbit app on dev.fitbit.com. Fitbit allows only one redirect URL per personal app; update it when switching from local to prod. |
-| `FITBIT_WEIGHT_UNIT` | `lbs` or `kg` *(optional)* |
-| `USER_TIMEZONE` | IANA timezone, e.g. `America/Los_Angeles` |
-| `OWNER_USER_ID` | Your Supabase auth UUID — run `python3 scripts/print_owner_id.py`. Required for cron sync. |
-| `CRON_SECRET` | Generate a random string, e.g. `openssl rand -hex 32` |
-| `GITHUB_PAT` | GitHub Personal Access Token with `workflow` scope — used by `/api/cron/weekly-plan` to dispatch the `weekly-plan.yml` GitHub Actions workflow. Create at GitHub → Settings → Developer settings → Personal access tokens (fine-grained or classic with `workflow`). |
-| `APP_URL` | Your Vercel deployment URL *(optional — enables notification tap-to-open)* |
-| `POLYGON_API_KEY` | [polygon.io](https://polygon.io) → Dashboard → API Keys *(optional — stock watchlist widget + `get_stock_quote` chat tool; free tier supports EOD data)* |
-| `SPORTSDB_API_KEY` | [thesportsdb.com](https://www.thesportsdb.com/api.php) → personal key *(optional — sports dashboard widget + `get_sports_data` chat tool; defaults to public test key `3` if unset)* |
-| `TMDB_API_KEY` | [themoviedb.org](https://www.themoviedb.org) → Settings → API → Create API key *(required for backlog movie + show metadata search)* |
-| `IGDB_CLIENT_ID` | [dev.twitch.tv](https://dev.twitch.tv/console/apps) → Register Your Application → Client ID *(required for backlog game metadata search)* |
-| `IGDB_CLIENT_SECRET` | Same Twitch app → New Secret *(required for backlog game metadata search)* |
-| `GOOGLE_BOOKS_API_KEY` | [console.cloud.google.com](https://console.cloud.google.com) → APIs → Books API → Credentials *(optional — fallback when OpenLibrary lacks covers)* |
+The app is a plain Docker image (`web/Dockerfile`, Next.js standalone output). The homelab stacks live in [jl-homelab](https://github.com/Theioz/jl-homelab): `docker/mr-bridge/`, `docker/supabase/`, `docker/ollama/`.
 
-### Step 8 — Deploy to Vercel
+```bash
+docker compose build && docker compose up -d
+```
 
-1. Go to [vercel.com](https://vercel.com) → **New Project** → import your GitHub fork.
-2. Set the **Root Directory** to `web`.
-3. Go to **Settings → Environment Variables** and add every variable from `web/.env.local`, including `CRON_SECRET`, `APP_URL`, and `GITHUB_PAT`.
-4. Click **Deploy**. Vercel will auto-deploy on every push to `main` going forward.
+**Ingress** — three hostnames, three exposure levels:
 
-The `vercel.json` in `web/` schedules a daily sync cron at 6am PST (`0 14 * * *`) that calls `/api/cron/sync` to pull overnight Oura, Fitbit, and Google Fit data before you open the dashboard.
+| Hostname | Reach | What |
+|---|---|---|
+| `mr-bridge.<domain>` | **tailnet only** | The full app. Health data is never publicly routable. |
+| `supabase.<domain>` | **tailnet only** | The database gateway. It *must* be a real hostname — the browser talks to Supabase directly, so it cannot hide on the Docker network. |
+| `share.<domain>` | **public** | Only token-gated `/share/*`, behind a default-deny path allowlist. The dashboard, meals, journal, fitness, settings, admin and the entire API return **404** from the internet. |
 
-The weekly planning cron (`0 15 * * 0` — Sunday 8am PST) now fires a GitHub Actions `workflow_dispatch` event rather than running the planning logic directly. The actual work (Claude AI passes + Supabase writes) runs in `.github/workflows/weekly-plan.yml`, which has a 30-minute timeout instead of Vercel's 60-second function limit. Requires `GITHUB_PAT`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, and `APP_URL` stored as GitHub Actions secrets in your fork.
+**Cron** — `web/vercel.json` is gone. The three jobs (`/api/cron/sync`, `/api/cron/reset-demo`) run from the node's crontab, authenticated with `CRON_SECRET` exactly as before. The weekly planner moved to a Claude Code command (see below).
+
+### Step 8b — Wire up the MCP server (this is the chat)
+
+There is no in-app chat. `web/mcp/server.ts` exposes the same 30 tools to Claude Code:
+
+```bash
+# secrets live OUTSIDE the repo — a service-role key in a tree you `git add -A`
+# is one typo from publication
+bw get notes mr-bridge-env > ~/.mrb-secrets/env && chmod 600 ~/.mrb-secrets/env
+```
+
+`.mcp.json` already registers it. Open Claude Code in the repo and the tools are there.
+
+**Laptop/desktop only.** claude.ai and the Claude mobile app can only reach *remote* MCP servers over HTTPS; a stdio server on your machine is invisible to them. The web app remains the phone client — which is the intended split: **phone for logging, laptop for thinking**.
+
 
 ### Step 9 — Connect Google Calendar + Gmail in Claude Code
 
@@ -271,7 +254,7 @@ The `/admin` route is gated by `is_admin: true` in your Supabase user metadata. 
 3. Under **User Metadata**, add: `{ "is_admin": true }`
 4. Save
 
-Navigate to `https://your-app.vercel.app/admin` — you should see the tenant list. Non-admin accounts receive a 404 (the route is not advertised).
+Navigate to `https://mr-bridge.jl-infra-lab.com/admin` — you should see the tenant list. Non-admin accounts receive a 404 (the route is not advertised).
 
 ### Step 11 — First session
 
@@ -350,30 +333,22 @@ Requires `web/.env.local` to be filled in (see Step 7). The app runs entirely ag
 
 ## Running smoke tests
 
-Automated browser smoke for chat-route and tool changes, using Playwright. Replaces the manual "start dev, sign in, send a message" loop for everything covered by a committed spec. `@playwright/mcp` is also registered in [.mcp.json](.mcp.json) so Claude Code can drive a real browser during sessions.
+**Parked (#476).** The Playwright suite cannot run on a GitHub-hosted runner any more,
+and no edit to the specs fixes that: the app and Supabase are **tailnet-only**, so a cloud
+runner has no route to either and every spec fails at login. `.github/workflows/smoke.yml`
+is `workflow_dispatch`-only so it never fails by accident.
 
-**One-time setup**
+Re-enabling means either a self-hosted runner on the tailnet, or standing up a throwaway
+Supabase + app inside the job.
+
+The chat specs are **gone** (`chat.spec.ts`, `chat-multi-turn-smoke.spec.ts`,
+`tool-status-feedback.spec.ts`) — there is no chat to test. The auth, export and a11y
+specs are still valuable and were kept.
 
 ```bash
-cd web
-npm run smoke:install           # download Chromium (~150 MB)
+npm run smoke:a11y    # a11y sweep (still useful locally)
 ```
 
-Create a dedicated smoke-test Supabase user (never point smoke at your real account) and fill in `SMOKE_TEST_EMAIL`, `SMOKE_TEST_PASSWORD`, and `SMOKE_SUPABASE_SERVICE_KEY` per `.env.example`. Full walkthrough, including the test-account creation steps, lives in [docs/smoke-testing.md](docs/smoke-testing.md).
-
-**Run**
-
-```bash
-cd web
-npm run smoke:chat              # the chat smoke (sign in → send → persist)
-npm run smoke                   # full suite (currently == smoke:chat)
-```
-
-The config auto-starts `next dev` on port 3000 (or reuses a running one). On failure, Playwright writes a trace + screenshot to `web/smoke/test-results/`.
-
-**What's covered:** chat happy-path (send, receive, persist, no console errors). **What stays manual for now:** a11y (axe), perf (Lighthouse), multi-turn + tool-call + mutating-tool flows, iOS Safari, VoiceOver — all tracked as follow-ups to #373. The manual chat-smoke rule still applies for anything outside the committed spec coverage.
-
----
 
 ## File structure
 
@@ -436,7 +411,7 @@ mr-bridge-assistant/
 │       ├── 20260426000000_db_generated_timestamps.sql
 │       └── 20260430000000_add_backlog.sql
 │
-├── web/                                   # Next.js web interface (deployed on Vercel)
+├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
 │   ├── src/
 │   │   ├── app/
@@ -452,7 +427,6 @@ mr-bridge-assistant/
 │   │   │   │   ├── habits/page.tsx        # Habit tracking — add/archive + 7/30/90d history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
 │   │   │   │   ├── weekly/page.tsx        # Weekly review — habits, tasks, workouts, recovery, body comp, journal
-│   │   │   │   ├── chat/page.tsx          # Mr. Bridge chat
 │   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
 │   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: food photo or label scan, serving multiplier, daily macro context
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
@@ -477,7 +451,7 @@ mr-bridge-assistant/
 │   │   │   │   │       ├── share/route.ts       # POST generate token, DELETE revoke
 │   │   │   │   │       └── priority/route.ts    # PATCH priority (drag-to-reorder)
 │   │   │   │   ├── cron/
-│   │   │   │   │   ├── sync/route.ts      # GET — Vercel cron handler; CRON_SECRET auth; daily 6am PST
+│   │   │   │   │   ├── sync/route.ts      # GET — node crontab hits this; CRON_SECRET auth; daily 6am PST
 │   │   │   │   │   └── reset-demo/route.ts # GET — nightly demo data wipe + reseed (CRON_SECRET auth)
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
@@ -566,7 +540,6 @@ mr-bridge-assistant/
 │   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
 │   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
-│   ├── vercel.json                        # Cron: /api/cron/sync daily at 6am PST (0 14 * * *)
 │   └── package.json
 │
 ├── .claude/
@@ -642,13 +615,12 @@ Or sign in manually:
 - **Email:** `demo@mr-bridge.app`
 - **Password:** set in your deployment's `DEMO_PASSWORD` env var (see `.env.example`)
 
-The demo account is fully interactive: toggle habits, add tasks, chat with the AI, browse fitness data. All changes are wiped and reseeded at 3 AM PT each night.
+The demo account is fully interactive: toggle habits, add tasks, log meals, browse fitness data. All changes are wiped and reseeded at 3 AM PT each night.
 
 **What's real vs mocked:**
 | Feature | Demo behaviour |
 |---------|----------------|
 | Habits, tasks, fitness, recovery | Real data from Supabase (seeded) |
-| Chat (AI) | Groq Llama 3.3-70b — free tier, no Claude API cost |
 | Gmail | Hardcoded mock emails |
 | Google Calendar | Hardcoded mock events |
 | Fitbit / Oura sync | Not connected — seed data covers it |
@@ -657,91 +629,63 @@ The demo account is fully interactive: toggle habits, add tasks, chat with the A
 
 ## Self-Hosting
 
-This repo is designed to run as a personal deployment. If you fork it, choose a unique name for your app before deploying to avoid conflicts.
+This section used to be a fork-and-deploy-to-Vercel guide. It isn't any more — the
+project genuinely self-hosts now (#476), and that changes what you need to know.
 
-### Places that reference "mr-bridge" by name
+### What you are actually running
 
-Run a global find-and-replace on these before deploying:
+| Piece | Where |
+|---|---|
+| Next.js app | Docker (`web/Dockerfile`, standalone output). Built on the node from a git checkout. |
+| Supabase | **3 containers** — Postgres 17.6 + GoTrue + PostgREST, plus a small local Caddy gateway. Not Kong, not Realtime, not Storage, not edge-runtime, not analytics, not the pooler. None of them are used. |
+| Local model | Ollama (`qwen2.5vl:7b`), CPU, loopback-only. |
+| Nutrition data | USDA FoodData Central. |
+| Chat | Claude Code + MCP (`web/mcp/`), on your subscription. |
 
-| Location | What to change |
-|----------|----------------|
-| `web/package.json` → `"name"` | `mr-bridge-web` → your app name |
-| Vercel project name | Set in the Vercel dashboard on first deploy |
-| Supabase project name | Set when creating the project |
-| `.env` → `NEXT_PUBLIC_APP_NAME` (if used) | Your app name |
-| Any hardcoded `mr-bridge.app` domains in `.env` | Your domain |
+Stacks live in [jl-homelab](https://github.com/Theioz/jl-homelab) under `docker/{mr-bridge,supabase,ollama}/`.
 
-### One-time setup after forking
+### The four traps
 
-```bash
-# 1. Install dependencies
-cd web && npm install
-pip3 install -r scripts/requirements.txt
+Vercel + Supabase Cloud let the browser and the server share **one URL**. Self-hosting
+splits them, and each layer breaks separately — all four are runtime-only failures that
+no code review catches:
 
-# 2. Copy and fill environment variables
-cp .env.example .env
-# Edit .env — fill in Supabase, Anthropic, Google OAuth, Groq keys
+1. **Server-side fetch.** The app used `NEXT_PUBLIC_SUPABASE_URL` server-side. Once the
+   server is inside a tailnet and the URL points at a host it cannot route to, every
+   service-role call, cron run and RSC page dies with `TypeError: fetch failed`.
+   Fix: a separate `SUPABASE_INTERNAL_URL`.
+2. **`host.docker.internal` is not the host's loopback.** It maps to the bridge gateway
+   (172.17.0.1), so it cannot reach a container published on `127.0.0.1`. Use a shared
+   Docker network.
+3. **CORS.** GoTrue answers `OPTIONS` with a bare 204 and **no** `Access-Control-Allow-Origin`
+   — upstream, *Kong* adds it. Drop Kong and login fails with a useless "Failed to fetch".
+   PostgREST handles its own preflight, which is why only login breaks.
+4. **The auth cookie name.** `@supabase/ssr` derives it from the Supabase URL's *hostname*.
+   With two different URLs, the browser writes one cookie and the server looks for another.
+   Login **succeeds**, then middleware finds no session and bounces you to `/login` forever,
+   with no error shown. Pin `cookieOptions.name`.
 
-# 3. Run the schema migration in Supabase SQL editor
-# Copy contents of supabase/migrations/ and run in order
+### Keys do not carry over
 
-# 4. Get your Supabase user ID for OWNER_USER_ID
-python3 scripts/print_owner_id.py
-# Add OWNER_USER_ID=<uuid> to .env
+Supabase Cloud issues `sb_publishable_` / `sb_secret_` keys — a Cloud-only auth system.
+Self-hosted GoTrue and PostgREST verify **legacy JWTs**. Mint them with
+`docker/supabase/gen-keys.sh`. (The upside: your Cloud project keeps working on its own
+keys, so it stays a genuine rollback.)
 
-# 5. Create the demo account in Supabase Auth dashboard
-# Email: demo@mr-bridge.app (or your chosen demo email)
-# Then add DEMO_EMAIL, DEMO_PASSWORD, DEMO_USER_ID to .env
+### Backups are now your problem
 
-# 6. Seed the demo account
-python3 scripts/seed_demo.py
+Supabase Cloud's managed PITR does **not** come with you, and this repo's own
+Settings → Data export is **not a backup** — it deliberately excludes chat history and
+`user_integrations` (the encrypted OAuth tokens), so it cannot restore an account.
+Run a nightly `pg_dump` of both the `public` **and** `auth` schemas and put it somewhere
+else. `auth` matters because every table foreign-keys to `auth.users(id)` and
+`OWNER_USER_ID` is a literal UUID in your env — if those IDs change, everything breaks.
 
-# 7. Add NEXT_PUBLIC_DEMO_EMAIL and NEXT_PUBLIC_DEMO_PASSWORD to .env
-# (these are exposed to the browser to power the "Try demo" button)
-```
+### Required environment
 
-### Refreshing the demo account between releases
+See `.env.example` — it documents every variable and flags the load-bearing ones.
+There is **no** `ANTHROPIC_API_KEY`, **no** `GROQ_API_KEY`, and **no** Vercel anything.
 
-The seed script is idempotent and is what you re-run each release to pick up new tables, widgets, or persona changes. Two entry points:
-
-```bash
-# Full wipe + reseed (recommended between releases):
-python3 scripts/reset_demo.py --yes
-
-# Seed-only (safe re-run; upserts where constraints allow, inserts new rows otherwise):
-python3 scripts/seed_demo.py
-```
-
-OAuth-gated integrations are **not** covered by the seed — they require a real auth'd session and have to be re-linked manually from the demo account's Settings page after reset:
-
-- Google Calendar + Gmail (OAuth)
-- Oura Ring token
-- Fitbit token
-- Google Fit token
-
-Before seeding against a fresh Supabase project: apply every migration in `supabase/migrations/` first. The seed script relies on `enable row level security` being active on every multi-tenant table and on the `(user_id, …)` unique constraints from migrations `20260413000002` and `20260417000001` — without them, re-runs will duplicate rows and cross-user collisions become possible.
-
-### Required env vars
-
-| Variable | Description |
-|----------|-------------|
-| `SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_URL` | Same as above (browser-accessible) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-only) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key (browser) |
-| `ANTHROPIC_API_KEY` | Claude API key |
-| `GROQ_API_KEY` | Groq API key — free at console.groq.com |
-| `OWNER_USER_ID` | Your Supabase auth UUID (run `print_owner_id.py`) |
-| `DEMO_USER_ID` | Demo account's Supabase auth UUID |
-| `DEMO_EMAIL` | Demo account email |
-| `DEMO_PASSWORD` | Demo account password |
-| `NEXT_PUBLIC_DEMO_EMAIL` | Same as `DEMO_EMAIL` (exposes "Try demo" button) |
-| `NEXT_PUBLIC_DEMO_PASSWORD` | Same as `DEMO_PASSWORD` (powers auto-fill) |
-| `CRON_SECRET` | Secret for protecting cron endpoints |
-| `ENCRYPTION_KEY` | 32-byte hex key for encrypting refresh tokens in `user_integrations` |
-| `GOOGLE_OAUTH_REDIRECT_URI` | Callback URL registered in Google Cloud Console |
-
----
 
 ## Changelog
 

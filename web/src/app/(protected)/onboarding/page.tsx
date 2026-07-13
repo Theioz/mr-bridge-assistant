@@ -2,10 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { computeNutritionTargets } from "@/lib/nutrition/targets";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import type { SportsFavorite } from "@/lib/sync/sports";
 
@@ -155,46 +153,24 @@ async function suggestNutritionTargets(
     : null;
   const sex = overrides?.biologicalSex ?? v["biological_sex"] ?? null;
   const goal = overrides?.fitnessGoal ?? v["fitness_goal"] ?? null;
-  const level = overrides?.fitnessLevel ?? v["fitness_level"] ?? null;
-  const workoutPrefs =
-    overrides?.workoutPrefs ??
-    (v["workout_preferences"] ? (JSON.parse(v["workout_preferences"]) as string[]) : []);
   const rawTargetWeightLb = overrides?.targetWeightLb ?? v["target_weight_lb"];
   const targetWeightLb = rawTargetWeightLb ? parseFloat(rawTargetWeightLb) : null;
   const workoutDaysPerWeek = overrides?.workoutDaysPerWeek ?? v["workout_days_per_week"] ?? null;
 
-  const parts: string[] = [];
-  if (age) parts.push(`Age: ${age}`);
-  if (sex) parts.push(`Sex: ${sex}`);
-  if (weightLb)
-    parts.push(`Current weight: ${weightLb} lbs (${(weightLb / 2.20462).toFixed(1)} kg)`);
-  if (targetWeightLb)
-    parts.push(
-      `Target weight: ${targetWeightLb} lbs (${(targetWeightLb / 2.20462).toFixed(1)} kg)`,
-    );
-  if (heightCm) parts.push(`Height: ${heightCm} cm`);
-  if (goal) parts.push(`Goal: ${goal.replace(/_/g, " ")}`);
-  if (level) parts.push(`Fitness level: ${level}`);
-  if (workoutDaysPerWeek) parts.push(`Workout days per week: ${workoutDaysPerWeek}`);
-  if (workoutPrefs.length > 0) parts.push(`Workout types: ${workoutPrefs.join(", ")}`);
-
-  if (parts.length === 0) return null;
-
-  try {
-    const { object } = await generateObject({
-      model: anthropic("claude-haiku-4-5-20251001"),
-      schema: z.object({
-        calories: z.number(),
-        protein_g: z.number(),
-        carbs_g: z.number(),
-        fat_g: z.number(),
-      }),
-      prompt: `You are a sports nutritionist. Suggest daily macro targets for this person:\n\n${parts.join("\n")}`,
-    });
-    return object;
-  } catch {
-    return null;
-  }
+  // Computed with Mifflin-St Jeor rather than asked of an LLM (issue 476). The model
+  // was being handed exactly the inputs to the equation and asked to approximate
+  // its output — deterministic beats plausible here. Returns null when the inputs
+  // are insufficient, so the wizard leaves the fields blank instead of inventing
+  // numbers (the LLM path would happily hallucinate targets from a partial profile).
+  return computeNutritionTargets({
+    ageYears: age,
+    biologicalSex: sex,
+    weightLb,
+    targetWeightLb,
+    heightCm,
+    goal,
+    workoutDaysPerWeek: workoutDaysPerWeek ? Number(workoutDaysPerWeek) : null,
+  });
 }
 
 async function saveWatchlist(tickers: string[]) {

@@ -31,7 +31,6 @@ import anthropic  # noqa: E402
 
 APP_URL = os.environ.get("APP_URL") or "https://mr-bridge-assistant.vercel.app"
 CRON_SECRET = os.environ["CRON_SECRET"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 HEADERS = {
     "Authorization": f"Bearer {CRON_SECRET}",
@@ -348,99 +347,80 @@ def fetch(url: str, method: str = "GET", body: bytes | None = None) -> tuple[int
         return e.code, e.read().decode()
 
 
-def extract_json(text: str) -> dict:
-    fence = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
-    raw = fence.group(1).strip() if fence else text.strip()
-    start, end = raw.index("{"), raw.rindex("}")
-    return json.loads(raw[start: end + 1])
-
-
-def generate(client: anthropic.Anthropic, messages: list[dict], label: str) -> dict:
-    print(f"  {label}...")
-    msg = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=8192,
-        messages=messages,
-    )
-    raw = msg.content[0].text
-    try:
-        return extract_json(raw)
-    except Exception as e:
-        print(f"  JSON parse error ({e}) — retrying with explicit fix instruction")
-        msg2 = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=8192,
-            messages=messages + [
-                {"role": "assistant", "content": raw},
-                {"role": "user", "content": "The JSON you returned was malformed. Return ONLY the corrected, complete JSON object in a single ```json code block. No other text."},
-            ],
-        )
-        return extract_json(msg2.content[0].text)
-
-
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── CLI ───────────────────────────────────────────────────────────────────────
+#
+# The generation step used to be an Anthropic API call from inside this script.
+# It is now CLAUDE CODE itself (.claude/commands/weekly-plan.md), so this file is
+# reduced to the parts that must stay deterministic:
+#
+#   context   GET the planning context (AI-free endpoint)
+#   validate  run the structural validators against a plan file — coverage,
+#             recovery spacing, same-day redundancy. These are RULES, not
+#             judgement, and must not be left to a model.
+#   submit    POST the plan (AI-free endpoint) — writes workout_plans + the
+#             meal-prep task
+#
+# Splitting it this way means the model can be swapped or removed without
+# touching the rules, and the rules cannot be quietly "interpreted" away.
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--week-start", required=True, help="YYYY-MM-DD of the Monday to plan for")
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_ctx = sub.add_parser("context", help="print the planning context for a week")
+    p_ctx.add_argument("--week-start", required=True, help="YYYY-MM-DD (a Monday)")
+
+    p_val = sub.add_parser("validate", help="check a plan against the structural rules")
+    p_val.add_argument("plan", help="path to the plan JSON (or - for stdin)")
+
+    p_sub = sub.add_parser("submit", help="write a validated plan")
+    p_sub.add_argument("plan", help="path to the plan JSON (or - for stdin)")
+    p_sub.add_argument("--week-start", required=True, help="YYYY-MM-DD (a Monday)")
+
     args = parser.parse_args()
-    week_start = args.week_start
 
-    # 1. Fetch planning context (includes equipment, profile, last week's performance)
-    print(f"Fetching planning context for week of {week_start}...")
-    status, context_text = fetch(f"{APP_URL}/api/internal/plan?week_start={week_start}")
-    if status != 200:
-        print(f"Failed to fetch context: {status}\n{context_text}", file=sys.stderr)
-        sys.exit(1)
-    print(f"Context fetched ({len(context_text)} chars)")
+    if args.cmd == "context":
+        status, text = fetch(f"{APP_URL}/api/internal/plan?week_start={args.week_start}")
+        if status != 200:
+            print(f"failed to fetch context: {status}\n{text}", file=sys.stderr)
+            sys.exit(1)
+        print(text)
+        return
 
-    # Detect pull-up bar from context (context includes equipment section)
-    has_pull_up_bar = "pull-up bar" in context_text.lower() or "pull_up_bar" in context_text.lower()
-    print(f"Pull-up bar detected: {has_pull_up_bar}")
+    raw = sys.stdin.read() if args.plan == "-" else open(args.plan).read()
+    plan = json.loads(raw)
 
-    # 2. First-pass plan generation
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    prompt = PLANNER_PROMPT.format(planning_context=context_text)
-    plan = generate(client, [{"role": "user", "content": prompt}], "Generating plan (pass 1)")
-    print(f"  → {len(plan.get('workout_days', []))} workout days")
+    if args.cmd == "validate":
+        day_plans = plan.get("days") or plan.get("day_plans") or []
+        exercises = [
+            e.get("exercise", "")
+            for d in day_plans
+            for phase in ("warmup", "workout", "cooldown")
+            for e in (d.get(phase) or [])
+        ]
+        has_bar = "--has-pull-up-bar" in sys.argv
 
-    # 3. Structural validation + correction pass
-    correction_prompt = build_correction_prompt(plan, has_pull_up_bar)
-    if correction_prompt:
-        print("  Structural issues found — running correction pass")
-        try:
-            plan = generate(client, [{"role": "user", "content": correction_prompt}], "Correction pass (pass 2)")
-            # Verify correction resolved issues
-            remaining = build_correction_prompt(plan, has_pull_up_bar)
-            if remaining:
-                print("  WARNING: correction pass did not fully resolve all issues — using corrected plan anyway")
-            else:
-                print("  Correction pass clean ✓")
-        except Exception as e:
-            print(f"  Correction pass failed ({e}) — using first-pass plan", file=sys.stderr)
-    else:
-        print("  Structural validation passed ✓")
+        problems = []
+        problems += [f"coverage: {m}" for m in validate_weekly_coverage(exercises, has_bar)]
+        problems += [f"recovery: {v}" for v in validate_recovery(day_plans)]
+        problems += [f"redundancy: {r}" for r in check_same_day_redundancy(exercises)]
 
-    # 4. Write to Supabase via internal endpoint
-    print("Writing plan to Supabase...")
-    payload = json.dumps({**plan, "week_start": week_start}).encode()
-    status, write_body = fetch(f"{APP_URL}/api/internal/plan", method="POST", body=payload)
-    try:
-        result = json.loads(write_body)
-    except Exception:
-        print(f"Write response not JSON: {write_body}", file=sys.stderr)
-        sys.exit(1)
+        if problems:
+            print("PLAN FAILED VALIDATION:")
+            for p in problems:
+                print(f"  - {p}")
+            sys.exit(1)
+        print("plan OK — coverage, recovery spacing and same-day redundancy all pass")
+        return
 
-    if status != 200:
-        print(f"Write failed ({status}): {write_body}", file=sys.stderr)
-        sys.exit(1)
-
-    if result.get("skipped"):
-        print(f"Skipped — {result.get('message')}")
-    else:
-        print(f"Done — {result.get('message')}")
-        days = [d["date"] for d in plan.get("workout_days", []) if d.get("date")]
-        print("Scheduled:", ", ".join(days))
+    if args.cmd == "submit":
+        body = json.dumps({"week_start": args.week_start, "plan": plan}).encode()
+        status, text = fetch(f"{APP_URL}/api/internal/plan", method="POST", body=body)
+        if status not in (200, 201):
+            print(f"submit failed: {status}\n{text}", file=sys.stderr)
+            sys.exit(1)
+        print(f"plan written for week of {args.week_start}")
+        return
 
 
 if __name__ == "__main__":
