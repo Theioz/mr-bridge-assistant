@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "mr-bridge": {
+      "command": "bash",
+      "args": ["web/mcp/run.sh"]
+    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]

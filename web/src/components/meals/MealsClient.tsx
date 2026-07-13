@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  MessageSquare,
   ChevronDown,
   ChevronUp,
   RefreshCw,
@@ -1104,32 +1103,6 @@ function TodayTab({
         </section>
       )}
 
-      {/* Log via chat nudge — hairline row, no card */}
-      <div
-        className="flex items-center"
-        style={{
-          gap: "var(--space-3)",
-          paddingTop: "var(--space-3)",
-          paddingBottom: "var(--space-3)",
-          borderTop: "1px solid var(--rule-soft)",
-        }}
-      >
-        <MessageSquare size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
-        <p style={{ fontSize: "var(--t-meta)", color: "var(--color-text-muted)" }}>
-          Or ask{" "}
-          <Link
-            href="/chat"
-            style={{
-              color: "var(--accent-text)",
-              textDecoration: "underline",
-              textUnderlineOffset: 2,
-            }}
-          >
-            Mr. Bridge
-          </Link>{" "}
-          for meal ideas based on what you have on hand.
-        </p>
-      </div>
     </div>
   );
 }
