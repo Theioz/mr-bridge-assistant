@@ -38,9 +38,14 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-# standalone emits server.js + the traced node_modules. static/ and public/ are
-# NOT included in the trace and must be copied explicitly, or every asset 404s.
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+# standalone emits server.js + the traced node_modules — but NESTED under a dir
+# named for the build cwd, because outputFileTracingRoot is the monorepo root and
+# paths are emitted relative to IT. So the bundle lands at
+# `.next/standalone/app/server.js`, not `.next/standalone/server.js`. Copying the
+# parent gives you /app/app/server.js and a MODULE_NOT_FOUND at boot. Flatten it.
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/app ./
+# static/ and public/ are NOT part of the trace and must be copied explicitly, or
+# every asset 404s while the HTML renders fine.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
