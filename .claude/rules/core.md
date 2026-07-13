@@ -13,8 +13,14 @@
 - No motivational framing ("great job", "you've got this", etc.)
 - If something is ambiguous, state the assumption made and continue
 
+## Interface
+- There is **no in-app chat** (deleted #476). You ARE the chat: the MCP server
+  (`web/mcp/run.sh`) exposes 30 tools to this session — tasks, habits, fitness,
+  meals, calendar, Gmail, backlog, profile.
+- Prefer an MCP tool over shelling out to a script when both exist.
+
 ## Memory Update Rules
-- Data is stored in Supabase — do not write to local markdown files for live data
+- Data is stored in **self-hosted** Supabase — do not write to local markdown files for live data
 - Habit logging: run `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`
 - Task updates: use Supabase directly or a future task management command
 - After any Supabase write: confirm to user what was written and to which table
@@ -36,6 +42,5 @@ When the user's request matches one of these contexts, read the matching file be
 | new feature work, branches, PRs, best-practice refs    | `.claude/rules/features.md`        |
 | change/reset weather location                          | `.claude/rules/location.md`        |
 | start/stop a study timer                               | `.claude/rules/study-timer.md`     |
-| voice mode / spoken-reply context                      | `.claude/rules/voice.md`           |
 | data source or Supabase table lookup                   | `.claude/rules/data-sources.md`    |
-| RLS, schema design, multi-tenancy, OAuth encryption, prompt caching, verified-success contract, architecture intent | `docs/ARCHITECTURE.md` |
+| RLS, schema design, multi-tenancy, OAuth encryption, verified-success contract, architecture intent | `docs/ARCHITECTURE.md` |

@@ -23,10 +23,7 @@
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { createClient } from "@supabase/supabase-js";
 
 import { buildChatTools } from "../src/lib/tools/build";
@@ -75,10 +72,7 @@ function schemaOf(t: AiTool): Record<string, unknown> {
 
 const entries = Object.entries(tools as Record<string, AiTool>).filter(([, t]) => t.execute);
 
-const server = new Server(
-  { name: "mr-bridge", version: "1.0.0" },
-  { capabilities: { tools: {} } },
-);
+const server = new Server({ name: "mr-bridge", version: "1.0.0" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: entries.map(([name, t]) => ({

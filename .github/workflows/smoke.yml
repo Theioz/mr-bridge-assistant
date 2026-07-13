@@ -1,14 +1,24 @@
+# smoke — PARKED 2026-07-13 (#476).
+#
+# These tests cannot run on a GitHub-hosted runner any more, and no amount of
+# editing the specs fixes that: the app and Supabase are now **tailnet-only**
+# (mr-bridge.jl-infra-lab.com / supabase.jl-infra-lab.com). A cloud runner has no
+# route to either, so every spec would fail at login.
+#
+# Re-enabling means one of:
+#   - a self-hosted runner on the tailnet, or
+#   - standing up a throwaway Supabase + app in the job itself
+#
+# Parked rather than deleted: the specs are still valuable and the auth/export/a11y
+# ones are not chat-dependent. The chat specs ARE gone (the chat was deleted) —
+# chat.spec.ts, chat-multi-turn-smoke.spec.ts, tool-status-feedback.spec.ts.
+#
+# Trigger is workflow_dispatch-only so it never runs (and never fails) by accident.
+
 name: Smoke
 
 on:
-  pull_request:
-    paths:
-      - 'web/**'
-      - 'docs/smoke-testing.md'
-      - '.github/workflows/smoke.yml'
-      - '.mcp.json'
-  schedule:
-    - cron: '0 9 * * *'  # 09:00 UTC daily
+  # Manual only — see the header. Cloud runners cannot reach the tailnet.
   workflow_dispatch:
 
 concurrency:
@@ -16,61 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  smoke-pr-chat:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: web
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      # Smoke-only vars (fixture + supabase-verify admin client)
-      SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
-      SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
-      SMOKE_SUPABASE_SERVICE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
-      # Next app runtime (middleware, server components, API routes).
-      # SUPABASE_SERVICE_ROLE_KEY aliases SMOKE_SUPABASE_SERVICE_KEY per
-      # docs/smoke-testing.md §2 — one secret covers both names.
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SMOKE_SUPABASE_SERVICE_KEY }}
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
-
-      - name: Install Playwright Chromium (cache miss only)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - run: npm run smoke:chat
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: smoke-pr-chat-artifacts
-          path: |
-            web/smoke/test-results/
-            web/smoke/playwright-report/
-          retention-days: 14
-
+  # smoke-pr-chat: REMOVED — the in-app chat was deleted (#476). Conversation now
+  # happens through the MCP server (web/mcp/), which is not a browser surface and
+  # is not smoke-testable with Playwright.
   smoke-pr-a11y:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -168,7 +126,6 @@ jobs:
 
       - name: Chat + a11y smokes (against next dev)
         run: |
-          npm run smoke:chat
           npm run smoke:a11y
 
       - name: Stop any leftover dev server

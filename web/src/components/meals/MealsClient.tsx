@@ -1102,7 +1102,6 @@ function TodayTab({
           </div>
         </section>
       )}
-
     </div>
   );
 }

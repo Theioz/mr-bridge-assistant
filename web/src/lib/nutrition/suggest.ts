@@ -55,8 +55,27 @@ function tokens(s: string): Set<string> {
 }
 
 const STOPWORDS = new Set([
-  "and", "the", "with", "for", "cup", "cups", "tbsp", "tsp", "oz", "lb", "grams", "gram",
-  "chopped", "diced", "sliced", "fresh", "large", "small", "medium", "optional", "taste",
+  "and",
+  "the",
+  "with",
+  "for",
+  "cup",
+  "cups",
+  "tbsp",
+  "tsp",
+  "oz",
+  "lb",
+  "grams",
+  "gram",
+  "chopped",
+  "diced",
+  "sliced",
+  "fresh",
+  "large",
+  "small",
+  "medium",
+  "optional",
+  "taste",
 ]);
 
 /**
@@ -119,7 +138,9 @@ async function proposeDishes(
       ? `They have about ${budget.calories} kcal and ${budget.protein_g ?? "?"}g protein left today.`
       : "No calorie goal set.";
 
-  const out = await chatJSON<{ dishes: { name: string; description: string; ingredients: string }[] }>(
+  const out = await chatJSON<{
+    dishes: { name: string; description: string; ingredients: string }[];
+  }>(
     [
       {
         role: "system",

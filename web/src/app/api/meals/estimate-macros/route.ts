@@ -94,8 +94,10 @@ export async function POST(req: Request) {
       protein_g = Math.round(((cm!.protein_g ?? 0) + protein_g) * 10) / 10;
       carbs_g = Math.round(((cm!.carbs_g ?? 0) + carbs_g) * 10) / 10;
       fat_g = Math.round(((cm!.fat_g ?? 0) + fat_g) * 10) / 10;
-      fiber_g = cm!.fiber_g != null ? Math.round((cm!.fiber_g + (fiber_g ?? 0)) * 10) / 10 : fiber_g;
-      sugar_g = cm!.sugar_g != null ? Math.round((cm!.sugar_g + (sugar_g ?? 0)) * 10) / 10 : sugar_g;
+      fiber_g =
+        cm!.fiber_g != null ? Math.round((cm!.fiber_g + (fiber_g ?? 0)) * 10) / 10 : fiber_g;
+      sugar_g =
+        cm!.sugar_g != null ? Math.round((cm!.sugar_g + (sugar_g ?? 0)) * 10) / 10 : sugar_g;
       sodium_mg = Math.round((cm!.sodium_mg ?? 0) + sodium_mg);
       notes = `Added to the existing meal. ${estimate.notes}`;
     }

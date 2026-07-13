@@ -213,7 +213,16 @@ const LABEL_SCHEMA = {
     readable: { type: "boolean" },
     notes: { type: "string" },
   },
-  required: ["product_name", "serving_size", "calories", "protein_g", "carbs_g", "fat_g", "readable", "notes"],
+  required: [
+    "product_name",
+    "serving_size",
+    "calories",
+    "protein_g",
+    "carbs_g",
+    "fat_g",
+    "readable",
+    "notes",
+  ],
 };
 
 export type LabelReading = {

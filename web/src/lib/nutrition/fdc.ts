@@ -410,8 +410,9 @@ export function gramsFor(
     // Prefer a countable portion ("1 large" = 50g) over a bulk/volume one
     // ("1 cup (4.86 large eggs)" = 243g) — the latter is not what "a serving" means.
     const countable =
-      usable.find((p) => !MEASURE_WORDS.some((m) => new RegExp(`\\b${m}\\b`).test(descriptorOf(p)))) ??
-      usable[0];
+      usable.find(
+        (p) => !MEASURE_WORDS.some((m) => new RegExp(`\\b${m}\\b`).test(descriptorOf(p))),
+      ) ?? usable[0];
     return {
       grams: n * (countable.gramWeight / countable.amount),
       exact: true,

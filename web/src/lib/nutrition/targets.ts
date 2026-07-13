@@ -97,8 +97,7 @@ export function computeNutritionTargets(input: TargetInputs): NutritionTargets |
   const weightKg = weightLb / LB_PER_KG;
 
   // Mifflin-St Jeor BMR (kcal/day)
-  const bmr =
-    10 * weightKg + 6.25 * heightCm - 5 * ageYears + (sex === "male" ? 5 : -161);
+  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageYears + (sex === "male" ? 5 : -161);
 
   const tdee = bmr * activityMultiplier(workoutDaysPerWeek ?? 0);
 
