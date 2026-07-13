@@ -157,7 +157,7 @@ async function suggestNutritionTargets(
   const targetWeightLb = rawTargetWeightLb ? parseFloat(rawTargetWeightLb) : null;
   const workoutDaysPerWeek = overrides?.workoutDaysPerWeek ?? v["workout_days_per_week"] ?? null;
 
-  // Computed with Mifflin-St Jeor rather than asked of an LLM (#476). The model
+  // Computed with Mifflin-St Jeor rather than asked of an LLM (issue 476). The model
   // was being handed exactly the inputs to the equation and asked to approximate
   // its output — deterministic beats plausible here. Returns null when the inputs
   // are insufficient, so the wizard leaves the fields blank instead of inventing
