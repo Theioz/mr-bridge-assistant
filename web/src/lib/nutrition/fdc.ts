@@ -276,7 +276,13 @@ const GENERIC_UNITS = new Set([
   "",
 ]);
 
-/** Last-resort weights when USDA has no portion for the stated unit. */
+/**
+ * Last-resort weights when USDA has no portion for the stated unit.
+ *
+ * The garnish units are not padding: "2 leaf" of basil had no USDA portion, fell
+ * through to the 100g/serving default, and logged **200g of basil** — a shrub, not
+ * a garnish. A leaf is not a serving.
+ */
 const FALLBACK_GRAMS: Record<string, number> = {
   cup: 150,
   tablespoon: 15,
@@ -292,6 +298,15 @@ const FALLBACK_GRAMS: Record<string, number> = {
   item: 100,
   piece: 100,
   bowl: 250,
+  // Garnishes / aromatics — grams, not hectograms.
+  leaf: 0.5,
+  leaves: 0.5,
+  sprig: 1,
+  clove: 3,
+  pinch: 0.5,
+  dash: 0.5,
+  drizzle: 5,
+  handful: 30,
 };
 
 /**

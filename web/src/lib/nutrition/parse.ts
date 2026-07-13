@@ -144,24 +144,126 @@ export async function parseFoodText(text: string): Promise<ParsedFood[]> {
   return (out.items ?? []).filter((i) => i.query?.trim());
 }
 
-/** Same parse, but from a photo of a meal. */
-export async function parseFoodPhoto(base64Jpeg: string): Promise<ParsedFood[]> {
+/**
+ * Parse a meal photo, optionally guided by what the user says it is.
+ *
+ * Portion estimation from pixels is the weakest thing a local VLM does — so the
+ * user's own words are treated as AUTHORITATIVE and the image is only used to
+ * fill the gaps:
+ *
+ *   - "6oz beef bolognese"      -> the 6oz wins outright; no visual guessing.
+ *   - "beef bolognese with parmesan" -> identification is settled by the text
+ *      (the model no longer has to guess whether that's bolognese or chili);
+ *      only the portion is estimated from the image.
+ *   - no description            -> everything comes from the image, as before.
+ *
+ * This is why the description box matters: it lets the user hand the model the
+ * two things it is worst at (what the dish is, how much of it there is) whenever
+ * they happen to know them.
+ */
+export async function parseFoodPhoto(
+  base64Jpeg: string,
+  description?: string,
+): Promise<ParsedFood[]> {
+  const desc = description?.trim();
+
+  const instruction = desc
+    ? [
+        "Identify the foods in this meal photo.",
+        "",
+        `The user describes it as: "${desc}"`,
+        "",
+        "THE USER'S DESCRIPTION IS AUTHORITATIVE:",
+        "- If they state a quantity or weight, use it EXACTLY. Do not re-estimate it from",
+        "  the image. A stated measurement always beats a visual guess.",
+        "- If they name the dish or its ingredients, trust that over what you think you see.",
+        "- Use the image only to fill gaps: foods they did not mention, and portions they",
+        "  did not state (estimate those from plate/utensil scale).",
+      ].join("\n")
+    : [
+        "List every distinct food visible in this meal photo.",
+        "Estimate each portion from visual cues (plate size, utensils) using a natural",
+        "unit — e.g. qty=1 unit='cup', qty=6 unit='oz'.",
+      ].join("\n");
+
   const out = await chatJSON<{ items: ParsedFood[] }>(
     [
       { role: "system", content: PARSE_SYSTEM },
-      {
-        role: "user",
-        content:
-          "List every distinct food visible in this meal photo, with your best estimate of " +
-          "the portion using a natural unit (e.g. qty=1 unit='cup', qty=6 unit='oz'). " +
-          "Estimate portion size from visual cues (plate size, utensils).",
-        images: [base64Jpeg],
-      },
+      { role: "user", content: instruction, images: [base64Jpeg] },
     ],
     PARSE_SCHEMA,
     180_000, // vision is slower than text
   );
   return (out.items ?? []).filter((i) => i.query?.trim());
+}
+
+const LABEL_SCHEMA = {
+  type: "object",
+  properties: {
+    product_name: { type: "string" },
+    serving_size: { type: "string" },
+    servings_per_container: { type: ["number", "null"] },
+    calories: { type: "number" },
+    protein_g: { type: "number" },
+    carbs_g: { type: "number" },
+    fat_g: { type: "number" },
+    fiber_g: { type: ["number", "null"] },
+    sugar_g: { type: ["number", "null"] },
+    sodium_mg: { type: ["number", "null"] },
+    readable: { type: "boolean" },
+    notes: { type: "string" },
+  },
+  required: ["product_name", "serving_size", "calories", "protein_g", "carbs_g", "fat_g", "readable", "notes"],
+};
+
+export type LabelReading = {
+  product_name: string;
+  serving_size: string;
+  servings_per_container: number | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number | null;
+  readable: boolean;
+  notes: string;
+};
+
+/**
+ * Read a printed nutrition label.
+ *
+ * This one needs no USDA lookup and no estimation at all — the manufacturer has
+ * already done the measuring. It is pure OCR: transcribe the printed numbers.
+ * That makes it the most reliable path in the whole meals feature, and the model
+ * is explicitly told not to "help" by inferring anything.
+ */
+export async function readNutritionLabel(base64Jpeg: string): Promise<LabelReading> {
+  return chatJSON<LabelReading>(
+    [
+      {
+        role: "system",
+        content: [
+          "You transcribe printed Nutrition Facts labels. This is a READING task, not an",
+          "estimation task.",
+          "",
+          "- Report the values EXACTLY as printed, per serving. Do not round, convert, or",
+          "  'correct' them.",
+          "- If a value is not printed or is unreadable, return null for it. Never guess.",
+          "- Set readable=false if the label is blurred, cropped or obscured, and say so in",
+          "  notes. A wrong number is far worse than an admitted gap.",
+        ].join("\n"),
+      },
+      {
+        role: "user",
+        content: "Transcribe this Nutrition Facts label.",
+        images: [base64Jpeg],
+      },
+    ],
+    LABEL_SCHEMA,
+    180_000,
+  );
 }
 
 const PICK_SCHEMA = {

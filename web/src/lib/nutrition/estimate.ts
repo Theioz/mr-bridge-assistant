@@ -45,6 +45,20 @@ export type MealEstimate = {
   notes: string;
 };
 
+/**
+ * Some USDA records carry no nutrient data at all — "Pasta, dry, enriched,
+ * spaghetti" came back with 0 kcal AND 0 protein/carbs/fat, which would log a
+ * zero-calorie plate of pasta. An empty record is not a valid answer; skip it.
+ */
+function isNutritionallyEmpty(m: {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}): boolean {
+  return m.calories <= 0 && m.protein_g <= 0 && m.carbs_g <= 0 && m.fat_g <= 0;
+}
+
 async function estimateOne(food: ParsedFood, context?: string): Promise<EstimatedItem | null> {
   const candidates = await searchFoods(food.query, 5);
   if (candidates.length === 0) return null;
@@ -57,22 +71,31 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   } catch {
     idx = null; // model unavailable -> fall through to first hit, flagged low-confidence
   }
-  const chosen = candidates[idx ?? 0];
 
-  const detail = await getFood(chosen.fdcId);
-  const { grams, exact, basis } = gramsFor(food.qty, food.unit, detail.portions);
+  // Try the chosen candidate first, then the rest in rank order, skipping any
+  // record with no usable nutrition.
+  const order = [idx ?? 0, ...candidates.map((_, i) => i).filter((i) => i !== (idx ?? 0))];
 
-  return {
-    input: `${food.qty} ${food.unit} ${food.query}`.trim(),
-    matched: detail.description,
-    fdcId: detail.fdcId,
-    qty: food.qty,
-    unit: food.unit,
-    grams: Math.round(grams),
-    exactPortion: exact && idx !== null,
-    basis,
-    macros: macrosForGrams(detail.per100g, grams),
-  };
+  for (const i of order) {
+    const detail = await getFood(candidates[i].fdcId);
+    if (isNutritionallyEmpty(detail.per100g)) continue;
+
+    const { grams, exact, basis } = gramsFor(food.qty, food.unit, detail.portions);
+    return {
+      input: `${food.qty} ${food.unit} ${food.query}`.trim(),
+      matched: detail.description,
+      fdcId: detail.fdcId,
+      qty: food.qty,
+      unit: food.unit,
+      grams: Math.round(grams),
+      // Only "exact" if we both picked deliberately AND resolved a real portion.
+      exactPortion: exact && idx !== null && i === idx,
+      basis,
+      macros: macrosForGrams(detail.per100g, grams),
+    };
+  }
+
+  return null; // every candidate was empty — better to report nothing than zeros
 }
 
 function assemble(items: EstimatedItem[], label: string): MealEstimate {
@@ -108,11 +131,34 @@ export async function estimateFromText(text: string, label?: string): Promise<Me
   return assemble(items, label?.trim() || text.trim());
 }
 
-/** Photo of a meal. */
-export async function estimateFromPhoto(base64Jpeg: string, label?: string): Promise<MealEstimate> {
-  const foods = await parseFoodPhoto(base64Jpeg);
-  const settled = await Promise.all(foods.map((f) => estimateOne(f).catch(() => null)));
+/**
+ * Photo of a meal, optionally with the user's own description.
+ *
+ * The description is the highest-value input in the whole feature: it lets the
+ * user supply the two things the model is worst at — WHAT the dish is ("beef
+ * bolognese with parmesan") and HOW MUCH of it there is ("6oz") — whenever they
+ * happen to know. Stated measurements are used verbatim; the image only fills the
+ * gaps. With no description, it falls back to pure vision, as before.
+ */
+export async function estimateFromPhoto(
+  base64Jpeg: string,
+  opts?: { description?: string; label?: string },
+): Promise<MealEstimate> {
+  const description = opts?.description?.trim();
+  const foods = await parseFoodPhoto(base64Jpeg, description);
+
+  // The description also disambiguates USDA selection — it's what stops "a bowl of
+  // oatmeal" resolving to "Bread, oatmeal".
+  const settled = await Promise.all(
+    foods.map((f) => estimateOne(f, description).catch(() => null)),
+  );
   const items = settled.filter((i): i is EstimatedItem => i !== null);
-  const name = label?.trim() || items.map((i) => i.matched.split(",")[0]).join(", ") || "Meal";
+
+  const name =
+    opts?.label?.trim() ||
+    description ||
+    items.map((i) => i.matched.split(",")[0]).join(", ") ||
+    "Meal";
+
   return assemble(items, name);
 }
