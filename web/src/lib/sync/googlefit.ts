@@ -171,7 +171,14 @@ export async function syncGoogleFit(
       body_fat_pct: fatPct != null ? Math.round(fatPct * 10) / 10 : null,
       bmi: bmiVal != null ? Math.round(bmiVal * 10) / 10 : null,
       muscle_mass_lb: leanKg != null ? Math.round(leanKg * 2.20462 * 10) / 10 : null,
-      metadata: Object.keys(meta).length ? meta : null,
+      // `{}`, not null. fitness_log.metadata is `jsonb NOT NULL DEFAULT '{}'`, and a
+      // column DEFAULT only applies when the column is OMITTED — an explicit null
+      // overrides it and violates the constraint:
+      //   null value in column "metadata" of relation "fitness_log" violates not-null
+      // This fires whenever Google Fit returns a payload with no extra metadata, so
+      // it is an intermittent failure, not a constant one. (Fitbit always sends an
+      // object, which is why only this path broke.)
+      metadata: Object.keys(meta).length ? meta : {},
     };
 
     // Only include rows that have at least one numeric value
