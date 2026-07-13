@@ -139,6 +139,16 @@ export async function searchFoods(query: string, limit = 5): Promise<FdcCandidat
  * Demote them unless the user actually asked for that form.
  */
 const PROCESSED_MARKERS = [
+  // Different FORM of the ingredient, not a different food — but nutritionally miles
+  // apart. "50g white rice" matched "Flour, rice, white" (180 kcal) instead of cooked
+  // rice (~65 kcal). Same class as "oatmeal" matching "Bread, oatmeal": USDA search
+  // happily returns a food that merely shares the words.
+  "flour",
+  "dry",
+  "uncooked",
+  "dehydrated",
+  "powder",
+  "concentrate",
   "breaded",
   "battered",
   "fried",
