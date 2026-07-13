@@ -30,3 +30,18 @@ export function supabaseServerUrl(): string {
 export function supabasePublicUrl(): string {
   return process.env.NEXT_PUBLIC_SUPABASE_URL!;
 }
+
+/**
+ * The auth-cookie name, pinned explicitly. Do not remove this.
+ *
+ * @supabase/ssr derives it from the Supabase URL's HOSTNAME — `sb-<ref>-auth-token`.
+ * That is fine when both sides use one URL (Vercel + Cloud). Here they do not:
+ *
+ *   browser -> https://supabase.jl-infra-lab.com  =>  sb-supabase-auth-token
+ *   server  -> http://supabase-gateway:8000       =>  sb-supabase-gateway-auth-token
+ *
+ * So the browser wrote one cookie and the server looked for another. Login SUCCEEDED
+ * (GoTrue returned 200 and a session), then middleware found no session, redirected to
+ * /login, and the sign-in button just span forever. A pinned name makes both agree.
+ */
+export const SUPABASE_COOKIE_NAME = "sb-mr-bridge-auth-token";

@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { supabaseServerUrl } from "@/lib/supabase/urls";
+import { supabaseServerUrl, SUPABASE_COOKIE_NAME } from "@/lib/supabase/urls";
 import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -68,6 +68,8 @@ export async function proxy(request: NextRequest) {
     supabaseServerUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Must match the browser's cookie name — see urls.ts.
+      cookieOptions: { name: SUPABASE_COOKIE_NAME },
       cookies: {
         getAll: () => request.cookies.getAll(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
