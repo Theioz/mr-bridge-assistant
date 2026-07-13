@@ -1,20 +1,36 @@
-// Scoped analyzer-chat endpoint (#303).
-// Tool-enabled chat isolated to the Food Analyzer. Exposes one tool —
-// log_meal_from_scan — that proposes a meal-log action card the user must
-// confirm client-side. General chat (/api/chat) intentionally does NOT
-// register this tool, so Bridge can only log meals from inside a scan.
-
-import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, tool, jsonSchema, stepCountIs } from "ai";
-import { todayString } from "@/lib/timezone";
 import { createClient } from "@/lib/supabase/server";
+import { chatJSON } from "@/lib/nutrition/parse";
+import { estimateFromText } from "@/lib/nutrition/estimate";
+import { todayString } from "@/lib/timezone";
 
-export const maxDuration = 30;
+/**
+ * Conversational adjustment of a food scan before logging. Was the last Anthropic
+ * call site (#609); now the local model + USDA, like every other meals path.
+ *
+ * WHAT CHANGED, AND WHY IT MATTERS
+ *
+ * The old prompt said, verbatim:
+ *
+ *   "recompute the items' macros using conservative estimates from your food knowledge"
+ *
+ * i.e. the model INVENTED the numbers — the exact thing we designed out of every other
+ * meals route. So "add 50g rice" produced whatever calories the model happened to recall.
+ *
+ * Now the model does only what it is reliable at: read the user's intent and name the
+ * foods. Every macro that ends up on the card is computed by USDA FoodData Central
+ * through the same pipeline as logging. A suggestion's numbers therefore agree with what
+ * you'd get if you actually ate it — which was never guaranteed before.
+ *
+ * Also: no streaming, and no tool-calling. The old route streamed the AI SDK data
+ * protocol and exposed one tool; the client hand-parsed `0:` / `a:` prefixes. Tool-calling
+ * on a 7B local model is precisely the fragile thing this migration was escaping. A single
+ * structured response is deterministic and the client got simpler, not harder.
+ */
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface ScanItemInput {
-  id: string;
+type ScanItemInput = {
+  id?: string;
   label: string;
   calories: number;
   protein_g: number;
@@ -22,14 +38,38 @@ interface ScanItemInput {
   fat_g: number;
   fiber_g: number | null;
   sugar_g: number | null;
-  user_context?: string;
-}
+  user_context?: string | null;
+};
 
 interface ScanChatBody {
   messages: { role: "user" | "assistant"; content: string }[];
   scanItems: ScanItemInput[];
   mealType: MealType;
 }
+
+/** What the model is allowed to decide. Note: no macros anywhere in here. */
+const INTENT_SCHEMA = {
+  type: "object",
+  properties: {
+    reply: { type: "string" },
+    intent: { type: "string", enum: ["question", "adjust", "log"] },
+    additions: { type: "string" },
+    removals: { type: "array", items: { type: "string" } },
+    scale: { type: ["number", "null"] },
+  },
+  required: ["reply", "intent", "additions", "removals"],
+};
+
+type Intent = {
+  reply: string;
+  intent: "question" | "adjust" | "log";
+  /** Free text of foods to ADD, e.g. "50g white rice". Fed to the USDA pipeline. */
+  additions: string;
+  /** Labels of scanned items to drop. */
+  removals: string[];
+  /** Multiply the whole meal, e.g. 2 for "double it". */
+  scale?: number | null;
+};
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -46,136 +86,139 @@ export async function POST(req: Request) {
   }
 
   const { messages, scanItems, mealType } = body;
+  if (!Array.isArray(scanItems)) {
+    return Response.json({ error: "scanItems is required" }, { status: 400 });
+  }
 
-  const systemPrompt = `You are Mr. Bridge, helping the user review a food scan on the Meals → Scanner tab. Today's date is ${todayString()}.
+  const scanSummary = scanItems
+    .map(
+      (i) =>
+        `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ` +
+        `${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`,
+    )
+    .join("\n");
 
-Style: Direct, structured, high-density. No filler, no emojis.
+  const system = [
+    `You are helping review a food scan. Today is ${todayString()}.`,
+    "",
+    "Current scanned items:",
+    scanSummary || "(none)",
+    "",
+    "Decide what the user wants and reply briefly. Direct, no filler, no emojis.",
+    "",
+    "- intent='question' — they asked something. Answer it in `reply`. Change nothing.",
+    "- intent='adjust'   — they want the meal changed before logging.",
+    "- intent='log'      — they explicitly want it logged ('log it', 'save this').",
+    "",
+    "For an adjustment, express it as DATA, not as recomputed numbers:",
+    "  additions: free text of foods to ADD, with quantities — e.g. '50g white rice'.",
+    "             Empty string if nothing is being added.",
+    "  removals:  labels of scanned items to REMOVE (match the labels above).",
+    "  scale:     a multiplier for the whole meal ('double it' -> 2). null otherwise.",
+    "",
+    "CRITICAL: never output calories, protein, carbs or fat. You are not being asked for",
+    "nutrition — a database computes it from your `additions` text. Numbers you invent",
+    "would be wrong.",
+  ].join("\n");
 
-Current scan items (${scanItems.length}):
-${scanItems
-  .map((i) => {
-    const extras = [
-      i.fiber_g !== null ? `${i.fiber_g}g fiber` : null,
-      i.sugar_g !== null ? `${i.sugar_g}g sugar` : null,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    const base = `- ${i.label}: ${Math.round(i.calories)} cal, ${Math.round(i.protein_g)}g P, ${Math.round(i.carbs_g)}g C, ${Math.round(i.fat_g)}g fat`;
-    const withExtras = extras ? `${base}, ${extras}` : base;
-    return i.user_context
-      ? `${withExtras}\n  User-provided description of the dish (for reference; may be inaccurate): ${i.user_context}`
-      : withExtras;
-  })
-  .join("\n")}
-Default meal type: ${mealType}
+  const convo = (messages ?? [])
+    .slice(-6)
+    .map((m) => `${m.role}: ${m.content}`)
+    .join("\n");
 
-You can log the scanned meal on the user's behalf by calling the log_meal_from_scan tool. Use it when the user expresses intent to log ("log it", "save this", "add this to today", etc.). You must NOT call the tool without an explicit log intent.
+  try {
+    const out = await chatJSON<Intent>(
+      [
+        { role: "system", content: system },
+        { role: "user", content: convo || "(no message)" },
+      ],
+      INTENT_SCHEMA,
+      90_000,
+    );
 
-When the user asks you to adjust the macros before logging (e.g. "add 50g rice", "without the oil", "double the portion"), recompute the items' macros using conservative estimates from your food knowledge, then call log_meal_from_scan with the updated items array. Do not invent items the user didn't mention.
+    // A question changes nothing.
+    if (out.intent === "question") {
+      return Response.json({ reply: out.reply, card: null });
+    }
 
-The tool does NOT write to the database — it returns a structured card the user must confirm. If the user only asks a question (not a log intent), answer normally without calling the tool.
+    // --- apply the adjustment, with USDA doing every calculation -------------
+    let items = scanItems.map((i) => ({ ...i }));
 
-Preserve fiber_g and sugar_g as null (not 0) when a food legitimately lacks that nutrient — e.g. butter has no fiber, plain meat has no sugar.`;
+    if (out.removals?.length) {
+      const drop = out.removals.map((r) => r.toLowerCase().trim());
+      items = items.filter(
+        (i) =>
+          !drop.some((d) => i.label.toLowerCase().includes(d) || d.includes(i.label.toLowerCase())),
+      );
+    }
 
-  const tools = {
-    log_meal_from_scan: tool({
-      description:
-        "Propose a meal-log action card for the user to confirm. Returns a structured proposal — the DB write happens client-side only after the user taps Log on the card. Call this when the user expresses intent to log the current scan (optionally with adjustments to the macros or item list based on conversation).",
-      inputSchema: jsonSchema<{
-        items: {
-          label: string;
-          calories: number;
-          protein_g: number;
-          carbs_g: number;
-          fat_g: number;
-          fiber_g: number | null;
-          sugar_g: number | null;
-        }[];
-        meal_type: MealType;
-        notes?: string;
-      }>({
-        type: "object",
-        required: ["items", "meal_type"],
-        properties: {
-          items: {
-            type: "array",
-            description:
-              "The final item list to log — use the scan items as-is, or adjusted per conversation.",
-            items: {
-              type: "object",
-              required: [
-                "label",
-                "calories",
-                "protein_g",
-                "carbs_g",
-                "fat_g",
-                "fiber_g",
-                "sugar_g",
-              ],
-              properties: {
-                label: { type: "string" },
-                calories: { type: "number" },
-                protein_g: { type: "number" },
-                carbs_g: { type: "number" },
-                fat_g: { type: "number" },
-                fiber_g: { type: ["number", "null"] },
-                sugar_g: { type: ["number", "null"] },
-              },
-            },
-          },
-          meal_type: {
-            type: "string",
-            enum: ["breakfast", "lunch", "dinner", "snack"],
-          },
-          notes: {
-            type: "string",
-            description:
-              "Optional short label for the meal row (defaults to concatenated item names).",
-          },
-        },
-      }),
-      execute: async ({ items, meal_type, notes }) => {
-        // No DB write — client renders this as a confirm card and POSTs to /api/meals/log
-        // only after the user confirms. Returning the structured payload plus a kind tag
-        // so the InlineMealChat client can discriminate text vs. action-card tool results.
-        const totals = items.reduce(
-          (acc, i) => ({
-            calories: acc.calories + (i.calories ?? 0),
-            protein_g: acc.protein_g + (i.protein_g ?? 0),
-            carbs_g: acc.carbs_g + (i.carbs_g ?? 0),
-            fat_g: acc.fat_g + (i.fat_g ?? 0),
-            fiber_g: i.fiber_g !== null ? (acc.fiber_g ?? 0) + i.fiber_g : acc.fiber_g,
-            sugar_g: i.sugar_g !== null ? (acc.sugar_g ?? 0) + i.sugar_g : acc.sugar_g,
-          }),
-          {
-            calories: 0,
-            protein_g: 0,
-            carbs_g: 0,
-            fat_g: 0,
-            fiber_g: null as number | null,
-            sugar_g: null as number | null,
-          },
-        );
-        const firstUserContext = scanItems.find((i) => i.user_context)?.user_context;
-        return {
-          kind: "log_meal_proposal",
-          items,
-          meal_type,
-          notes: notes ?? items.map((i) => i.label).join(", "),
-          user_context: firstUserContext ?? null,
-          totals,
-        };
+    if (out.additions?.trim()) {
+      // The added food is priced by USDA, exactly as if it had been typed into the
+      // meal log — not by whatever the model remembers about rice.
+      const est = await estimateFromText(out.additions.trim());
+      for (const it of est.items) {
+        items.push({
+          label: `${it.matched} (${it.grams}g)`,
+          calories: Math.round(it.macros.calories),
+          protein_g: Math.round(it.macros.protein_g * 10) / 10,
+          carbs_g: Math.round(it.macros.carbs_g * 10) / 10,
+          fat_g: Math.round(it.macros.fat_g * 10) / 10,
+          fiber_g: Math.round(it.macros.fiber_g * 10) / 10,
+          sugar_g: Math.round(it.macros.sugar_g * 10) / 10,
+        });
+      }
+    }
+
+    const scale = typeof out.scale === "number" && out.scale > 0 ? out.scale : 1;
+    if (scale !== 1) {
+      items = items.map((i) => ({
+        ...i,
+        calories: Math.round(i.calories * scale),
+        protein_g: Math.round(i.protein_g * scale * 10) / 10,
+        carbs_g: Math.round(i.carbs_g * scale * 10) / 10,
+        fat_g: Math.round(i.fat_g * scale * 10) / 10,
+        // null means "this food legitimately has none" — scaling must not turn that into 0.
+        fiber_g: i.fiber_g === null ? null : Math.round(i.fiber_g * scale * 10) / 10,
+        sugar_g: i.sugar_g === null ? null : Math.round(i.sugar_g * scale * 10) / 10,
+      }));
+    }
+
+    // Totals are SUMMED from the items, never asked of the model. Keep null when a
+    // food legitimately has no fiber/sugar (butter, plain meat) rather than coercing
+    // to 0 — the original contract was explicit about this and it is still right.
+    const sum = (pick: (i: (typeof items)[number]) => number | null): number | null => {
+      const vals = items.map(pick);
+      if (vals.every((v) => v === null)) return null;
+      return Math.round(vals.reduce<number>((a, v) => a + (v ?? 0), 0) * 10) / 10;
+    };
+
+    const totals = {
+      calories: Math.round(items.reduce((a, i) => a + i.calories, 0)),
+      protein_g: sum((i) => i.protein_g) ?? 0,
+      carbs_g: sum((i) => i.carbs_g) ?? 0,
+      fat_g: sum((i) => i.fat_g) ?? 0,
+      fiber_g: sum((i) => i.fiber_g),
+      sugar_g: sum((i) => i.sugar_g),
+    };
+
+    // The card is a PROPOSAL. Nothing is written here — the client POSTs to
+    // /api/meals/log only after the user confirms. Same contract as before.
+    return Response.json({
+      reply: out.reply,
+      card: {
+        kind: "log_meal_proposal" as const,
+        items,
+        meal_type: mealType,
+        notes: out.additions?.trim() ? "Added items priced from USDA data." : "",
+        user_context: scanItems.find((i) => i.user_context)?.user_context ?? null,
+        totals,
       },
-    }),
-  };
-
-  const result = streamText({
-    model: anthropic("claude-haiku-4-5-20251001"),
-    system: systemPrompt,
-    messages,
-    tools,
-    stopWhen: stepCountIs(5),
-  });
-
-  return result.toUIMessageStreamResponse();
+    });
+  } catch (err) {
+    console.error("[meals/scan-chat] failed:", err);
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Request failed" },
+      { status: 500 },
+    );
+  }
 }

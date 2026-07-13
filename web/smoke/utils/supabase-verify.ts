@@ -17,27 +17,3 @@ export function createSmokeAdminClient(): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-
-export type ChatMessageRow = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  parts: unknown;
-  position: number;
-  created_at: string;
-};
-
-export async function getMessagesForSession(
-  admin: SupabaseClient,
-  sessionId: string,
-): Promise<ChatMessageRow[]> {
-  const { data, error } = await admin
-    .from("chat_messages")
-    .select("id, role, content, parts, position, created_at")
-    .eq("session_id", sessionId)
-    .order("position", { ascending: true });
-  if (error) {
-    throw new Error(`chat_messages query failed: ${error.message}`);
-  }
-  return (data ?? []) as ChatMessageRow[];
-}

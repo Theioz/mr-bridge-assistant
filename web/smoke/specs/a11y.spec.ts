@@ -8,11 +8,10 @@ type Route = {
   settled: (page: Page) => Locator;
 };
 
-// Sentinels are semantic, not networkidle — /chat and /dashboard hold
+// Sentinels are semantic, not networkidle — /dashboard holds
 // streaming / long-poll connections that never quiet the network tab.
 const ROUTES: Route[] = [
   { path: "/dashboard", auth: "signed-in", settled: (p) => p.locator("h1").first() },
-  { path: "/chat", auth: "signed-in", settled: (p) => p.getByPlaceholder("Ask Mr. Bridge...") },
   { path: "/fitness", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/habits", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/tasks", auth: "signed-in", settled: (p) => p.locator("h1").first() },

@@ -4,7 +4,7 @@ test("calendar tool — list events fires without config error", async ({
   signedInPage: page,
   consoleErrors,
 }) => {
-  await page.goto("/chat");
+  await page.goto("/calendar");
   await expect(page.getByPlaceholder("Ask Mr. Bridge...")).toBeVisible({ timeout: 10000 });
 
   await page.getByPlaceholder("Ask Mr. Bridge...").fill("list my calendar events for today");

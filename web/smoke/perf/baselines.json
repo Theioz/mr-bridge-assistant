@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-route baselines for metrics above the hard thresholds — ratchet down as perf improves. See #384. Values = median-of-3 from prod build + ~60ms variance buffer. Ratcheted from commit 7b5e9462 after fix/mobile-perf-384 changes (code splits, waterfall collapse, Suspense streaming, CLS fix). /settings CLS baseline removed — now 0.000.",
+  "_comment": "Per-route baselines for metrics above the hard thresholds \u2014 ratchet down as perf improves. See #384. Values = median-of-3 from prod build + ~60ms variance buffer. Ratcheted from commit 7b5e9462 after fix/mobile-perf-384 changes (code splits, waterfall collapse, Suspense streaming, CLS fix). /settings CLS baseline removed \u2014 now 0.000.",
   "routes": {
     "/dashboard": {
       "mobile": {

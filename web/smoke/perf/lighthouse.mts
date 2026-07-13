@@ -48,7 +48,6 @@ type Preset = "mobile" | "desktop";
 
 const ROUTES = [
   "/dashboard",
-  "/chat",
   "/fitness",
   "/habits",
   "/tasks",
