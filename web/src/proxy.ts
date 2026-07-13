@@ -3,6 +3,22 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+// Derive the Supabase origin from config rather than hardcoding `*.supabase.co`.
+// The browser talks to Supabase directly (anon-key client: auth + RLS-scoped
+// queries), so its origin must be in connect-src or every request is blocked.
+// Self-hosted Supabase lives on our own domain, so a hardcoded *.supabase.co
+// allowlist would silently break the whole app after the migration.
+const SUPABASE_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
+
+// Realtime (the one chat_messages subscription) needs the ws(s) origin too.
+const SUPABASE_WS_ORIGIN = SUPABASE_ORIGIN.replace(/^http/, "ws");
+
 function buildCSP(nonce: string): string {
   // 'strict-dynamic' trusts scripts loaded by nonce-bearing scripts; host allowlists
   // are ignored by CSP3 browsers when strict-dynamic is present but left for fallback.
@@ -25,9 +41,9 @@ function buildCSP(nonce: string): string {
     // (Radix UI portals set inline positioning styles that cannot carry a nonce).
     styleSrcElem,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: https://a.espncdn.com https://*.supabase.co https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://*.googleapis.com https://books.googleusercontent.com",
+    `img-src 'self' data: https://a.espncdn.com ${SUPABASE_ORIGIN} https://image.tmdb.org https://images.igdb.com https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://*.googleapis.com https://books.googleusercontent.com`,
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    `connect-src 'self' ${SUPABASE_ORIGIN} ${SUPABASE_WS_ORIGIN}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
