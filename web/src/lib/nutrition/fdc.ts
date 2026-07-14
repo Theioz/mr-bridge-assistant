@@ -215,8 +215,28 @@ function tokens(text: string, dropWeak: boolean): Set<string> {
   );
 }
 
+/**
+ * Branded and restaurant records are not INGREDIENTS.
+ *
+ * The dataType filter already excludes USDA's "Branded" set, but SR Legacy still carries
+ * restaurant entrées — so a search for marinara, which USDA has no plain entry for, resolved
+ * to "OLIVE GARDEN, cheese ravioli with marinara sauce". A ravioli dinner is not a spoon of
+ * sauce, and seeing a restaurant menu item inside your own recipe is the fastest way to stop
+ * believing any of the numbers.
+ *
+ * USDA writes brands in caps ("OLIVE GARDEN,", "KRAFT,") while real foods are sentence case
+ * ("Beef, ribeye..."), which makes this cheap to detect.
+ */
+function isBrandedOrRestaurant(description: string): boolean {
+  if (/^restaurant\b/i.test(description)) return true;
+  const head = description.split(",")[0].trim();
+  // Two or more consecutive capitals in the leading segment = a brand, not a food.
+  return head.length > 2 && /[A-Z]{2,}/.test(head) && head === head.toUpperCase();
+}
+
 /** True when the candidate plausibly IS the queried food. */
 export function isPlausibleMatch(query: string, description: string): boolean {
+  if (isBrandedOrRestaurant(description)) return false;
   // The query must be matched on a DISTINCTIVE word ("marinara"), not a category one
   // ("sauce"). The description keeps its category words — "Sauce, marinara" should still
   // match on "marinara".
