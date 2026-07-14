@@ -15,6 +15,7 @@ import {
   EMPTY_MACROS,
   getFood,
   gramsFor,
+  isPlausibleMatch,
   macrosForGrams,
   roundMacros,
   searchFoods,
@@ -49,6 +50,8 @@ export type MealEstimate = {
   items: EstimatedItem[];
   totals: Macros;
   confidence: "high" | "medium" | "low";
+  /** Foods that matched no plausible USDA record and are ABSENT from `totals`. */
+  unmatched: string[];
   notes: string;
 };
 
@@ -67,7 +70,16 @@ function isNutritionallyEmpty(m: {
 }
 
 async function estimateOne(food: ParsedFood, context?: string): Promise<EstimatedItem | null> {
-  const candidates = await searchFoods(food.query, 5);
+  const searched = await searchFoods(food.query, 5);
+
+  // Drop candidates that are not plausibly the food we asked for. USDA's search sometimes
+  // returns nothing relevant, and the model then picks the least-bad of a bad set — "salt"
+  // became "Syrups, table blends, pancake", which puts 20g of SYRUP into a zero-calorie
+  // ingredient. No prompt fixes that: the right answer was never in the list.
+  //
+  // Matching NOTHING is a better outcome than matching syrup. Salt genuinely has no macros;
+  // a bogus match invents some. The caller reports what went unmatched.
+  const candidates = searched.filter((c) => isPlausibleMatch(food.query, c.description));
   if (candidates.length === 0) return null;
 
   // THE QUANTITY COMES FROM THE TEXT, NOT THE MODEL.
@@ -122,7 +134,7 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   return null; // every candidate was empty — better to report nothing than zeros
 }
 
-function assemble(items: EstimatedItem[], label: string): MealEstimate {
+function assemble(items: EstimatedItem[], label: string, unmatched: string[] = []): MealEstimate {
   const totals = items.reduce<Macros>((acc, i) => addMacros(acc, i.macros), { ...EMPTY_MACROS });
 
   // CONFIDENCE MUST MEASURE THE RIGHT THING.
@@ -154,6 +166,14 @@ function assemble(items: EstimatedItem[], label: string): MealEstimate {
         `${unquantified.map((i) => i.input).join(", ")}. Add an amount to fix the total.`,
     );
   }
+  if (unmatched.length) {
+    // Name them. Some (salt, pepper) contribute nothing and their absence is harmless —
+    // correct, even. Others are a real hole in the total. Only the user can tell which.
+    parts.push(
+      `No USDA match for: ${unmatched.join(", ")} — these contribute NOTHING to the total. ` +
+        `Harmless for salt/pepper; a real gap for anything else.`,
+    );
+  }
   if (assumedPortion) {
     parts.push(`${assumedPortion} portion(s) used an assumed serving weight.`);
   }
@@ -164,6 +184,7 @@ function assemble(items: EstimatedItem[], label: string): MealEstimate {
     items,
     totals: roundMacros(totals),
     confidence,
+    unmatched,
     notes: parts.join(" "),
   };
 }
@@ -177,7 +198,12 @@ export async function estimateFromText(
   const foods = await parseFoodText(text, mode);
   const settled = await Promise.all(foods.map((f) => estimateOne(f, text).catch(() => null)));
   const items = settled.filter((i): i is EstimatedItem => i !== null);
-  return assemble(items, label?.trim() || text.trim());
+  // An ingredient that matched nothing used to vanish silently. Carry it through so the
+  // estimate can say what is missing from its own total.
+  const unmatched = foods
+    .filter((_, i) => settled[i] === null)
+    .map((f) => f.source?.trim() || f.query);
+  return assemble(items, label?.trim() || text.trim(), unmatched);
 }
 
 /**
