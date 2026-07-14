@@ -4,7 +4,7 @@ All live data is in **self-hosted Supabase** on `compute-core` (`supabase.jl-inf
 Migrated off Supabase Cloud 2026-07-13 — see ADR 0017 in the jl-homelab repo.
 
 There is **no in-app chat**. Conversation happens through the **MCP server**
-(`web/mcp/run.sh`), which exposes the same 30 tools to Claude Code. Where a row below
+(`web/mcp/run.sh`), which exposes the same 35 tools to Claude Code. Where a row below
 says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
@@ -19,7 +19,10 @@ says "MCP tool", that tool is available to you directly in this session.
 | `habits` + `habit_registry` | Manual | `scripts/log_habit.py`, or the `log_habit` **MCP tool** |
 | `tasks` + `study_log` | Manual | `/tasks` page, or `add_task` / `complete_task` **MCP tools** |
 | `profile` | k/v store: name, macro targets, watchlists, `onboarding_completed` | `/settings`, or `update_profile` **MCP tool** |
-| `recipes` + `meal_log` | Manual + photo/text analysis | `/api/meals/log` (plain CRUD). **There is no `log_meal` tool** — the model proposes, the UI confirms, the route writes |
+| `recipes` | Library of "cooked this, liked it, might cook again". Macros are for the **whole recipe as written**, USDA-derived | `/settings`, `POST /api/recipes/<id>/macros` to resolve, or `get_recipes` **MCP tool** |
+| `cooks` | **One time you actually made food.** Portions live here, not on the recipe (you eyeball the split). Batch prep = many portions draining over days; a one-off dinner = 1 portion; leftover-ingredient cooking = no recipe. Leftovers = `portions_remaining > 0` | `POST /api/cooks`, or `log_cook` **MCP tool** |
+| `meal_plans` | Proposed meals — points at a cook (leftovers), a recipe (needs cooking), or freeform. **Carries no macros of its own** | `plan_meals` **MCP tool** |
+| `meal_log` | What was actually eaten | `POST /api/meals/eat` (one-tap confirm of a cook — macros already known) or `/api/meals/log` (photo/text → USDA, for off-plan food). **There is still no `log_meal` tool** — the model never records that food went in a mouth |
 | `journal_entries` | Manual | `/journal` server action. **No tool writes journal entries** |
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools** |
 | `notifications`, `packages` | ntfy push history; Gmail package scan | `/api/cron/sync` |
