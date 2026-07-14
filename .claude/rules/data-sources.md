@@ -9,9 +9,9 @@ says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
 |---|---|---|
-| `user_integrations` | OAuth tokens — Google, Fitbit, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY` |
-| `fitness_log` | Google Fit (weight) + Fitbit (weight/fat/BMI) | `sync-googlefit.py`, `sync-fitbit.py`, `/api/cron/sync` |
-| `workout_sessions` | Fitbit | `sync-fitbit.py` |
+| `user_integrations` | OAuth tokens — Google, Google Health, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so it carries no Gmail scope (Google revokes Gmail-scoped tokens on password change) |
+| `fitness_log` | Google Health (weight/fat, derived BMI) | `sync-google-health.py`, `/api/cron/sync` |
+| `workout_sessions` | Google Health | `sync-google-health.py`, `/api/cron/sync` |
 | `recovery_metrics` | Oura Ring | `sync-oura.py` |
 | `strength_sessions`, `strength_session_sets`, `exercise_prs` | In-app set logger | `/api/strength-sessions` |
 | `workout_plans` | Weekly planner | `/api/internal/plan` (AI-free) + `scripts/weekly_plan.py` |

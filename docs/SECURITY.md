@@ -14,14 +14,14 @@ Public-by-design variables (the only ones that may omit the flag):
 
 ## What never goes in environment variables
 
-User OAuth tokens — Google (Calendar, Gmail, Fit), Fitbit refresh tokens, and Oura PATs — are stored **encrypted** in the `user_integrations` Supabase table using `pgp_sym_encrypt` keyed by `ENCRYPTION_KEY`. They are never placed in env vars. See `web/src/lib/integrations/tokens.ts`.
+User OAuth tokens — Google (Calendar, Gmail), Google Health refresh tokens, and Oura PATs — are stored **encrypted** in the `user_integrations` Supabase table using `pgp_sym_encrypt` keyed by `ENCRYPTION_KEY`. They are never placed in env vars. See `web/src/lib/integrations/tokens.ts`.
 
 ## Rotation cadence
 
 | Trigger | Action |
 |---------|--------|
 | Post-incident (any credential exposure) | Rotate immediately, priority-ordered by blast radius |
-| Annually | Review all credentials; rotate SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_SECRET, FITBIT_CLIENT_SECRET |
+| Annually | Review all credentials; rotate SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_SECRET |
 
 ## Rotation priority order
 
@@ -30,7 +30,7 @@ Rotate highest blast radius first. After each rotation, verify the listed signal
 1. **SUPABASE_SERVICE_ROLE_KEY** — bypasses RLS; all data at risk. Verify: `/api/cron/sync` returns 200.
 4. **SUPABASE_ANON_KEY** — auth + client queries break. Verify: sign in from a fresh browser.
 5. **GOOGLE_CLIENT_SECRET** — existing users must re-OAuth. Surface a notice in Settings. Verify: disconnect/reconnect Google in Settings → Integrations.
-6. **FITBIT_CLIENT_SECRET** — new OAuth flows + token refresh break; existing stored tokens survive. Verify: Sync Now for Fitbit returns 200.
+6. **GOOGLE_CLIENT_SECRET** also backs Google Health — rotating it breaks both the `google` and `google_health` token refresh. Verify: Sync Now for Google Health returns 200.
 7. **CRON_SECRET** — cron endpoints return 401. Verify: `curl -H "Authorization: Bearer $NEW_SECRET" /api/cron/sync` returns 200.
 8. Third-party API keys (POLYGON_API_KEY, etc.) — rotate in respective consoles.
 
@@ -90,10 +90,10 @@ Two things worth knowing about that public surface:
 
 | Key | Blast radius if stale/leaked |
 |---|---|
-| `ENCRYPTION_KEY` | **The big one.** Decrypts the Google/Fitbit/Oura refresh tokens in `user_integrations`. If lost, every integration must be re-authorised by hand. Rotation procedure: `docs/runbooks/rotate-encryption-key.md`. |
+| `ENCRYPTION_KEY` | **The big one.** Decrypts the Google/Google Health/Oura refresh tokens in `user_integrations`. If lost, every integration must be re-authorised by hand. Rotation procedure: `docs/runbooks/rotate-encryption-key.md`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Full RLS bypass. Self-hosted: re-mint with `docker/supabase/gen-keys.sh` (which also changes `JWT_SECRET`, invalidating the anon key and all sessions). |
 | `CRON_SECRET` | Lets a caller trigger `/api/cron/*`. |
 | `FDC_API_KEY` | Low: a rate-limited public data key. |
-| `GOOGLE_CLIENT_SECRET` / `FITBIT_CLIENT_SECRET` | OAuth client impersonation. |
+| `GOOGLE_CLIENT_SECRET` | OAuth client impersonation (covers both the `google` and `google_health` consents — same client). |
 
 **No `ANTHROPIC_API_KEY` and no `GROQ_API_KEY`** — both removed in #476.

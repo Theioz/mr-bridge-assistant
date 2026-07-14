@@ -7,7 +7,7 @@ Execute in this exact order:
    ```bash
    python3 scripts/run-syncs.py
    ```
-   This runs all three sync scripts (google_fit, oura, fitbit) in parallel and skips any source synced within the last 30 minutes.
+   This runs both sync scripts (oura, google_health) in parallel and skips any source synced within the last 30 minutes.
 2. Fetch all briefing data from Supabase:
    ```bash
    python3 scripts/fetch_briefing_data.py
@@ -74,7 +74,7 @@ Readiness: [score] | Sleep: [score] | Total: [Xh Ym] | Deep: [Xh Ym] | REM: [Xh 
 ```
 
 Body Composition rules:
-- Use the **last Renpho row** in Baseline Metrics (rows with Body Fat % filled in, not weight-only Google Fit rows)
+- Use the **last row with Body Fat % filled in** (not weight-only rows)
 - Show delta vs the row before it for weight and body fat %
 
 Recovery rules:

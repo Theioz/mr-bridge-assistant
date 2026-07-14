@@ -23,9 +23,8 @@ from _sync_log import log_sync
 SKIP_WINDOW_SECS = 30 * 60  # 30 minutes
 
 SYNCS: list[tuple[str, list[str]]] = [
-    ("google_fit", ["scripts/sync-googlefit.py", "--yes"]),
-    ("oura",       ["scripts/sync-oura.py",      "--yes"]),
-    ("fitbit",     ["scripts/sync-fitbit.py",    "--yes"]),
+    ("oura",          ["scripts/sync-oura.py",          "--yes"]),
+    ("google_health", ["scripts/sync-google-health.py", "--yes"]),
 ]
 
 # Alert scripts run after syncs — order matters (HRV needs fresh Oura data)

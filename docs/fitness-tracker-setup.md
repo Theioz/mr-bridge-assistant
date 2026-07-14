@@ -1,66 +1,46 @@
 # Fitness Tracker Setup
 
-Three sync scripts pull data from fitness APIs and write directly to Supabase. Run them manually before sessions to get fresh data.
+Two sync scripts pull data from fitness APIs and write directly to Supabase. Run them manually before sessions to get fresh data, or let `scripts/run-syncs.py` / `/api/cron/sync` do it.
 
 ---
 
-## Google Fit — weight only
+## Google Health — workouts + body composition
 
-**Script:** `scripts/sync-googlefit.py`
+**Script:** `scripts/sync-google-health.py`
 
-Uses the existing Google OAuth credentials in `.env`. Pulls weight from Google Fit (synced from Renpho via Health Sync). Workout data comes from Fitbit instead — Google Fit workout tracking is unreliable due to background step/activity noise.
+Replaced both `sync-fitbit.py` and `sync-googlefit.py` in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). The Fitbit Web API is turned down **September 2026** and the Google Fit REST API is deprecated; the Google Health API (`health.googleapis.com/v4`) supersedes both.
+
+Writes:
+- `workout_sessions` — activity, duration, calories, average HR, and per-session heart-rate zones
+- `fitness_log` — weight, body fat %, and a **derived** BMI (source: `google_health`)
 
 **First-time setup:**
-Google Fit scopes were added to the refresh token during setup (see `docs/google-oauth-setup.md`). No additional steps needed.
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/library/health.googleapis.com), enable the **Google Health API** on the same project as your existing OAuth client.
+2. On the **Data Access** page, add both read scopes:
+   - `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly`
+   - `https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly`
+
+   These are **restricted** scopes. The console will demand verification — verification is only required to exceed 100 users, and Google documents an explicit exception for apps used solely by the developer. Proceed past the warning.
+3. Set the publishing status to **In production**. This is not optional: an app in *Testing* is issued refresh tokens that **expire after 7 days**, which would break the unattended cron.
+4. Add `https://<your-host>/api/auth/google-health/callback` as an authorized redirect URI on the **existing** OAuth client, and set `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` in `.env`. No new client ID or secret — it reuses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+5. In the app, go to **Settings → Integrations → Connect Google Health**. Click through the "Google hasn't verified this app" screen. The refresh token is stored encrypted in `user_integrations` under provider `google_health`.
+
+**Why a separate consent from the `google` integration:** Google revokes a refresh token on password change *if that token carries Gmail scopes*. Keeping the health token free of Gmail scopes means a password change can't take the fitness sync down with it. `include_granted_scopes: false` is what keeps the two tokens from merging.
 
 **Run:**
 ```bash
-python3 scripts/sync-googlefit.py           # last 7 days (default)
-python3 scripts/sync-googlefit.py --days 30 # last 30 days
+python3 scripts/sync-google-health.py            # last 7 days (default)
+python3 scripts/sync-google-health.py --days 30  # last 30 days
+python3 scripts/sync-google-health.py --probe    # print without writing
 ```
 
-**Prerequisites:**
-```bash
-pip3 install google-auth google-auth-oauthlib python-dotenv
-```
-
----
-
-## Fitbit — workout sessions + body composition
-
-**Script:** `scripts/sync-fitbit.py`
-
-Pulls explicitly logged workout sessions and body composition (weight/fat/BMI) from Fitbit API.
-
-**First-time setup (web UI — recommended):**
-1. Go to [dev.fitbit.com/apps/new](https://dev.fitbit.com/apps/new)
-2. Fill in:
-   - **Application Name:** Mr. Bridge (or anything)
-   - **OAuth 2.0 Application Type:** Personal
-   - **Redirect URL:** `http://localhost:3000/api/auth/fitbit/callback`
-     *(For production on Vercel, change this to `https://your-app.vercel.app/api/auth/fitbit/callback`.
-     Fitbit allows only one redirect URL per app — update it in the app settings when switching from local to prod.)*
-   - **Default Access Type:** Read Only
-3. Copy **Client ID** and **Client Secret** → add to `web/.env.local`:
-   ```
-   FITBIT_CLIENT_ID=your_client_id
-   FITBIT_CLIENT_SECRET=your_client_secret
-   FITBIT_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/fitbit/callback
-   ```
-4. Restart the dev server so Next.js picks up the new env vars.
-5. In the app, go to **Settings → Integrations → Connect Fitbit**. Complete the OAuth flow. Refresh token is stored encrypted in `user_integrations`.
-
-**First-time setup (Python script only — fallback):**
-1. Run `python3 scripts/sync-fitbit.py --setup` (uses localhost:8080 redirect).
-2. Paste `FITBIT_REFRESH_TOKEN` from the output into `.env`. The script will use this as a fallback until you connect via UI.
-
-**Run:**
-```bash
-python3 scripts/sync-fitbit.py           # last 7 days
-python3 scripts/sync-fitbit.py --days 30 # last 30 days
-```
-
-**Note:** Fitbit rotates refresh tokens on each use. The script persists rotated tokens back to `user_integrations` (if connected via UI) or `.env` + the `profile` table (if using the fallback path).
+**Known differences from the Fitbit sync it replaced:**
+| | Fitbit | Google Health |
+|---|---|---|
+| Heart-rate zones | `Fat Burn` / `Cardio` / `Peak` | `Light` / `Moderate` / `Vigorous` / `Peak` — four zones, different names. Rows written before the cutover keep the old labels. |
+| Workout duration | wall-clock, incl. pauses | `activeDuration`, excludes pauses |
+| BMI | supplied directly | **derived** from weight + height. If no `height` sample exists, BMI is null rather than guessed. |
+| Recovery (sleep/HRV/RHR) | written to `recovery_metrics` | **not written** — Oura is a strict superset and is the only recovery source |
 
 ---
 
@@ -103,8 +83,7 @@ python3 scripts/sync-oura.py --days 30  # last 30 days
 
 Run before starting a session to get the latest data:
 ```bash
-python3 scripts/sync-googlefit.py
-python3 scripts/sync-oura.py
+python3 scripts/run-syncs.py   # runs both in parallel, skips anything synced in the last 30m
 ```
 
 All sync data writes to Supabase — no file commits needed.

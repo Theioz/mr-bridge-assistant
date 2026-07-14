@@ -16,7 +16,7 @@ export const METRIC_DEFAULTS: MetricPreferences = {
   steps: "oura",
   active_calories: "oura",
   readiness: "oura",
-  body_composition: "fitbit_body",
+  body_composition: "google_health",
 };
 
 export const ALL_METRICS: MetricCategory[] = [

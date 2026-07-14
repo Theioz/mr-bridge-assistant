@@ -20,7 +20,7 @@ export default function MastheadRefresh({ refreshStocks, refreshSports }: Props)
         ? errorSummary || "Sync failed"
         : syncedAt
           ? `Last synced ${syncedAt}`
-          : "Sync Oura, Fitbit, Google Fit, stocks, and sports";
+          : "Sync Oura, Google Health, stocks, and sports";
 
   return (
     <button

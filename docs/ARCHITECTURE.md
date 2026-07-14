@@ -16,7 +16,7 @@ For a live map of code relationships, see [graphify-out/GRAPH_REPORT.md](../grap
 | Conversation | **MCP server** (`web/mcp/`) → Claude Code, on the existing subscription. No API key. The in-app chat was deleted (#476). |
 | Auth | Supabase Auth | JWT; SSR cookie-based via `@supabase/ssr` |
 | Hosting / Cron | Self-hosted on compute-core. Cron is the **node's crontab** — `web/vercel.json` is deleted. |
-| External APIs | Google Calendar, Gmail, Oura, Fitbit, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
+| External APIs | Google Calendar, Gmail, Google Health, Oura, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
 
 ---
 
@@ -48,9 +48,9 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 
 | Table | Purpose |
 |-------|---------|
-| `fitness_log` | Weight, body fat %, BMI, muscle mass — from Google Fit, Fitbit, or Renpho |
-| `workout_sessions` | Cardio/activity sessions from Fitbit or manual entry: type, duration, calories, HR zones |
-| `recovery_metrics` | Oura Ring and Fitbit sleep/recovery: readiness, HRV, sleep stages, resting HR |
+| `fitness_log` | Weight, body fat %, derived BMI — from Google Health. (`muscle_mass_lb` is legacy: it was fed by the retired Renpho scale via Google Fit; Google Health has no lean-body-mass type — see #69) |
+| `workout_sessions` | Cardio/activity sessions from Google Health or manual entry: type, duration, calories, HR zones |
+| `recovery_metrics` | Oura Ring sleep/recovery: readiness, HRV, sleep stages, resting HR. (Oura-only since #607 — Google Health writes no recovery rows) |
 | `strength_sessions` | Strength training sessions: start/end time, notes |
 | `strength_session_sets` | Individual sets within a session: exercise, weight, reps, RPE |
 | `workout_plans` | Structured weekly programs: Mon–Sun plan cards with phases (warm-up/workout/cool-down) |
@@ -88,7 +88,7 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 
 | Table | Purpose |
 |-------|---------|
-| `user_integrations` | Encrypted OAuth refresh tokens per provider (Google, Fitbit, Oura) — see [OAuth Token Encryption](#oauth-token-encryption) |
+| `user_integrations` | Encrypted OAuth refresh tokens per provider (Google, Google Health, Oura) — see [OAuth Token Encryption](#oauth-token-encryption) |
 | `sync_log` | External sync audit log: source, status, records written, error — globally readable/writable (no per-user RLS) |
 
 ### System / Cache

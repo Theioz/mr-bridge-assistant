@@ -138,8 +138,8 @@ const INTEGRATION_CARDS = [
     description: "Continuous sleep, recovery, and readiness data.",
   },
   {
-    id: "fitbit",
-    label: "Fitbit",
+    id: "google-health",
+    label: "Google Health",
     description: "Workouts, body composition, and activity logged in real time.",
   },
 ];

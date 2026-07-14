@@ -22,7 +22,7 @@ export function buildFitnessTools({ supabase, userId }: ToolContext) {
         // Load user's preferred source per metric; falls back to defaults if no rows exist.
         const prefs = userId ? await loadMetricPreferences(supabase, userId) : null;
         const sleepSource = prefs?.sleep ?? "oura";
-        const bodySource = prefs?.body_composition ?? "fitbit_body";
+        const bodySource = prefs?.body_composition ?? "google_health";
 
         let bodyQ = supabase
           .from("fitness_log")
@@ -36,8 +36,8 @@ export function buildFitnessTools({ supabase, userId }: ToolContext) {
           .select("date, activity, duration_mins, calories, avg_hr, notes")
           .gte("date", sinceStr)
           .order("date", { ascending: false });
-        // Use the preferred sleep/recovery source. readiness is Oura-only; if the user
-        // prefers fitbit for sleep, readiness will be null in the returned row.
+        // Use the preferred sleep/recovery source. Oura is the only recovery source
+        // since #607 — Google Health writes no recovery_metrics.
         let recQ = supabase
           .from("recovery_metrics")
           .select("date, avg_hrv, resting_hr, sleep_score, readiness, source, steps, active_cal")

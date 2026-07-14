@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type SyncState = "idle" | "syncing" | "done" | "error";
 
-const HEALTH_SOURCES = ["oura", "fitbit", "googlefit"] as const;
+const HEALTH_SOURCES = ["oura", "google-health"] as const;
 type HealthSource = (typeof HEALTH_SOURCES)[number];
 type AnySource = HealthSource | "stocks" | "sports";
 
