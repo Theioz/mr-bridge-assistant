@@ -56,7 +56,14 @@ export async function POST(request: NextRequest) {
 
     try {
       const macros = await resolveRecipeMacros(db, userId, r.id as string);
-      resolved.push({ name, ...macros?.total });
+      resolved.push({
+        name,
+        ...macros?.total,
+        // The working, not just the answer — which USDA record each ingredient matched and
+        // how its grams were derived. This is what makes a wrong total findable.
+        unquantified: macros?.unquantified ?? [],
+        items: macros?.items ?? [],
+      });
     } catch (e) {
       failed.push({ name, error: (e as Error).message });
     }
