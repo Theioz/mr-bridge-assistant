@@ -3,6 +3,11 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgoString, todayString } from "@/lib/timezone";
+import {
+  KitchenPanel,
+  type KitchenCook,
+  type KitchenPlannedMeal,
+} from "@/components/meals/KitchenPanel";
 import MealsClient, {
   type MealRow,
   type RecipeRow,
@@ -45,15 +50,37 @@ export default async function MealsPage() {
       .order("date", { ascending: true }),
   ]);
 
-  // Wave 2 — recipes query needs user.id from Wave 1.
+  // Wave 2 — these all need user.id from Wave 1.
   const userId = user?.id;
-  const { data: recipesData } = await (userId
-    ? supabase
-        .from("recipes")
-        .select("id, name, cuisine, tags, ingredients")
-        .eq("user_id", userId)
-        .order("name")
-    : Promise.resolve({ data: [] }));
+  const [{ data: recipesData }, { data: leftoversData }, { data: planData }] = await Promise.all([
+    userId
+      ? supabase
+          .from("recipes")
+          .select("id, name, cuisine, tags, ingredients")
+          .eq("user_id", userId)
+          .order("name")
+      : Promise.resolve({ data: [] }),
+    // The kitchen is fetched here rather than by the client component so the panel has no
+    // loading flash and no fetch waterfall. router.refresh() re-runs this after "Ate this".
+    userId
+      ? supabase
+          .from("cooks")
+          .select("id, name, cooked_on, portions, portions_remaining, calories, protein_g")
+          .eq("user_id", userId)
+          .gt("portions_remaining", 0)
+          .order("cooked_on", { ascending: true }) // oldest first — eat it before it turns
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase
+          .from("meal_plans")
+          .select(
+            "id, date, meal_type, portions, status, name, recipes(id, name), " +
+              "cooks(id, name, portions, portions_remaining)",
+          )
+          .eq("user_id", userId)
+          .eq("date", todayString())
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const meals = (mealsData ?? []) as unknown as MealRow[];
   const recipes = (recipesData ?? []) as unknown as RecipeRow[];
@@ -170,6 +197,11 @@ export default async function MealsPage() {
           Meal Hub
         </p>
       </div>
+
+      <KitchenPanel
+        leftovers={(leftoversData ?? []) as unknown as KitchenCook[]}
+        plan={(planData ?? []) as unknown as KitchenPlannedMeal[]}
+      />
 
       <MealsClient
         todayMeals={todayMeals}

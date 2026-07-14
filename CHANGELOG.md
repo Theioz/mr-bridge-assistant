@@ -7,6 +7,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Food gets measured macros, and cooking gets modelled.** `recipes` gains
+  calories/protein/carbs/fat/fiber for the recipe **as written**, resolved once through the
+  existing pipeline — the local model identifies the foods, **USDA FoodData Central supplies
+  every gram**. No macro value is model-authored.
+
+  New `cooks` table: **one time you actually made food.** Portions live here, not on the
+  recipe — you don't cook "the 6-serving chicken bowl", you cook a pile of chicken and
+  eyeball it into however many containers you feel like that day, and the same recipe splits
+  5 ways one week and 7 the next. This makes a one-off meal *not a special case*: it's a cook
+  with 1 portion. Batch prep is a cook with 6 that drains over the week. Cooking down leftover
+  ingredients is a cook with no recipe. One object, three behaviours. Leftovers become a
+  trivial query — the cooks with `portions_remaining > 0` are literally what's in the fridge.
+
+  `meal_log` gains `cook_id` + `portions`, so logging a prepped meal is a **confirm** rather
+  than a photo → USDA round trip. `meal_log.recipe_id` has existed since the initial schema
+  and was never once populated (0 of 44 rows); that friction is why meal logging stopped in May.
+
+  Accuracy is deliberately bounded: the eyeballed portion split is the error bar, and no
+  amount of USDA precision rescues a container that's 20% bigger than its neighbour. These
+  numbers are for direction across weeks, not lab-grade accuracy — which is all a body-comp
+  trend needs.
+
 ### Changed
 
 - **Fitbit and Google Fit replaced by the Google Health API**
