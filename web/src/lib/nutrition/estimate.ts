@@ -15,12 +15,14 @@ import {
   EMPTY_MACROS,
   getFood,
   gramsFor,
+  isPlausibleMatch,
   macrosForGrams,
   roundMacros,
   searchFoods,
   type Macros,
 } from "./fdc";
 import { parseFoodPhoto, parseFoodText, pickBestFood, type ParsedFood } from "./parse";
+import { lexQuantity } from "./quantity";
 
 export type EstimatedItem = {
   /** What the user said / the model saw. */
@@ -33,6 +35,12 @@ export type EstimatedItem = {
   grams: number;
   /** false when we fell back to an assumed portion weight. */
   exactPortion: boolean;
+  /**
+   * false when the source text stated no quantity at all ("Green beans", "olive oil").
+   * The amount used is then an invention, and the estimate must say so rather than let a
+   * made-up serving hide inside a confident-looking total.
+   */
+  quantified: boolean;
   basis: string;
   macros: Macros;
 };
@@ -42,6 +50,8 @@ export type MealEstimate = {
   items: EstimatedItem[];
   totals: Macros;
   confidence: "high" | "medium" | "low";
+  /** Foods that matched no plausible USDA record and are ABSENT from `totals`. */
+  unmatched: string[];
   notes: string;
 };
 
@@ -60,8 +70,33 @@ function isNutritionallyEmpty(m: {
 }
 
 async function estimateOne(food: ParsedFood, context?: string): Promise<EstimatedItem | null> {
-  const candidates = await searchFoods(food.query, 5);
+  const searched = await searchFoods(food.query, 5);
+
+  // Drop candidates that are not plausibly the food we asked for. USDA's search sometimes
+  // returns nothing relevant, and the model then picks the least-bad of a bad set — "salt"
+  // became "Syrups, table blends, pancake", which puts 20g of SYRUP into a zero-calorie
+  // ingredient. No prompt fixes that: the right answer was never in the list.
+  //
+  // Matching NOTHING is a better outcome than matching syrup. Salt genuinely has no macros;
+  // a bogus match invents some. The caller reports what went unmatched.
+  const candidates = searched.filter((c) => isPlausibleMatch(food.query, c.description));
   if (candidates.length === 0) return null;
+
+  // THE QUANTITY COMES FROM THE TEXT, NOT THE MODEL.
+  //
+  // The model is asked to echo the fragment it read (`source`) and we lex the number out of
+  // that ourselves. It is not trusted to repeat a number, because it demonstrably alters
+  // them: "2 cups dry brown rice" came back as a cooked-rice match, and "about 6oz of
+  // chicken" used to come back as qty=1 unit='medium'. A stated measurement is the user's
+  // own data and no model should be able to round it.
+  //
+  // When the source states nothing ("Green beans"), the model's qty/unit is an invention.
+  // We still estimate — a rough total beats no total — but the item is flagged unquantified
+  // and the confidence below is capped accordingly.
+  const lexed = food.source ? lexQuantity(food.source) : null;
+  const qty = lexed ? lexed.qty : food.qty;
+  const unit = lexed ? lexed.unit : food.unit;
+  const quantified = lexed !== null;
 
   // Never blind-trust candidates[0] — USDA's top hit for "chicken breast, cooked"
   // is breaded microwaved tenders (252 kcal vs ~165 for plain).
@@ -80,17 +115,18 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
     const detail = await getFood(candidates[i].fdcId);
     if (isNutritionallyEmpty(detail.per100g)) continue;
 
-    const { grams, exact, basis } = gramsFor(food.qty, food.unit, detail.portions);
+    const { grams, exact, basis } = gramsFor(qty, unit, detail.portions);
     return {
-      input: `${food.qty} ${food.unit} ${food.query}`.trim(),
+      input: (food.source ?? `${qty} ${unit} ${food.query}`).trim(),
       matched: detail.description,
       fdcId: detail.fdcId,
-      qty: food.qty,
-      unit: food.unit,
+      qty,
+      unit,
       grams: Math.round(grams),
       // Only "exact" if we both picked deliberately AND resolved a real portion.
       exactPortion: exact && idx !== null && i === idx,
-      basis,
+      quantified,
+      basis: quantified ? basis : `${basis} — NO QUANTITY STATED, amount is a guess`,
       macros: macrosForGrams(detail.per100g, grams),
     };
   }
@@ -98,37 +134,76 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   return null; // every candidate was empty — better to report nothing than zeros
 }
 
-function assemble(items: EstimatedItem[], label: string): MealEstimate {
+function assemble(items: EstimatedItem[], label: string, unmatched: string[] = []): MealEstimate {
   const totals = items.reduce<Macros>((acc, i) => addMacros(acc, i.macros), { ...EMPTY_MACROS });
 
-  // Confidence reflects what actually happened, not a vibe:
-  //  high   — every portion resolved against real USDA portion data
-  //  medium — some portions fell back to an assumed weight
-  //  low    — nothing matched
-  const assumed = items.filter((i) => !i.exactPortion).length;
-  const confidence: MealEstimate["confidence"] =
-    items.length === 0 ? "low" : assumed === 0 ? "high" : assumed < items.length ? "medium" : "low";
+  // CONFIDENCE MUST MEASURE THE RIGHT THING.
+  //
+  // It used to reflect only whether gramsFor() found a USDA portion table. That is a fact
+  // about USDA's data, not about whether the answer is right — so a recipe whose rice was
+  // silently resolved as COOKED (a 3x carb error) came back "high", because USDA does
+  // happen to publish a cup-portion for cooked rice. A wrong number wearing a confident
+  // badge is worse than an honest "I guessed".
+  //
+  // So: any ingredient we had to invent an amount for makes "high" unreachable. You cannot
+  // be highly confident in a total that contains a number nobody wrote down.
+  const unquantified = items.filter((i) => !i.quantified);
+  const assumedPortion = items.filter((i) => i.quantified && !i.exactPortion).length;
 
-  const notes =
-    assumed === 0
-      ? "All portions resolved from USDA measured portion data."
-      : `${assumed} of ${items.length} portion(s) used an assumed serving weight — adjust below if that's off.`;
+  let confidence: MealEstimate["confidence"];
+  if (items.length === 0) confidence = "low";
+  else if (unquantified.length)
+    confidence = unquantified.length === items.length ? "low" : "medium";
+  else if (assumedPortion === 0) confidence = "high";
+  else confidence = assumedPortion < items.length ? "medium" : "low";
+
+  const parts: string[] = [];
+  if (unquantified.length) {
+    // Name them. "Some portions were assumed" is unactionable; "green beans, olive oil had
+    // no quantity" tells the user exactly which line to go and fix.
+    parts.push(
+      `${unquantified.length} ingredient(s) had NO stated quantity and were guessed: ` +
+        `${unquantified.map((i) => i.input).join(", ")}. Add an amount to fix the total.`,
+    );
+  }
+  if (unmatched.length) {
+    // Name them. Some (salt, pepper) contribute nothing and their absence is harmless —
+    // correct, even. Others are a real hole in the total. Only the user can tell which.
+    parts.push(
+      `No USDA match for: ${unmatched.join(", ")} — these contribute NOTHING to the total. ` +
+        `Harmless for salt/pepper; a real gap for anything else.`,
+    );
+  }
+  if (assumedPortion) {
+    parts.push(`${assumedPortion} portion(s) used an assumed serving weight.`);
+  }
+  if (!parts.length) parts.push("Every amount was taken from your text; USDA supplied the grams.");
 
   return {
     food_name: label,
     items,
     totals: roundMacros(totals),
     confidence,
-    notes,
+    unmatched,
+    notes: parts.join(" "),
   };
 }
 
 /** Free-text: "2 eggs and toast" */
-export async function estimateFromText(text: string, label?: string): Promise<MealEstimate> {
-  const foods = await parseFoodText(text);
+export async function estimateFromText(
+  text: string,
+  label?: string,
+  mode: "meal" | "recipe" = "meal",
+): Promise<MealEstimate> {
+  const foods = await parseFoodText(text, mode);
   const settled = await Promise.all(foods.map((f) => estimateOne(f, text).catch(() => null)));
   const items = settled.filter((i): i is EstimatedItem => i !== null);
-  return assemble(items, label?.trim() || text.trim());
+  // An ingredient that matched nothing used to vanish silently. Carry it through so the
+  // estimate can say what is missing from its own total.
+  const unmatched = foods
+    .filter((_, i) => settled[i] === null)
+    .map((f) => f.source?.trim() || f.query);
+  return assemble(items, label?.trim() || text.trim(), unmatched);
 }
 
 /**

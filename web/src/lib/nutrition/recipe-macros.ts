@@ -25,8 +25,27 @@ export interface RecipeMacroTotals {
   notes: string;
 }
 
+/** One resolved ingredient — the audit trail. A number you cannot audit is a number you
+ *  cannot trust, and this is what makes the total checkable instead of hopeful. */
+export interface ResolvedIngredient {
+  input: string;
+  matched: string;
+  fdcId: number;
+  grams: number;
+  /** false when the text stated no amount and one was guessed. */
+  quantified: boolean;
+  /** How the grams were derived, e.g. "USDA portion: 1 cup = 195g". */
+  basis: string;
+}
+
 export interface RecipeMacros {
   total: RecipeMacroTotals;
+  /** Every ingredient, what USDA record it matched, and how its grams were arrived at. */
+  items: ResolvedIngredient[];
+  /** Ingredients with no stated amount. Non-empty means the total is soft — go fix the text. */
+  unquantified: string[];
+  /** Ingredients that matched no plausible USDA record and are ABSENT from the total. */
+  unmatched: string[];
   /** Hint only — what a portion would look like IF split this many ways. Not a claim. */
   typicalPortions: number | null;
   perPortion: Omit<RecipeMacroTotals, "confidence" | "notes"> | null;
@@ -73,7 +92,10 @@ export async function resolveRecipeMacros(
   // The recipe NAME is passed as the label, not as food to parse — naming the dish helps
   // the identifier disambiguate ("Greek Salmon" -> salmon, not a generic fish), while the
   // ingredient list remains the only thing quantities are read from.
-  const estimate = await estimateFromText(ingredients, recipe.name as string);
+  // "recipe" mode, NOT the meal prompt. A recipe's ingredients are raw and dry; the meal
+  // prompt's examples all say "cooked", and fed a recipe it rewrote "2 cups dry brown rice"
+  // to cooked rice — ~90g of carbs instead of ~280g, reported as HIGH confidence.
+  const estimate = await estimateFromText(ingredients, recipe.name as string, "recipe");
 
   const total: RecipeMacroTotals = {
     calories: Math.round(estimate.totals.calories),
@@ -93,6 +115,16 @@ export async function resolveRecipeMacros(
     );
   }
 
+  const items: ResolvedIngredient[] = estimate.items.map((i) => ({
+    input: i.input,
+    matched: i.matched,
+    fdcId: i.fdcId,
+    grams: i.grams,
+    quantified: i.quantified,
+    basis: i.basis,
+  }));
+  const unquantified = items.filter((i) => !i.quantified).map((i) => i.input);
+
   const { error: writeErr } = await db
     .from("recipes")
     .update({
@@ -103,6 +135,13 @@ export async function resolveRecipeMacros(
       fiber_g: total.fiber_g,
       macros_confidence: total.confidence,
       macros_computed_at: new Date().toISOString(),
+      // Persist the working, not just the answer. Without this the only way to find out that
+      // the rice had been resolved as COOKED was to reverse-engineer it from the carb count.
+      metadata: {
+        macro_items: items,
+        macro_notes: total.notes,
+        macro_unmatched: estimate.unmatched,
+      },
     })
     .eq("id", recipeId)
     .eq("user_id", userId);
@@ -112,6 +151,9 @@ export async function resolveRecipeMacros(
   const typicalPortions = (recipe.typical_portions as number | null) ?? null;
   return {
     total,
+    items,
+    unquantified,
+    unmatched: estimate.unmatched,
     typicalPortions,
     perPortion: typicalPortions ? perPortion(total, typicalPortions) : null,
   };

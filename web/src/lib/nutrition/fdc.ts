@@ -99,6 +99,159 @@ const ZERO: Macros = {
 };
 
 /**
+ * Reject a USDA record that isn't plausibly the food we asked for.
+ *
+ * The model picks from a candidate list, and when USDA's search returns nothing relevant it
+ * picks the least-bad of a bad set — silently. Observed on real recipes:
+ *
+ *   "salt"        -> "Syrups, table blends, pancake"       (20g of SYRUP for a zero-cal
+ *                                                            ingredient — invents calories)
+ *   "broccolini"  -> "Abiyuch, raw"                        (a tropical fruit)
+ *   "marinara"    -> "Cheese sauce, prepared from recipe"
+ *
+ * A model cannot be prompted out of this: the right answer was never in the list. The guard
+ * is arithmetic — a candidate must share at least one MEANINGFUL word with the query.
+ *
+ * "Meaningful" excludes preparation and packaging words, because otherwise "rice, brown, raw"
+ * would happily match "Beef, raw" on the strength of "raw" alone. Matching on those is how
+ * you get a plate of beef where the rice should be.
+ *
+ * This deliberately only catches the egregious cases (ZERO overlap). It will still let
+ * "cream cheese" through as "Cheese, goat" — a wrong-ish match, but one in the right food
+ * family and the right calorie order. Better a narrow guard that never rejects a good match
+ * than a clever one that does.
+ */
+// Broad category nouns. These are too weak to PROVE a match on their own: "sauce, marinara"
+// and "Cheese sauce, prepared from recipe" share "sauce" and are not the same food — that
+// exact match got marinara resolved as cheese sauce in production. Likewise "cheese, cream"
+// vs "Cheese, goat".
+//
+// They are only stripped from the QUERY's required tokens; a query consisting of NOTHING but
+// category words (a bare "cheese") still matches anything in that family, which is the right
+// behaviour for a vague query.
+const WEAK_TOKENS = new Set([
+  "sauce",
+  "soup",
+  "oil",
+  "cheese",
+  "juice",
+  "spice",
+  "spices",
+  "seasoning",
+  "beverage",
+  "beverages",
+  "drink",
+  "snack",
+  "snacks",
+  "food",
+  "foods",
+  "mix",
+  "mixture",
+  "product",
+  "products",
+  "dish",
+  "meal",
+  "recipe",
+]);
+
+const PREP_WORDS = new Set([
+  "raw",
+  "cooked",
+  "boiled",
+  "roasted",
+  "baked",
+  "fried",
+  "grilled",
+  "broiled",
+  "steamed",
+  "dry",
+  "dried",
+  "fresh",
+  "frozen",
+  "canned",
+  "prepared",
+  "enriched",
+  "unenriched",
+  "whole",
+  "boneless",
+  "skinless",
+  "sliced",
+  "chopped",
+  "ground",
+  "powder",
+  "powdered",
+  "type",
+  "soft",
+  "hard",
+  "light",
+  "regular",
+  "plain",
+  "unsalted",
+  "salted",
+  "low",
+  "reduced",
+  "and",
+  "or",
+  "with",
+  "without",
+  "in",
+  "of",
+  "the",
+  "a",
+  "from",
+  "table",
+  "blends",
+  "blend",
+]);
+
+function tokens(text: string, dropWeak: boolean): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && !PREP_WORDS.has(w) && !(dropWeak && WEAK_TOKENS.has(w)))
+      // Crude singularisation so "broilers" matches "broiler", "beans" matches "bean".
+      .map((w) => (w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w)),
+  );
+}
+
+/**
+ * Branded and restaurant records are not INGREDIENTS.
+ *
+ * The dataType filter already excludes USDA's "Branded" set, but SR Legacy still carries
+ * restaurant entrées — so a search for marinara, which USDA has no plain entry for, resolved
+ * to "OLIVE GARDEN, cheese ravioli with marinara sauce". A ravioli dinner is not a spoon of
+ * sauce, and seeing a restaurant menu item inside your own recipe is the fastest way to stop
+ * believing any of the numbers.
+ *
+ * USDA writes brands in caps ("OLIVE GARDEN,", "KRAFT,") while real foods are sentence case
+ * ("Beef, ribeye..."), which makes this cheap to detect.
+ */
+function isBrandedOrRestaurant(description: string): boolean {
+  if (/^restaurant\b/i.test(description)) return true;
+  const head = description.split(",")[0].trim();
+  // Two or more consecutive capitals in the leading segment = a brand, not a food.
+  return head.length > 2 && /[A-Z]{2,}/.test(head) && head === head.toUpperCase();
+}
+
+/** True when the candidate plausibly IS the queried food. */
+export function isPlausibleMatch(query: string, description: string): boolean {
+  if (isBrandedOrRestaurant(description)) return false;
+  // The query must be matched on a DISTINCTIVE word ("marinara"), not a category one
+  // ("sauce"). The description keeps its category words — "Sauce, marinara" should still
+  // match on "marinara".
+  const wanted = tokens(query, true);
+  if (wanted.size === 0) {
+    // The query is nothing but category/prep words (a bare "cheese", "oil"). There is no
+    // distinctive word to check, so don't block — anything in the family is a fair answer.
+    return true;
+  }
+  const got = tokens(description, false);
+  for (const w of wanted) if (got.has(w)) return true;
+  return false;
+}
+
+/**
  * Search for candidate foods.
  *
  * Restricted to Foundation + SR Legacy: these are USDA's *measured* datasets.
