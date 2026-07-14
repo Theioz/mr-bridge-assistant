@@ -20,8 +20,19 @@
 export type ParsedFood = {
   /** Plain USDA-style food name, e.g. "egg, whole, raw". */
   query: string;
+  /**
+   * The model's OWN reading of the quantity. Treated as a fallback only — `source` is
+   * lexed in code and wins whenever it states a quantity, because the model demonstrably
+   * alters numbers it is asked to repeat (see quantity.ts).
+   */
   qty: number;
   unit: string;
+  /**
+   * The exact fragment of the user's text this food came from, verbatim. This is what the
+   * quantity lexer reads, so the number that reaches USDA is the number the user wrote —
+   * not the model's recollection of it.
+   */
+  source?: string;
 };
 
 function ollamaUrl(): string {
@@ -82,8 +93,9 @@ const PARSE_SCHEMA = {
           query: { type: "string" },
           qty: { type: "number" },
           unit: { type: "string" },
+          source: { type: "string" },
         },
-        required: ["query", "qty", "unit"],
+        required: ["query", "qty", "unit", "source"],
       },
     },
   },
@@ -103,6 +115,9 @@ const PARSE_SYSTEM = [
   "  itself (raw/cooked/roasted/toasted); drop the rest.",
   "- qty: the NUMBER of units. Never null.",
   "- unit: the unit AS STATED by the user.",
+  "- source: the exact fragment of the input this food came from, COPIED VERBATIM.",
+  "  Copy the characters; do not normalise, round, or re-word them. This is the only",
+  "  field that is trusted for the quantity — qty/unit are a fallback.",
   "",
   "RULES",
   "1. If the user states a weight or volume, keep it EXACTLY. Never replace a stated",
@@ -117,26 +132,82 @@ const PARSE_SYSTEM = [
   "",
   "EXAMPLES",
   'Input: "2 eggs and toast"',
-  'Output: [{"query":"egg, whole, raw","qty":2,"unit":"large"},',
-  '         {"query":"bread, white, toasted","qty":1,"unit":"slice"}]',
+  'Output: [{"query":"egg, whole, raw","qty":2,"unit":"large","source":"2 eggs"},',
+  '         {"query":"bread, white, toasted","qty":1,"unit":"slice","source":"toast"}]',
   "",
   'Input: "grilled chicken breast, about 6oz, with a cup of white rice"',
-  'Output: [{"query":"chicken breast, roasted","qty":6,"unit":"oz"},',
-  '         {"query":"rice, white, cooked","qty":1,"unit":"cup"}]',
+  'Output: [{"query":"chicken breast, roasted","qty":6,"unit":"oz","source":"about 6oz"},',
+  '         {"query":"rice, white, cooked","qty":1,"unit":"cup","source":"a cup of white rice"}]',
   "",
   'Input: "a bowl of oatmeal with a banana"',
-  'Output: [{"query":"oats, cooked","qty":1,"unit":"cup"},',
-  '         {"query":"banana, raw","qty":1,"unit":"medium"}]',
+  'Output: [{"query":"oats, cooked","qty":1,"unit":"cup","source":"a bowl of oatmeal"},',
+  '         {"query":"banana, raw","qty":1,"unit":"medium","source":"a banana"}]',
   "",
   'Input: "added some chicken"',
-  'Output: [{"query":"chicken breast, roasted","qty":1,"unit":"serving"}]',
+  'Output: [{"query":"chicken breast, roasted","qty":1,"unit":"serving","source":"some chicken"}]',
 ].join("\n");
 
-/** "2 eggs and toast" -> [{query:'egg, whole, raw', qty:2, unit:'each'}, ...] */
-export async function parseFoodText(text: string): Promise<ParsedFood[]> {
+/**
+ * Recipes are a different domain and the meal prompt is actively wrong for them.
+ *
+ * A meal is a plate of COOKED food — "rice, white, cooked" is the right USDA entry, and
+ * every example above teaches that. A recipe's ingredient list is a tray of RAW, DRY
+ * ingredients. Fed the meal prompt, qwen2.5vl rewrote "2 cups dry brown rice" to
+ * "rice, brown, cooked": ~90g of carbs instead of ~280g, a 3x error, reported as HIGH
+ * confidence. It did the same to raw chicken breast (-> "roasted").
+ *
+ * So: the preparation state comes from the user's words, never the model's default.
+ */
+const PARSE_SYSTEM_RECIPE = [
+  "Convert a RECIPE INGREDIENT LIST into a structured food list.",
+  "",
+  "These are RAW, UNCOOKED ingredients as bought and measured — not a plate of food.",
+  "",
+  "For each ingredient emit exactly:",
+  "- query: a plain USDA-style ingredient name (e.g. 'rice, brown, long-grain, raw',",
+  "  'chicken, breast, raw', 'pasta, dry, enriched').",
+  "- qty: the NUMBER of units. Never null.",
+  "- unit: the unit AS STATED.",
+  "- source: the exact fragment of the input this ingredient came from, COPIED VERBATIM.",
+  "",
+  "RULES",
+  "1. NEVER add 'cooked', 'roasted', 'boiled' or 'prepared' unless the input says so.",
+  "   An ingredient list is raw/dry by default. Adding 'cooked' to rice or pasta changes",
+  "   the answer by ~3x, because cooked grains are mostly water.",
+  "2. Keep a stated weight or volume EXACTLY. It is the user's own measurement.",
+  "3. Never estimate grams. Never output calories or macros — a database supplies those.",
+  "4. If an ingredient has no stated quantity, still emit it with qty 1 and unit 'serving'.",
+  "   Do not invent a plausible amount; the caller detects this and reports it.",
+  "",
+  "EXAMPLES",
+  'Input: "3 lb chicken breast, 2 cups dry brown rice"',
+  'Output: [{"query":"chicken, broiler, breast, raw","qty":3,"unit":"lb","source":"3 lb chicken breast"},',
+  '         {"query":"rice, brown, long-grain, raw","qty":2,"unit":"cup","source":"2 cups dry brown rice"}]',
+  "",
+  'Input: "1.5 lb ground turkey, 2.5 cups pasta"',
+  'Output: [{"query":"turkey, ground, raw","qty":1.5,"unit":"lb","source":"1.5 lb ground turkey"},',
+  '         {"query":"pasta, dry, enriched","qty":2.5,"unit":"cup","source":"2.5 cups pasta"}]',
+  "",
+  'Input: "Green beans, olive oil + lemon"',
+  'Output: [{"query":"green beans, raw","qty":1,"unit":"serving","source":"Green beans"},',
+  '         {"query":"oil, olive","qty":1,"unit":"serving","source":"olive oil"},',
+  '         {"query":"lemon, raw","qty":1,"unit":"serving","source":"lemon"}]',
+].join("\n");
+
+/**
+ * "2 eggs and toast" -> [{query:'egg, whole, raw', qty:2, unit:'large', source:'2 eggs'}, ...]
+ *
+ * `mode` picks the domain. A recipe's ingredient list is raw and dry; a meal is cooked.
+ * Using the meal prompt on a recipe silently triples the carbs of every grain — see
+ * PARSE_SYSTEM_RECIPE.
+ */
+export async function parseFoodText(
+  text: string,
+  mode: "meal" | "recipe" = "meal",
+): Promise<ParsedFood[]> {
   const out = await chatJSON<{ items: ParsedFood[] }>(
     [
-      { role: "system", content: PARSE_SYSTEM },
+      { role: "system", content: mode === "recipe" ? PARSE_SYSTEM_RECIPE : PARSE_SYSTEM },
       { role: "user", content: text },
     ],
     PARSE_SCHEMA,

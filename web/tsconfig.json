@@ -6,6 +6,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // The unit tests run under `node --experimental-strip-types`, which requires the .ts
+    // extension on relative imports. Safe here because noEmit is true.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
