@@ -122,6 +122,22 @@ test("a shared CATEGORY word is not a match either", () => {
   assert.equal(isPlausibleMatch("cheese", "Cheese, cheddar"), true);
 });
 
+test("branded and restaurant records are not ingredients", () => {
+  // USDA has no plain marinara, so the best "marinara" hit was an Olive Garden entrée.
+  // A ravioli dinner is not a spoon of sauce.
+  assert.equal(
+    isPlausibleMatch("sauce, marinara", "OLIVE GARDEN, cheese ravioli with marinara sauce"),
+    false,
+  );
+  assert.equal(isPlausibleMatch("cheese, cheddar", "KRAFT, cheddar cheese"), false);
+  assert.equal(
+    isPlausibleMatch("chicken, breast", "Restaurant, family style, chicken breast"),
+    false,
+  );
+  // Real foods are sentence case and must still pass.
+  assert.equal(isPlausibleMatch("beef, ribeye", "Beef, ribeye, steak, boneless, raw"), true);
+});
+
 test("a shared PREPARATION word is not a match", () => {
   // Otherwise "rice, brown, raw" would happily match "Beef, raw" on the strength of "raw"
   // alone — which is how you end up with beef where the rice should be.
