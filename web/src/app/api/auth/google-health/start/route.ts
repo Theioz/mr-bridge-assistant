@@ -3,17 +3,16 @@ import { google } from "googleapis";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
-// Scopes requested in a single consent flow covering Calendar and Gmail (read).
+// Google Health replaces the Fitbit Web API (turned down September 2026).
 //
-// The fitness.* scopes were removed in #607: the Google Fit REST API is deprecated and
-// its sync was folded into Google Health, which is consented separately via
-// /api/auth/google-health/start so the health token carries no Gmail scope. (Google
-// revokes Gmail-scoped refresh tokens on password change; keeping them apart means a
-// password change can't take the unattended fitness sync down with it.)
-const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/calendar",
-  "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/gmail.readonly",
+// These scopes are deliberately requested in a SEPARATE consent from the Calendar/Gmail
+// flow, against the same OAuth client. Google revokes a refresh token on password change
+// if that token carries Gmail scopes — issuing a health-only token keeps the unattended
+// fitness sync alive through a password change. `include_granted_scopes: false` is what
+// keeps the two tokens from merging.
+const GOOGLE_HEALTH_SCOPES = [
+  "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
+  "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",
 ];
 
 export async function GET() {
@@ -27,12 +26,12 @@ export async function GET() {
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  const redirectUri = process.env.GOOGLE_HEALTH_OAUTH_REDIRECT_URI;
   if (!clientId || !clientSecret || !redirectUri) {
     return NextResponse.json(
       {
         error:
-          "Google OAuth not configured (missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_OAUTH_REDIRECT_URI)",
+          "Google Health OAuth not configured (missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_HEALTH_OAUTH_REDIRECT_URI)",
       },
       { status: 500 },
     );
@@ -44,12 +43,12 @@ export async function GET() {
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: false,
-    scope: GOOGLE_SCOPES,
+    scope: GOOGLE_HEALTH_SCOPES,
     state: csrf,
   });
 
   const cookieStore = await cookies();
-  cookieStore.set("google_oauth_csrf", csrf, {
+  cookieStore.set("google_health_oauth_csrf", csrf, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

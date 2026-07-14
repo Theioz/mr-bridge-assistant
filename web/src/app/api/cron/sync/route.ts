@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { syncOura } from "@/lib/sync/oura";
-import { syncFitbit } from "@/lib/sync/fitbit";
-import { syncGoogleFit } from "@/lib/sync/googlefit";
+import { syncGoogleHealth } from "@/lib/sync/google-health";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import { syncPackages } from "@/lib/sync/packages";
@@ -32,11 +31,11 @@ export async function GET(request: NextRequest) {
     .delete()
     .lt("sent_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-  // Run all three syncs in parallel, skipping any synced within the last 30 minutes
-  const [ouraAge, fitbitAge, googleFitAge] = await Promise.all([
+  // Run both health syncs in parallel, skipping any synced within the last 30 minutes.
+  // Fitbit and Google Fit were folded into Google Health — see #607.
+  const [ouraAge, googleHealthAge] = await Promise.all([
     lastSyncAgeSecs(db, "oura"),
-    lastSyncAgeSecs(db, "fitbit"),
-    lastSyncAgeSecs(db, "google_fit"),
+    lastSyncAgeSecs(db, "google_health"),
   ]);
 
   if (ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
@@ -56,38 +55,21 @@ export async function GET(request: NextRequest) {
     results.oura = { skipped: true, ageSecs: Math.round(ouraAge) };
   }
 
-  if (fitbitAge === null || fitbitAge >= SKIP_WINDOW_SECS) {
-    const userIds = await listConnectedUsers(db, "fitbit");
-    const settled = await Promise.allSettled(userIds.map((uid) => syncFitbit(db, uid)));
+  if (googleHealthAge === null || googleHealthAge >= SKIP_WINDOW_SECS) {
+    const userIds = await listConnectedUsers(db, "google_health");
+    const settled = await Promise.allSettled(userIds.map((uid) => syncGoogleHealth(db, uid)));
     const errors = settled
       .map((s, i) =>
         s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
       )
       .filter((e): e is { userId: string; error: string } => e !== null);
-    results.fitbit = {
+    results.googleHealth = {
       usersSynced: settled.length - errors.length,
       usersFailed: errors.length,
       errors,
     };
   } else {
-    results.fitbit = { skipped: true, ageSecs: Math.round(fitbitAge) };
-  }
-
-  if (googleFitAge === null || googleFitAge >= SKIP_WINDOW_SECS) {
-    const userIds = await listConnectedUsers(db, "google");
-    const settled = await Promise.allSettled(userIds.map((uid) => syncGoogleFit(db, uid)));
-    const errors = settled
-      .map((s, i) =>
-        s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
-      )
-      .filter((e): e is { userId: string; error: string } => e !== null);
-    results.googleFit = {
-      usersSynced: settled.length - errors.length,
-      usersFailed: errors.length,
-      errors,
-    };
-  } else {
-    results.googleFit = { skipped: true, ageSecs: Math.round(googleFitAge) };
+    results.googleHealth = { skipped: true, ageSecs: Math.round(googleHealthAge) };
   }
 
   // Stocks sync — no skip window; EOD data doesn't change intraday

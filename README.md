@@ -42,10 +42,10 @@ This runs on your own hardware. You need:
 | **A Linux host with Docker** | The reference deployment is a homelab node (`compute-core`). ~5 GB RAM for the app + Supabase + a 7B model. |
 | **Tailscale** (or equivalent) | The app and its database are **tailnet-only** — never publicly routable. Every device you use it from must be on the tailnet. |
 | **A domain** | For TLS + hostnames. The reference uses `jl-infra-lab.com` via Cloudflare. |
-| **Google Cloud project** | Calendar + Gmail + Fit OAuth. Free. |
+| **Google Cloud project** | Calendar + Gmail + Google Health OAuth. Free. |
 | **USDA FoodData Central key** | Free, instant: <https://fdc.nal.usda.gov/api-key-signup.html>. This is where macros come from. |
 | **Ollama** | Local model for food identification. CPU is fine. |
-| Fitbit / Oura *(optional)* | See [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607) — Fitbit's Web API is deprecated in 2026. |
+| Google Health / Oura *(optional)* | Google Health replaced Fitbit + Google Fit in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). |
 
 **No Anthropic API key. No Vercel account. No Supabase Cloud account.** Conversation runs through Claude Code on your existing subscription (see the MCP section).
 
@@ -84,7 +84,7 @@ This is what replaced Claude for nutrition. The macros are read from measured da
 
 ### Step 4 — Set up Google Cloud OAuth
 
-This step enables Calendar, Gmail, and optionally Google Fit. It's the most involved step but only needs to be done once.
+This step enables Calendar, Gmail, and optionally Google Health. It's the most involved step but only needs to be done once.
 
 **Create a Google Cloud project and enable APIs:**
 
@@ -92,7 +92,7 @@ This step enables Calendar, Gmail, and optionally Google Fit. It's the most invo
 2. In the left sidebar: **APIs & Services → Library**. Search for and enable each of these:
    - **Google Calendar API**
    - **Gmail API**
-   - **Fitness API** *(only if you use Google Fit)*
+   - **Google Health API** *(only if you sync workouts / body composition)*
 
 **Configure the OAuth consent screen:**
 
@@ -123,15 +123,18 @@ Skip any integrations you don't use. The app works with none, one, or all of the
 2. In your running app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
 3. *(Migration fallback)* If you set `OURA_ACCESS_TOKEN` in `.env` before connecting via Settings, the sync scripts will fall back to it until you connect via UI.
 
-**Fitbit:**
-1. Go to [dev.fitbit.com](https://dev.fitbit.com) → **Register an app**.
-2. Fill in: Application Name (anything), OAuth 2.0 Application Type → **Personal**, Callback URL → your redirect URI (see below).
-3. Copy your `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` into `.env`.
-4. Set `FITBIT_OAUTH_REDIRECT_URI` in `.env`:
-   - Local: `http://localhost:3000/api/auth/fitbit/callback`
-   - Production: `https://mr-bridge.jl-infra-lab.com/api/auth/fitbit/callback`
-   - Register the same URL under your app's **Callback URL** on dev.fitbit.com.
-5. In your running app, go to **Settings → Integrations → Connect Fitbit** and complete the OAuth flow. The refresh token is stored encrypted in `user_integrations` and rotates automatically.
+**Google Health** *(replaces Fitbit and Google Fit — see [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607))*:
+1. Enable the [Google Health API](https://console.cloud.google.com/apis/library/health.googleapis.com) on the **same** Google Cloud project from Step 4.
+2. On the **Data Access** page, add both read scopes:
+   - `.../auth/googlehealth.activity_and_fitness.readonly`
+   - `.../auth/googlehealth.health_metrics_and_measurements.readonly`
+
+   These are **restricted** scopes, so the console will demand verification. Verification is only needed to exceed 100 users; Google documents an explicit exception for apps used only by their developer. Proceed past the warning.
+3. Set the OAuth **publishing status to "In production"**. Not optional — an app in *Testing* gets refresh tokens that **expire after 7 days**, which breaks the unattended sync.
+4. Add `https://<your-host>/api/auth/google-health/callback` as an authorized redirect URI on the **existing** OAuth client and set `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` in `.env`. There is no separate client ID or secret — it reuses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+5. In your running app, go to **Settings → Integrations → Connect Google Health**. Click through the "Google hasn't verified this app" screen. The refresh token is stored encrypted in `user_integrations`.
+
+   It is consented *separately* from the `google` integration on purpose: Google revokes refresh tokens carrying Gmail scopes when the account password changes, so a health-only token keeps the fitness sync alive through a password change.
 
 ### Step 6 — Set up push notifications via ntfy.sh *(optional)*
 
@@ -186,7 +189,7 @@ cp .env.example .env
 
 | Variable | Why it matters |
 |---|---|
-| `ENCRYPTION_KEY` | The pgcrypto key for `user_integrations.refresh_token_encrypted` — your Google/Fitbit/Oura **refresh tokens**. Lose it and every integration must be re-authorised by hand. **Prove it decrypts a real row before trusting any restore**: the wrong key restores a healthy-looking database in which every integration silently fails. |
+| `ENCRYPTION_KEY` | The pgcrypto key for `user_integrations.refresh_token_encrypted` — your Google/Google Health/Oura **refresh tokens**. Lose it and every integration must be re-authorised by hand. **Prove it decrypts a real row before trusting any restore**: the wrong key restores a healthy-looking database in which every integration silently fails. |
 | `SUPABASE_URL` vs `SUPABASE_INTERNAL_URL` | The browser and the server reach Supabase on **different** URLs. The app container has no route to the tailnet vhost, so it uses a node-local gateway. Collapsing these into one breaks every server-side call with `TypeError: fetch failed`. |
 | `NTFY_TOPIC` | Mind the spelling. Production once had `NFTY_TOPIC`, and push notifications silently 503'd for months. |
 | `SHARE_BASE_URL` | Share links go to people *outside* the tailnet, so they must resolve on the public host. Using `APP_URL` hands recipients an unreachable link. |
@@ -439,7 +442,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── chat/route.ts          # Claude API tool use (26 tools)
 │   │   │   │   ├── sync/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
-│   │   │   │   │   ├── fitbit/route.ts    # POST — sync last 7d Fitbit body + workouts
+│   │   │   │   │   ├── google-health/route.ts  # POST — sync last 7d body + workouts
 │   │   │   │   │   ├── googlefit/route.ts # POST — sync last 7d Google Fit body comp
 │   │   │   │   │   └── packages/route.ts  # POST — sync package deliveries from email → packages table
 │   │   │   │   ├── backlog/
@@ -485,8 +488,8 @@ mr-bridge-assistant/
 │   │   │   │   ├── auth/
 │   │   │   │   │   ├── google/start/route.ts    # GET — initiate Google OAuth flow
 │   │   │   │   │   ├── google/callback/route.ts # GET — handle Google OAuth callback; store encrypted refresh token
-│   │   │   │   │   ├── fitbit/start/route.ts    # GET — initiate Fitbit OAuth flow
-│   │   │   │   │   └── fitbit/callback/route.ts # GET — handle Fitbit OAuth callback; store encrypted refresh token
+│   │   │   │   │   ├── google-health/start/route.ts    # GET — initiate Google Health OAuth (health scopes only)
+│   │   │   │   │   └── google-health/callback/route.ts # GET — handle callback; store encrypted refresh token
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts              # GET — today's Google Calendar events (dashboard widget)
 │   │   │   │       ├── calendar/events/route.ts       # GET/POST — create calendar events (chat tool backend)
@@ -536,7 +539,7 @@ mr-bridge-assistant/
 │   │       │   └── csv.ts                 # Deterministic CSV serializer (ordered columns, CRLF)
 │   │       └── sync/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
-│   │           ├── fitbit.ts              # syncFitbit() — body comp + workouts; rotating refresh token
+│   │           ├── google-health.ts       # syncGoogleHealth() — body comp + workouts + HR zones
 │   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
 │   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
@@ -571,7 +574,7 @@ mr-bridge-assistant/
 │
 ├── docs/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
-│   ├── fitness-tracker-setup.md           # Google Fit, Oura, Fitbit, Renpho setup
+│   ├── fitness-tracker-setup.md           # Google Health + Oura setup
 │   ├── google-oauth-setup.md              # OAuth token setup + refresh guide
 │   └── gmail-multi-account.md             # Auto-forwarding + Calendar sharing setup
 │
@@ -582,9 +585,8 @@ mr-bridge-assistant/
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
-│   ├── sync-googlefit.py                  # Google Fit weight → Supabase fitness_log
 │   ├── sync-oura.py                       # Oura Ring → recovery_metrics + workout_sessions
-│   ├── sync-fitbit.py                     # Fitbit workouts + body comp → Supabase
+│   ├── sync-google-health.py              # Google Health workouts + body comp → Supabase
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
@@ -623,7 +625,7 @@ The demo account is fully interactive: toggle habits, add tasks, log meals, brow
 | Habits, tasks, fitness, recovery | Real data from Supabase (seeded) |
 | Gmail | Hardcoded mock emails |
 | Google Calendar | Hardcoded mock events |
-| Fitbit / Oura sync | Not connected — seed data covers it |
+| Google Health / Oura sync | Not connected — seed data covers it |
 
 ---
 

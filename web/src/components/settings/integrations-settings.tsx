@@ -18,9 +18,9 @@ interface IntegrationsSettingsProps {
   saveOuraTokenAction: (pat: string) => Promise<void>;
   disconnectOuraAction: () => Promise<void>;
   ouraLastSync: SyncStatus | null;
-  fitbitIntegration: Integration | null;
-  disconnectFitbitAction: () => Promise<void>;
-  fitbitLastSync: SyncStatus | null;
+  googleHealthIntegration: Integration | null;
+  disconnectGoogleHealthAction: () => Promise<void>;
+  googleHealthLastSync: SyncStatus | null;
   metricPreferences: MetricPreferences;
   saveMetricPreferencesAction: (prefs: Record<string, string>) => Promise<void>;
   errorParam?: string;
@@ -34,12 +34,14 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Google did not issue a refresh token. Revoke Mr. Bridge access at myaccount.google.com/permissions, then connect again.",
   google_store: "Connected to Google but failed to save the token. Please try again.",
   google_invalid: "Invalid OAuth response. Please try again.",
-  fitbit_denied: "Fitbit authorisation was cancelled.",
-  fitbit_csrf: "Security check failed. Please try again.",
-  fitbit_exchange: "Could not exchange the Fitbit authorisation code. Please try again.",
-  fitbit_no_refresh_token: "Fitbit did not issue a refresh token. Please try connecting again.",
-  fitbit_store: "Connected to Fitbit but failed to save the token. Please try again.",
-  fitbit_invalid: "Invalid Fitbit OAuth response. Please try again.",
+  google_health_denied: "Google Health authorisation was cancelled.",
+  google_health_csrf: "Security check failed. Please try again.",
+  google_health_exchange:
+    "Could not exchange the Google Health authorisation code. Please try again.",
+  google_health_no_refresh_token:
+    "Google did not issue a refresh token. Revoke the app's access in your Google Account and connect again.",
+  google_health_store: "Connected to Google Health but failed to save the token. Please try again.",
+  google_health_invalid: "Invalid Google Health OAuth response. Please try again.",
   oura_store: "Failed to save your Oura token. Please try again.",
 };
 
@@ -59,7 +61,6 @@ function scopeSummary(scopes: string[]): string {
   const labels: string[] = [];
   if (scopes.some((s) => s.includes("calendar"))) labels.push("Calendar");
   if (scopes.some((s) => s.includes("gmail"))) labels.push("Gmail");
-  if (scopes.some((s) => s.includes("fitness"))) labels.push("Fitness");
   return labels.length ? labels.join(", ") : "Google";
 }
 
@@ -75,7 +76,7 @@ function syncLabel(sync: SyncStatus | null): React.ReactElement {
 }
 
 interface SyncNowButtonProps {
-  endpoint: "/api/sync/oura" | "/api/sync/fitbit";
+  endpoint: "/api/sync/oura" | "/api/sync/google-health";
   onDone: (s: SyncStatus) => void;
 }
 
@@ -205,22 +206,24 @@ export function IntegrationsSettings({
   saveOuraTokenAction,
   disconnectOuraAction,
   ouraLastSync,
-  fitbitIntegration,
-  disconnectFitbitAction,
-  fitbitLastSync,
+  googleHealthIntegration,
+  disconnectGoogleHealthAction,
+  googleHealthLastSync,
   metricPreferences,
   saveMetricPreferencesAction,
   errorParam,
 }: IntegrationsSettingsProps) {
   const [googlePending, startGoogleTransition] = useTransition();
   const [ouraPending, startOuraTransition] = useTransition();
-  const [fitbitPending, startFitbitTransition] = useTransition();
+  const [googleHealthPending, startGoogleHealthTransition] = useTransition();
   const [prefsPending, startPrefsTransition] = useTransition();
   const [ouraExpanded, setOuraExpanded] = useState(false);
   const [ouraToken, setOuraToken] = useState("");
   const [ouraSaving, setOuraSaving] = useState(false);
   const [ouraSync, setOuraSync] = useState<SyncStatus | null>(ouraLastSync ?? null);
-  const [fitbitSync, setFitbitSync] = useState<SyncStatus | null>(fitbitLastSync ?? null);
+  const [googleHealthSync, setGoogleHealthSync] = useState<SyncStatus | null>(
+    googleHealthLastSync ?? null,
+  );
   const [localPrefs, setLocalPrefs] = useState<MetricPreferences>(metricPreferences);
   const [prefsSaved, setPrefsSaved] = useState(false);
 
@@ -444,7 +447,7 @@ export function IntegrationsSettings({
         )}
       </div>
 
-      {/* ── Fitbit ── */}
+      {/* ── Google Health ── */}
       <div
         style={{
           paddingTop: "var(--space-4)",
@@ -457,38 +460,38 @@ export function IntegrationsSettings({
         }}
       >
         <div style={labelColStyle}>
-          <span style={nameStyle}>Fitbit</span>
-          {fitbitIntegration ? (
+          <span style={nameStyle}>Google Health</span>
+          {googleHealthIntegration ? (
             <>
               <span style={descStyle}>
-                {`Connected ${formatConnectedDate(fitbitIntegration.connectedAt)} · Activities, weight, heart rate`}
+                {`Connected ${formatConnectedDate(googleHealthIntegration.connectedAt)} · Workouts, weight, heart rate`}
               </span>
               <span style={{ ...descStyle, marginTop: "var(--space-1)" }}>
-                {syncLabel(fitbitSync)}
+                {syncLabel(googleHealthSync)}
               </span>
             </>
           ) : (
-            <span style={descStyle}>Activities, weight, heart rate</span>
+            <span style={descStyle}>Workouts, weight, heart rate</span>
           )}
         </div>
 
         <div style={actionColStyle}>
-          {fitbitIntegration ? (
+          {googleHealthIntegration ? (
             <>
               <span style={connectedBadgeStyle}>Connected</span>
-              <SyncNowButton endpoint="/api/sync/fitbit" onDone={setFitbitSync} />
+              <SyncNowButton endpoint="/api/sync/google-health" onDone={setGoogleHealthSync} />
               <button
                 type="button"
-                disabled={fitbitPending}
-                onClick={() => startFitbitTransition(() => disconnectFitbitAction())}
-                style={disconnectButtonStyle(fitbitPending)}
+                disabled={googleHealthPending}
+                onClick={() => startGoogleHealthTransition(() => disconnectGoogleHealthAction())}
+                style={disconnectButtonStyle(googleHealthPending)}
               >
-                {fitbitPending ? "Disconnecting…" : "Disconnect"}
+                {googleHealthPending ? "Disconnecting…" : "Disconnect"}
               </button>
             </>
           ) : (
-            <a href="/api/auth/fitbit/start" style={connectLinkStyle()}>
-              Connect Fitbit
+            <a href="/api/auth/google-health/start" style={connectLinkStyle()}>
+              Connect Google Health
             </a>
           )}
         </div>
@@ -536,37 +539,33 @@ export function IntegrationsSettings({
               metric: "sleep" as const,
               label: "Sleep",
               desc: "Total sleep, stages, bedtime, efficiency",
-              options: [
-                ouraIntegration ? { value: "oura", label: "Oura" } : null,
-                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
-              ].filter(Boolean) as { value: string; label: string }[],
+              options: [ouraIntegration ? { value: "oura", label: "Oura" } : null].filter(
+                Boolean,
+              ) as { value: string; label: string }[],
             },
             {
               metric: "hrv" as const,
               label: "HRV",
               desc: "Average heart rate variability",
-              options: [
-                ouraIntegration ? { value: "oura", label: "Oura" } : null,
-                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
-              ].filter(Boolean) as { value: string; label: string }[],
+              options: [ouraIntegration ? { value: "oura", label: "Oura" } : null].filter(
+                Boolean,
+              ) as { value: string; label: string }[],
             },
             {
               metric: "steps" as const,
               label: "Steps",
               desc: "Daily step count",
-              options: [
-                ouraIntegration ? { value: "oura", label: "Oura" } : null,
-                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
-              ].filter(Boolean) as { value: string; label: string }[],
+              options: [ouraIntegration ? { value: "oura", label: "Oura" } : null].filter(
+                Boolean,
+              ) as { value: string; label: string }[],
             },
             {
               metric: "active_calories" as const,
               label: "Active Calories",
               desc: "Active calories burned",
-              options: [
-                ouraIntegration ? { value: "oura", label: "Oura" } : null,
-                fitbitIntegration ? { value: "fitbit", label: "Fitbit" } : null,
-              ].filter(Boolean) as { value: string; label: string }[],
+              options: [ouraIntegration ? { value: "oura", label: "Oura" } : null].filter(
+                Boolean,
+              ) as { value: string; label: string }[],
             },
             {
               metric: "readiness" as const,
@@ -581,8 +580,7 @@ export function IntegrationsSettings({
               label: "Body Composition",
               desc: "Weight, body fat, BMI",
               options: [
-                fitbitIntegration ? { value: "fitbit_body", label: "Fitbit" } : null,
-                googleIntegration ? { value: "google_fit", label: "Google Fit" } : null,
+                googleHealthIntegration ? { value: "google_health", label: "Google Health" } : null,
               ].filter(Boolean) as { value: string; label: string }[],
             },
           ] as const

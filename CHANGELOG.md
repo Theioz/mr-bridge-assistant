@@ -9,6 +9,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- **Fitbit and Google Fit replaced by the Google Health API**
+  ([#607](https://github.com/Theioz/mr-bridge-assistant/issues/607)). The Fitbit Web API
+  is **turned down in September 2026** and the Google Fit REST API is deprecated; both
+  now come through `health.googleapis.com/v4` via a single `sync-google-health.py` /
+  `web/src/lib/sync/google-health.ts`. Three sync paths became one.
+
+  - **Per-workout heart-rate zones and average HR survive the move** — they are native
+    fields on `Exercise.metricsSummary` (`heartRateZoneDurations`,
+    `averageHeartRateBeatsPerMinute`), better-structured than Fitbit's. The data
+    regression feared in #607 does not exist.
+  - **Zone names change:** Fitbit's `Fat Burn` / `Cardio` / `Peak` become Google's
+    `Light` / `Moderate` / `Vigorous` / `Peak`. Rows written before the cutover keep the
+    old labels — `workout_sessions.metadata.hr_zones` is intentionally mixed, not
+    backfilled.
+  - **BMI is now derived** from weight + height. Google Health has no `bmi` data type
+    (Fitbit supplied one directly). With no `height` sample on file, BMI is null rather
+    than guessed.
+  - **Workout duration now excludes pauses** (`activeDuration`); Fitbit's `duration` did
+    not.
+  - **Recovery is Oura-only.** The Fitbit `recovery_metrics` writer is gone rather than
+    ported: Oura is a strict superset (it also supplies `readiness`, `sleep_score`,
+    `vo2_max`, which Fitbit never did) and no preference pointed at Fitbit.
+  - **`muscle_mass_lb` and `metadata.bmr_kcal` stop being written.** Google Health has no
+    lean-body-mass or BMR data type. Not a new regression — those columns were fed by the
+    retired Renpho scale via Google Fit and have not received data since the switch to the
+    GE CS10G / Fit Profile. See [#69](https://github.com/Theioz/mr-bridge-assistant/issues/69).
+
+- **Google Health is consented separately from Calendar/Gmail**, against the same OAuth
+  client, and stored under its own `google_health` provider row. Google revokes a refresh
+  token on password change *if that token carries Gmail scopes* — a health-only token
+  keeps the unattended fitness sync alive through a password change. The `fitness.*`
+  scopes were dropped from `GOOGLE_SCOPES`.
+
 - **Self-hosted.** Mr. Bridge is off **Vercel** and off **Supabase Cloud**, running on a
   homelab node behind a tailnet ([#476](https://github.com/Theioz/jl-homelab/issues/476)).
   Three hostnames: the app and Supabase are **tailnet-only**; only token-gated `/share/*`
@@ -454,6 +487,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 - **Delete a logged meal (#330).** Each row in *Logged Today* and *Past 6 Days* now has a trash icon. Tap → row disappears immediately and today's macro totals (calories, protein, carbs, fat, fiber, sugar) recompute from the visible rows; a 5-second "Meal deleted" undo toast lets the user restore the row before commit. After the toast expires, `DELETE /api/meals/log` fires; if the user navigates away inside the window, an unmount cleanup flushes the pending delete via `fetch(..., { keepalive: true })` so it leaves the browser even as the page tears down. New `DELETE` handler on [web/src/app/api/meals/log/route.ts](web/src/app/api/meals/log/route.ts) is user-scoped (`createClient()` + `eq("user_id", user.id)` + 404 on cross-user IDs). Reuses the [`UndoToastProvider`](web/src/components/ui/undo-toast.tsx) built for chat session deletion (#205); macro totals are recomputed client-side via a small helper in [MealsClient.tsx](web/src/components/meals/MealsClient.tsx) that mirrors the SSR reduce in [page.tsx](web/src/app/(protected)/meals/page.tsx). The dedupe-driven *Recent meals* row is intentionally excluded — those are historical references for re-logging, not the source rows themselves; deleting them would be ambiguous.
+
+### Removed
+
+- `scripts/sync-fitbit.py`, `scripts/sync-googlefit.py`, `web/src/lib/sync/fitbit.ts`,
+  `web/src/lib/sync/googlefit.ts`, `/api/auth/fitbit/{start,callback}`,
+  `/api/sync/fitbit`, `/api/sync/googlefit` — all superseded by Google Health (#607).
+- Env: `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, `FITBIT_OAUTH_REDIRECT_URI`,
+  `FITBIT_WEIGHT_UNIT`. Google Health reuses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+  and adds only `GOOGLE_HEALTH_OAUTH_REDIRECT_URI`.
 
 ## [1.1.0] — 2026-04-17
 

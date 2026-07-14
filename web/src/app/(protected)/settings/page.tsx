@@ -223,7 +223,7 @@ async function disconnectOura() {
   revalidatePath("/settings");
 }
 
-async function disconnectFitbit() {
+async function disconnectGoogleHealth() {
   "use server";
   const supabase = await createClient();
   const {
@@ -231,7 +231,7 @@ async function disconnectFitbit() {
   } = await supabase.auth.getUser();
   if (!user) return;
   const db = createServiceClient();
-  await deleteIntegration(db, user.id, "fitbit");
+  await deleteIntegration(db, user.id, "google_health");
   revalidatePath("/settings");
 }
 
@@ -267,18 +267,20 @@ async function SettingsContent({
     const [
       googleIntegration,
       ouraIntegration,
-      fitbitIntegration,
+      googleHealthIntegration,
       googleLastSync,
       ouraLastSync,
-      fitbitLastSync,
+      googleHealthLastSync,
       metricPreferences,
     ] = await Promise.all([
       user ? loadIntegration(db, user.id, "google").catch((): null => null) : Promise.resolve(null),
       user ? loadIntegration(db, user.id, "oura").catch((): null => null) : Promise.resolve(null),
-      user ? loadIntegration(db, user.id, "fitbit").catch((): null => null) : Promise.resolve(null),
-      lastSyncStatus(db, "google_fit").catch((): null => null),
+      user
+        ? loadIntegration(db, user.id, "google_health").catch((): null => null)
+        : Promise.resolve(null),
+      lastSyncStatus(db, "packages").catch((): null => null),
       lastSyncStatus(db, "oura").catch((): null => null),
-      lastSyncStatus(db, "fitbit").catch((): null => null),
+      lastSyncStatus(db, "google_health").catch((): null => null),
       user
         ? loadMetricPreferences(db, user.id).catch(
             (): MetricPreferences => ({ ...METRIC_DEFAULTS }),
@@ -295,9 +297,9 @@ async function SettingsContent({
         saveOuraTokenAction={saveOuraToken}
         disconnectOuraAction={disconnectOura}
         ouraLastSync={ouraLastSync}
-        fitbitIntegration={fitbitIntegration}
-        disconnectFitbitAction={disconnectFitbit}
-        fitbitLastSync={fitbitLastSync}
+        googleHealthIntegration={googleHealthIntegration}
+        disconnectGoogleHealthAction={disconnectGoogleHealth}
+        googleHealthLastSync={googleHealthLastSync}
         metricPreferences={metricPreferences}
         saveMetricPreferencesAction={saveMetricPreferences}
         errorParam={params.error}
