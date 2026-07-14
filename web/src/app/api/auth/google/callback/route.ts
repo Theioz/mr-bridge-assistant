@@ -7,6 +7,13 @@ import { storeIntegration } from "@/lib/integrations/tokens";
 
 const SETTINGS_URL = "/settings?connected=google";
 
+// Behind the Caddy reverse proxy, req.nextUrl.origin resolves to the container's bind
+// address (http://0.0.0.0:3000) rather than the public host, so redirecting to it lands
+// the browser on an unreachable URL. NEXT_PUBLIC_APP_URL is the app's own public origin.
+function appOrigin(req: NextRequest): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? req.nextUrl.origin;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const code = searchParams.get("code");
@@ -14,17 +21,17 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(new URL("/settings?error=google_denied", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?error=google_denied", appOrigin(req)));
   }
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/settings?error=google_invalid", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?error=google_invalid", appOrigin(req)));
   }
 
   // Validate CSRF state
   const cookieStore = await cookies();
   const csrf = cookieStore.get("google_oauth_csrf")?.value;
   if (!csrf || csrf !== state) {
-    return NextResponse.redirect(new URL("/settings?error=google_csrf", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?error=google_csrf", appOrigin(req)));
   }
   cookieStore.delete("google_oauth_csrf");
 
@@ -34,7 +41,7 @@ export async function GET(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login", appOrigin(req)));
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID!;
@@ -48,14 +55,14 @@ export async function GET(req: NextRequest) {
     const { tokens: exchanged } = await oauth2Client.getToken(code);
     tokens = exchanged;
   } catch {
-    return NextResponse.redirect(new URL("/settings?error=google_exchange", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?error=google_exchange", appOrigin(req)));
   }
 
   if (!tokens.refresh_token) {
     // Google only issues a refresh_token on first consent. If it's missing,
     // the user likely connected before without revoking. Show a helpful error.
     return NextResponse.redirect(
-      new URL("/settings?error=google_no_refresh_token", req.nextUrl.origin),
+      new URL("/settings?error=google_no_refresh_token", appOrigin(req)),
     );
   }
 
@@ -69,8 +76,8 @@ export async function GET(req: NextRequest) {
       scopes: grantedScopes,
     });
   } catch {
-    return NextResponse.redirect(new URL("/settings?error=google_store", req.nextUrl.origin));
+    return NextResponse.redirect(new URL("/settings?error=google_store", appOrigin(req)));
   }
 
-  return NextResponse.redirect(new URL(SETTINGS_URL, req.nextUrl.origin));
+  return NextResponse.redirect(new URL(SETTINGS_URL, appOrigin(req)));
 }
