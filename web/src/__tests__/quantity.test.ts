@@ -106,6 +106,22 @@ test("accepts the real match, including USDA's verbose phrasing", () => {
   assert.equal(isPlausibleMatch("pasta, dry, enriched", "Pasta, dry, enriched"), true);
 });
 
+test("a shared CATEGORY word is not a match either", () => {
+  // The one that slipped through in production: the model queries "sauce, marinara", and
+  // "Cheese sauce, prepared from recipe" shares "sauce" — so marinara resolved as cheese
+  // sauce. A category noun is not evidence; a distinctive one is.
+  assert.equal(isPlausibleMatch("sauce, marinara", "Cheese sauce, prepared from recipe"), false);
+  assert.equal(isPlausibleMatch("cheese, cream", "Cheese, goat, soft type"), false);
+  assert.equal(isPlausibleMatch("oil, olive", "Oil, corn, peanut, and olive"), true); // olive IS distinctive
+  assert.equal(
+    isPlausibleMatch("sauce, marinara", "Sauce, pasta, spaghetti/marinara, ready-to-serve"),
+    true,
+  );
+  // A query with no distinctive word at all must not be blocked — anything in the family
+  // is a fair answer to a vague question.
+  assert.equal(isPlausibleMatch("cheese", "Cheese, cheddar"), true);
+});
+
 test("a shared PREPARATION word is not a match", () => {
   // Otherwise "rice, brown, raw" would happily match "Beef, raw" on the strength of "raw"
   // alone — which is how you end up with beef where the rice should be.
