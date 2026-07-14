@@ -220,9 +220,10 @@ def fetch_body(access_token: str, start_str: str, end_excl: str) -> list[dict]:
     # Height changes rarely and is only needed for BMI — take the latest on file.
     heights = list_data_points(access_token, "height", None, 1)
 
+    # heightMillimeters is int64 — proto-JSON serialises it as a STRING, not a number.
     height_mm = ((heights[0].get("height") or {}).get("heightMillimeters")
                  if heights else None)
-    height_m = height_mm / 1000 if height_mm else None
+    height_m = float(height_mm) / 1000 if height_mm else None
 
     by_date: dict[str, dict] = {}
     for p in weights:
