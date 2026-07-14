@@ -121,6 +121,39 @@ const ZERO: Macros = {
  * family and the right calorie order. Better a narrow guard that never rejects a good match
  * than a clever one that does.
  */
+// Broad category nouns. These are too weak to PROVE a match on their own: "sauce, marinara"
+// and "Cheese sauce, prepared from recipe" share "sauce" and are not the same food — that
+// exact match got marinara resolved as cheese sauce in production. Likewise "cheese, cream"
+// vs "Cheese, goat".
+//
+// They are only stripped from the QUERY's required tokens; a query consisting of NOTHING but
+// category words (a bare "cheese") still matches anything in that family, which is the right
+// behaviour for a vague query.
+const WEAK_TOKENS = new Set([
+  "sauce",
+  "soup",
+  "oil",
+  "cheese",
+  "juice",
+  "spice",
+  "spices",
+  "seasoning",
+  "beverage",
+  "beverages",
+  "drink",
+  "snack",
+  "snacks",
+  "food",
+  "foods",
+  "mix",
+  "mixture",
+  "product",
+  "products",
+  "dish",
+  "meal",
+  "recipe",
+]);
+
 const PREP_WORDS = new Set([
   "raw",
   "cooked",
@@ -171,12 +204,12 @@ const PREP_WORDS = new Set([
   "blend",
 ]);
 
-function significantTokens(text: string): Set<string> {
+function tokens(text: string, dropWeak: boolean): Set<string> {
   return new Set(
     text
       .toLowerCase()
       .split(/[^a-z]+/)
-      .filter((w) => w.length > 2 && !PREP_WORDS.has(w))
+      .filter((w) => w.length > 2 && !PREP_WORDS.has(w) && !(dropWeak && WEAK_TOKENS.has(w)))
       // Crude singularisation so "broilers" matches "broiler", "beans" matches "bean".
       .map((w) => (w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w)),
   );
@@ -184,9 +217,16 @@ function significantTokens(text: string): Set<string> {
 
 /** True when the candidate plausibly IS the queried food. */
 export function isPlausibleMatch(query: string, description: string): boolean {
-  const wanted = significantTokens(query);
-  if (wanted.size === 0) return true; // nothing to check against — don't block on a vague query
-  const got = significantTokens(description);
+  // The query must be matched on a DISTINCTIVE word ("marinara"), not a category one
+  // ("sauce"). The description keeps its category words — "Sauce, marinara" should still
+  // match on "marinara".
+  const wanted = tokens(query, true);
+  if (wanted.size === 0) {
+    // The query is nothing but category/prep words (a bare "cheese", "oil"). There is no
+    // distinctive word to check, so don't block — anything in the family is a fair answer.
+    return true;
+  }
+  const got = tokens(description, false);
   for (const w of wanted) if (got.has(w)) return true;
   return false;
 }
