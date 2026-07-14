@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Recipes carry measured macros** (#607 follow-on — meal-prep coordination). `recipes`
+  gains `servings` plus calories/protein/carbs/fat/fiber for the recipe **as written**
+  (per-serving is derived, so re-portioning a batch never re-runs USDA). Resolved once
+  through the existing pipeline — the local model identifies the foods, **USDA FoodData
+  Central supplies every gram**. No macro value here is model-authored.
+
+  This is the prerequisite for planning meals against a target, and for logging a meal by
+  *confirming* it rather than photographing it: `meal_log.recipe_id` has existed all along
+  and has never once been populated (0 of 44 rows), which is why every meal cost a
+  photo → USDA round trip, and why meal logging stopped in May.
+
 ### Changed
 
 - **Fitbit and Google Fit replaced by the Google Health API**
