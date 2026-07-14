@@ -18,17 +18,19 @@ const BODY_SOURCES = ["google_health", "fitbit_body", "google_fit"];
 // Verified against the v4 discovery doc, rev 20260713.
 // ---------------------------------------------------------------------------
 
-interface CivilDateTime {
-  date?: { year?: number; month?: number; day?: number };
-  time?: { hours?: number; minutes?: number; seconds?: number };
+interface SampleTime {
+  physicalTime?: string;
+  utcOffset?: string;
 }
 
 interface DataPoint {
-  weight?: { sampleTime?: { civilTime?: CivilDateTime }; weightGrams?: number };
-  bodyFat?: { sampleTime?: { civilTime?: CivilDateTime }; percentage?: number };
-  height?: { heightMillimeters?: number };
+  // heightMillimeters and averageHeartRateBeatsPerMinute are int64 — proto-JSON
+  // serialises them as STRINGS, not numbers.
+  weight?: { sampleTime?: SampleTime; weightGrams?: number };
+  bodyFat?: { sampleTime?: SampleTime; percentage?: number };
+  height?: { heightMillimeters?: string };
   exercise?: {
-    interval?: { civilStartTime?: CivilDateTime };
+    interval?: { startTime?: string; startUtcOffset?: string };
     exerciseType?: string;
     displayName?: string;
     activeDuration?: string;
@@ -118,21 +120,29 @@ async function listDataPoints(
 }
 
 // ---------------------------------------------------------------------------
-// Civil time = the user's local wall-clock time, supplied by the API directly.
-// This is the equivalent of Fitbit's local timestamps; no offset math needed.
+// Local wall-clock time.
+//
+// The API accepts `civil_*` fields in a FILTER but does not return them in the
+// response — a data point carries only a UTC instant plus a google-duration offset
+// ("-25200s"). Verified against live data: startTime 2026-07-11T00:16:17Z with
+// startUtcOffset -25200s is a workout the user logged at 17:16 on 07-10. Reading the
+// documented civilStartTime instead yields undefined and silently drops every row.
 // ---------------------------------------------------------------------------
 
-function civilDate(c: CivilDateTime | undefined): string | null {
-  const d = c?.date;
-  if (!d?.year || !d.month || !d.day) return null;
-  return `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+function localDate(utcTime?: string, utcOffset?: string): Date | null {
+  if (!utcTime) return null;
+  const ms = Date.parse(utcTime);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms + durationSecs(utcOffset) * 1000);
 }
 
-function civilTime(c: CivilDateTime | undefined): string | null {
-  const t = c?.time;
-  if (!t) return null;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(t.hours ?? 0)}:${pad(t.minutes ?? 0)}:${pad(t.seconds ?? 0)}`;
+// Read back the shifted instant in UTC — it now holds the user's local wall clock.
+function dateStr(d: Date | null): string | null {
+  return d ? d.toISOString().slice(0, 10) : null;
+}
+
+function timeStr(d: Date | null): string | null {
+  return d ? d.toISOString().slice(11, 19) : null;
 }
 
 // Filters take civil time as an unzoned RFC-3339-style literal, and use the
@@ -251,17 +261,20 @@ export async function syncGoogleHealth(
   // derived from weight + height. Height is a separate sample, not part of the weight
   // reading; if the user has never recorded one, BMI stays null rather than guessed.
 
-  const heightM = (heightPoints[0]?.height?.heightMillimeters ?? 0) / 1000 || null;
+  const heightMm = Number(heightPoints[0]?.height?.heightMillimeters ?? 0);
+  const heightM = Number.isFinite(heightMm) && heightMm > 0 ? heightMm / 1000 : null;
 
   const byDate = new Map<string, { weightKg?: number; fatPct?: number }>();
   for (const p of weightPoints) {
-    const date = civilDate(p.weight?.sampleTime?.civilTime);
+    const st = p.weight?.sampleTime;
+    const date = dateStr(localDate(st?.physicalTime, st?.utcOffset));
     const grams = p.weight?.weightGrams;
     if (!date || grams == null) continue;
     byDate.set(date, { ...byDate.get(date), weightKg: grams / 1000 });
   }
   for (const p of fatPoints) {
-    const date = civilDate(p.bodyFat?.sampleTime?.civilTime);
+    const st = p.bodyFat?.sampleTime;
+    const date = dateStr(localDate(st?.physicalTime, st?.utcOffset));
     const pct = p.bodyFat?.percentage;
     if (!date || pct == null) continue;
     byDate.set(date, { ...byDate.get(date), fatPct: pct });
@@ -320,7 +333,8 @@ export async function syncGoogleHealth(
     const ex = p.exercise;
     if (!ex) continue;
 
-    const date = civilDate(ex.interval?.civilStartTime);
+    const startLocal = localDate(ex.interval?.startTime, ex.interval?.startUtcOffset);
+    const date = dateStr(startLocal);
     if (!date) continue;
 
     // activeDuration excludes pauses; Fitbit's `duration` did not. Slightly stricter,
@@ -328,7 +342,7 @@ export async function syncGoogleHealth(
     const durationMin = Math.round(durationSecs(ex.activeDuration) / 60);
     if (durationMin < 5) continue;
 
-    const timeStr = civilTime(ex.interval?.civilStartTime);
+    const startTime = timeStr(startLocal);
     const metrics = ex.metricsSummary;
     const avgHrRaw = metrics?.averageHeartRateBeatsPerMinute;
     const avgHr = avgHrRaw != null ? Number(avgHrRaw) : null;
@@ -337,14 +351,14 @@ export async function syncGoogleHealth(
 
     workoutRows.push({
       date,
-      start_time: timeStr,
+      start_time: startTime,
       activity,
       duration_mins: durationMin,
       calories: calories != null ? Math.round(calories) : null,
       avg_hr: avgHr != null && Number.isFinite(avgHr) ? Math.round(avgHr) : null,
       source: "google_health",
       metadata: { hr_zones: fmtHrZones(metrics?.heartRateZoneDurations) },
-      _key: `${date}|${timeStr}|${activity}`,
+      _key: `${date}|${startTime}|${activity}`,
     });
   }
 

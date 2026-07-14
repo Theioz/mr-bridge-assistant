@@ -37,7 +37,7 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(Path(__file__).parent))
 from _supabase import get_client, get_owner_user_id, upsert
-from _sync_log import log_sync, urlopen_with_retry, HTTP_TIMEOUT
+from _sync_log import log_sync, urlopen_with_retry
 from _integrations import load_integration
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -93,8 +93,7 @@ def get_access_token(client, user_id: str) -> str:
         data=body,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    with urlopen_with_retry(req, timeout=HTTP_TIMEOUT) as resp:
-        return json.loads(resp.read())["access_token"]
+    return urlopen_with_retry(req)["access_token"]
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +115,7 @@ def list_data_points(access_token: str, data_type: str, filter_expr: str | None 
 
         url = f"{HEALTH_API_BASE}/users/me/dataTypes/{data_type}/dataPoints?{urllib.parse.urlencode(params)}"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {access_token}"})
-        with urlopen_with_retry(req, timeout=HTTP_TIMEOUT) as resp:
-            data = json.loads(resp.read())
+        data = urlopen_with_retry(req)
 
         points.extend(data.get("dataPoints") or [])
         page_token = data.get("nextPageToken")
@@ -139,18 +137,31 @@ def civil_range_filter(field: str, start_str: str, end_str: str) -> str:
 # equivalent of Fitbit's local timestamps. No offset arithmetic needed.
 # ---------------------------------------------------------------------------
 
-def civil_date(civil: dict | None) -> str | None:
-    d = (civil or {}).get("date") or {}
-    if not all(d.get(k) for k in ("year", "month", "day")):
+def local_datetime(utc_time: str | None, utc_offset: str | None) -> datetime | None:
+    """The user's wall-clock time for an observation.
+
+    The API accepts `civil_*` fields in a FILTER but does not return them in the
+    response — an interval carries only `startTime` (UTC) and `startUtcOffset`
+    (a google-duration like "-25200s"). Verified against live data: startTime
+    2026-07-11T00:16:17Z with offset -25200s is a workout logged at 17:16 on 07-10.
+    Reading the documented `civilStartTime` instead yields None and silently drops
+    every row.
+    """
+    if not utc_time:
         return None
-    return f"{d['year']:04d}-{d['month']:02d}-{d['day']:02d}"
+    try:
+        dt = datetime.fromisoformat(utc_time.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt + timedelta(seconds=duration_secs(utc_offset))
 
 
-def civil_time(civil: dict | None) -> str | None:
-    t = (civil or {}).get("time")
-    if t is None:
-        return None
-    return f"{t.get('hours', 0):02d}:{t.get('minutes', 0):02d}:{t.get('seconds', 0):02d}"
+def local_date(dt: datetime | None) -> str | None:
+    return dt.strftime("%Y-%m-%d") if dt else None
+
+
+def local_time(dt: datetime | None) -> str | None:
+    return dt.strftime("%H:%M:%S") if dt else None
 
 
 def duration_secs(d: str | None) -> float:
@@ -216,13 +227,15 @@ def fetch_body(access_token: str, start_str: str, end_excl: str) -> list[dict]:
     by_date: dict[str, dict] = {}
     for p in weights:
         w = p.get("weight") or {}
-        date = civil_date((w.get("sampleTime") or {}).get("civilTime"))
+        st = w.get("sampleTime") or {}
+        date = local_date(local_datetime(st.get("physicalTime"), st.get("utcOffset")))
         grams = w.get("weightGrams")
         if date and grams is not None:
             by_date.setdefault(date, {})["weight_kg"] = grams / 1000
     for p in fats:
         f = p.get("bodyFat") or {}
-        date = civil_date((f.get("sampleTime") or {}).get("civilTime"))
+        st = f.get("sampleTime") or {}
+        date = local_date(local_datetime(st.get("physicalTime"), st.get("utcOffset")))
         pct = f.get("percentage")
         if date and pct is not None:
             by_date.setdefault(date, {})["fat_pct"] = pct
@@ -257,7 +270,8 @@ def fetch_workouts(access_token: str, start_str: str, end_excl: str) -> list[dic
         if not ex:
             continue
         interval = ex.get("interval") or {}
-        date = civil_date(interval.get("civilStartTime"))
+        start_local = local_datetime(interval.get("startTime"), interval.get("startUtcOffset"))
+        date = local_date(start_local)
         if not date:
             continue
 
@@ -266,7 +280,7 @@ def fetch_workouts(access_token: str, start_str: str, end_excl: str) -> list[dic
         if duration_min < 5:
             continue
 
-        start_time = civil_time(interval.get("civilStartTime"))
+        start_time = local_time(start_local)
         metrics = ex.get("metricsSummary") or {}
         avg_hr = metrics.get("averageHeartRateBeatsPerMinute")
         calories = metrics.get("caloriesKcal")
