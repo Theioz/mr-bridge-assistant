@@ -9,8 +9,10 @@ import { estimateFromText } from "./estimate";
  * (local model identifies the foods -> USDA FoodData Central supplies the grams and the
  * macros) and stores the totals. A recipe's macros are therefore measured, not recalled.
  *
- * Totals are for the recipe AS WRITTEN — the whole tray. Per-serving is derived at read
- * time from `servings`, so re-portioning a batch never costs a USDA round trip.
+ * Totals are for the recipe AS WRITTEN — the whole tray. Portions are NOT a property of a
+ * recipe: you cook a pile of food and then eyeball it into however many containers you feel
+ * like that day, and the same recipe splits 5 ways one week and 7 the next. The portion
+ * count therefore lives on a `cook`, and per-portion macros are derived there.
  */
 
 export interface RecipeMacroTotals {
@@ -24,15 +26,19 @@ export interface RecipeMacroTotals {
 }
 
 export interface RecipeMacros {
-  servings: number;
   total: RecipeMacroTotals;
-  perServing: Omit<RecipeMacroTotals, "confidence" | "notes">;
+  /** Hint only — what a portion would look like IF split this many ways. Not a claim. */
+  typicalPortions: number | null;
+  perPortion: Omit<RecipeMacroTotals, "confidence" | "notes"> | null;
 }
 
-function perServing(total: RecipeMacroTotals, servings: number) {
-  const div = (n: number) => Math.round((n / servings) * 10) / 10;
+export function perPortion(
+  total: Pick<RecipeMacroTotals, "calories" | "protein_g" | "carbs_g" | "fat_g" | "fiber_g">,
+  portions: number,
+) {
+  const div = (n: number) => Math.round((n / portions) * 10) / 10;
   return {
-    calories: Math.round(total.calories / servings),
+    calories: Math.round(total.calories / portions),
     protein_g: div(total.protein_g),
     carbs_g: div(total.carbs_g),
     fat_g: div(total.fat_g),
@@ -53,7 +59,7 @@ export async function resolveRecipeMacros(
 ): Promise<RecipeMacros | null> {
   const { data: recipe, error } = await db
     .from("recipes")
-    .select("id, name, ingredients, servings")
+    .select("id, name, ingredients, typical_portions")
     .eq("id", recipeId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -103,6 +109,10 @@ export async function resolveRecipeMacros(
 
   if (writeErr) throw new Error(`recipe macro write failed: ${writeErr.message}`);
 
-  const servings = (recipe.servings as number) || 1;
-  return { servings, total, perServing: perServing(total, servings) };
+  const typicalPortions = (recipe.typical_portions as number | null) ?? null;
+  return {
+    total,
+    typicalPortions,
+    perPortion: typicalPortions ? perPortion(total, typicalPortions) : null,
+  };
 }
