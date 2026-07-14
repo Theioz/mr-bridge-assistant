@@ -44,6 +44,8 @@ export interface RecipeMacros {
   items: ResolvedIngredient[];
   /** Ingredients with no stated amount. Non-empty means the total is soft — go fix the text. */
   unquantified: string[];
+  /** Ingredients that matched no plausible USDA record and are ABSENT from the total. */
+  unmatched: string[];
   /** Hint only — what a portion would look like IF split this many ways. Not a claim. */
   typicalPortions: number | null;
   perPortion: Omit<RecipeMacroTotals, "confidence" | "notes"> | null;
@@ -135,7 +137,11 @@ export async function resolveRecipeMacros(
       macros_computed_at: new Date().toISOString(),
       // Persist the working, not just the answer. Without this the only way to find out that
       // the rice had been resolved as COOKED was to reverse-engineer it from the carb count.
-      metadata: { macro_items: items, macro_notes: total.notes },
+      metadata: {
+        macro_items: items,
+        macro_notes: total.notes,
+        macro_unmatched: estimate.unmatched,
+      },
     })
     .eq("id", recipeId)
     .eq("user_id", userId);
@@ -147,6 +153,7 @@ export async function resolveRecipeMacros(
     total,
     items,
     unquantified,
+    unmatched: estimate.unmatched,
     typicalPortions,
     perPortion: typicalPortions ? perPortion(total, typicalPortions) : null,
   };

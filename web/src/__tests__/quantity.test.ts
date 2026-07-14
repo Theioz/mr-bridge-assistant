@@ -23,6 +23,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { lexQuantity, splitIngredients } from "../lib/nutrition/quantity.ts";
+import { isPlausibleMatch } from "../lib/nutrition/fdc.ts";
 
 test("reads a stated mass or volume exactly", () => {
   assert.deepEqual(lexQuantity("3 lb chicken breast"), {
@@ -69,4 +70,45 @@ test("splits a real recipe's ingredient text into ingredients", () => {
     splitIngredients("3 lb chicken breast, 2 cups dry brown rice\nGreen beans, olive oil + lemon"),
     ["3 lb chicken breast", "2 cups dry brown rice", "Green beans", "olive oil", "lemon"],
   );
+});
+
+// ---------------------------------------------------------------------------
+// Food-selection guard.
+//
+// The model picks from a USDA candidate list. When USDA's search returns nothing relevant it
+// picks the least-bad of a bad set, silently. Observed on real recipes:
+//
+//   "salt"       -> "Syrups, table blends, pancake"   (20g of SYRUP in a zero-calorie
+//                                                      ingredient — it INVENTS calories)
+//   "broccolini" -> "Abiyuch, raw"                    (a tropical fruit)
+//   "marinara"   -> "Cheese sauce, prepared from recipe"
+//
+// No prompt fixes this — the right answer was never in the list. The guard is arithmetic.
+// ---------------------------------------------------------------------------
+
+test("rejects a candidate that is not plausibly the food asked for", () => {
+  assert.equal(isPlausibleMatch("salt", "Syrups, table blends, pancake"), false);
+  assert.equal(isPlausibleMatch("broccolini", "Abiyuch, raw"), false);
+  assert.equal(isPlausibleMatch("marinara", "Cheese sauce, prepared from recipe"), false);
+});
+
+test("accepts the real match, including USDA's verbose phrasing", () => {
+  assert.equal(
+    isPlausibleMatch("chicken, breast, raw", "Chicken, broilers or fryers, meat only, raw"),
+    true,
+  );
+  assert.equal(
+    isPlausibleMatch("rice, brown, long-grain, raw", "Rice, brown, long grain, unenriched, raw"),
+    true,
+  );
+  assert.equal(isPlausibleMatch("green beans, raw", "Beans, snap, green, raw"), true);
+  assert.equal(isPlausibleMatch("turkey, ground, raw", "Turkey, Ground, raw"), true);
+  assert.equal(isPlausibleMatch("pasta, dry, enriched", "Pasta, dry, enriched"), true);
+});
+
+test("a shared PREPARATION word is not a match", () => {
+  // Otherwise "rice, brown, raw" would happily match "Beef, raw" on the strength of "raw"
+  // alone — which is how you end up with beef where the rice should be.
+  assert.equal(isPlausibleMatch("rice, brown, raw", "Beef, ribeye, raw"), false);
+  assert.equal(isPlausibleMatch("oats, dry", "Sugars, granulated, dry"), false);
 });

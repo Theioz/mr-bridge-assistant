@@ -99,6 +99,99 @@ const ZERO: Macros = {
 };
 
 /**
+ * Reject a USDA record that isn't plausibly the food we asked for.
+ *
+ * The model picks from a candidate list, and when USDA's search returns nothing relevant it
+ * picks the least-bad of a bad set — silently. Observed on real recipes:
+ *
+ *   "salt"        -> "Syrups, table blends, pancake"       (20g of SYRUP for a zero-cal
+ *                                                            ingredient — invents calories)
+ *   "broccolini"  -> "Abiyuch, raw"                        (a tropical fruit)
+ *   "marinara"    -> "Cheese sauce, prepared from recipe"
+ *
+ * A model cannot be prompted out of this: the right answer was never in the list. The guard
+ * is arithmetic — a candidate must share at least one MEANINGFUL word with the query.
+ *
+ * "Meaningful" excludes preparation and packaging words, because otherwise "rice, brown, raw"
+ * would happily match "Beef, raw" on the strength of "raw" alone. Matching on those is how
+ * you get a plate of beef where the rice should be.
+ *
+ * This deliberately only catches the egregious cases (ZERO overlap). It will still let
+ * "cream cheese" through as "Cheese, goat" — a wrong-ish match, but one in the right food
+ * family and the right calorie order. Better a narrow guard that never rejects a good match
+ * than a clever one that does.
+ */
+const PREP_WORDS = new Set([
+  "raw",
+  "cooked",
+  "boiled",
+  "roasted",
+  "baked",
+  "fried",
+  "grilled",
+  "broiled",
+  "steamed",
+  "dry",
+  "dried",
+  "fresh",
+  "frozen",
+  "canned",
+  "prepared",
+  "enriched",
+  "unenriched",
+  "whole",
+  "boneless",
+  "skinless",
+  "sliced",
+  "chopped",
+  "ground",
+  "powder",
+  "powdered",
+  "type",
+  "soft",
+  "hard",
+  "light",
+  "regular",
+  "plain",
+  "unsalted",
+  "salted",
+  "low",
+  "reduced",
+  "and",
+  "or",
+  "with",
+  "without",
+  "in",
+  "of",
+  "the",
+  "a",
+  "from",
+  "table",
+  "blends",
+  "blend",
+]);
+
+function significantTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && !PREP_WORDS.has(w))
+      // Crude singularisation so "broilers" matches "broiler", "beans" matches "bean".
+      .map((w) => (w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w)),
+  );
+}
+
+/** True when the candidate plausibly IS the queried food. */
+export function isPlausibleMatch(query: string, description: string): boolean {
+  const wanted = significantTokens(query);
+  if (wanted.size === 0) return true; // nothing to check against — don't block on a vague query
+  const got = significantTokens(description);
+  for (const w of wanted) if (got.has(w)) return true;
+  return false;
+}
+
+/**
  * Search for candidate foods.
  *
  * Restricted to Foundation + SR Legacy: these are USDA's *measured* datasets.
