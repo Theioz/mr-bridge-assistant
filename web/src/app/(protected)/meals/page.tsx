@@ -79,8 +79,9 @@ export default async function MealsPage() {
           .from("meal_plans")
           .select(
             "id, date, meal_type, portions, status, name, " +
-              "recipes(id, name, calories, macros_computed_at), " +
-              "cooks(id, name, portions, portions_remaining)",
+              "recipes(id, name, ingredients, calories, protein_g, carbs_g, fat_g, fiber_g, " +
+              "typical_portions, macros_confidence, macros_computed_at), " +
+              "cooks(id, name, portions, portions_remaining, calories, protein_g, carbs_g, fat_g, fiber_g)",
           )
           .eq("user_id", userId)
           .gte("date", todayString())

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PlannedMealDetail } from "./PlannedMealDetail";
 
 /**
  * The kitchen: what's planned today, and what's already in the fridge.
@@ -34,15 +35,32 @@ export interface KitchenPlannedMeal {
   status: string;
   name: string | null;
   // macros_computed_at distinguishes a real recipe from a name-only stub: only a resolved
-  // recipe can be cooked-and-logged in one tap. calories is shown as a preview of what the tap
-  // will log.
+  // recipe can be cooked-and-logged in one tap. The rest feeds the click-in detail view —
+  // ingredients and macros are surfaced there so a plan isn't just an opaque label.
   recipes: {
     id: string;
     name: string;
+    ingredients: string | null;
     calories: number | null;
+    protein_g: number | null;
+    carbs_g: number | null;
+    fat_g: number | null;
+    fiber_g: number | null;
+    typical_portions: number | null;
+    macros_confidence: string | null;
     macros_computed_at: string | null;
   } | null;
-  cooks: { id: string; name: string; portions: number; portions_remaining: number } | null;
+  cooks: {
+    id: string;
+    name: string;
+    portions: number;
+    portions_remaining: number;
+    calories: number | null;
+    protein_g: number | null;
+    carbs_g: number | null;
+    fat_g: number | null;
+    fiber_g: number | null;
+  } | null;
 }
 
 interface KitchenPanelProps {
@@ -76,6 +94,7 @@ function ageLabel(dateStr: string): { text: string; stale: boolean } {
 export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Data comes from the server component, so "Ate this" just needs to invalidate it:
@@ -213,72 +232,84 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
             // stub (macros_computed_at null) can't — it falls through to the status-only path.
             const recipe = p.recipes;
             const canEatRecipe = !cook && !!recipe && !!recipe.macros_computed_at;
+            const expanded = expandedId === p.id;
             return (
-              <div key={p.id} style={rowStyle}>
-                <div>
-                  <span style={nameStyle}>{label}</span>
-                  <span style={subStyle}>
-                    {p.meal_type}
-                    {canEatRecipe ? " · from recipe" : ""}
-                    {!cook && recipe && !recipe.macros_computed_at ? " · needs cooking" : ""}
-                    {!cook && !recipe ? " · off-plan" : ""}
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
-                  {canEat ? (
-                    // Cook-backed: log the known macros AND decrement the fridge.
-                    <button
-                      type="button"
-                      disabled={busyId === p.id}
-                      onClick={() => eat(cook.id, { mealType: p.meal_type, mealPlanId: p.id })}
-                      style={eatButtonStyle(busyId === p.id)}
-                    >
-                      {busyId === p.id ? "Logging…" : "Ate this"}
-                    </button>
-                  ) : canEatRecipe ? (
-                    // Recipe-backed with known macros: cook it and log a portion in one tap.
-                    <button
-                      type="button"
-                      disabled={busyId === p.id}
-                      onClick={() =>
-                        eatRecipe(recipe.id, { mealType: p.meal_type, mealPlanId: p.id })
-                      }
-                      style={eatButtonStyle(busyId === p.id)}
-                      title={
-                        recipe.calories != null
-                          ? `Logs this recipe's macros (~${recipe.calories} kcal for the batch) and adds any surplus to the fridge.`
-                          : "Cooks this recipe and logs a portion's macros."
-                      }
-                    >
-                      {busyId === p.id ? "Logging…" : "Ate this"}
-                    </button>
-                  ) : (
-                    // No cook and no resolved recipe — nothing to log macros from, but the
-                    // outcome is still worth recording. Confirming intent beats a silent row.
-                    <button
-                      type="button"
-                      disabled={busyId === p.id}
-                      onClick={() => mark(p.id, "eaten")}
-                      style={eatButtonStyle(busyId === p.id)}
-                      title={
-                        recipe
-                          ? "Marks it eaten. This recipe has no macros yet, so none are logged."
-                          : "Marks it eaten. No macros are logged."
-                      }
-                    >
-                      {busyId === p.id ? "Saving…" : "Ate it"}
-                    </button>
-                  )}
+              <div key={p.id}>
+                <div style={rowStyle}>
                   <button
                     type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => mark(p.id, "skipped")}
-                    style={skipButtonStyle(busyId === p.id)}
-                    title="Didn't eat this. A skip is data — it's how the plan finds out it was wrong."
+                    onClick={() => setExpandedId(expanded ? null : p.id)}
+                    aria-expanded={expanded}
+                    style={expanderStyle}
                   >
-                    Skip
+                    <span style={caretStyle}>{expanded ? "▾" : "▸"}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={nameStyle}>{label}</span>
+                      <span style={subStyle}>
+                        {p.meal_type}
+                        {canEatRecipe ? " · from recipe" : ""}
+                        {!cook && recipe && !recipe.macros_computed_at ? " · needs cooking" : ""}
+                        {!cook && !recipe ? " · tap for amounts" : ""}
+                      </span>
+                    </span>
                   </button>
+                  <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
+                    {canEat ? (
+                      // Cook-backed: log the known macros AND decrement the fridge.
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() => eat(cook.id, { mealType: p.meal_type, mealPlanId: p.id })}
+                        style={eatButtonStyle(busyId === p.id)}
+                      >
+                        {busyId === p.id ? "Logging…" : "Ate this"}
+                      </button>
+                    ) : canEatRecipe ? (
+                      // Recipe-backed with known macros: cook it and log a portion in one tap.
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() =>
+                          eatRecipe(recipe.id, { mealType: p.meal_type, mealPlanId: p.id })
+                        }
+                        style={eatButtonStyle(busyId === p.id)}
+                        title={
+                          recipe.calories != null
+                            ? `Logs this recipe's macros (~${recipe.calories} kcal for the batch) and adds any surplus to the fridge.`
+                            : "Cooks this recipe and logs a portion's macros."
+                        }
+                      >
+                        {busyId === p.id ? "Logging…" : "Ate this"}
+                      </button>
+                    ) : (
+                      // No cook and no resolved recipe — nothing to log macros from, but the
+                      // outcome is still worth recording. Confirming intent beats a silent row.
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() => mark(p.id, "eaten")}
+                        style={eatButtonStyle(busyId === p.id)}
+                        title={
+                          recipe
+                            ? "Marks it eaten. This recipe has no macros yet, so none are logged."
+                            : "Marks it eaten. No macros are logged."
+                        }
+                      >
+                        {busyId === p.id ? "Saving…" : "Ate it"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busyId === p.id}
+                      onClick={() => mark(p.id, "skipped")}
+                      style={skipButtonStyle(busyId === p.id)}
+                      title="Didn't eat this. A skip is data — it's how the plan finds out it was wrong."
+                    >
+                      Skip
+                    </button>
+                  </div>
                 </div>
+                {expanded && <PlannedMealDetail meal={p} />}
               </div>
             );
           })}
@@ -337,6 +368,27 @@ const rowStyle: React.CSSProperties = {
   gap: "var(--space-4)",
   padding: "var(--space-3) 0",
   borderBottom: "1px solid var(--rule-soft)",
+};
+
+// The name doubles as the expand toggle — a transparent, full-height button so the whole
+// label is a tap target, with a caret to signal there's more underneath.
+const expanderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: "var(--space-2)",
+  minWidth: 0,
+  flex: 1,
+  background: "none",
+  border: "none",
+  padding: 0,
+  textAlign: "left",
+  cursor: "pointer",
+};
+
+const caretStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-faint)",
+  flexShrink: 0,
 };
 
 const nameStyle: React.CSSProperties = {

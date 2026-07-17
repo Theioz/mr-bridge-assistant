@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import type { KitchenPlannedMeal } from "./KitchenPanel";
+import { PlannedMealDetail } from "./PlannedMealDetail";
 
 /**
  * The week ahead, as planned.
@@ -10,9 +14,10 @@ import type { KitchenPlannedMeal } from "./KitchenPanel";
  * Empty days are rendered, not hidden. A gap is the most useful thing on this panel: it's the
  * list of decisions still owed, and it's what the Sunday planning session exists to close.
  *
- * Macros are deliberately absent. `meal_plans` carries none of its own (see
- * .claude/rules/data-sources.md) — a plan points at a cook or a recipe, and those own the
- * numbers. Restating macros here would mean either duplicating them or inventing them.
+ * The row itself stays macro-free — `meal_plans` carries no macros of its own (see
+ * .claude/rules/data-sources.md). But each row expands: clicking one reveals the ingredients
+ * and macros read THROUGH its recipe or cook, never restated on the plan. A freeform meal with
+ * no amounts expands to a form that turns it into a recipe.
  */
 
 const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
@@ -38,6 +43,8 @@ export function WeekPlan({
   days: string[];
   today: string;
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const byDate = new Map<string, KitchenPlannedMeal[]>();
   for (const p of week) {
     const list = byDate.get(p.date) ?? [];
@@ -90,29 +97,41 @@ export function WeekPlan({
                 const name = p.cooks?.name ?? p.recipes?.name ?? p.name ?? "Meal";
                 const eaten = p.status === "eaten";
                 const skipped = p.status === "skipped";
+                const expanded = expandedId === p.id;
                 return (
-                  <div key={p.id} style={rowStyle}>
-                    <span style={mealTypeStyle}>{p.meal_type}</span>
-                    <span
-                      style={{
-                        ...nameStyle,
-                        color: eaten || skipped ? "var(--color-text-muted)" : "var(--color-text)",
-                        textDecoration: skipped ? "line-through" : undefined,
-                      }}
+                  <div key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(expanded ? null : p.id)}
+                      aria-expanded={expanded}
+                      style={rowButtonStyle}
                     >
-                      {name}
-                    </span>
-                    <span style={statusStyle}>
-                      {eaten
-                        ? "eaten"
-                        : skipped
-                          ? "skipped"
-                          : p.cooks
-                            ? "ready"
-                            : p.recipes
-                              ? "needs cooking"
-                              : ""}
-                    </span>
+                      <span style={mealTypeStyle}>{p.meal_type}</span>
+                      <span
+                        style={{
+                          ...nameStyle,
+                          color: eaten || skipped ? "var(--color-text-muted)" : "var(--color-text)",
+                          textDecoration: skipped ? "line-through" : undefined,
+                        }}
+                      >
+                        {name}
+                      </span>
+                      <span style={statusStyle}>
+                        {eaten
+                          ? "eaten"
+                          : skipped
+                            ? "skipped"
+                            : p.cooks
+                              ? "ready"
+                              : p.recipes
+                                ? "needs cooking"
+                                : "no amounts"}
+                        <span style={{ marginLeft: 6, color: "var(--color-text-faint)" }}>
+                          {expanded ? "▾" : "▸"}
+                        </span>
+                      </span>
+                    </button>
+                    {expanded && <PlannedMealDetail meal={p} />}
                   </div>
                 );
               })
@@ -138,12 +157,19 @@ const dayHeadStyle: React.CSSProperties = {
   marginBottom: "var(--space-2)",
 };
 
-const rowStyle: React.CSSProperties = {
+// The whole row is the expand toggle. Grid layout preserved; button reset applied so it reads
+// as a row, not a control.
+const rowButtonStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "72px 1fr auto",
   alignItems: "baseline",
   gap: "var(--space-3)",
   padding: "var(--space-1) 0",
+  width: "100%",
+  background: "none",
+  border: "none",
+  textAlign: "left",
+  cursor: "pointer",
 };
 
 const mealTypeStyle: React.CSSProperties = {

@@ -9,6 +9,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Click into a planned meal to see what's in it.** A planned meal showed only its label —
+  "Tilapia x2 + rice" told you nothing about how much tilapia or how much rice, because a
+  freeform plan records no amounts and no macros. Every planned-meal row (in both "Planned
+  today" and "This week") now expands: a recipe- or cook-backed plan reveals its ingredients
+  and USDA macros read THROUGH the recipe/cook (never restated on the plan), and a freeform
+  plan with no amounts expands to a **"turn this into a recipe"** form. Filling the amounts
+  once (`2 tilapia fillets`, `1 cup rice`) creates a reusable recipe, resolves its macros
+  through USDA, and adopts the plan — which then becomes one-tap loggable. New `POST /api/recipes`
+  (create + optional resolve + optional plan-link) and a shared `PlannedMealDetail` component;
+  `WeekPlan` became a client component to carry the expand state. The plan queries now select the
+  recipe's ingredients and full macros and the cook's macros.
+
 - **A recipe-backed plan now logs its macros.** `PATCH /api/meal-plan` (above) records that a
   planned meal happened, but logs no macros — right for freeform text, wrong for a meal you
   actually cooked from a recipe whose macros are already known. So marking "3 eggs + spinach"
