@@ -9,6 +9,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The coaching loop answers back.** 33 `workout_plans` were written between May and June
+  2026 and never once opened; the user logged 7 sessions with real notes and the system
+  responded with nothing. An unrewarded loop decays, and this one did — training stopped
+  2026-05-06. The plans were never the missing piece; the reply was.
+
+  New `scripts/coach_check.py`, driven by cron **on compute-core** (not a cloud routine —
+  the self-hosted Supabase is tailnet-only and unreachable from an Anthropic cloud sandbox,
+  and health data is deliberately not publicly routable):
+
+  - `--post-session` — Mon/Wed/Sat 20:00 PT. Did today's planned session get logged? Pushes
+    the streak plus an effort verdict. Two consecutive misses drop volume automatically;
+    three says the program is wrong, not the person. Silent when nothing was planned.
+  - `--weekly` — Sunday 18:00 PT. 7-day weight average vs the prior week, sessions vs target,
+    readiness, sleep — then pulls the user into a planning session.
+
+  **No LLM is involved.** It reads Postgres and pushes ntfy, which is all it needs to do —
+  the thinking happens in a Claude Code session. This is deliberate: compute-core is
+  zero-Anthropic (ADR 0017), which is exactly why `/api/cron/weekly-plan` sits commented out
+  of the crontab — it dispatches a GitHub Action running `scripts/weekly_plan.py`, which
+  still does `import anthropic`.
+
+  Filters `recovery_metrics` on `total_sleep_hrs > 0`: that table carries duplicate rows per
+  date — real Oura data alongside rows with zero sleep and null readiness — so an unfiltered
+  average is garbage.
+
 - **The week you planned is now visible.** `meal_plans` shipped with a today-only read
   (`.eq("date", todayString())` in the meals page), so a week of planned meals sat in the
   table with no surface to render on — you could plan Sunday through Saturday and see none
