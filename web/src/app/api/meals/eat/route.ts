@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { eatFromCook } from "@/lib/nutrition/cooks";
+import { eatFromCook, eatFromRecipe } from "@/lib/nutrition/cooks";
 
 /**
  * "I ate this." One tap: the macros are already known, so there is no photo, no local model
@@ -10,6 +10,13 @@ import { eatFromCook } from "@/lib/nutrition/cooks";
  *
  * This route is the entire reason the cooks model exists. Every prepped meal previously cost
  * a photo -> parse -> USDA cycle; three of those a day is what made meal logging stop.
+ *
+ * Two ways in, both landing in meal_log with USDA-derived macros:
+ *   cook_id    — eat a portion of food that already exists (leftovers). No cooking.
+ *   recipe_id  — eat a recipe-backed planned meal: cook it (one tap), then eat a portion,
+ *                the surplus becoming leftovers. This is what lets a recipe-backed plan log
+ *                macros at all; before it, "Ate it" on such a plan recorded a status and no
+ *                numbers, so eating to plan and eating nothing looked the same in the totals.
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -20,6 +27,7 @@ export async function POST(req: NextRequest) {
 
   let body: {
     cook_id?: string;
+    recipe_id?: string;
     portions?: number;
     meal_type?: string;
     date?: string;
@@ -32,25 +40,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body.cook_id) {
-    return NextResponse.json({ error: "cook_id is required" }, { status: 400 });
+  if (!body.cook_id && !body.recipe_id) {
+    return NextResponse.json({ error: "cook_id or recipe_id is required" }, { status: 400 });
   }
 
   try {
     const db = createServiceClient();
-    const result = await eatFromCook(db, user.id, {
-      cookId: body.cook_id,
-      portions: body.portions,
-      mealType: body.meal_type,
-      date: body.date,
-      mealPlanId: body.meal_plan_id ?? null,
-      notes: body.notes,
-    });
+    const result = body.cook_id
+      ? await eatFromCook(db, user.id, {
+          cookId: body.cook_id,
+          portions: body.portions,
+          mealType: body.meal_type,
+          date: body.date,
+          mealPlanId: body.meal_plan_id ?? null,
+          notes: body.notes,
+        })
+      : await eatFromRecipe(db, user.id, {
+          recipeId: body.recipe_id!,
+          portionsEaten: body.portions,
+          mealType: body.meal_type,
+          date: body.date,
+          mealPlanId: body.meal_plan_id ?? null,
+          notes: body.notes,
+        });
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to log meal";
-    // "Only 1 portion left" is a normal thing for a user to hit, not a server fault.
-    const client = /not found|portion|greater than zero/i.test(msg);
+    // "Only 1 portion left" and "resolve macros first" are normal user-facing conditions,
+    // not server faults.
+    const client = /not found|portion|greater than zero|no macros yet/i.test(msg);
     if (!client) console.error("[POST /api/meals/eat]", err);
     return NextResponse.json({ error: msg }, { status: client ? 400 : 500 });
   }

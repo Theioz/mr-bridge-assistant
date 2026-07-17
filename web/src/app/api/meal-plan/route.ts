@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       .from("meal_plans")
       .select(
         "id, date, meal_type, portions, status, name, notes, " +
-          "recipes(id, name), " +
+          "recipes(id, name, calories, macros_computed_at), " +
           "cooks(id, name, portions, portions_remaining)",
       )
       .eq("user_id", user.id)
