@@ -238,3 +238,60 @@ export async function eatFromCook(
 
   return { mealLogId: logged.id as string, portionsRemaining: remaining, macros };
 }
+
+/**
+ * Eat a recipe-backed planned meal: make the recipe, then eat a portion of it.
+ *
+ * A recipe-backed plan means "cook this", so the honest record is a cook (the tray you made)
+ * plus a meal_log (the serving you ate), with any surplus becoming leftovers the planner can
+ * spend later. That is exactly createCook followed by eatFromCook — this only ties the two
+ * together so one tap does both, which is what makes a recipe-backed plan loggable at all.
+ * Before this, "Ate it" on such a plan flipped its status and logged NO macros, so a day of
+ * eating to plan looked identical in the totals to a day of eating nothing.
+ *
+ * portionsCooked defaults to the recipe's typical_portions hint, or 1 when it has none — a
+ * single-serving dish, or "no idea yet", where 1 is the honest floor (a real batch is still
+ * best logged as a cook directly, with its true portion count). createCook enforces that the
+ * recipe has resolved macros and throws a message pointing at the resolve endpoint otherwise.
+ */
+export async function eatFromRecipe(
+  db: SupabaseClient,
+  userId: string,
+  input: {
+    recipeId: string;
+    portionsCooked?: number;
+    portionsEaten?: number;
+    mealType?: string;
+    date?: string;
+    mealPlanId?: string | null;
+    notes?: string;
+  },
+): Promise<{ mealLogId: string; portionsRemaining: number; macros: Totals; cookId: string }> {
+  const { data: recipe, error } = await db
+    .from("recipes")
+    .select("typical_portions")
+    .eq("id", input.recipeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`recipe load failed: ${error.message}`);
+  if (!recipe) throw new Error("Recipe not found");
+
+  const portionsCooked = input.portionsCooked ?? (recipe.typical_portions as number | null) ?? 1;
+
+  const cook = await createCook(db, userId, {
+    recipeId: input.recipeId,
+    portions: portionsCooked,
+    cookedOn: input.date,
+  });
+
+  const eaten = await eatFromCook(db, userId, {
+    cookId: cook.id,
+    portions: input.portionsEaten ?? 1,
+    mealType: input.mealType,
+    date: input.date,
+    mealPlanId: input.mealPlanId,
+    notes: input.notes,
+  });
+
+  return { ...eaten, cookId: cook.id };
+}

@@ -33,7 +33,15 @@ export interface KitchenPlannedMeal {
   portions: number;
   status: string;
   name: string | null;
-  recipes: { id: string; name: string } | null;
+  // macros_computed_at distinguishes a real recipe from a name-only stub: only a resolved
+  // recipe can be cooked-and-logged in one tap. calories is shown as a preview of what the tap
+  // will log.
+  recipes: {
+    id: string;
+    name: string;
+    calories: number | null;
+    macros_computed_at: string | null;
+  } | null;
   cooks: { id: string; name: string; portions: number; portions_remaining: number } | null;
 }
 
@@ -99,10 +107,39 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
     }
   }
 
-  // Outcome without macros. `eat()` above needs a cook, because it logs known numbers into
-  // meal_log. Most planned meals have no cook — a recipe not yet made, or freeform text — and
-  // those could previously be neither confirmed nor declined. Things don't go to plan; the plan
-  // has to be able to hear about it.
+  // Eat a recipe-backed plan: cook the recipe and eat a portion in one tap. Unlike `mark`
+  // below, this DOES log macros — the recipe's are known — so a planned meal you actually made
+  // stops being invisible in the day's totals. Same endpoint as `eat`, keyed on recipe_id.
+  async function eatRecipe(recipeId: string, opts: { mealType?: string; mealPlanId: string }) {
+    setBusyId(opts.mealPlanId);
+    setError(null);
+    try {
+      const res = await fetch("/api/meals/eat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipe_id: recipeId,
+          portions: 1,
+          meal_type: opts.mealType,
+          meal_plan_id: opts.mealPlanId,
+        }),
+      });
+      if (!res.ok) {
+        setError((await res.json()).error ?? "Couldn't log that");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Couldn't log that");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Outcome without macros. The two `eat*` handlers above log known numbers into meal_log; this
+  // is the fallback for a plan that has none to log — freeform text ("dinner out"), or a recipe
+  // that is still a name-only stub. Those could previously be neither confirmed nor declined.
+  // Things don't go to plan; the plan has to be able to hear about it.
   async function mark(planId: string, status: "eaten" | "skipped") {
     setBusyId(planId);
     setError(null);
@@ -172,14 +209,19 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
             const cook = p.cooks;
             const label = cook?.name ?? p.recipes?.name ?? p.name ?? "Meal";
             const canEat = !!cook && cook.portions_remaining > 0;
+            // A recipe with resolved macros can be cooked-and-logged in one tap. A name-only
+            // stub (macros_computed_at null) can't — it falls through to the status-only path.
+            const recipe = p.recipes;
+            const canEatRecipe = !cook && !!recipe && !!recipe.macros_computed_at;
             return (
               <div key={p.id} style={rowStyle}>
                 <div>
                   <span style={nameStyle}>{label}</span>
                   <span style={subStyle}>
                     {p.meal_type}
-                    {!cook && p.recipes ? " · needs cooking" : ""}
-                    {!cook && !p.recipes ? " · off-plan" : ""}
+                    {canEatRecipe ? " · from recipe" : ""}
+                    {!cook && recipe && !recipe.macros_computed_at ? " · needs cooking" : ""}
+                    {!cook && !recipe ? " · off-plan" : ""}
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
@@ -193,17 +235,34 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                     >
                       {busyId === p.id ? "Logging…" : "Ate this"}
                     </button>
+                  ) : canEatRecipe ? (
+                    // Recipe-backed with known macros: cook it and log a portion in one tap.
+                    <button
+                      type="button"
+                      disabled={busyId === p.id}
+                      onClick={() =>
+                        eatRecipe(recipe.id, { mealType: p.meal_type, mealPlanId: p.id })
+                      }
+                      style={eatButtonStyle(busyId === p.id)}
+                      title={
+                        recipe.calories != null
+                          ? `Logs this recipe's macros (~${recipe.calories} kcal for the batch) and adds any surplus to the fridge.`
+                          : "Cooks this recipe and logs a portion's macros."
+                      }
+                    >
+                      {busyId === p.id ? "Logging…" : "Ate this"}
+                    </button>
                   ) : (
-                    // No cook — nothing to decrement and no macros to log, but the outcome is
-                    // still worth recording. Confirming intent beats leaving the row silent.
+                    // No cook and no resolved recipe — nothing to log macros from, but the
+                    // outcome is still worth recording. Confirming intent beats a silent row.
                     <button
                       type="button"
                       disabled={busyId === p.id}
                       onClick={() => mark(p.id, "eaten")}
                       style={eatButtonStyle(busyId === p.id)}
                       title={
-                        p.recipes
-                          ? "Marks it eaten. Not cooked, so no macros are logged."
+                        recipe
+                          ? "Marks it eaten. This recipe has no macros yet, so none are logged."
                           : "Marks it eaten. No macros are logged."
                       }
                     >

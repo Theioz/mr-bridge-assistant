@@ -39,11 +39,12 @@ const VULGAR: Record<string, number> = {
   "⅛": 0.125,
 };
 
-// Units we can act on. Anything else (a "handful", a "bunch") is not a measurement we can
+// Units we can act on. Anything else (a bare "handful") is not a measurement we can
 // resolve, and is treated as unquantified rather than coerced into one.
 //
 // Mass/volume units pass straight through to fdc.ts's DIRECT_GRAMS or USDA portion tables.
-// Countable units ("large", "slice") are resolved against USDA's own portion data.
+// Countable and produce/container units ("large", "slice", "bunch") are resolved against
+// USDA's own portion data.
 const UNIT_ALIASES: Record<string, string> = {
   g: "g",
   gram: "g",
@@ -93,6 +94,27 @@ const UNIT_ALIASES: Record<string, string> = {
   drumsticks: "drumstick",
   wing: "wing",
   wings: "wing",
+
+  // Produce and container units USDA models as real portions ("1 bunch spinach = 340g",
+  // "1 package (10 oz) = 284g"). These belong here for the same reason "large" does: they
+  // are USDA portion descriptors gramsFor resolves against measured data, NOT bare counts.
+  // Without them, "1/2 bunch spinach" fell through to the bare-count branch and became
+  // qty 0.5 unit "each" — silently resolved against whatever spinach portion USDA returned
+  // first, so a recipe backfilled with "bunch" or "package" carried a wrong number wearing a
+  // confident badge. Where USDA has no portion for the unit, gramsFor still flags it inexact.
+  bunch: "bunch",
+  bunches: "bunch",
+  package: "package",
+  packages: "package",
+  pkg: "package",
+  bag: "bag",
+  bags: "bag",
+  head: "head",
+  heads: "head",
+  stalk: "stalk",
+  stalks: "stalk",
+  sprig: "sprig",
+  sprigs: "sprig",
 };
 
 // number: "2", "2.5", "1/2", "1 1/2", "½", "1½"

@@ -78,7 +78,8 @@ export default async function MealsPage() {
       ? supabase
           .from("meal_plans")
           .select(
-            "id, date, meal_type, portions, status, name, recipes(id, name), " +
+            "id, date, meal_type, portions, status, name, " +
+              "recipes(id, name, calories, macros_computed_at), " +
               "cooks(id, name, portions, portions_remaining)",
           )
           .eq("user_id", userId)

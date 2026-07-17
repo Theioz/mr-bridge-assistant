@@ -9,6 +9,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **A recipe-backed plan now logs its macros.** `PATCH /api/meal-plan` (above) records that a
+  planned meal happened, but logs no macros — right for freeform text, wrong for a meal you
+  actually cooked from a recipe whose macros are already known. So marking "3 eggs + spinach"
+  eaten flipped a status and left the day's totals at zero: you did what the plan said and got
+  nothing back, which is the same unrewarded loop that killed meal logging in May.
+
+  `POST /api/meals/eat` now accepts `recipe_id` as an alternative to `cook_id`, backed by a new
+  `eatFromRecipe` (`web/src/lib/nutrition/cooks.ts`): it creates a `cook` from the recipe and
+  eats a portion in one call, so the macros land in `meal_log` and any surplus becomes
+  leftovers. A recipe is "one time you made food" the moment you eat it. In `KitchenPanel`, a
+  recipe-backed plan with resolved macros now shows **"Ate this"** (logs macros) instead of the
+  macro-less "Ate it"; a name-only recipe stub still falls back to the status-only path, since
+  there is nothing to log. `meal_plans` and the plan API now surface `recipes.macros_computed_at`
+  so the panel can tell a real recipe from a stub.
+
+### Fixed
+
+- **`bunch` / `package` no longer resolve to the wrong weight.** `lexQuantity` documented
+  "bunch" as unresolvable but didn't treat it that way: a number before any unrecognized unit
+  fell through to the bare-count branch, so `1/2 bunch spinach` became `qty 0.5, unit "each"`
+  and silently resolved against whatever spinach portion USDA returned first — a wrong number
+  wearing a confident badge, exactly the failure mode the quantity lexer exists to prevent.
+  These are real USDA portion descriptors (`1 bunch spinach = 340g`, `1 package (10 oz) = 284g`),
+  so they now pass through to `gramsFor` like `large` does for eggs. Added: `bunch`, `package`,
+  `bag`, `head`, `stalk`, `sprig`. A bare `handful` (no USDA portion) is still unquantified.
+
 - **A plan you can contradict.** `POST /api/meals/eat` requires a `cook_id` — it exists to log
   macros that are already known. But most planned meals point at no cook: a recipe not yet
   made, or freeform text. Those could be marked **nothing at all**, so `meal_plans` could
