@@ -52,7 +52,11 @@ export function WeekPlan({
     <section style={{ marginBottom: "var(--space-6)" }}>
       <h2
         className="font-heading font-semibold"
-        style={{ fontSize: "var(--t-h3)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}
+        style={{
+          fontSize: "var(--t-h3)",
+          color: "var(--color-text)",
+          marginBottom: "var(--space-1)",
+        }}
       >
         This week
       </h2>
