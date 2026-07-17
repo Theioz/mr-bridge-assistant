@@ -27,6 +27,23 @@ export function daysAgoString(days: number, tz = USER_TZ): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
 }
 
+/** Returns a YYYY-MM-DD string for N days from now in the user's timezone. */
+export function daysAheadString(days: number, tz = USER_TZ): string {
+  const d = new Date(Date.now() + days * 86_400_000);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
+}
+
+/**
+ * Returns the next N days as YYYY-MM-DD strings in the user's timezone,
+ * today first (index 0 = today, last index = N-1 days ahead).
+ */
+export function getNextNDays(n: number, tz = USER_TZ): string[] {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.now() + i * 86_400_000);
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
+  });
+}
+
 /**
  * Returns the UTC offset string for a timezone at the current moment,
  * e.g. "-07:00" for PDT or "-08:00" for PST.

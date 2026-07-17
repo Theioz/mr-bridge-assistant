@@ -9,6 +9,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The week you planned is now visible.** `meal_plans` shipped with a today-only read
+  (`.eq("date", todayString())` in the meals page), so a week of planned meals sat in the
+  table with no surface to render on — you could plan Sunday through Saturday and see none
+  of it until each day became today. The planning half of "plan, cook, confirm" was
+  write-only.
+
+  The meals page now reads the **next 7 days** in the same query and splits it: `KitchenPanel`
+  keeps today's slice for one-tap logging, and a new `WeekPlan` panel renders the rest.
+  Empty days are shown, not hidden — a gap is the most useful thing on the panel, because
+  it's the list of decisions still owed and exactly what the Sunday planning session exists
+  to close.
+
+  `WeekPlan` shows no macros, deliberately. `meal_plans` carries none of its own; a plan
+  points at a cook or a recipe and those own the numbers. Restating them here would mean
+  duplicating or inventing them.
+
+  Adds `daysAheadString()` and `getNextNDays()` to `lib/timezone` — the module could only
+  look backwards.
+
 - **Food gets measured macros, and cooking gets modelled.** `recipes` gains
   calories/protein/carbs/fat/fiber for the recipe **as written**, resolved once through the
   existing pipeline — the local model identifies the foods, **USDA FoodData Central supplies

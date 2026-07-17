@@ -2,12 +2,13 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { daysAgoString, todayString } from "@/lib/timezone";
+import { daysAgoString, daysAheadString, getNextNDays, todayString } from "@/lib/timezone";
 import {
   KitchenPanel,
   type KitchenCook,
   type KitchenPlannedMeal,
 } from "@/components/meals/KitchenPanel";
+import { WeekPlan } from "@/components/meals/WeekPlan";
 import MealsClient, {
   type MealRow,
   type RecipeRow,
@@ -70,6 +71,9 @@ export default async function MealsPage() {
           .gt("portions_remaining", 0)
           .order("cooked_on", { ascending: true }) // oldest first — eat it before it turns
       : Promise.resolve({ data: [] }),
+    // The next 7 days, not just today. KitchenPanel still renders today's slice for one-tap
+    // logging; the rest feeds the week view. One query serves both — a plan you can't see
+    // until the day arrives isn't a plan.
     userId
       ? supabase
           .from("meal_plans")
@@ -78,12 +82,15 @@ export default async function MealsPage() {
               "cooks(id, name, portions, portions_remaining)",
           )
           .eq("user_id", userId)
-          .eq("date", todayString())
+          .gte("date", todayString())
+          .lte("date", daysAheadString(6))
+          .order("date", { ascending: true })
       : Promise.resolve({ data: [] }),
   ]);
 
   const meals = (mealsData ?? []) as unknown as MealRow[];
   const recipes = (recipesData ?? []) as unknown as RecipeRow[];
+  const weekPlan = (planData ?? []) as unknown as KitchenPlannedMeal[];
 
   // Profile → macro goals
   const profileMap: Record<string, string> = {};
@@ -200,8 +207,10 @@ export default async function MealsPage() {
 
       <KitchenPanel
         leftovers={(leftoversData ?? []) as unknown as KitchenCook[]}
-        plan={(planData ?? []) as unknown as KitchenPlannedMeal[]}
+        plan={weekPlan.filter((p) => p.date === today)}
       />
+
+      <WeekPlan week={weekPlan} days={getNextNDays(7)} today={today} />
 
       <MealsClient
         todayMeals={todayMeals}
