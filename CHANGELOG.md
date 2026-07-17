@@ -9,6 +9,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **A plan you can contradict.** `POST /api/meals/eat` requires a `cook_id` — it exists to log
+  macros that are already known. But most planned meals point at no cook: a recipe not yet
+  made, or freeform text. Those could be marked **nothing at all**, so `meal_plans` could
+  only ever describe intent, never outcome — and a day you ate something else looked
+  identical to a day that never happened.
+
+  Adds `PATCH /api/meal-plan` (`{id, status}` → `planned` | `eaten` | `skipped`) and
+  **Ate it / Skip** buttons on every planned meal in `KitchenPanel`. Cook-backed meals keep
+  the existing "Ate this", which also decrements the fridge; everything else records the
+  outcome without inventing macros for it.
+
+  A skip is data, not a failure — it's how the plan finds out it was wrong, and a plan nobody
+  can contradict is a plan nobody corrects. It gets a quiet button, not a red one.
+
 - **The coaching loop answers back.** 33 `workout_plans` were written between May and June
   2026 and never once opened; the user logged 7 sessions with real notes and the system
   responded with nothing. An unrewarded loop decays, and this one did — training stopped

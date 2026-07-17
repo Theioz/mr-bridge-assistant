@@ -99,6 +99,31 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
     }
   }
 
+  // Outcome without macros. `eat()` above needs a cook, because it logs known numbers into
+  // meal_log. Most planned meals have no cook — a recipe not yet made, or freeform text — and
+  // those could previously be neither confirmed nor declined. Things don't go to plan; the plan
+  // has to be able to hear about it.
+  async function mark(planId: string, status: "eaten" | "skipped") {
+    setBusyId(planId);
+    setError(null);
+    try {
+      const res = await fetch("/api/meal-plan", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: planId, status }),
+      });
+      if (!res.ok) {
+        setError((await res.json()).error ?? "Couldn't update that");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Couldn't update that");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const todaysPlan = plan
     .filter((p) => p.status === "planned")
     .sort((a, b) => MEAL_ORDER.indexOf(a.meal_type) - MEAL_ORDER.indexOf(b.meal_type));
@@ -157,20 +182,44 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                     {!cook && !p.recipes ? " · off-plan" : ""}
                   </span>
                 </div>
-                {canEat ? (
+                <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
+                  {canEat ? (
+                    // Cook-backed: log the known macros AND decrement the fridge.
+                    <button
+                      type="button"
+                      disabled={busyId === p.id}
+                      onClick={() => eat(cook.id, { mealType: p.meal_type, mealPlanId: p.id })}
+                      style={eatButtonStyle(busyId === p.id)}
+                    >
+                      {busyId === p.id ? "Logging…" : "Ate this"}
+                    </button>
+                  ) : (
+                    // No cook — nothing to decrement and no macros to log, but the outcome is
+                    // still worth recording. Confirming intent beats leaving the row silent.
+                    <button
+                      type="button"
+                      disabled={busyId === p.id}
+                      onClick={() => mark(p.id, "eaten")}
+                      style={eatButtonStyle(busyId === p.id)}
+                      title={
+                        p.recipes
+                          ? "Marks it eaten. Not cooked, so no macros are logged."
+                          : "Marks it eaten. No macros are logged."
+                      }
+                    >
+                      {busyId === p.id ? "Saving…" : "Ate it"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busyId === p.id}
-                    onClick={() => eat(cook.id, { mealType: p.meal_type, mealPlanId: p.id })}
-                    style={eatButtonStyle(busyId === p.id)}
+                    onClick={() => mark(p.id, "skipped")}
+                    style={skipButtonStyle(busyId === p.id)}
+                    title="Didn't eat this. A skip is data — it's how the plan finds out it was wrong."
                   >
-                    {busyId === p.id ? "Logging…" : "Ate this"}
+                    Skip
                   </button>
-                ) : (
-                  // A planned recipe isn't eatable until it's been cooked — a cook is what
-                  // gives it portions and macros. Don't offer a button that can't work.
-                  <span style={subStyle}>{p.recipes ? "not cooked yet" : "—"}</span>
-                )}
+                </div>
               </div>
             );
           })}
@@ -243,6 +292,25 @@ const subStyle: React.CSSProperties = {
   color: "var(--color-text-muted)",
   marginTop: 2,
 };
+
+// Skipping is a legitimate outcome, not a failure — it gets a quiet button, not a red one.
+function skipButtonStyle(pending: boolean): React.CSSProperties {
+  return {
+    fontFamily: "var(--font-body), system-ui, sans-serif",
+    fontSize: "var(--t-micro)",
+    fontWeight: 500,
+    color: "var(--color-text-muted)",
+    background: "transparent",
+    border: "1px solid var(--rule-soft)",
+    borderRadius: "var(--r-1)",
+    padding: "0 var(--space-3)",
+    minHeight: 36,
+    flexShrink: 0,
+    cursor: pending ? "wait" : "pointer",
+    opacity: pending ? 0.5 : 1,
+    transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+  };
+}
 
 function eatButtonStyle(pending: boolean): React.CSSProperties {
   return {
