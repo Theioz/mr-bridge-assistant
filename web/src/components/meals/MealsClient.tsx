@@ -32,6 +32,9 @@ export interface MealRow {
   notes: string | null;
   user_context: string | null;
   recipes: { name: string } | null;
+  // A meal logged from a cook (the "Ate this" path) carries the cook, not a recipe. Without
+  // this the row had no name to show and rendered as "—".
+  cooks: { name: string } | null;
   calories: number | null;
   protein_g: number | null;
   carbs_g: number | null;
@@ -337,7 +340,7 @@ function MealRowDisplay({ meal, onClick, onRelog, onDelete }: MealRowDisplayProp
           wordBreak: "break-word",
         }}
       >
-        {meal.recipes?.name ?? meal.notes ?? "—"}
+        {meal.cooks?.name ?? meal.recipes?.name ?? meal.notes ?? "—"}
       </span>
       {macroStr && (
         <div
@@ -675,7 +678,7 @@ function TodayTab({
   const quickLogRef = useRef<HTMLDivElement>(null);
 
   function prefillLog(m: MealRow) {
-    const name = m.recipes?.name ?? m.notes ?? "";
+    const name = m.cooks?.name ?? m.recipes?.name ?? m.notes ?? "";
     setLogDesc(name);
     setLogMealType(
       (MEAL_TYPES as readonly string[]).includes(m.meal_type)
@@ -731,7 +734,7 @@ function TodayTab({
     const byKey = new Map<string, MealRow>();
     const sorted = [...pastMeals].sort((a, b) => (a.date < b.date ? 1 : -1));
     for (const m of sorted) {
-      const key = normalizeName(m.recipes?.name ?? m.notes);
+      const key = normalizeName(m.cooks?.name ?? m.recipes?.name ?? m.notes);
       if (!key) continue;
       if (!byKey.has(key)) byKey.set(key, m);
     }

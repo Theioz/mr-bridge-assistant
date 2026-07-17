@@ -38,7 +38,7 @@ export default async function MealsPage() {
     supabase
       .from("meal_log")
       .select(
-        "id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, recipes(name)",
+        "id, date, meal_type, notes, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, recipes(name), cooks(name)",
       )
       .gte("date", daysAgoString(6))
       .order("date", { ascending: false })

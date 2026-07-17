@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **A meal logged from the fridge now shows what it was.** The "Logged today" list read a meal's
+  name from `recipes(name) ?? notes`, but a one-tap "Ate this" writes a `cook_id`, not a recipe —
+  so a logged cook had no name and rendered as "—" (or, worse, showed an internal note). The
+  meal_log query now also joins `cooks(name)` and the display prefers it, so "Eggs & Spinach" and
+  "Linguine…" show up as themselves. (A cook with unresolved macros still logs 0 kcal — that's a
+  data gap in the cook, not this display.)
+
 ### Added
 
 - **Click into a planned meal to see what's in it.** A planned meal showed only its label —
