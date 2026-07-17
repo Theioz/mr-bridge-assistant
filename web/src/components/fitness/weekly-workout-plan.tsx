@@ -643,6 +643,8 @@ export function WeeklyWorkoutPlan({
                   {day.isToday && (
                     <EndOfWorkoutRecap
                       sessionId={todaySession?.id ?? null}
+                      performedOn={day.date}
+                      workoutPlanId={day.plan?.id ?? null}
                       initialPerceivedEffort={todaySession?.perceived_effort ?? null}
                       initialNotes={todaySession?.notes ?? null}
                       completedAt={todaySession?.completed_at ?? null}

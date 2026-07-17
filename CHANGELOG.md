@@ -9,6 +9,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The end-of-workout feedback box works without logging sets.** The "how did it feel?" recap
+  (perceived effort + notes) only appeared once a set had been logged — it could only PATCH an
+  existing `strength_session`, and a session was created by the set logger. Do your workout
+  without logging every set in the app and the box never opened, so a real coaching signal went
+  uncaptured. `PATCH /api/strength-sessions` now accepts `performed_on` (+ `workout_plan_id`) and
+  finds-or-creates the session itself, and `EndOfWorkoutRecap` always renders on today's workout
+  and fills in its session id after the first save. Effort and notes can now be logged for any
+  workout, set-tracked or not.
+
 - **Recipes show how to cook them, not just what's in them.** Recipes have carried an
   `instructions` field all along, but neither the click-in planned-meal detail nor the Recipes
   tab rendered it — you saw the ingredient list and the macros, but not the method. Both now

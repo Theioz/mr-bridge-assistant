@@ -6,38 +6,32 @@ import { Loader2 } from "lucide-react";
 
 interface Props {
   sessionId: string | null;
+  // Used to find-or-create the session when none exists yet, so the box works without any set
+  // having been logged. One is required — the session is looked up by date if there's no id.
+  performedOn: string;
+  workoutPlanId: string | null;
   initialPerceivedEffort: number | null;
   initialNotes: string | null;
   completedAt: string | null;
 }
 
 export function EndOfWorkoutRecap({
-  sessionId,
+  sessionId: initialSessionId,
+  performedOn,
+  workoutPlanId,
   initialPerceivedEffort,
   initialNotes,
   completedAt,
 }: Props) {
   const router = useRouter();
+  // The id can arrive null (no set logged yet) and get filled in once we save and the server
+  // creates the session — hold it in state so a second save updates rather than duplicates.
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
   const [effort, setEffort] = useState<number | null>(initialPerceivedEffort);
   const [notes, setNotes] = useState<string>(initialNotes ?? "");
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(completedAt);
-
-  if (!sessionId) {
-    return (
-      <p
-        style={{
-          fontSize: 11,
-          color: "var(--color-text-faint, var(--color-text-muted))",
-          fontStyle: "italic",
-          marginTop: 8,
-        }}
-      >
-        Log a set above to open the end-of-workout recap.
-      </p>
-    );
-  }
 
   async function save() {
     setErr(null);
@@ -47,7 +41,10 @@ export function EndOfWorkoutRecap({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
+          // Prefer the id when we have it; otherwise let the server resolve by date.
+          session_id: sessionId ?? undefined,
+          performed_on: performedOn,
+          workout_plan_id: workoutPlanId,
           perceived_effort: effort,
           notes: notes.trim() === "" ? null : notes,
         }),
@@ -58,6 +55,7 @@ export function EndOfWorkoutRecap({
         return;
       }
       const data = await res.json();
+      if (data?.id) setSessionId(data.id);
       setSavedAt(data?.completed_at ?? new Date().toISOString());
       router.refresh();
     } catch (e) {
@@ -132,7 +130,7 @@ export function EndOfWorkoutRecap({
 
       <div style={{ marginBottom: 10 }}>
         <label
-          htmlFor={`recap-notes-${sessionId}`}
+          htmlFor={`recap-notes-${performedOn}`}
           style={{
             fontSize: 11,
             color: "var(--color-text-muted)",
@@ -144,7 +142,7 @@ export function EndOfWorkoutRecap({
           <span style={{ color: "var(--color-text-faint)" }}>(optional — how did it feel?)</span>
         </label>
         <textarea
-          id={`recap-notes-${sessionId}`}
+          id={`recap-notes-${performedOn}`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
