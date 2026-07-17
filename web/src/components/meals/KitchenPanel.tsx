@@ -41,6 +41,7 @@ export interface KitchenPlannedMeal {
     id: string;
     name: string;
     ingredients: string | null;
+    instructions: string | null;
     calories: number | null;
     protein_g: number | null;
     carbs_g: number | null;

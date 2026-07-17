@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Recipes show how to cook them, not just what's in them.** Recipes have carried an
+  `instructions` field all along, but neither the click-in planned-meal detail nor the Recipes
+  tab rendered it — you saw the ingredient list and the macros, but not the method. Both now
+  show a "How to make it" section (line breaks preserved) whenever a recipe has instructions.
+  Threaded `instructions` through the plan queries and the recipes query.
+
 ### Fixed
 
 - **A meal logged from the fridge now shows what it was.** The "Logged today" list read a meal's

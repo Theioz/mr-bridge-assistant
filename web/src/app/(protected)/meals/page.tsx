@@ -57,7 +57,7 @@ export default async function MealsPage() {
     userId
       ? supabase
           .from("recipes")
-          .select("id, name, cuisine, tags, ingredients")
+          .select("id, name, cuisine, tags, ingredients, instructions")
           .eq("user_id", userId)
           .order("name")
       : Promise.resolve({ data: [] }),
@@ -79,7 +79,7 @@ export default async function MealsPage() {
           .from("meal_plans")
           .select(
             "id, date, meal_type, portions, status, name, " +
-              "recipes(id, name, ingredients, calories, protein_g, carbs_g, fat_g, fiber_g, " +
+              "recipes(id, name, ingredients, instructions, calories, protein_g, carbs_g, fat_g, fiber_g, " +
               "typical_portions, macros_confidence, macros_computed_at), " +
               "cooks(id, name, portions, portions_remaining, calories, protein_g, carbs_g, fat_g, fiber_g)",
           )
