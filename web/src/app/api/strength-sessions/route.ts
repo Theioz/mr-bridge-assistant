@@ -15,7 +15,12 @@ interface LogSetBody {
 }
 
 interface RecapBody {
-  session_id: string;
+  // Either identify the session directly, or let it be found/created for a date. The latter is
+  // what lets the end-of-workout box stand on its own: you can say how a workout felt without
+  // having logged a single set (no set = no session existed = nowhere to write the note before).
+  session_id?: string;
+  performed_on?: string;
+  workout_plan_id?: string | null;
   perceived_effort?: number | null;
   notes?: string | null;
   completed_at?: string;
@@ -112,8 +117,8 @@ export async function PATCH(req: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.session_id) {
-    return Response.json({ error: "session_id is required" }, { status: 400 });
+  if (!body.session_id && !body.performed_on) {
+    return Response.json({ error: "session_id or performed_on is required" }, { status: 400 });
   }
   if (body.perceived_effort != null && (body.perceived_effort < 1 || body.perceived_effort > 10)) {
     return Response.json({ error: "perceived_effort must be between 1 and 10" }, { status: 400 });
@@ -125,6 +130,45 @@ export async function PATCH(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Resolve the session. With no session_id, find the one for that date, or create it — so a
+  // note can be saved for a workout that was never set-logged. Mirrors the POST create path.
+  let sessionId = body.session_id ?? null;
+  if (!sessionId) {
+    const { data: existing, error: lookupErr } = await supabase
+      .from("strength_sessions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("performed_on", body.performed_on!)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (lookupErr) return Response.json({ error: lookupErr.message }, { status: 500 });
+    if (existing) {
+      sessionId = existing.id;
+    } else {
+      const { data: created, error: createErr } = await supabase
+        .from("strength_sessions")
+        .insert({
+          user_id: user.id,
+          workout_plan_id: body.workout_plan_id ?? null,
+          performed_on: body.performed_on!,
+          started_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (createErr || !created) {
+        return Response.json(
+          { error: createErr?.message ?? "failed to create session" },
+          { status: 500 },
+        );
+      }
+      sessionId = created.id;
+    }
+  }
+  if (!sessionId) {
+    return Response.json({ error: "Could not resolve session" }, { status: 500 });
+  }
+
   const updates: Record<string, unknown> = {
     completed_at: body.completed_at ?? new Date().toISOString(),
   };
@@ -134,7 +178,7 @@ export async function PATCH(req: Request) {
   const { data, error } = await supabase
     .from("strength_sessions")
     .update(updates)
-    .eq("id", body.session_id)
+    .eq("id", sessionId)
     .eq("user_id", user.id)
     .select()
     .single();
@@ -143,7 +187,7 @@ export async function PATCH(req: Request) {
   if (!data) return Response.json({ error: "Session not found" }, { status: 404 });
 
   // Fire-and-forget PR computation on session completion
-  upsertExercisePRs(supabase, user.id, body.session_id).catch(() => {});
+  upsertExercisePRs(supabase, user.id, sessionId).catch(() => {});
 
   return Response.json(data);
 }
