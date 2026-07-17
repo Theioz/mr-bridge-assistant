@@ -61,12 +61,18 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
     return (
       <div style={detailBoxStyle}>
         {recipe.ingredients ? (
-          <div style={{ marginBottom: hasMacros ? "var(--space-3)" : 0 }}>
+          <div style={{ marginBottom: "var(--space-3)" }}>
             <p style={sectionLabelStyle}>Ingredients</p>
             <p style={ingredientsStyle}>{recipe.ingredients}</p>
           </div>
         ) : (
           <p style={mutedStyle}>No ingredients recorded for this recipe yet.</p>
+        )}
+        {recipe.instructions && (
+          <div style={{ marginBottom: hasMacros ? "var(--space-3)" : 0 }}>
+            <p style={sectionLabelStyle}>How to make it</p>
+            <p style={ingredientsStyle}>{recipe.instructions}</p>
+          </div>
         )}
         {hasMacros ? (
           <>

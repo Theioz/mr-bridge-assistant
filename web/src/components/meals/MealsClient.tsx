@@ -49,6 +49,7 @@ export interface RecipeRow {
   cuisine: string | null;
   tags: string[] | null;
   ingredients: string | null;
+  instructions: string | null;
 }
 
 export interface MacroGoals {
@@ -1270,6 +1271,33 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                       >
                         {r.ingredients}
                       </p>
+                    )}
+
+                    {r.instructions && (
+                      <div style={{ marginBottom: "var(--space-3)" }}>
+                        <p
+                          style={{
+                            fontSize: "var(--t-micro)",
+                            fontWeight: 600,
+                            color: "var(--color-text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                            marginBottom: "var(--space-1)",
+                          }}
+                        >
+                          How to make it
+                        </p>
+                        <p
+                          style={{
+                            fontSize: "var(--t-meta)",
+                            color: "var(--color-text)",
+                            lineHeight: 1.6,
+                            whiteSpace: "pre-line",
+                          }}
+                        >
+                          {r.instructions}
+                        </p>
+                      </div>
                     )}
 
                     {isUsing ? (
