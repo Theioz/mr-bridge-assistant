@@ -23,6 +23,9 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 TZ = os.environ.get("USER_TIMEZONE", "America/Los_Angeles")
 GOAL_LB = 140.0
 SESSIONS_PER_WEEK = 3
+# Beyond this gap, two sessions are not comparable — the later one is a re-entry
+# deload, not a performance drop.
+REGRESSION_MAX_GAP_DAYS = 14
 
 
 def today_local():
@@ -51,6 +54,48 @@ def weight_avg(rows, start, end):
     return sum(vals) / len(vals) if vals else None
 
 
+def top_sets(c, session_ids):
+    """Best set per exercise per session, keyed {session_id: {exercise: weight*reps}}."""
+    if not session_ids:
+        return {}
+    rows = c.table("strength_session_sets") \
+        .select("session_id,exercise_name,weight_kg,reps") \
+        .in_("session_id", session_ids).execute().data
+    out: dict = {}
+    for r in rows:
+        load = (r.get("weight_kg") or 0) * (r.get("reps") or 0)
+        by_ex = out.setdefault(r["session_id"], {})
+        if load > by_ex.get(r["exercise_name"], 0):
+            by_ex[r["exercise_name"]] = load
+    return out
+
+
+def regressions(c, uid, today):
+    """Exercises whose best set fell vs the previous session that also trained them.
+
+    This is the sound autoregulation trigger. Reducing load because a *set felt hard*
+    penalises the productive zone (1-3 RIR); reducing it because performance actually
+    dropped across sessions is a real fatigue signal.
+    """
+    recent = c.table("strength_sessions").select("id,performed_on").eq("user_id", uid) \
+        .lte("performed_on", today.isoformat()).order("performed_on", desc=True) \
+        .limit(2).execute().data
+    if len(recent) < 2:
+        return []
+
+    # Only compare against a genuinely recent session. Across a layoff the previous
+    # session is at pre-layoff loads, so every exercise reads as a "regression" when
+    # it is really a deliberate re-entry deload. Testing this against real data flagged
+    # DB Single-Arm Row by comparing 2026-07-17 against 2026-05-06.
+    gap = (date.fromisoformat(recent[0]["performed_on"])
+           - date.fromisoformat(recent[1]["performed_on"])).days
+    if gap > REGRESSION_MAX_GAP_DAYS:
+        return []
+    loads = top_sets(c, [r["id"] for r in recent])
+    cur, prev = loads.get(recent[0]["id"], {}), loads.get(recent[1]["id"], {})
+    return [ex for ex, v in cur.items() if ex in prev and prev[ex] > 0 and v < prev[ex] * 0.95]
+
+
 def post_session(c, uid, today):
     planned = c.table("workout_plans").select("name,status").eq("user_id", uid) \
         .eq("date", today.isoformat()).execute().data
@@ -58,7 +103,7 @@ def post_session(c, uid, today):
         print("no plan today; silent")
         return
 
-    logged = c.table("strength_sessions").select("id,perceived_effort") \
+    logged = c.table("strength_sessions").select("id,perceived_effort,notes") \
         .eq("user_id", uid).eq("performed_on", today.isoformat()).execute().data
 
     wk = today - timedelta(days=6)
@@ -69,17 +114,38 @@ def post_session(c, uid, today):
 
     if logged:
         effort = logged[0].get("perceived_effort")
+        note = (logged[0].get("notes") or "").strip()
         bits = [f"Session logged. {n}/{SESSIONS_PER_WEEK} this week."]
+
+        # Effort bands target 1-3 RIR on the last set of each exercise. The old bands
+        # treated 8-9 as a fault and cut load — that is the productive zone, and at a
+        # 25 lb dumbbell ceiling stopping short of it leaves the set near-unstimulating
+        # (proximity to failure matters MORE at light loads). 10 still means back off.
         if effort is None:
-            bits.append("No effort score — log one, it's what drives next week's load.")
-        elif effort >= 9:
-            bits.append(f"Effort {effort}/10 — too hard. Next session drops a set.")
-        elif effort >= 8:
-            bits.append(f"Effort {effort}/10 — above target. Next session drops load 10%.")
-        elif effort <= 4:
-            bits.append(f"Effort {effort}/10 — too easy. We add load next session.")
+            bits.append("No effort score — log one, it's what tunes next session.")
+        elif effort >= 10:
+            bits.append(f"Effort {effort}/10 — couldn't finish. That's a load problem, not you. Next session backs off.")
+        elif effort >= 7:
+            bits.append(f"Effort {effort}/10 — on target (1-3 reps left in the tank). Hold here.")
+        elif effort >= 6:
+            bits.append(f"Effort {effort}/10 — fine for re-entry, light for growth. Add reps before load.")
         else:
-            bits.append(f"Effort {effort}/10 — dead on target. This is the pace that sticks.")
+            bits.append(f"Effort {effort}/10 — under target. Add reps or load next session.")
+
+        # Performance, not felt-effort, is what triggers a reduction.
+        reg = regressions(c, uid, today)
+        if reg:
+            bits.append(f"Down vs last session: {', '.join(reg[:3])}. Two in a row = back off.")
+
+        # THE POINT OF THIS SCRIPT. In May he wrote thoughtful notes and the system
+        # never answered; the loop decayed on schedule. Quoting it back is the minimum
+        # acknowledgement that the note was received by something.
+        if note:
+            snippet = note if len(note) <= 90 else note[:87] + "..."
+            bits.append(f'Your note: "{snippet}" — logged, and it shapes the next plan.')
+        else:
+            bits.append("No note this time — a line on how it felt is what the next plan reads.")
+
         notify("Mr. Bridge — Logged", " ".join(bits))
         return
 
@@ -101,10 +167,13 @@ def post_session(c, uid, today):
         msg = (f"3 planned sessions missed. Not a nag — a signal. The program is too much "
                f"as written; Sunday we cut it, not you.")
     elif miss == 2:
-        msg = (f"2 missed in a row. Volume drops next session automatically. "
-               f"Consistency beats intensity — that's the whole point.")
+        # Was "Volume drops next session automatically." Nothing in this repo drops
+        # volume — no code path writes workout_plans from here. Promising an automatic
+        # correction that never arrives is the same broken promise as an unanswered note.
+        msg = (f"2 missed in a row. Next session is cut to 3 exercises — open Claude Code and "
+               f"it gets rewritten smaller. Consistency beats intensity.")
     else:
-        msg = f"'{name}' wasn't logged. 13 sets, ~35 min, effort 6/10. Still counts if you do it late."
+        msg = f"'{name}' wasn't logged. 13 sets, ~35 min, last set of each to 1-3 reps in reserve. Still counts if you do it late."
     notify("Mr. Bridge — Missed", msg, click=os.environ.get("APP_URL", "") + "/weekly")
 
 
