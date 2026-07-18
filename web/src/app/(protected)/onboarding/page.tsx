@@ -97,11 +97,19 @@ async function saveNutritionTargets(
   "use server";
   const user = await getUser();
   if (!user) return;
+  // These MUST be the *_goal keys. Onboarding used to write calorie_target /
+  // protein_target_g / carb_target_g / fat_target_g, which nothing else in the app
+  // reads — every consumer (meals page, MacroSummaryCard, settings, the profile MCP
+  // tool, the briefing script) reads calorie_goal / protein_goal / carbs_goal /
+  // fat_goal. The Mifflin-St Jeor result computed here was therefore written to
+  // dead keys and the meals page showed no targets until the user separately hit
+  // "Apply" in settings, which uses a different (bodyweight-multiplier) formula.
+  // Note carbs_goal is plural.
   const rows = [
-    { key: "calorie_target", value: calories },
-    { key: "protein_target_g", value: proteinG },
-    { key: "carb_target_g", value: carbsG },
-    { key: "fat_target_g", value: fatG },
+    { key: "calorie_goal", value: calories },
+    { key: "protein_goal", value: proteinG },
+    { key: "carbs_goal", value: carbsG },
+    { key: "fat_goal", value: fatG },
   ].filter((r) => r.value.trim());
   for (const row of rows) await upsert(user.id, row.key, row.value);
 }
@@ -224,10 +232,10 @@ export default async function OnboardingPage() {
         initialWorkoutDaysPerWeek={v["workout_days_per_week"] ?? ""}
         initialWorkoutPrefs={JSON.parse(v["workout_preferences"] ?? "[]") as string[]}
         initialEquipment={JSON.parse(v["equipment_preference"] ?? "[]") as string[]}
-        initialCalorieTarget={v["calorie_target"] ?? ""}
-        initialProteinTarget={v["protein_target_g"] ?? ""}
-        initialCarbTarget={v["carb_target_g"] ?? ""}
-        initialFatTarget={v["fat_target_g"] ?? ""}
+        initialCalorieTarget={v["calorie_goal"] ?? ""}
+        initialProteinTarget={v["protein_goal"] ?? ""}
+        initialCarbTarget={v["carbs_goal"] ?? ""}
+        initialFatTarget={v["fat_goal"] ?? ""}
         initialWatchlist={JSON.parse(v["stock_watchlist"] ?? "[]") as string[]}
         initialSportsFavorites={JSON.parse(v["sports_favorites"] ?? "[]") as SportsFavorite[]}
         saveNameAndLocationAction={saveNameAndLocation}

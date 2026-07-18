@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { validateWeights } from "@/lib/fitness/equipment-validation";
 
 interface WorkoutExercise {
   exercise: string;
@@ -491,6 +492,37 @@ export async function POST(request: NextRequest) {
       skipped: true,
       message: `Plan already exists for week of ${nextMondayStr}`,
     });
+  }
+
+  // Equipment caps. `validateWeights` already backs the MCP assign_workout and
+  // update_workout_exercise tools, but the weekly planner wrote model-chosen loads
+  // straight through without it — the one path that writes a whole week at once was
+  // the one path with no cap check. A plan prescribing 30 lb against a 25 lb pair is
+  // not executable, and silently writing it produces a week the user cannot perform.
+  if (workout_days.length > 0) {
+    const allExercises = workout_days.flatMap((d) => [
+      ...(d.warmup ?? []),
+      ...(d.workout ?? []),
+      ...(d.cooldown ?? []),
+    ]);
+    const { valid, violations } = await validateWeights({
+      supabase: db,
+      userId: uid,
+      exercises: allExercises,
+    });
+    if (!valid) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "plan exceeds available equipment",
+          violations: violations.map(
+            (v) =>
+              `${v.exercise}: ${v.requested_weight} lb requested, ${v.max_available} lb is the heaviest ${v.equipment_type} available`,
+          ),
+        },
+        { status: 422 },
+      );
+    }
   }
 
   const errors: string[] = [];
