@@ -16,11 +16,17 @@ not be quietly interpreted away.
 
 ## Steps
 
+> **Run these on compute-core with `INTERNAL_APP_URL=http://localhost:3000`.** The script
+> calls the app's own API, and `APP_URL` (the tailnet host) is **not reachable from
+> compute-core** — the hostname resolves to a tailnet IP on another node that the ACL does
+> not grant. Using it fails at connect, which looks like the app being down rather than a
+> config problem.
+
 1. **Fetch the context** (AI-free endpoint — profile, equipment, last week's sets with
    per-set RPE, recovery, meals, habits):
 
    ```bash
-   python3 scripts/weekly_plan.py context --week-start <YYYY-MM-DD>
+   INTERNAL_APP_URL=http://localhost:3000 python3 scripts/weekly_plan.py context --week-start <YYYY-MM-DD>
    ```
 
    `<YYYY-MM-DD>` is the **Monday** of the week to plan. Default to next Monday.
@@ -41,7 +47,7 @@ not be quietly interpreted away.
 4. **Submit:**
 
    ```bash
-   python3 scripts/weekly_plan.py submit /tmp/plan.json --week-start <YYYY-MM-DD>
+   INTERNAL_APP_URL=http://localhost:3000 python3 scripts/weekly_plan.py submit /tmp/plan.json --week-start <YYYY-MM-DD>
    ```
 
    This writes `workout_plans` rows and the meal-prep task.

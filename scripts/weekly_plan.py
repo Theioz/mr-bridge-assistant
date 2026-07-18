@@ -34,12 +34,26 @@ if env_file.exists():
 # /api/cron/weekly-plan disabled. Do not reintroduce it: generation happens in a
 # Claude Code session, not here.
 
-APP_URL = os.environ.get("APP_URL")
-if not APP_URL:
+# API_BASE — the origin THIS SCRIPT uses for its own server-to-server calls.
+#
+# Deliberately not APP_URL. APP_URL is the tailnet-only app host (see
+# web/src/lib/share-url.ts, which already documents that distinction for share links).
+# This script runs ON compute-core, and compute-core cannot reach that host:
+# mr-bridge.jl-infra-lab.com resolves to a tailnet IP belonging to a *different* node,
+# and the Tailscale ACL does not grant compute-core -> that node. A call to APP_URL
+# from here fails at connect, not at auth — so it looks like the app is down.
+#
+# Precedence:
+#   INTERNAL_APP_URL   loopback/LAN origin for host-local calls, e.g. http://localhost:3000
+#   APP_URL            fallback for dev or a single-host deploy where they are the same
+API_BASE = os.environ.get("INTERNAL_APP_URL") or os.environ.get("APP_URL")
+if not API_BASE:
     raise SystemExit(
-        "APP_URL must be set. It previously defaulted to the Vercel deployment, which was "
-        "decommissioned in the 2026-07-13 self-host cutover — the default silently pointed "
-        "every submit at a dead host."
+        "Set INTERNAL_APP_URL (preferred, e.g. http://localhost:3000) or APP_URL.\n"
+        "This previously defaulted to the Vercel deployment, decommissioned in the "
+        "2026-07-13 self-host cutover, so the default silently pointed every submit at a "
+        "dead host. Note APP_URL alone is not reachable from compute-core — it is the "
+        "tailnet app host on another node."
     )
 CRON_SECRET = os.environ["CRON_SECRET"]
 
@@ -420,7 +434,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.cmd == "context":
-        status, text = fetch(f"{APP_URL}/api/internal/plan?week_start={args.week_start}")
+        status, text = fetch(f"{API_BASE}/api/internal/plan?week_start={args.week_start}")
         if status != 200:
             print(f"failed to fetch context: {status}\n{text}", file=sys.stderr)
             sys.exit(1)
@@ -475,7 +489,7 @@ def main() -> None:
             )
             sys.exit(1)
         body = json.dumps({**plan, "week_start": args.week_start}).encode()
-        status, text = fetch(f"{APP_URL}/api/internal/plan", method="POST", body=body)
+        status, text = fetch(f"{API_BASE}/api/internal/plan", method="POST", body=body)
         if status not in (200, 201):
             print(f"submit failed: {status}\n{text}", file=sys.stderr)
             sys.exit(1)
