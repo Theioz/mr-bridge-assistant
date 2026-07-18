@@ -123,10 +123,81 @@ def main():
     def q_meal_log():
         return (
             client.table("meal_log")
-            .select("date,meal_type,notes,recipe_id")
+            .select("date,meal_type,notes,recipe_id,calories,protein_g,carbs_g,fat_g,fiber_g")
             .eq("user_id", uid)
             .gte("date", seven_days_ago)
             .order("date", desc=True)
+            .execute()
+            .data
+        )
+
+    def q_cooks():
+        """Leftovers. `calories` on a cook is the WHOLE cook — divide by `portions`."""
+        return (
+            client.table("cooks")
+            .select("name,cooked_on,portions,portions_remaining,calories,protein_g,carbs_g,fat_g")
+            .eq("user_id", uid)
+            .gt("portions_remaining", 0)
+            .order("cooked_on")
+            .execute()
+            .data
+        )
+
+    def q_meal_plans():
+        return (
+            client.table("meal_plans")
+            .select(
+                "date,meal_type,status,name,portions,"
+                "recipes(name,calories,protein_g,carbs_g,fat_g),"
+                "cooks(name,portions,calories,protein_g,carbs_g,fat_g)"
+            )
+            .eq("user_id", uid)
+            .gte("date", today)
+            .order("date")
+            .order("meal_type")
+            .execute()
+            .data
+        )
+
+    def q_strength_sessions():
+        return (
+            client.table("strength_sessions")
+            .select("id,performed_on,perceived_effort,notes")
+            .eq("user_id", uid)
+            .order("performed_on", desc=True)
+            .limit(3)
+            .execute()
+            .data
+        )
+
+    def q_strength_sets(session_ids: list):
+        return (
+            client.table("strength_session_sets")
+            .select("session_id,exercise_name,exercise_order,set_number,weight_kg,reps")
+            .in_("session_id", session_ids)
+            .order("exercise_order")
+            .order("set_number")
+            .execute()
+            .data
+        )
+
+    def q_exercise_prs():
+        return (
+            client.table("exercise_prs")
+            .select("exercise_name,weight_pr_kg,rep_pr_reps,rep_pr_weight_kg,weight_pr_achieved_at")
+            .eq("user_id", uid)
+            .order("exercise_name")
+            .execute()
+            .data
+        )
+
+    def q_workout_plans():
+        return (
+            client.table("workout_plans")
+            .select("date,name,status")
+            .eq("user_id", uid)
+            .gte("date", today)
+            .order("date")
             .execute()
             .data
         )
@@ -161,6 +232,11 @@ def main():
         "study_log":          q_study_log,
         "meal_log":           q_meal_log,
         "weather":            q_weather,
+        "cooks":              q_cooks,
+        "meal_plans":         q_meal_plans,
+        "strength_sessions":  q_strength_sessions,
+        "exercise_prs":       q_exercise_prs,
+        "workout_plans":      q_workout_plans,
     }
 
     results: dict = {}
@@ -185,6 +261,12 @@ def main():
             tier2_futs[pool.submit(lambda ids=recipe_ids: q_recipes(ids))] = "recipes"
         else:
             results["recipes"] = []
+
+        session_ids = [s["id"] for s in (results.get("strength_sessions") or [])]
+        if session_ids:
+            tier2_futs[pool.submit(lambda ids=session_ids: q_strength_sets(ids))] = "strength_sets"
+        else:
+            results["strength_sets"] = []
 
         for fut in as_completed(tier2_futs):
             key = tier2_futs[fut]
@@ -330,7 +412,144 @@ def main():
         print("\n## RECENT MEALS (last 7 days)")
         for m in meal_logs:
             label = recipe_names.get(m["recipe_id"], m.get("notes") or "—") if m.get("recipe_id") else (m.get("notes") or "—")
-            print(f"- {m['date']} | {m.get('meal_type', '—')} | {label}")
+            macro_parts = []
+            if m.get("calories"):
+                macro_parts.append(f"{round(m['calories'])} kcal")
+            for key, tag in (("protein_g", "P"), ("carbs_g", "C"), ("fat_g", "F")):
+                if m.get(key):
+                    macro_parts.append(f"{round(m[key], 1)}{tag}")
+            macros = f" | {' / '.join(macro_parts)}" if macro_parts else ""
+            print(f"- {m['date']} | {m.get('meal_type', '—')} | {label}{macros}")
+
+    # Daily intake totals vs targets — planned macros mean nothing without the
+    # target line next to them, and per-meal rows do not sum themselves.
+    if meal_logs:
+        targets = {
+            "calorie_goal": profile.get("calorie_goal"),
+            "protein_goal": profile.get("protein_goal"),
+            "carbs_goal": profile.get("carbs_goal"),
+            "fat_goal": profile.get("fat_goal"),
+            "fiber_goal": profile.get("fiber_goal"),
+        }
+        print("\n## INTAKE vs TARGETS (logged days, last 7)")
+        if any(targets.values()):
+            print(
+                f"TARGET: {targets['calorie_goal']} kcal / {targets['protein_goal']}P / "
+                f"{targets['carbs_goal']}C / {targets['fat_goal']}F / {targets['fiber_goal']} fiber"
+            )
+        daily: dict[str, list[float]] = {}
+        for m in meal_logs:
+            acc = daily.setdefault(m["date"], [0.0, 0.0, 0.0, 0.0, 0.0])
+            for i, key in enumerate(("calories", "protein_g", "carbs_g", "fat_g", "fiber_g")):
+                acc[i] += m.get(key) or 0
+        for day in sorted(daily, reverse=True):
+            a = daily[day]
+            gap = ""
+            if targets["protein_goal"]:
+                short = float(targets["protein_goal"]) - a[1]
+                if short > 20:
+                    gap = f"  <- {round(short)}g protein short"
+            print(
+                f"- {day}: {round(a[0])} kcal / {round(a[1], 1)}P / {round(a[2], 1)}C / "
+                f"{round(a[3], 1)}F / {round(a[4], 1)} fiber{gap}"
+            )
+        print("NOTE: absence of rows means unlogged, not fasted.")
+
+    # Fridge — leftovers are the first input to any meal plan, so they lead.
+    cooks = results.get("cooks") or []
+    print("\n## FRIDGE (leftovers — plan into these first)")
+    if cooks:
+        for c in cooks:
+            n = c.get("portions") or 1
+            try:
+                age = f" ({(date.today() - date.fromisoformat(c['cooked_on'])).days}d ago)"
+            except (TypeError, ValueError):
+                age = ""
+            print(
+                f"- {c['name']} | {c['portions_remaining']}/{n} left | cooked {c['cooked_on']}{age}"
+                f" | per portion {round((c.get('calories') or 0) / n)} kcal / "
+                f"{round((c.get('protein_g') or 0) / n, 1)}P / "
+                f"{round((c.get('carbs_g') or 0) / n, 1)}C / "
+                f"{round((c.get('fat_g') or 0) / n, 1)}F"
+            )
+    else:
+        print("- Empty")
+
+    # Planned meals
+    plans = results.get("meal_plans") or []
+    print("\n## MEAL PLAN (today forward)")
+    if plans:
+        current = None
+        for p in plans:
+            if p["date"] != current:
+                current = p["date"]
+                print(f"  {current}")
+            src = p.get("recipes") or p.get("cooks") or {}
+            # A cook's macros are the whole cook; a recipe's are one serving.
+            divisor = (src.get("portions") or 1) if p.get("cooks") else 1
+            if src:
+                macros = (
+                    f"{round((src.get('calories') or 0) / divisor)} kcal / "
+                    f"{round((src.get('protein_g') or 0) / divisor, 1)}P / "
+                    f"{round((src.get('carbs_g') or 0) / divisor, 1)}C / "
+                    f"{round((src.get('fat_g') or 0) / divisor, 1)}F"
+                )
+            else:
+                macros = "no macros (freeform)"
+            print(f"    {p.get('meal_type', '—'):9} [{p.get('status', '—'):7}] {p.get('name') or '—'} -> {macros}")
+    else:
+        print("- None")
+
+    # Strength — the set logger is the only record of what was actually lifted.
+    sessions = results.get("strength_sessions") or []
+    sets_by_session: dict = {}
+    for s in (results.get("strength_sets") or []):
+        sets_by_session.setdefault(s["session_id"], []).append(s)
+    print("\n## STRENGTH (last 3 sessions)")
+    if sessions:
+        for s in sessions:
+            rows = sets_by_session.get(s["id"], [])
+            effort = s.get("perceived_effort")
+            flag = ""
+            if effort and effort >= 9:
+                flag = "  FLAG: effort >=9 — cut a set next session"
+            elif effort and effort >= 8:
+                flag = "  FLAG: effort >=8 — drop next session load 10%"
+            print(f"- {s['performed_on']} | effort {effort or '—'}/10 | {len(rows)} sets{flag}")
+            if s.get("notes"):
+                print(f"    note: {s['notes']}")
+            by_ex: dict = {}
+            for r in rows:
+                by_ex.setdefault(r["exercise_name"], []).append(
+                    f"{round((r.get('weight_kg') or 0) * 2.20462)}lb x{r.get('reps')}"
+                )
+            for name, entries in by_ex.items():
+                print(f"    {name}: {', '.join(entries)}")
+    else:
+        print("- None logged")
+
+    # PRs — the re-entry block prescribes a percentage of these, so they are
+    # load-bearing context for any plan written this session.
+    prs = results.get("exercise_prs") or []
+    if prs:
+        print("\n## EXERCISE PRs")
+        for p in prs:
+            w = p.get("weight_pr_kg")
+            rep_w = p.get("rep_pr_weight_kg")
+            print(
+                f"- {p['exercise_name']:28} {round(w * 2.20462, 1) if w else '—'} lb"
+                f" | rep PR {p.get('rep_pr_reps') or '—'} @ "
+                f"{round(rep_w * 2.20462, 1) if rep_w else '—'} lb"
+                f" | {(p.get('weight_pr_achieved_at') or '—')[:10]}"
+            )
+
+    wplans = results.get("workout_plans") or []
+    print("\n## WORKOUT PLANS (today forward)")
+    if wplans:
+        for w in wplans:
+            print(f"- {w['date']} | {w.get('name') or '—'} [{w.get('status') or '—'}]")
+    else:
+        print("- None scheduled")
 
 
 if __name__ == "__main__":
