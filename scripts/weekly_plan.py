@@ -27,9 +27,20 @@ if env_file.exists():
             k, _, v = line.partition("=")
             os.environ[k.strip()] = v.strip()
 
-import anthropic  # noqa: E402
+# NOTE: `import anthropic` used to live here, left over from when generation was an
+# API call from inside this script (see the note above main()). Nothing referenced it,
+# but it made the module unimportable on any host without the package — including
+# compute-core, which is deliberately zero-Anthropic. That is what kept
+# /api/cron/weekly-plan disabled. Do not reintroduce it: generation happens in a
+# Claude Code session, not here.
 
-APP_URL = os.environ.get("APP_URL") or "https://mr-bridge-assistant.vercel.app"
+APP_URL = os.environ.get("APP_URL")
+if not APP_URL:
+    raise SystemExit(
+        "APP_URL must be set. It previously defaulted to the Vercel deployment, which was "
+        "decommissioned in the 2026-07-13 self-host cutover — the default silently pointed "
+        "every submit at a dead host."
+    )
 CRON_SECRET = os.environ["CRON_SECRET"]
 
 HEADERS = {
@@ -161,6 +172,37 @@ def js_day_of_week(date_str: str) -> int:
     return date(y, m, d).isoweekday() % 7  # Mon=1→1, Sun=7→0
 
 
+def shape_plan(plan: dict) -> tuple[list[str], list[dict]]:
+    """Reduce a submitted plan to the two shapes the validators consume.
+
+    The plan schema is {workout_days: [{date, warmup, workout, cooldown}]} where each
+    exercise entry is keyed `exercise`. The validators want a flat name list (coverage)
+    and [{dayOfWeek, exercises: [{name, sets}]}] (recovery spacing). Keeping the
+    conversion in one place is what stops `validate` and `build_correction_prompt`
+    drifting apart — they disagreed before, and `validate` was the one that was wrong.
+    """
+    all_exercises: list[str] = []
+    day_plans: list[dict] = []
+
+    for day in plan.get("workout_days", []):
+        if not day.get("date"):
+            continue
+        entries = (day.get("warmup") or []) + (day.get("workout") or []) + (day.get("cooldown") or [])
+        names = [e["exercise"] for e in entries if e.get("exercise")]
+        all_exercises.extend(names)
+        day_plans.append({
+            "dayOfWeek": js_day_of_week(day["date"]),
+            "date": day["date"],
+            "exercises": [
+                {"name": e["exercise"], "sets": e.get("sets", 1)}
+                for e in entries
+                if e.get("exercise")
+            ],
+        })
+
+    return all_exercises, day_plans
+
+
 def validate_recovery(day_plans: list[dict]) -> list[dict]:
     """day_plans: [{dayOfWeek: int, exercises: [{name, sets}]}]"""
     violations = []
@@ -176,7 +218,12 @@ def validate_recovery(day_plans: list[dict]) -> list[dict]:
             if vol_a == 0 or vol_b == 0:
                 continue
             hours_between = (day_b["dayOfWeek"] - day_a["dayOfWeek"]) * 24
-            if hours_between > 48:
+            # >= not >. At exactly 48h the rule fired and demanded the second session be
+            # at half volume, which rejects any Mon/Wed/Sat full-body split — the split
+            # this program actually runs. 48h is adequate recovery for a muscle group;
+            # the rule is meant to catch back-to-back days. This never surfaced because
+            # the validator was unreachable (wrong dict key) until now.
+            if hours_between >= 48:
                 continue
             if vol_b > vol_a * 0.5:
                 violations.append({
@@ -191,19 +238,7 @@ def validate_recovery(day_plans: list[dict]) -> list[dict]:
 
 
 def build_correction_prompt(plan: dict, has_pull_up_bar: bool) -> str | None:
-    all_exercises: list[str] = []
-    day_plans: list[dict] = []
-
-    for day in plan.get("workout_days", []):
-        if not day.get("date"):
-            continue
-        exercises = (day.get("warmup") or []) + (day.get("workout") or []) + (day.get("cooldown") or [])
-        names = [e["exercise"] for e in exercises]
-        all_exercises.extend(names)
-        day_plans.append({
-            "dayOfWeek": js_day_of_week(day["date"]),
-            "exercises": [{"name": e["exercise"], "sets": e.get("sets", 1)} for e in exercises],
-        })
+    all_exercises, day_plans = shape_plan(plan)
 
     missing_patterns = validate_weekly_coverage(all_exercises, has_pull_up_bar)
     recovery_violations = validate_recovery(day_plans)
@@ -372,6 +407,11 @@ def main() -> None:
 
     p_val = sub.add_parser("validate", help="check a plan against the structural rules")
     p_val.add_argument("plan", help="path to the plan JSON (or - for stdin)")
+    p_val.add_argument(
+        "--has-pull-up-bar",
+        action="store_true",
+        help="require vertical-pull coverage (was previously sniffed out of sys.argv)",
+    )
 
     p_sub = sub.add_parser("submit", help="write a validated plan")
     p_sub.add_argument("plan", help="path to the plan JSON (or - for stdin)")
@@ -391,30 +431,50 @@ def main() -> None:
     plan = json.loads(raw)
 
     if args.cmd == "validate":
-        day_plans = plan.get("days") or plan.get("day_plans") or []
-        exercises = [
-            e.get("exercise", "")
-            for d in day_plans
-            for phase in ("warmup", "workout", "cooldown")
-            for e in (d.get(phase) or [])
-        ]
-        has_bar = "--has-pull-up-bar" in sys.argv
+        exercises, day_plans = shape_plan(plan)
+        if not day_plans:
+            print(
+                "PLAN FAILED VALIDATION:\n"
+                "  - no workout_days with a date found. Expected "
+                '{"workout_days": [{"date": "YYYY-MM-DD", "workout": [{"exercise": ..., "sets": ...}]}]}',
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
         problems = []
-        problems += [f"coverage: {m}" for m in validate_weekly_coverage(exercises, has_bar)]
-        problems += [f"recovery: {v}" for v in validate_recovery(day_plans)]
-        problems += [f"redundancy: {r}" for r in check_same_day_redundancy(exercises)]
+        problems += [f"coverage: missing {m}" for m in validate_weekly_coverage(exercises, args.has_pull_up_bar)]
+        problems += [f"recovery: {v['message']}" for v in validate_recovery(day_plans)]
+        # Redundancy is a within-day property — checking a list flattened across days
+        # compares the last exercise of one day against the first of the next.
+        for dp in day_plans:
+            for issue in check_same_day_redundancy([e["name"] for e in dp["exercises"]]):
+                problems.append(
+                    f"redundancy: {dp['date']} — {issue['exerciseA']} then {issue['exerciseB']} "
+                    f"share pattern '{issue['sharedPattern']}'"
+                )
 
         if problems:
             print("PLAN FAILED VALIDATION:")
             for p in problems:
                 print(f"  - {p}")
             sys.exit(1)
-        print("plan OK — coverage, recovery spacing and same-day redundancy all pass")
+        print(
+            f"plan OK — {len(day_plans)} day(s), {len(exercises)} exercises; "
+            "coverage, recovery spacing and same-day redundancy all pass"
+        )
         return
 
     if args.cmd == "submit":
-        body = json.dumps({"week_start": args.week_start, "plan": plan}).encode()
+        # The route destructures workout_days / meal_prep_task from the TOP level and
+        # 400s when both are absent — nesting the plan under a "plan" key made every
+        # submit fail.
+        if not plan.get("workout_days") and not plan.get("meal_prep_task"):
+            print(
+                "refusing to submit: plan has neither workout_days nor meal_prep_task",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        body = json.dumps({**plan, "week_start": args.week_start}).encode()
         status, text = fetch(f"{APP_URL}/api/internal/plan", method="POST", body=body)
         if status not in (200, 201):
             print(f"submit failed: {status}\n{text}", file=sys.stderr)
