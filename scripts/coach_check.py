@@ -47,6 +47,30 @@ def notify(title, message, click=None):
     print(f"[notify] {title} :: {message}")
 
 
+def programmed_sessions(c, uid, start, end=None, select="performed_on"):
+    """Sessions belonging to a PROGRAMMED workout — `workout_plan_id` is not null.
+
+    Walk pull-ups are logged as `strength_sessions` too, because that is the only place
+    set-level data lives, but they carry a null `workout_plan_id`. The goal is a set of
+    pull-ups on every walk, so these arrive most days and would swamp every count here.
+
+    Counting them inflates "n/3 this week", but the damage is worse than a wrong number:
+    the missed-session check tests `plan_date in {performed_on}`, so a walk on a lifting
+    day made a skipped session look completed and the nudge never fired. Filtering at the
+    query is what keeps that honest.
+
+    Verified against real data: every programmed session on record carries a plan id; only
+    the walk pull-ups are null. If a future session logs without one, it silently stops
+    counting — the fix then belongs in whatever wrote it, not in a looser filter here.
+    """
+    q = (c.table("strength_sessions").select(select).eq("user_id", uid)
+         .not_.is_("workout_plan_id", "null")
+         .gte("performed_on", start if isinstance(start, str) else start.isoformat()))
+    if end is not None:
+        q = q.lte("performed_on", end if isinstance(end, str) else end.isoformat())
+    return q.execute().data
+
+
 def weight_avg(rows, start, end):
     """Mean weight over [start, end]. Real scale rows only."""
     vals = [r["weight_lb"] for r in rows
@@ -77,9 +101,13 @@ def regressions(c, uid, today):
     penalises the productive zone (1-3 RIR); reducing it because performance actually
     dropped across sessions is a real fatigue signal.
     """
-    recent = c.table("strength_sessions").select("id,performed_on").eq("user_id", uid) \
-        .lte("performed_on", today.isoformat()).order("performed_on", desc=True) \
-        .limit(2).execute().data
+    # Programmed sessions only. Comparing against walk pull-ups would consume both
+    # comparison slots on most days — pull-ups share no exercises with a lifting session,
+    # so it returns nothing and a real regression is never seen.
+    recent = sorted(
+        programmed_sessions(c, uid, "2000-01-01", today, select="id,performed_on"),
+        key=lambda r: r["performed_on"], reverse=True,
+    )[:2]
     if len(recent) < 2:
         return []
 
@@ -103,13 +131,10 @@ def post_session(c, uid, today):
         print("no plan today; silent")
         return
 
-    logged = c.table("strength_sessions").select("id,perceived_effort,notes") \
-        .eq("user_id", uid).eq("performed_on", today.isoformat()).execute().data
+    logged = programmed_sessions(c, uid, today, today, select="id,perceived_effort,notes")
 
     wk = today - timedelta(days=6)
-    done = c.table("strength_sessions").select("performed_on").eq("user_id", uid) \
-        .gte("performed_on", wk.isoformat()).lte("performed_on", today.isoformat()) \
-        .execute().data
+    done = programmed_sessions(c, uid, wk, today)
     n = len({r["performed_on"] for r in done})
 
     if logged:
@@ -153,9 +178,10 @@ def post_session(c, uid, today):
     recent = c.table("workout_plans").select("date,status").eq("user_id", uid) \
         .lte("date", today.isoformat()).gte("date", (today - timedelta(days=21)).isoformat()) \
         .order("date", desc=True).execute().data
-    sess = {r["performed_on"] for r in c.table("strength_sessions").select("performed_on")
-            .eq("user_id", uid).gte("performed_on", (today - timedelta(days=21)).isoformat())
-            .execute().data}
+    # Programmed only. A walk on a lifting day used to satisfy this test, so a skipped
+    # session read as completed and `miss` never left 0 — the nudge silently died.
+    sess = {r["performed_on"]
+            for r in programmed_sessions(c, uid, today - timedelta(days=21), today)}
     miss = 0
     for p in recent:
         if p["date"] in sess:
@@ -186,8 +212,7 @@ def weekly(c, uid, today):
     cur = weight_avg(fl, wk_start, today)
     prev = weight_avg(fl, prev_start, prev_end)
 
-    done = c.table("strength_sessions").select("performed_on,perceived_effort") \
-        .eq("user_id", uid).gte("performed_on", wk_start.isoformat()).execute().data
+    done = programmed_sessions(c, uid, wk_start, select="performed_on,perceived_effort")
     n = len({r["performed_on"] for r in done})
 
     # Oura rows only — the google_health dupes carry total_sleep_hrs 0.0 and poison the mean.
