@@ -418,6 +418,22 @@ const DIRECT_GRAMS: Record<string, number> = {
   ounces: 28.3495,
   lb: 453.592,
   pound: 453.592,
+  // Volume, at water density (1 ml = 1 g). An approximation, but a small one for the
+  // liquids people actually log: wine 0.99, milk 1.03, juice ~1.05. Oil (0.92) and
+  // honey (1.4) are the outliers.
+  //
+  // These were MISSING, and the failure was not graceful. `ml` is a known alias in
+  // quantity.ts, so the lexer happily produced {qty: 750, unit: "ml"} — but gramsFor
+  // had no direct conversion, "ml" is not in GENERIC_UNITS either, so it fell through
+  // to the step-4 fallback of FALLBACK_GRAMS.serving = 100g and returned
+  // 750 x 100 = 75,000 g. A 750 ml bottle of wine resolved to 62,250 kcal.
+  // Any ml/l quantity was silently 100x its real weight.
+  ml: 1,
+  milliliter: 1,
+  milliliters: 1,
+  l: 1000,
+  liter: 1000,
+  liters: 1000,
 };
 
 /**
