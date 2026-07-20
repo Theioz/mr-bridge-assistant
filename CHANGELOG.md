@@ -35,6 +35,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Logging a planned meal in the evening no longer lands it on tomorrow.** `eatFromCook` stamped
+  the `meal_log` row with `new Date().toISOString().slice(0,10)` — a **UTC** date — so tapping
+  "Ate this" after ~5pm PT (past UTC midnight) logged the meal on the next day, splitting it from
+  the plan it satisfied and throwing off today's totals. A plan-linked meal now **inherits its
+  `meal_plan.date`** (explicit `date` still wins; UTC remains only as the last resort for a
+  free-form, plan-less log). Fixes a real 2026-07-19 mislog (Sunday lunch recorded on Monday).
+
 - **An unconnected integration no longer crashes the sync with a misleading traceback.**
   `load_integration` read `.data` off `maybe_single().execute()`, which returns `None` (not a
   response object) when zero rows match in this postgrest-py version — so a provider that simply
