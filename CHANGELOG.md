@@ -9,6 +9,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in
+  `.claude/settings.json`, handled by `.claude/hooks/scripts/hooks.py`) injects an instruction
+  that makes any session launched in this repo read the rules + private project memory and run
+  the Session Start Protocol (syncs → briefing data → calendar/birthday/email) automatically —
+  no more manual `/session-briefing`. Committed so it works on every device via `git pull`; it
+  replaces a device-local `settings.local.json` version that only existed on one machine. The
+  hook dispatcher now also keys off the real `hook_event_name` field, so the existing
+  `PostToolUse`/`Stop` handlers fire as intended.
+
 - **The end-of-workout feedback box works without logging sets.** The "how did it feel?" recap
   (perceived effort + notes) only appeared once a set had been logged — it could only PATCH an
   existing `strength_session`, and a session was created by the set logger. Do your workout
@@ -32,6 +41,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   the plan it satisfied and throwing off today's totals. A plan-linked meal now **inherits its
   `meal_plan.date`** (explicit `date` still wins; UTC remains only as the last resort for a
   free-form, plan-less log). Fixes a real 2026-07-19 mislog (Sunday lunch recorded on Monday).
+
+- **An unconnected integration no longer crashes the sync with a misleading traceback.**
+  `load_integration` read `.data` off `maybe_single().execute()`, which returns `None` (not a
+  response object) when zero rows match in this postgrest-py version — so a provider that simply
+  isn't connected (e.g. `google_health`) raised `AttributeError: 'NoneType' object has no
+  attribute 'data'` and looked like a code failure / "no workouts this week" instead of a
+  connection gap. It now returns `None` cleanly, so callers hit their real guard (e.g. "Google
+  Health not connected — authorize via /settings").
 
 - **A meal logged from the fridge now shows what it was.** The "Logged today" list read a meal's
   name from `recipes(name) ?? notes`, but a one-tap "Ate this" writes a `cook_id`, not a recipe —

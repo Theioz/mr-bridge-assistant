@@ -23,14 +23,18 @@ def _require_encryption_key() -> str:
 def load_integration(client, user_id: str, provider: str) -> dict | None:
     """Return {refresh_token, scopes, connected_at} for (user_id, provider), or None if not found."""
     key = _require_encryption_key()
-    row = (
+    resp = (
         client.table("user_integrations")
         .select("refresh_token_encrypted, scopes, connected_at")
         .eq("user_id", user_id)
         .eq("provider", provider)
         .maybe_single()
         .execute()
-    ).data
+    )
+    # maybe_single().execute() returns None (not a response object) when zero rows
+    # match in this postgrest-py version — guard so an unconnected provider returns
+    # None cleanly instead of raising AttributeError on `.data`.
+    row = resp.data if resp else None
     if not row:
         return None
 
