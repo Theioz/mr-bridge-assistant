@@ -125,6 +125,15 @@ export async function resolveRecipeMacros(
   }));
   const unquantified = items.filter((i) => !i.quantified).map((i) => i.input);
 
+  // An ingredient that could not be quantified or matched is ABSENT from the total, so an
+  // incomplete resolve silently understates a real plate — a 200g chicken thigh dropping out
+  // took one recipe from ~40g protein to ~12g with nothing in the row to show for it. The
+  // unmatched list was already persisted; the unquantified list was computed and thrown away,
+  // which is exactly the trace that went missing. Persist both, and never let a total that is
+  // known to be missing an ingredient read above "low".
+  const incomplete = unquantified.length > 0 || estimate.unmatched.length > 0;
+  if (incomplete) total.confidence = "low";
+
   const { error: writeErr } = await db
     .from("recipes")
     .update({
@@ -141,6 +150,7 @@ export async function resolveRecipeMacros(
         macro_items: items,
         macro_notes: total.notes,
         macro_unmatched: estimate.unmatched,
+        macro_unquantified: unquantified,
       },
     })
     .eq("id", recipeId)
