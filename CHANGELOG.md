@@ -35,6 +35,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **An unconnected integration no longer crashes the sync with a misleading traceback.**
+  `load_integration` read `.data` off `maybe_single().execute()`, which returns `None` (not a
+  response object) when zero rows match in this postgrest-py version — so a provider that simply
+  isn't connected (e.g. `google_health`) raised `AttributeError: 'NoneType' object has no
+  attribute 'data'` and looked like a code failure / "no workouts this week" instead of a
+  connection gap. It now returns `None` cleanly, so callers hit their real guard (e.g. "Google
+  Health not connected — authorize via /settings").
+
 - **A meal logged from the fridge now shows what it was.** The "Logged today" list read a meal's
   name from `recipes(name) ?? notes`, but a one-tap "Ate this" writes a `cook_id`, not a recipe —
   so a logged cook had no name and rendered as "—" (or, worse, showed an internal note). The
