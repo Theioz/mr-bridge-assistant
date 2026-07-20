@@ -306,7 +306,7 @@ def main():
     if tasks:
         for t in tasks:
             due = f" | Due: {t['due_date']}" if t.get("due_date") else ""
-            print(f"- [{t.get('priority', '—').upper()}] {t['title']}{due}")
+            print(f"- [{(t.get('priority') or '—').upper()}] {t['title']}{due}")
     else:
         print("- None")
 
