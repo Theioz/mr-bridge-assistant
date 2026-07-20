@@ -4,8 +4,9 @@ Mr. Bridge — Claude Code Hooks
 Receives event context via stdin JSON and handles lifecycle events.
 
 Supported hooks:
-  PostToolUse — fires after Write or Edit tool completes
-  Stop        — fires when a session ends
+  SessionStart — fires when a new session starts (startup / resume / clear)
+  PostToolUse  — fires after Write or Edit tool completes
+  Stop         — fires when a session ends
 """
 
 import json
@@ -88,6 +89,33 @@ def kill_dev_servers() -> int:
     return len(killed_pids)
 
 
+# Injected into the session at startup so Mr. Bridge auto-loads its context.
+# Kept as a file reference (not duplicated steps) so it never drifts from briefing.md.
+SESSION_START_CONTEXT = (
+    "[Mr. Bridge] New session. Load project context before your first reply: read "
+    "CLAUDE.md, .claude/rules/core.md, .claude/rules/briefing.md, and the private "
+    "project-memory index at ~/jl-homelab/.claude/memory/mrbridge/README.md (then the "
+    "files there relevant to the task). Next EXECUTE the Session Start Protocol in "
+    ".claude/rules/briefing.md — run `python3 scripts/run-syncs.py` (silent, errors "
+    "non-fatal), run `python3 scripts/fetch_briefing_data.py` and read its output, then "
+    "in ONE parallel turn fetch today's calendar events, the single nearest upcoming "
+    "birthday, and important unread emails — and deliver the standard session briefing "
+    "in the format defined in briefing.md. Address the user by the profile `name` key. "
+    "Follow core.md style: direct, structured, high-density, no filler, no emojis, no "
+    "motivational language. Prefer MCP tools over shelling out to scripts when both exist."
+)
+
+
+def handle_session_start(event: dict):
+    """At session start, inject Mr. Bridge context so the briefing runs automatically."""
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": SESSION_START_CONTEXT,
+        }
+    }))
+
+
 def handle_post_tool_use(event: dict):
     """After a Write or Edit tool call, remind to commit if a memory file was touched."""
     tool_name = event.get("tool_name", "")
@@ -132,9 +160,11 @@ def main():
     except (json.JSONDecodeError, Exception):
         return
 
-    hook_type = event.get("hook_type", "")
+    hook_type = event.get("hook_event_name") or event.get("hook_type", "")
 
-    if hook_type == "PostToolUse":
+    if hook_type == "SessionStart":
+        handle_session_start(event)
+    elif hook_type == "PostToolUse":
         handle_post_tool_use(event)
     elif hook_type == "Stop":
         handle_stop(event)

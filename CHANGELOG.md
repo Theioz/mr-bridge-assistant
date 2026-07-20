@@ -9,6 +9,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in
+  `.claude/settings.json`, handled by `.claude/hooks/scripts/hooks.py`) injects an instruction
+  that makes any session launched in this repo read the rules + private project memory and run
+  the Session Start Protocol (syncs → briefing data → calendar/birthday/email) automatically —
+  no more manual `/session-briefing`. Committed so it works on every device via `git pull`; it
+  replaces a device-local `settings.local.json` version that only existed on one machine. The
+  hook dispatcher now also keys off the real `hook_event_name` field, so the existing
+  `PostToolUse`/`Stop` handlers fire as intended.
+
 - **The end-of-workout feedback box works without logging sets.** The "how did it feel?" recap
   (perceived effort + notes) only appeared once a set had been logged — it could only PATCH an
   existing `strength_session`, and a session was created by the set logger. Do your workout
