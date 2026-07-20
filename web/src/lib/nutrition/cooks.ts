@@ -204,11 +204,27 @@ export async function eatFromCook(
     fiber_g: Math.round(one.fiber_g * portions * 10) / 10,
   };
 
+  // A plan-linked meal belongs on its plan's own date. Deriving the log date from UTC instead
+  // lands an evening log on "tomorrow" once it is past UTC midnight but still today locally
+  // (6:40pm PT = 01:40Z the next day is what put a Sunday lunch on Monday). Prefer an explicit
+  // date, then the linked plan's date, then UTC as a last resort for a free-form, plan-less log.
+  let logDate = input.date;
+  if (!logDate && input.mealPlanId) {
+    const { data: plan } = await db
+      .from("meal_plans")
+      .select("date")
+      .eq("id", input.mealPlanId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    logDate = (plan?.date as string | undefined) ?? undefined;
+  }
+  logDate = logDate ?? new Date().toISOString().slice(0, 10);
+
   const { data: logged, error: logErr } = await db
     .from("meal_log")
     .insert({
       user_id: userId,
-      date: input.date ?? new Date().toISOString().slice(0, 10),
+      date: logDate,
       meal_type: input.mealType ?? null,
       cook_id: cook.id,
       meal_plan_id: input.mealPlanId ?? null,

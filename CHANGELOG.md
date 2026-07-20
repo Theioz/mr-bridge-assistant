@@ -26,6 +26,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Logging a planned meal in the evening no longer lands it on tomorrow.** `eatFromCook` stamped
+  the `meal_log` row with `new Date().toISOString().slice(0,10)` — a **UTC** date — so tapping
+  "Ate this" after ~5pm PT (past UTC midnight) logged the meal on the next day, splitting it from
+  the plan it satisfied and throwing off today's totals. A plan-linked meal now **inherits its
+  `meal_plan.date`** (explicit `date` still wins; UTC remains only as the last resort for a
+  free-form, plan-less log). Fixes a real 2026-07-19 mislog (Sunday lunch recorded on Monday).
+
 - **A meal logged from the fridge now shows what it was.** The "Logged today" list read a meal's
   name from `recipes(name) ?? notes`, but a one-tap "Ate this" writes a `cook_id`, not a recipe —
   so a logged cook had no name and rendered as "—" (or, worse, showed an internal note). The
