@@ -8,7 +8,6 @@ import {
   type KitchenCook,
   type KitchenPlannedMeal,
 } from "@/components/meals/KitchenPanel";
-import { InventoryPanel, type InventoryItem } from "@/components/meals/InventoryPanel";
 import { WeekPlan } from "@/components/meals/WeekPlan";
 import MealsClient, {
   type MealRow,
@@ -54,12 +53,7 @@ export default async function MealsPage() {
 
   // Wave 2 — these all need user.id from Wave 1.
   const userId = user?.id;
-  const [
-    { data: recipesData },
-    { data: leftoversData },
-    { data: planData },
-    { data: inventoryData },
-  ] = await Promise.all([
+  const [{ data: recipesData }, { data: leftoversData }, { data: planData }] = await Promise.all([
     userId
       ? supabase
           .from("recipes")
@@ -93,17 +87,6 @@ export default async function MealsPage() {
           .gte("date", todayString())
           .lte("date", daysAheadString(6))
           .order("date", { ascending: true })
-      : Promise.resolve({ data: [] }),
-    // Raw ingredients on hand — the fridge/freezer/pantry the planner cooks into. Oldest and
-    // soonest-to-expire first, so the panel surfaces what to use before it turns.
-    userId
-      ? supabase
-          .from("inventory_items")
-          .select("id, name, quantity, unit, location, category, added_date, expires_on, notes")
-          .eq("user_id", userId)
-          .order("location", { ascending: true })
-          .order("expires_on", { ascending: true, nullsFirst: false })
-          .order("name", { ascending: true })
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -228,8 +211,6 @@ export default async function MealsPage() {
         leftovers={(leftoversData ?? []) as unknown as KitchenCook[]}
         plan={weekPlan.filter((p) => p.date === today)}
       />
-
-      <InventoryPanel items={(inventoryData ?? []) as unknown as InventoryItem[]} />
 
       <WeekPlan week={weekPlan} days={getNextNDays(7)} today={today} />
 
