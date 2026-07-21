@@ -43,6 +43,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   Inventory carries no macros and links to nothing, so editing it can never affect a macro or a
   plan.
 
+- **Recipe ingredients show imperial equivalents too.** Ingredient lists (in the click-in planned
+  meal and the Recipes tab) written in grams now annotate each weight with oz/lb inline —
+  "200 g (7.1 oz) chicken thigh", "80 g (2.8 oz) brown rice" — so a recipe reconciles with the
+  fridge (stocked in lb/oz) without mental math. Display-only via `addWeightConversions`; the
+  stored text is unchanged, and counts/volumes ("2 fillets", "1 cup") and trivial amounts are
+  left alone.
+
 ### Changed
 
 - **Every planned meal must be backed by a recipe or a cook.** `plan_meals` no longer accepts a
