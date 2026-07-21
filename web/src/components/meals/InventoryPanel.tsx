@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * The kitchen inventory: raw ingredients on hand, by location.
+ * The kitchen inventory: raw ingredients on hand, action-first.
  *
- * The fridge-leftovers panel (KitchenPanel) only knows about food already COOKED. It was blind
- * to the raw salmon and the frozen steak, which is why planning had to be TOLD what was on hand
- * every week. This panel closes that gap: fridge / freezer / pantry, soonest-to-expire first,
- * with a "use soon" flag so nothing quietly turns. Moving an item to the freezer is one tap —
- * that is how "I froze it" gets recorded, and how the planner learns the steak is next-week food.
+ * The page's real job is "what do I cook before it turns?", which a flat list buries. So the
+ * urgent items (expiring within a few days) are lifted into a "Use soon" strip at the top, and
+ * everything else sits under its location with a freshness dot. Moving an item to the freezer is
+ * one tap — that is how "I froze it" gets recorded, and how the planner learns the steak is
+ * next-week food.
  *
- * No macros here by design — an inventory item is a location and a rough quantity, not a
- * nutrition record.
+ * No macros here by design — an inventory item is a location + rough quantity + a fresh window,
+ * never a nutrition record. It has no link to recipes, cooks or meal plans, so editing it can
+ * never change a macro total or a plan.
  */
 
 export interface InventoryItem {
@@ -36,6 +37,9 @@ const LOCATION_LABEL: Record<string, string> = {
   counter: "Counter",
 };
 
+// An item this close to (or past) its date is what the next cook should spend first.
+const USE_SOON_DAYS = 3;
+
 function daysUntil(dateStr: string): number {
   const then = new Date(`${dateStr}T00:00:00`);
   const now = new Date();
@@ -43,21 +47,50 @@ function daysUntil(dateStr: string): number {
   return Math.round((then.getTime() - now.getTime()) / 86_400_000);
 }
 
-// Fresh window as a short badge. Danger colour when it's within two days or already past —
-// those are the items the next cook should spend first.
-function expiryLabel(dateStr: string | null): { text: string; urgent: boolean } | null {
-  if (!dateStr) return null;
-  const d = daysUntil(dateStr);
-  if (d < 0) return { text: "expired", urgent: true };
-  if (d === 0) return { text: "use today", urgent: true };
-  if (d <= 2) return { text: `use in ${d}d`, urgent: true };
-  return { text: `${d}d left`, urgent: false };
+type Freshness = "urgent" | "fine" | "stable" | "frozen";
+
+// Frozen items don't expire on a fridge clock; a dated fridge/counter item is urgent inside the
+// window and fine outside it; an undated staple (rice, oil) is simply stable.
+function freshnessOf(item: InventoryItem): { kind: Freshness; days: number | null } {
+  if (item.location === "freezer") return { kind: "frozen", days: null };
+  if (item.expires_on) {
+    const d = daysUntil(item.expires_on);
+    return { kind: d <= USE_SOON_DAYS ? "urgent" : "fine", days: d };
+  }
+  return { kind: "stable", days: null };
+}
+
+function daysText(d: number): string {
+  if (d < 0) return "expired";
+  if (d === 0) return "today";
+  return `${d}d`;
 }
 
 function quantityLabel(item: InventoryItem): string {
   if (item.quantity == null) return item.unit ?? "on hand";
   const qty = String(Number(item.quantity));
   return item.unit ? `${qty} ${item.unit}` : qty;
+}
+
+// A single freshness marker: filled danger dot (urgent), hollow ring (fine), small square
+// (frozen), faint dot (undated staple). Colour comes from tokens so both themes stay legible.
+function FreshnessDot({ kind }: { kind: Freshness }) {
+  const base: React.CSSProperties = {
+    display: "inline-block",
+    width: 8,
+    height: 8,
+    boxSizing: "border-box",
+    flexShrink: 0,
+  };
+  const style: React.CSSProperties =
+    kind === "urgent"
+      ? { ...base, borderRadius: "50%", background: "var(--color-danger)" }
+      : kind === "frozen"
+        ? { ...base, borderRadius: 2, background: "var(--color-text-faint)" }
+        : kind === "fine"
+          ? { ...base, borderRadius: "50%", border: "1.5px solid var(--color-text-faint)" }
+          : { ...base, borderRadius: "50%", background: "var(--rule-soft)" };
+  return <span aria-hidden style={style} />;
 }
 
 interface InventoryPanelProps {
@@ -120,6 +153,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
   }
 
   function startEdit(item: InventoryItem) {
+    setAdding(false);
     setEditingId(item.id);
     setEditForm({
       name: item.name,
@@ -169,6 +203,10 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
     }
   }
 
+  const useSoon = items
+    .filter((i) => freshnessOf(i).kind === "urgent")
+    .sort((a, b) => daysUntil(a.expires_on as string) - daysUntil(b.expires_on as string));
+
   const byLocation = LOCATIONS.map((loc) => ({
     loc,
     rows: items.filter((i) => i.location === loc),
@@ -188,7 +226,65 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
         </p>
       )}
 
-      {byLocation.length === 0 && (
+      {/* Add — top-right trigger, expands to the shared form. */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-4)" }}>
+        {!adding && (
+          <button type="button" onClick={() => setAdding(true)} style={addTriggerStyle}>
+            + Add item
+          </button>
+        )}
+      </div>
+
+      {adding && (
+        <div style={{ ...editRowStyle, marginBottom: "var(--space-5)" }}>
+          <FormFields form={addForm} setForm={setAddForm} />
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button
+              type="button"
+              disabled={busyId === "__add__"}
+              onClick={addItem}
+              style={ctaButtonStyle(busyId === "__add__")}
+            >
+              {busyId === "__add__" ? "Adding…" : "Add item"}
+            </button>
+            <button
+              type="button"
+              disabled={busyId === "__add__"}
+              onClick={() => {
+                setAdding(false);
+                setAddForm(EMPTY_FORM);
+              }}
+              style={quietButtonStyle(busyId === "__add__")}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Use soon — the triage strip. Read-only highlight; act on items in their location below. */}
+      {useSoon.length > 0 && (
+        <div style={useSoonBoxStyle}>
+          <p style={useSoonHeaderStyle}>Use soon · {useSoon.length}</p>
+          {useSoon.map((item) => {
+            const f = freshnessOf(item);
+            return (
+              <div key={item.id} style={useSoonRowStyle}>
+                <FreshnessDot kind="urgent" />
+                <span style={{ flex: 1, minWidth: 0, color: "var(--color-text)" }}>
+                  {item.name}
+                </span>
+                <span style={useSoonMetaStyle}>
+                  {LOCATION_LABEL[item.location]}
+                  {f.days != null ? ` · ${daysText(f.days)}` : ""}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {items.length === 0 && (
         <p
           style={{
             fontSize: "var(--t-body)",
@@ -196,17 +292,18 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
             marginBottom: "var(--space-4)",
           }}
         >
-          Nothing tracked yet.
+          Nothing tracked yet — add what&apos;s in your kitchen.
         </p>
       )}
 
       {byLocation.map(({ loc, rows }) => (
         <div key={loc} style={{ marginBottom: "var(--space-5)" }}>
-          <p style={labelStyle}>{LOCATION_LABEL[loc]}</p>
+          <div style={sectionHeaderStyle}>
+            <span style={labelStyle}>{LOCATION_LABEL[loc]}</span>
+            <span style={countStyle}>{rows.length}</span>
+          </div>
           {rows.map((item) => {
-            const editing = editingId === item.id;
-            const exp = expiryLabel(item.expires_on);
-            if (editing) {
+            if (editingId === item.id) {
               return (
                 <div key={item.id} style={editRowStyle}>
                   <FormFields form={editForm} setForm={setEditForm} />
@@ -215,7 +312,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                       type="button"
                       disabled={busyId === item.id}
                       onClick={() => saveEdit(item.id)}
-                      style={eatButtonStyle(busyId === item.id)}
+                      style={ctaButtonStyle(busyId === item.id)}
                     >
                       {busyId === item.id ? "Saving…" : "Save"}
                     </button>
@@ -223,7 +320,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                       type="button"
                       disabled={busyId === item.id}
                       onClick={() => setEditingId(null)}
-                      style={skipButtonStyle(busyId === item.id)}
+                      style={quietButtonStyle(busyId === item.id)}
                     >
                       Cancel
                     </button>
@@ -231,20 +328,28 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                 </div>
               );
             }
+            const f = freshnessOf(item);
             return (
               <div key={item.id} style={rowStyle}>
-                <div style={{ minWidth: 0 }}>
-                  <span style={nameStyle}>{item.name}</span>
-                  <span style={subStyle}>
-                    {quantityLabel(item)}
-                    {item.category ? ` · ${item.category}` : ""}
-                    {exp ? " · " : ""}
-                    {exp && (
-                      <span style={{ color: exp.urgent ? "var(--color-danger)" : undefined }}>
-                        {exp.text}
-                      </span>
-                    )}
-                  </span>
+                <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
+                  <FreshnessDot kind={f.kind} />
+                  <div style={{ minWidth: 0, marginLeft: "var(--space-2)" }}>
+                    <span style={nameStyle}>{item.name}</span>
+                    <span style={subStyle}>
+                      {quantityLabel(item)}
+                      {item.category ? ` · ${item.category}` : ""}
+                      {f.days != null ? " · " : ""}
+                      {f.days != null && (
+                        <span
+                          style={{
+                            color: f.kind === "urgent" ? "var(--color-danger)" : undefined,
+                          }}
+                        >
+                          {daysText(f.days)}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
                   <select
@@ -264,7 +369,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                     type="button"
                     disabled={busyId === item.id}
                     onClick={() => startEdit(item)}
-                    style={skipButtonStyle(busyId === item.id)}
+                    style={quietButtonStyle(busyId === item.id)}
                   >
                     Edit
                   </button>
@@ -272,7 +377,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                     type="button"
                     disabled={busyId === item.id}
                     onClick={() => remove(item.id)}
-                    style={skipButtonStyle(busyId === item.id)}
+                    style={quietButtonStyle(busyId === item.id)}
                     title="Remove — used up or thrown out."
                   >
                     {busyId === item.id ? "…" : "Remove"}
@@ -284,35 +389,18 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
         </div>
       ))}
 
-      {adding ? (
-        <div style={editRowStyle}>
-          <FormFields form={addForm} setForm={setAddForm} />
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <button
-              type="button"
-              disabled={busyId === "__add__"}
-              onClick={addItem}
-              style={eatButtonStyle(busyId === "__add__")}
-            >
-              {busyId === "__add__" ? "Adding…" : "Add item"}
-            </button>
-            <button
-              type="button"
-              disabled={busyId === "__add__"}
-              onClick={() => {
-                setAdding(false);
-                setAddForm(EMPTY_FORM);
-              }}
-              style={skipButtonStyle(busyId === "__add__")}
-            >
-              Cancel
-            </button>
-          </div>
+      {items.length > 0 && (
+        <div style={legendStyle}>
+          <span style={legendItemStyle}>
+            <FreshnessDot kind="urgent" /> use soon
+          </span>
+          <span style={legendItemStyle}>
+            <FreshnessDot kind="fine" /> fine
+          </span>
+          <span style={legendItemStyle}>
+            <FreshnessDot kind="frozen" /> frozen
+          </span>
         </div>
-      ) : (
-        <button type="button" onClick={() => setAdding(true)} style={addTriggerStyle}>
-          + Add item
-        </button>
       )}
     </section>
   );
@@ -395,7 +483,19 @@ const labelStyle: React.CSSProperties = {
   color: "var(--color-text-muted)",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: "var(--space-2)",
   marginBottom: "var(--space-2)",
+};
+
+const countStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-faint)",
+  fontVariantNumeric: "tabular-nums",
 };
 
 const rowStyle: React.CSSProperties = {
@@ -428,6 +528,53 @@ const subStyle: React.CSSProperties = {
   marginTop: 2,
 };
 
+// Use-soon triage strip — a quiet warning-tinted box so it reads as "attention" without shouting.
+const useSoonBoxStyle: React.CSSProperties = {
+  background: "var(--warning-subtle)",
+  border: "1px solid var(--rule-soft)",
+  borderRadius: "var(--r-2)",
+  padding: "var(--space-3) var(--space-4)",
+  marginBottom: "var(--space-5)",
+};
+
+const useSoonHeaderStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  fontWeight: 600,
+  color: "var(--color-danger)",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  marginBottom: "var(--space-2)",
+};
+
+const useSoonRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-2)",
+  fontSize: "var(--t-meta)",
+  padding: "var(--space-1) 0",
+};
+
+const useSoonMetaStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  flexShrink: 0,
+  fontVariantNumeric: "tabular-nums",
+};
+
+const legendStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "var(--space-4)",
+  marginTop: "var(--space-2)",
+};
+
+const legendItemStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-1)",
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-faint)",
+};
+
 const inputStyle: React.CSSProperties = {
   fontFamily: "var(--font-body), system-ui, sans-serif",
   fontSize: "var(--t-micro)",
@@ -457,7 +604,7 @@ const addTriggerStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-function skipButtonStyle(pending: boolean): React.CSSProperties {
+function quietButtonStyle(pending: boolean): React.CSSProperties {
   return {
     fontFamily: "var(--font-body), system-ui, sans-serif",
     fontSize: "var(--t-micro)",
@@ -475,7 +622,7 @@ function skipButtonStyle(pending: boolean): React.CSSProperties {
   };
 }
 
-function eatButtonStyle(pending: boolean): React.CSSProperties {
+function ctaButtonStyle(pending: boolean): React.CSSProperties {
   return {
     fontFamily: "var(--font-body), system-ui, sans-serif",
     fontSize: "var(--t-micro)",
