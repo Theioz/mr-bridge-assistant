@@ -18,6 +18,7 @@ import { compressImage } from "@/lib/meal-photo";
 import { ChartFrame, TrendLine } from "@/components/charts/primitives";
 import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
+import { addWeightConversions } from "@/lib/units";
 
 const FoodPhotoAnalyzer = dynamic(() => import("@/app/(protected)/meals/FoodPhotoAnalyzer"), {
   ssr: false,
@@ -1267,9 +1268,10 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                           color: "var(--color-text-muted)",
                           lineHeight: 1.6,
                           marginBottom: "var(--space-3)",
+                          whiteSpace: "pre-line",
                         }}
                       >
-                        {r.ingredients}
+                        {addWeightConversions(r.ingredients)}
                       </p>
                     )}
 
