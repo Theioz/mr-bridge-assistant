@@ -53,6 +53,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Deploys now actually reach the browser (service-worker stale cache).** The service worker
+  cached `/_next/static/*` **cache-first** under a fixed cache name. Turbopack chunk filenames
+  are not reliably content-hashed, so a deploy's changed code shipped under a name the cache
+  already held — and cache-first served the old copy indefinitely, making new features look like
+  they never deployed until the cache was cleared by hand. Switched to **stale-while-revalidate**
+  (the cache is refreshed from the network on every request) and bumped the cache version
+  (`mb-static-v1` → `v2`) so the activate handler purges the poisoned cache once. Deploys now
+  self-update within a reload.
+
 - **Logging a planned meal in the evening no longer lands it on tomorrow.** `eatFromCook` stamped
   the `meal_log` row with `new Date().toISOString().slice(0,10)` — a **UTC** date — so tapping
   "Ate this" after ~5pm PT (past UTC midnight) logged the meal on the next day, splitting it from
