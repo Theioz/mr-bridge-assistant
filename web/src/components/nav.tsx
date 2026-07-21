@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Bell,
   Library,
+  Refrigerator,
   MoreHorizontal,
   X,
   LogOut,
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/library", label: "Library", icon: Library },
   { href: "/meals", label: "Meals", icon: UtensilsCrossed },
+  { href: "/inventory", label: "Inventory", icon: Refrigerator },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

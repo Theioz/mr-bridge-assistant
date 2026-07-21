@@ -176,27 +176,6 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
 
   return (
     <section style={{ marginBottom: "var(--space-6)" }}>
-      <h2
-        className="font-heading font-semibold"
-        style={{
-          fontSize: "var(--t-h3)",
-          color: "var(--color-text)",
-          marginBottom: "var(--space-1)",
-        }}
-      >
-        In the kitchen
-      </h2>
-      <p
-        style={{
-          fontSize: "var(--t-micro)",
-          color: "var(--color-text-muted)",
-          marginBottom: "var(--space-4)",
-        }}
-      >
-        Raw ingredients on hand — the planner cooks these down oldest-first. Move to the freezer in
-        one tap so nothing turns.
-      </p>
-
       {error && (
         <p
           style={{
