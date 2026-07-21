@@ -177,11 +177,14 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
 
     plan_meals: tool({
       description:
-        "Write planned meals. Each entry is ONE of: `cook_id` (eat a portion of food that " +
-        "already exists — prefer this, it needs no shopping), `recipe_id` (cook this), or a " +
-        "bare `name` (freeform, e.g. 'dinner out' — carries no macros and claims none). " +
-        "Re-planning the same date+meal_type replaces it. Never pass macro numbers: there is " +
-        "no field for them, because macros come from USDA, not from you.",
+        "Write planned meals. Every entry MUST be backed by either a `cook_id` (eat a portion " +
+        "of food that already exists — prefer this, it needs no shopping) or a `recipe_id` " +
+        "(cook this). A plan with neither is rejected — a meal without a recipe has no " +
+        "instructions and no macros. For a meal out, plan the reusable 'Eating out' recipe " +
+        "(look it up with get_recipes) and log the real macros afterward. `name` is only an " +
+        "optional display label and never satisfies the requirement on its own. Re-planning " +
+        "the same date+meal_type replaces it. Never pass macro numbers: there is no field for " +
+        "them, because macros come from USDA, not from you.",
       inputSchema: jsonSchema<{
         meals: {
           date: string;
@@ -212,7 +215,9 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
                 recipe_id: { type: "string", description: "Cook this recipe. Implies groceries." },
                 name: {
                   type: "string",
-                  description: "Freeform label when there is no cook or recipe ('dinner out').",
+                  description:
+                    "Optional display label only. Does NOT satisfy the requirement — every " +
+                    "meal still needs a cook_id or recipe_id (use the 'Eating out' recipe for meals out).",
                 },
                 portions: { type: "number", description: "Defaults to 1." },
                 notes: { type: "string" },
@@ -232,8 +237,10 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
               error: `${m.date} ${m.meal_type}: pass cook_id OR recipe_id, not both — eating leftovers and cooking fresh are different days of work`,
             };
           }
-          if (!m.cook_id && !m.recipe_id && !m.name) {
-            return { error: `${m.date} ${m.meal_type}: needs a cook_id, a recipe_id, or a name` };
+          if (!m.cook_id && !m.recipe_id) {
+            return {
+              error: `${m.date} ${m.meal_type}: every planned meal must have a recipe_id or a cook_id — no freeform plans. For a meal out, use the "Eating out" recipe.`,
+            };
           }
         }
 
