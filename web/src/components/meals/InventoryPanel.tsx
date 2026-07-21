@@ -66,10 +66,47 @@ function daysText(d: number): string {
   return `${d}d`;
 }
 
+// Weight units → grams, so any of them can be shown alongside the others. Recipes are written
+// in grams and shopping is done in lb/oz; showing both ends the "1.25 lb here, 200 g there"
+// guesswork without changing the stored value.
+const GRAMS_PER: Record<string, number> = {
+  g: 1,
+  gram: 1,
+  grams: 1,
+  kg: 1000,
+  oz: 28.3495,
+  ounce: 28.3495,
+  ounces: 28.3495,
+  lb: 453.592,
+  lbs: 453.592,
+  pound: 453.592,
+  pounds: 453.592,
+};
+const G_FAMILY = new Set(["g", "gram", "grams", "kg"]);
+const OZ_FAMILY = new Set(["oz", "ounce", "ounces"]);
+const LB_FAMILY = new Set(["lb", "lbs", "pound", "pounds"]);
+
+function trimNum(n: number, dp: number): string {
+  return String(Math.round(n * 10 ** dp) / 10 ** dp);
+}
+
 function quantityLabel(item: InventoryItem): string {
   if (item.quantity == null) return item.unit ?? "on hand";
-  const qty = String(Number(item.quantity));
-  return item.unit ? `${qty} ${item.unit}` : qty;
+  const qty = Number(item.quantity);
+  const unit = item.unit ?? "";
+  const key = unit.trim().toLowerCase();
+
+  // Count units (each, portion, steak, can, egg, bunch, bottle, scoop) — nothing to convert.
+  if (!(key in GRAMS_PER)) return unit ? `${trimNum(qty, 2)} ${unit}` : trimNum(qty, 2);
+
+  const grams = qty * GRAMS_PER[key];
+  const primary = `${trimNum(qty, 2)} ${unit}`;
+  const alts: string[] = [];
+  if (!G_FAMILY.has(key)) alts.push(`${Math.round(grams)} g`);
+  if (!OZ_FAMILY.has(key)) alts.push(`${trimNum(grams / 28.3495, 1)} oz`);
+  // Only bother with pounds once there's at least one to show.
+  if (!LB_FAMILY.has(key) && grams >= 453.592) alts.push(`${trimNum(grams / 453.592, 2)} lb`);
+  return alts.length ? `${primary} (${alts.join(" · ")})` : primary;
 }
 
 // A single freshness marker: filled danger dot (urgent), hollow ring (fine), small square
