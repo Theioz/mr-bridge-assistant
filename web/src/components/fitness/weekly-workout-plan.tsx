@@ -88,6 +88,9 @@ interface ExerciseRowProps {
   unit: WeightUnit;
   exercisePR?: ExercisePR | null;
   restTimerEnabled?: boolean;
+  // Superset slot ("A1"/"A2") when this row is part of a pair — renders a chip before the name,
+  // and suppresses the per-exercise set count (the group header carries the round count instead).
+  tag?: string | null;
   loggerContext?: {
     date: string;
     workoutPlanId: string | null;
@@ -102,10 +105,12 @@ function ExerciseRow({
   unit: _unit,
   exercisePR,
   restTimerEnabled,
+  tag,
   loggerContext,
 }: ExerciseRowProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const setsStr = ex.sets ? `${ex.sets} sets` : null;
+  // Inside a superset the round count lives in the group header, so drop the per-exercise "N sets".
+  const setsStr = ex.sets && !tag ? `${ex.sets} sets` : null;
   const repsStr = ex.reps ? `× ${ex.reps}` : null;
   const hasWeight = ex.weight_lbs != null && ex.weight_lbs > 0;
   const notation = resolveNotation(ex);
@@ -126,6 +131,7 @@ function ExerciseRow({
   return (
     <div style={{ padding: "var(--space-1) 0" }}>
       <div className="flex items-baseline gap-1.5 flex-wrap">
+        {tag && <span style={tagChipStyle}>{tag}</span>}
         <span
           style={{
             fontSize: "var(--t-body)",
@@ -250,19 +256,121 @@ function ExerciseRow({
   );
 }
 
+type LoggerBase = {
+  date: string;
+  workoutPlanId: string | null;
+  setsByExercise: Map<string, StrengthSessionSet[]>;
+  orderOffset: number;
+  unit: WeightUnit;
+};
+
+function buildLoggerContext(
+  loggerBase: LoggerBase | undefined,
+  ex: WorkoutExercise,
+  index: number,
+) {
+  if (!loggerBase) return undefined;
+  return {
+    date: loggerBase.date,
+    workoutPlanId: loggerBase.workoutPlanId,
+    exerciseOrder: loggerBase.orderOffset + index,
+    setsForThisExercise: loggerBase.setsByExercise.get(ex.exercise.toLowerCase()) ?? [],
+    unit: loggerBase.unit,
+  };
+}
+
+// A phase is a mix of standalone exercises and superset groups. Consecutive exercises whose
+// `superset` slot shares a letter (A1/A2 → "A") are one group, run alternated; everything else
+// is a single row. Each item keeps its flat index so the set logger still targets the right slot.
+type PhaseRow =
+  | { kind: "single"; ex: WorkoutExercise; index: number }
+  | {
+      kind: "superset";
+      letter: string;
+      rounds: number | null;
+      items: { ex: WorkoutExercise; index: number }[];
+    };
+
+function supersetLetter(ex: WorkoutExercise): string {
+  return ex.superset ? ex.superset.trim().charAt(0).toUpperCase() : "";
+}
+
+function groupBySuperset(exercises: WorkoutExercise[]): PhaseRow[] {
+  const rows: PhaseRow[] = [];
+  let i = 0;
+  while (i < exercises.length) {
+    const letter = supersetLetter(exercises[i]);
+    if (letter) {
+      const items = [{ ex: exercises[i], index: i }];
+      let j = i + 1;
+      while (j < exercises.length && supersetLetter(exercises[j]) === letter) {
+        items.push({ ex: exercises[j], index: j });
+        j += 1;
+      }
+      if (items.length >= 2) {
+        rows.push({ kind: "superset", letter, rounds: exercises[i].sets ?? null, items });
+        i = j;
+        continue;
+      }
+    }
+    rows.push({ kind: "single", ex: exercises[i], index: i });
+    i += 1;
+  }
+  return rows;
+}
+
+interface SupersetGroupProps {
+  letter: string;
+  rounds: number | null;
+  items: { ex: WorkoutExercise; index: number }[];
+  unit: WeightUnit;
+  prsByExercise?: Record<string, ExercisePR>;
+  restTimerEnabled?: boolean;
+  loggerBase?: LoggerBase;
+}
+
+// Strong-style superset block: an accent rail links the paired exercises, a header states the
+// round count and how to run them, and each exercise keeps its own A1/A2 tag and set logger.
+function SupersetGroup({
+  letter,
+  rounds,
+  items,
+  unit,
+  prsByExercise,
+  restTimerEnabled,
+  loggerBase,
+}: SupersetGroupProps) {
+  return (
+    <div style={supersetContainerStyle}>
+      <div className="flex items-baseline flex-wrap" style={{ gap: "var(--space-2)" }}>
+        <span style={supersetChipStyle}>Superset {letter}</span>
+        {rounds ? <span style={supersetRoundsStyle}>{rounds} rounds</span> : null}
+        <span style={supersetHintStyle}>alternate · ~20s between · ~60s after the pair</span>
+      </div>
+      <div style={{ marginTop: "var(--space-1)" }}>
+        {items.map(({ ex, index }) => (
+          <ExerciseRow
+            key={index}
+            ex={ex}
+            tag={ex.superset}
+            unit={unit}
+            exercisePR={prsByExercise?.[ex.exercise.toLowerCase()] ?? null}
+            restTimerEnabled={restTimerEnabled}
+            loggerContext={buildLoggerContext(loggerBase, ex, index)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface PhaseSectionProps {
   label: string;
   exercises: WorkoutExercise[];
   unit: WeightUnit;
   prsByExercise?: Record<string, ExercisePR>;
   restTimerEnabled?: boolean;
-  loggerBase?: {
-    date: string;
-    workoutPlanId: string | null;
-    setsByExercise: Map<string, StrengthSessionSet[]>;
-    orderOffset: number;
-    unit: WeightUnit;
-  };
+  loggerBase?: LoggerBase;
 }
 
 function PhaseSection({
@@ -274,6 +382,7 @@ function PhaseSection({
   loggerBase,
 }: PhaseSectionProps) {
   if (exercises.length === 0) return null;
+  const rows = groupBySuperset(exercises);
   return (
     <div style={{ marginBottom: "var(--space-4)" }}>
       <div
@@ -290,25 +399,29 @@ function PhaseSection({
       >
         {label}
       </div>
-      {exercises.map((ex, i) => {
-        const loggerContext = loggerBase
-          ? {
-              date: loggerBase.date,
-              workoutPlanId: loggerBase.workoutPlanId,
-              exerciseOrder: loggerBase.orderOffset + i,
-              setsForThisExercise: loggerBase.setsByExercise.get(ex.exercise.toLowerCase()) ?? [],
-              unit: loggerBase.unit,
-            }
-          : undefined;
-        const exercisePR = prsByExercise?.[ex.exercise.toLowerCase()] ?? null;
+      {rows.map((row, ri) => {
+        if (row.kind === "superset") {
+          return (
+            <SupersetGroup
+              key={ri}
+              letter={row.letter}
+              rounds={row.rounds}
+              items={row.items}
+              unit={unit}
+              prsByExercise={prsByExercise}
+              restTimerEnabled={restTimerEnabled}
+              loggerBase={loggerBase}
+            />
+          );
+        }
         return (
           <ExerciseRow
-            key={i}
-            ex={ex}
+            key={ri}
+            ex={row.ex}
             unit={unit}
-            exercisePR={exercisePR}
+            exercisePR={prsByExercise?.[row.ex.exercise.toLowerCase()] ?? null}
             restTimerEnabled={restTimerEnabled}
-            loggerContext={loggerContext}
+            loggerContext={buildLoggerContext(loggerBase, row.ex, row.index)}
           />
         );
       })}
@@ -708,3 +821,42 @@ function TodayPip() {
     </span>
   );
 }
+
+const tagChipStyle: React.CSSProperties = {
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: "0.03em",
+  color: "var(--accent-text)",
+  background: "var(--rule-soft)",
+  borderRadius: 3,
+  padding: "1px 4px",
+  lineHeight: 1.4,
+  flexShrink: 0,
+};
+
+const supersetContainerStyle: React.CSSProperties = {
+  borderLeft: "2px solid var(--accent)",
+  paddingLeft: "var(--space-3)",
+  marginTop: "var(--space-1)",
+  marginBottom: "var(--space-3)",
+};
+
+const supersetChipStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "var(--accent-text)",
+};
+
+const supersetRoundsStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  fontVariantNumeric: "tabular-nums",
+};
+
+const supersetHintStyle: React.CSSProperties = {
+  fontSize: 10,
+  color: "var(--color-text-faint)",
+  fontStyle: "italic",
+};
