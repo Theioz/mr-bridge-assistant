@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Trash2, Loader2 } from "lucide-react";
 import type { WeightUnit } from "@/lib/units";
@@ -66,7 +66,6 @@ export function InlineSetLogger({
     return null;
   });
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const pulseFiredRef = useRef(false);
 
   // Tick every 250ms while the timer is active
   useEffect(() => {
@@ -75,21 +74,10 @@ export function InlineSetLogger({
     return () => clearInterval(id);
   }, [timerEndMs]);
 
-  // Fire push notification once when timer reaches zero
-  useEffect(() => {
-    if (timerEndMs == null || pulseFiredRef.current) return;
-    if (nowMs >= timerEndMs) {
-      pulseFiredRef.current = true;
-      fetch("/api/notifications/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Rest done", message: "Time to log your next set." }),
-      }).catch(() => {});
-    }
-  }, [nowMs, timerEndMs]);
+  // Rest completion is signalled ON-SCREEN only — the timer widget turns positive and pulses
+  // (`.rest-timer-done`). No ntfy push: a phone buzz after every set was just spam.
 
   function startTimer() {
-    pulseFiredRef.current = false;
     let durationSec = DEFAULT_DURATION_S;
     try {
       const stored = localStorage.getItem(LS_DURATION);
@@ -117,7 +105,6 @@ export function InlineSetLogger({
       // ignore
     }
     setTimerEndMs(null);
-    pulseFiredRef.current = false;
   }
 
   const nextSetNumber = (existingSets[existingSets.length - 1]?.set_number ?? 0) + 1;

@@ -160,6 +160,11 @@ export interface WorkoutExercise {
   notes?: string | null;
   description?: string | null;
   tips?: string[] | null;
+  // Antagonist-superset metadata: `superset` is a slot like "A1"/"A2" (letter = the pair,
+  // digit = position); `pair_with` names the partner exercise. Consecutive same-letter slots
+  // are run as one superset — alternated, not as independent straight sets.
+  superset?: string | null;
+  pair_with?: string | null;
 }
 
 export interface ExercisePR {

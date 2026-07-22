@@ -50,7 +50,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   stored text is unchanged, and counts/volumes ("2 fillets", "1 cup") and trivial amounts are
   left alone.
 
+- **Supersets are shown as linked groups in the workout plan.** The plan carried `superset`/
+  `pair_with` metadata but the UI rendered every exercise as a flat straight-set list, so it
+  wasn't clear the pairs are alternated. Paired exercises now sit in a Strong-style group — an
+  accent rail links them, a header states "Superset A · 3 rounds · alternate · ~20s between ·
+  ~60s after the pair", and each exercise keeps an A1/A2 tag and its own set logger. The
+  per-exercise set count is dropped inside a group (the round count is in the header).
+
 ### Changed
+
+- **The rest timer no longer sends a phone push.** Every set kicked off a "Rest done" ntfy push
+  when the timer hit zero — a buzz after every single set, which was just spam. Rest completion is
+  now signalled on-screen only: the timer widget turns positive and pulses. The timer itself is
+  unchanged.
 
 - **Every planned meal must be backed by a recipe or a cook.** `plan_meals` no longer accepts a
   bare `name` freeform plan — it requires a `recipe_id` or a `cook_id`, and a database CHECK
