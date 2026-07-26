@@ -518,16 +518,26 @@ def main():
             # measured performance decrement (coach_check.py::regressions), never from
             # a set feeling hard.
             #
-            # The bands only apply to PROGRAMMED lifting (workout_plan_id not null), the
-            # same filter coach_check.py::programmed_sessions uses. Walk pull-ups are
-            # logged as strength_sessions with a null plan id and are grease-the-groove:
-            # deliberately submaximal and never to failure, because at a ~4-rep max the
-            # limiter is strength/skill and frequent low-fatigue practice is what raises
-            # it. Scoring those against the lifting bands tells the coach to add load to
-            # the one thing that must stay easy.
+            # The bands only apply to PROGRAMMED LIFTING. Two kinds of session must be
+            # exempt, and they look different in the data:
+            #   1. Ad-hoc bonus work (basketball, walk pull-ups done off-plan) — null
+            #      workout_plan_id, the same filter coach_check.py::programmed_sessions uses.
+            #   2. Grease-the-groove pull-ups. These DO carry a workout_plan_id whenever a
+            #      "Daily Pull-ups (GtG)" plan exists for the date, so the null check alone
+            #      does not catch them. They are deliberately submaximal and never taken to
+            #      failure: at a ~4-rep max the limiter is strength/skill, so frequent
+            #      low-fatigue practice is what raises it. A low effort score on GtG is the
+            #      protocol working, not a shortfall — scoring it against the lifting bands
+            #      tells the coach to add load to the one thing that must stay easy.
+            # Detect (2) from the sets already in hand rather than a second query.
+            gtg = bool(rows) and all(
+                "grease-the-groove" in (r.get("exercise_name") or "").lower() for r in rows
+            )
             effort = s.get("perceived_effort")
             if s.get("workout_plan_id") is None:
-                flag = "  (unprogrammed — grease-the-groove/bonus; effort bands do not apply)"
+                flag = "  (unprogrammed bonus work — effort bands do not apply)"
+            elif gtg:
+                flag = "  (grease-the-groove — submaximal by design; effort bands do not apply)"
             elif effort is None:
                 flag = "  FLAG: no effort score — it's what tunes the next session"
             elif effort >= 10:
