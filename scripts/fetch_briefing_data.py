@@ -162,7 +162,7 @@ def main():
     def q_strength_sessions():
         return (
             client.table("strength_sessions")
-            .select("id,performed_on,perceived_effort,notes")
+            .select("id,performed_on,perceived_effort,notes,workout_plan_id")
             .eq("user_id", uid)
             .order("performed_on", desc=True)
             .limit(3)
@@ -517,8 +517,18 @@ def main():
             # the one combination the evidence calls ineffective. Reductions come from
             # measured performance decrement (coach_check.py::regressions), never from
             # a set feeling hard.
+            #
+            # The bands only apply to PROGRAMMED lifting (workout_plan_id not null), the
+            # same filter coach_check.py::programmed_sessions uses. Walk pull-ups are
+            # logged as strength_sessions with a null plan id and are grease-the-groove:
+            # deliberately submaximal and never to failure, because at a ~4-rep max the
+            # limiter is strength/skill and frequent low-fatigue practice is what raises
+            # it. Scoring those against the lifting bands tells the coach to add load to
+            # the one thing that must stay easy.
             effort = s.get("perceived_effort")
-            if effort is None:
+            if s.get("workout_plan_id") is None:
+                flag = "  (unprogrammed — grease-the-groove/bonus; effort bands do not apply)"
+            elif effort is None:
                 flag = "  FLAG: no effort score — it's what tunes the next session"
             elif effort >= 10:
                 flag = "  FLAG: effort 10 — couldn't finish; that's a load problem, back off next session"
