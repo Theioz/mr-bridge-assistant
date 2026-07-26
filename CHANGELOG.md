@@ -72,6 +72,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **The briefing stopped telling the coach to undo the current training rule.**
+  `scripts/fetch_briefing_data.py` still printed `FLAG: effort >=8 — drop next session load 10%`
+  and `FLAG: effort >=9 — cut a set next session` on every logged session. Those bands were
+  **retired 2026-07-18**: 8-9/10 is roughly 1-3 RIR, which is the productive zone the program
+  now targets, and proximity to failure matters *more* at light loads — with the dumbbells
+  capped at 25 lb, "light load, far from failure" is the one combination the evidence calls
+  clearly ineffective. `coach_check.py::post_session` was updated at the time; this script was
+  missed, so the two halves of the coaching loop disagreed, and the briefing kept advising a
+  load cut on exactly the sessions that went well. Observed live on 2026-07-26: the 7/23
+  session (effort 8, DB Reverse Lunge @ 20 lb at RPE 8-9 — on target) was flagged for a 10%
+  reduction. Bands now mirror `coach_check.py`: 7-9 reads as on-target, 10 backs off, 6 and
+  below prompt more reps or load, and a missing score is called out as the thing that tunes the
+  next session. Load reductions remain driven solely by measured performance decrement
+  (`coach_check.py::regressions`), never by a set feeling hard.
+
 - **Deploys now actually reach the browser (service-worker stale cache).** The service worker
   cached `/_next/static/*` **cache-first** under a fixed cache name. Turbopack chunk filenames
   are not reliably content-hashed, so a deploy's changed code shipped under a name the cache
