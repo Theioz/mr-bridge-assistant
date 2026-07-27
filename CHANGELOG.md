@@ -7,6 +7,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Removed
+
+- **graphify — deleted the stale knowledge graph and every rule pointing at it.** `graphify-out/`
+  was last regenerated **2026-05-05** and had been tracked, unchanged, for 83 days while the repo
+  absorbed the self-host cutover, the Google Health port, inventory, dual units, the service-worker
+  fix, meal-plan constraints and the superset UI. The `graphify` binary is installed on **no**
+  current host, so `CLAUDE.md`'s "run `graphify update .` after modifying code files" was
+  unsatisfiable and the graph could only get staler. The problem was not that it had become useless
+  but that it was actively misleading: `CLAUDE.md` told agents to read `GRAPH_REPORT.md` *before*
+  answering architecture questions and to navigate `graphify-out/wiki/` *instead of reading raw
+  files* — a directory that does not exist — and a `PreToolUse` hook in `.claude/settings.json`
+  repeated that instruction on every `Glob`/`Grep`. A three-month-stale map that agents are told to
+  trust over the source is worse than no map. Removed: the 6 tracked files (2.3 MB) from this
+  **public** repo, the `CLAUDE.md` section, the `core.md` session-close step, the `PreToolUse` hook,
+  the `.gitignore`/`.dockerignore` entries, and two now-dead links in `docs/ARCHITECTURE.md`.
+  Historical CHANGELOG and audit references are left intact. The original rationale — an unfamiliar
+  codebase on the MacBook with no other index — no longer holds: `CLAUDE.md` + `.claude/rules/` are
+  accurate and maintained, load automatically via the `SessionStart` hook, and live search covers a
+  repo this size. Closes half of the open-cleanups list.
+
 ### Added
 
 - **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in

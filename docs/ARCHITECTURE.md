@@ -2,8 +2,6 @@
 
 This document captures Mr. Bridge's architectural intent: why decisions were made and where the system is heading. It is not a setup guide (see [README.md](../README.md)) or an API reference — it is the record of design choices that are not visible from code alone.
 
-For a live map of code relationships, see [graphify-out/GRAPH_REPORT.md](../graphify-out/GRAPH_REPORT.md).
-
 ---
 
 ## Stack
@@ -252,7 +250,6 @@ Planned: email invitations, `tenant_members.role` (owner/member/viewer), per-rol
 | [README.md](../README.md) | Setup guide, env vars, deployment steps |
 | [CHANGELOG.md](../CHANGELOG.md) | Full feature history by release |
 | [docs/SECURITY.md](SECURITY.md) | CSP hardening, nonce injection, auth guard patterns |
-| [graphify-out/GRAPH_REPORT.md](../graphify-out/GRAPH_REPORT.md) | Live code graph — god nodes, community clusters, surprising connections |
 | [supabase/migrations/](../supabase/migrations/) | Authoritative schema history — every table creation and RLS policy is here |
 
 ## Deployment (self-hosted, #476 / ADR 0017)
