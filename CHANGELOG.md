@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The planner validator now rejects broken superset metadata.** A superset renders only from
+  per-exercise `superset` / `pair_with` fields; the plan `name` and `notes` are display text and
+  control nothing. Week 2 (7/27, 7/29, 8/01) was written with neither field, so three sessions
+  named "(supersets)" — whose notes described "3 pairs x 3 rounds" — rendered as six standalone
+  straight sets. Nothing errored; the plan simply meant something different from what it showed,
+  and only an eyeball caught it. `validate_supersets()` in `scripts/weekly_plan.py` now fails the
+  plan on: a "(supersets)" day with no slots, partial slotting, malformed slots, non-contiguous
+  pairs (grouping is positional — `groupBySuperset` walks *consecutive* same-letter entries, so
+  a split pair renders as two broken groups), lone or self-paired slots, `pair_with` that isn't
+  reciprocal or names an exercise outside the group, out-of-order slot digits, and members of a
+  pair disagreeing on `sets` (the group header shows one round count for both). Wired into both
+  `validate` and the correction prompt, and the planner prompt now documents the fields so plans
+  are written right rather than only caught afterward. Covered by `tests/` — the project's first
+  Python tests — run in CI by a new stdlib-only `python-tests` workflow, since a guard against a
+  *silent* failure is itself worthless if it silently stops firing.
+
 - **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in
   `.claude/settings.json`, handled by `.claude/hooks/scripts/hooks.py`) injects an instruction
   that makes any session launched in this repo read the rules + private project memory and run

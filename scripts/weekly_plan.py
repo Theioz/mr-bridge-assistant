@@ -217,6 +217,147 @@ def shape_plan(plan: dict) -> tuple[list[str], list[dict]]:
     return all_exercises, day_plans
 
 
+# ── Superset integrity ───────────────────────────────────────────────────────
+#
+# The UI renders a superset only when each exercise carries BOTH `superset` (a slot
+# like "A1"/"A2") and `pair_with` (the partner's exact `exercise` name), AND the
+# partners are ADJACENT in the array — groupBySuperset() in
+# web/src/components/fitness/weekly-workout-plan.tsx walks the list and groups
+# CONSECUTIVE entries sharing a slot letter. Position is load-bearing; slot letters
+# alone are not enough.
+#
+# 2026-07-27: the Week 2 rows (7/27, 7/29, 8/01) were written with neither field. They
+# rendered as six standalone straight sets while the plan name still said "(supersets)"
+# and the notes still described "3 pairs x 3 rounds". Nothing errored — the plan just
+# silently meant something different from what it displayed, and the difference was only
+# caught by eye. That is exactly the class of failure this file exists to make impossible.
+
+SLOT_RE = re.compile(r"^([A-Z])(\d+)$")
+
+
+def _work_entries(day: dict) -> list[dict]:
+    """The working block only — warmups and cooldowns are never supersetted."""
+    return [e for e in (day.get("workout") or []) if e.get("exercise")]
+
+
+def validate_supersets(plan: dict) -> list[str]:
+    """Structural check on antagonist-superset metadata. Returns human-readable problems.
+
+    A day is exempt entirely if it declares no slots AND its name does not claim to be
+    a superset day — plenty of days (grease-the-groove pull-ups) are a single exercise.
+    """
+    problems: list[str] = []
+
+    for day in plan.get("workout_days", []):
+        date = day.get("date", "?")
+        name = day.get("name") or ""
+        entries = _work_entries(day)
+        if not entries:
+            continue
+
+        slotted = [e for e in entries if e.get("superset")]
+
+        if not slotted:
+            # The bug that motivated this check: the name promises pairs, the data has none.
+            if "superset" in name.lower():
+                problems.append(
+                    f"{date}: name says \"{name}\" but no exercise carries a `superset` slot — "
+                    "the UI will render 6 standalone straight sets. Add `superset` (A1/A2/B1/…) "
+                    "and `pair_with` to every working exercise, ordered so partners are adjacent."
+                )
+            continue
+
+        if len(slotted) != len(entries):
+            bare = [e["exercise"] for e in entries if not e.get("superset")]
+            problems.append(
+                f"{date}: `superset` is set on {len(slotted)}/{len(entries)} working exercises — "
+                f"missing on {', '.join(bare)}. Partial slotting renders as a mix of groups and "
+                "orphans; slot every working exercise or none."
+            )
+            continue
+
+        slots = [str(e["superset"]).strip().upper() for e in entries]
+        malformed = [s for s in slots if not SLOT_RE.match(s)]
+        if malformed:
+            problems.append(
+                f"{date}: malformed superset slot(s) {malformed} — expected a letter then a "
+                "digit, e.g. A1, A2, B1."
+            )
+            continue
+
+        # Consecutive runs by letter. A letter appearing in more than one run means the
+        # partners are separated in the array, which the UI groups as two broken groups.
+        runs: list[tuple[str, list[int]]] = []
+        for i, slot in enumerate(slots):
+            letter = slot[0]
+            if runs and runs[-1][0] == letter:
+                runs[-1][1].append(i)
+            else:
+                runs.append((letter, [i]))
+
+        seen: dict[str, int] = {}
+        for letter, _ in runs:
+            seen[letter] = seen.get(letter, 0) + 1
+        split = sorted(l for l, n in seen.items() if n > 1)
+        if split:
+            problems.append(
+                f"{date}: superset group(s) {split} are not contiguous — order is "
+                f"{', '.join(slots)}. Grouping is positional, so partners must sit next to "
+                "each other (A1, A2, B1, B2, C1, C2)."
+            )
+            continue
+
+        by_name = {e["exercise"]: e for e in entries}
+        for letter, idxs in runs:
+            members = [entries[i] for i in idxs]
+            if len(members) < 2:
+                problems.append(
+                    f"{date}: superset {letter} has only \"{members[0]['exercise']}\" in it — "
+                    "a group needs at least two exercises, or drop the slot."
+                )
+                continue
+
+            digits = [int(SLOT_RE.match(slots[i]).group(2)) for i in idxs]
+            if digits != list(range(1, len(digits) + 1)):
+                problems.append(
+                    f"{date}: superset {letter} slots are numbered {digits} — expected "
+                    f"{list(range(1, len(digits) + 1))} in order."
+                )
+
+            member_names = {e["exercise"] for e in members}
+            for e in members:
+                partner = e.get("pair_with")
+                if not partner:
+                    problems.append(
+                        f"{date}: \"{e['exercise']}\" ({e['superset']}) has no `pair_with`."
+                    )
+                elif partner == e["exercise"]:
+                    problems.append(
+                        f"{date}: \"{e['exercise']}\" is paired with itself."
+                    )
+                elif partner not in member_names:
+                    where = (
+                        f"it is in superset {by_name[partner].get('superset')}"
+                        if partner in by_name
+                        else "no such exercise in this day's workout"
+                    )
+                    problems.append(
+                        f"{date}: \"{e['exercise']}\" ({e['superset']}) pairs with "
+                        f"\"{partner}\", which is not in superset {letter} — {where}."
+                    )
+
+            # Rounds are read off the FIRST member (SupersetGroup's `rounds` prop), so a
+            # mismatch inside the group displays a round count the other exercise doesn't run.
+            set_counts = {e["exercise"]: e.get("sets") for e in members}
+            if len(set(set_counts.values())) > 1:
+                problems.append(
+                    f"{date}: superset {letter} members disagree on `sets` ({set_counts}) — "
+                    "the group header shows the first exercise's count for the whole pair."
+                )
+
+    return problems
+
+
 def validate_recovery(day_plans: list[dict]) -> list[dict]:
     """day_plans: [{dayOfWeek: int, exercises: [{name, sets}]}]"""
     violations = []
@@ -256,12 +397,13 @@ def build_correction_prompt(plan: dict, has_pull_up_bar: bool) -> str | None:
 
     missing_patterns = validate_weekly_coverage(all_exercises, has_pull_up_bar)
     recovery_violations = validate_recovery(day_plans)
+    superset_problems = validate_supersets(plan)
     redundancy_issues = []
     for dp in day_plans:
         for issue in check_same_day_redundancy([e["name"] for e in dp["exercises"]]):
             redundancy_issues.append({**issue, "day": dp["dayOfWeek"]})
 
-    if not missing_patterns and not recovery_violations and not redundancy_issues:
+    if not missing_patterns and not recovery_violations and not redundancy_issues and not superset_problems:
         return None
 
     issues: list[str] = []
@@ -278,6 +420,9 @@ def build_correction_prompt(plan: dict, has_pull_up_bar: bool) -> str | None:
 
     for v in recovery_violations:
         issues.append(f"RECOVERY CONFLICT: {v['message']}")
+
+    for p in superset_problems:
+        issues.append(f"SUPERSET METADATA: {p}")
 
     return f"""The workout plan below has structural issues. Return ONLY a corrected JSON plan in a code block, fixing exactly the issues listed. Do not change exercises that are not flagged.
 
@@ -309,7 +454,7 @@ OUTPUT RULES:
       "date": "YYYY-MM-DD",
       "name": "Push Day",
       "warmup": [{{"exercise": "...", "sets": N, "reps": "...", "description": "1-3 sentences on how to perform", "tips": ["form cue"]}}],
-      "workout": [...same shape...],
+      "workout": [...same shape, plus "superset": "A1", "pair_with": "<partner exercise>" on every entry of a superset day...],
       "cooldown": [...same shape...],
       "notes": "rationale — cite evidence e.g. 'DB Bent-Over Row 3×12 @ 25 lb avg RPE 8.3 last week — top of range, prescribing same load with tempo added'"
     }}
@@ -343,6 +488,18 @@ The week MUST include at least one working set from each pattern:
 - pull_vertical (e.g. Pull-Up, Chin-Up, Banded Pulldown) — REQUIRED if pull-up bar is in equipment inventory
 - core (e.g. Plank, Dead Bug, Slider Body Saw, Hollow Hold)
 Never place 2+ exercises sharing the same pattern AND same equipment type back-to-back within a day (e.g. DB Bent-Over Row immediately followed by DB Single-Arm Row). Break them up with a different pattern.
+
+ANTAGONIST SUPERSETS (mandatory whenever the day is programmed as pairs):
+The app renders a superset ONLY from per-exercise metadata — the day `name` and `notes` are
+display text and control nothing. On every working exercise of a superset day, set:
+- "superset": a slot — letter identifies the pair, digit the position within it ("A1", "A2",
+  "B1", "B2", "C1", "C2"). Same letter = same pair, run alternated.
+- "pair_with": the partner's EXACT `exercise` string, reciprocally (A1 names A2, A2 names A1).
+Order the `workout` array so partners are ADJACENT — A1, A2, B1, B2, C1, C2. Grouping is
+positional: a pair split across the array renders as two broken groups. Both members of a
+pair must share the same `sets` (the group header shows one round count for the pair).
+Never name a day "(supersets)" without this metadata — it renders as straight sets and the
+plan then means something different from what it displays.
 
 EQUIPMENT-CAPPED PROGRESSION (apply when user is at max DB weight):
 When an exercise has been performed at the user's equipment cap at avg RPE ≤ 8 for 2+ sessions, do NOT repeat the same prescription. Apply the progression ladder in order:
@@ -458,6 +615,7 @@ def main() -> None:
         problems = []
         problems += [f"coverage: missing {m}" for m in validate_weekly_coverage(exercises, args.has_pull_up_bar)]
         problems += [f"recovery: {v['message']}" for v in validate_recovery(day_plans)]
+        problems += [f"superset: {p}" for p in validate_supersets(plan)]
         # Redundancy is a within-day property — checking a list flattened across days
         # compares the last exercise of one day against the first of the next.
         for dp in day_plans:
@@ -474,7 +632,7 @@ def main() -> None:
             sys.exit(1)
         print(
             f"plan OK — {len(day_plans)} day(s), {len(exercises)} exercises; "
-            "coverage, recovery spacing and same-day redundancy all pass"
+            "coverage, recovery spacing, same-day redundancy and superset metadata all pass"
         )
         return
 
