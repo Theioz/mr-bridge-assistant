@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The planner validator now rejects broken superset metadata.** A superset renders only from
+  per-exercise `superset` / `pair_with` fields; the plan `name` and `notes` are display text and
+  control nothing. Week 2 (7/27, 7/29, 8/01) was written with neither field, so three sessions
+  named "(supersets)" — whose notes described "3 pairs x 3 rounds" — rendered as six standalone
+  straight sets. Nothing errored; the plan simply meant something different from what it showed,
+  and only an eyeball caught it. `validate_supersets()` in `scripts/weekly_plan.py` now fails the
+  plan on: a "(supersets)" day with no slots, partial slotting, malformed slots, non-contiguous
+  pairs (grouping is positional — `groupBySuperset` walks *consecutive* same-letter entries, so
+  a split pair renders as two broken groups), lone or self-paired slots, `pair_with` that isn't
+  reciprocal or names an exercise outside the group, out-of-order slot digits, and members of a
+  pair disagreeing on `sets` (the group header shows one round count for both). Wired into both
+  `validate` and the correction prompt, and the planner prompt now documents the fields so plans
+  are written right rather than only caught afterward. Covered by `tests/` — the project's first
+  Python tests — run in CI by a new stdlib-only `python-tests` workflow, since a guard against a
+  *silent* failure is itself worthless if it silently stops firing.
+
 - **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in
   `.claude/settings.json`, handled by `.claude/hooks/scripts/hooks.py`) injects an instruction
   that makes any session launched in this repo read the rules + private project memory and run
@@ -71,6 +87,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   plan without a recipe has no instructions and no macros, which is the gap this closes.
 
 ### Fixed
+
+- **The briefing stopped telling the coach to undo the current training rule.**
+  `scripts/fetch_briefing_data.py` still printed `FLAG: effort >=8 — drop next session load 10%`
+  and `FLAG: effort >=9 — cut a set next session` on every logged session. Those bands were
+  **retired 2026-07-18**: 8-9/10 is roughly 1-3 RIR, which is the productive zone the program
+  now targets, and proximity to failure matters *more* at light loads — with the dumbbells
+  capped at 25 lb, "light load, far from failure" is the one combination the evidence calls
+  clearly ineffective. `coach_check.py::post_session` was updated at the time; this script was
+  missed, so the two halves of the coaching loop disagreed, and the briefing kept advising a
+  load cut on exactly the sessions that went well. Observed live on 2026-07-26: the 7/23
+  session (effort 8, DB Reverse Lunge @ 20 lb at RPE 8-9 — on target) was flagged for a 10%
+  reduction. Bands now mirror `coach_check.py`: 7-9 reads as on-target, 10 backs off, 6 and
+  below prompt more reps or load, and a missing score is called out as the thing that tunes the
+  next session. Load reductions remain driven solely by measured performance decrement
+  (`coach_check.py::regressions`), never by a set feeling hard.
 
 - **Deploys now actually reach the browser (service-worker stale cache).** The service worker
   cached `/_next/static/*` **cache-first** under a fixed cache name. Turbopack chunk filenames

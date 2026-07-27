@@ -570,7 +570,10 @@ mr-bridge-assistant/
 │
 ├── .github/
 │   └── workflows/
-│       └── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
+│       ├── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
+│       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck
+│       ├── smoke.yml                      # Playwright a11y + perf smokes
+│       └── python-tests.yml               # stdlib-only unittest run over tests/
 │
 ├── docs/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
@@ -592,7 +595,11 @@ mr-bridge-assistant/
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
 │   ├── check_weather_alert.py             # Severe weather push alerts
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
+│   ├── weekly_plan.py                     # Weekly planner: context / validate / submit (structural rules live here)
 │   └── update-references.sh              # Pull latest best practices submodule
+│
+├── tests/                                 # Python unit tests (stdlib unittest, no deps)
+│   └── test_weekly_plan_supersets.py      # Superset-metadata validator
 │
 └── voice/                                 # Jarvis mode (voice interface)
     ├── bridge_voice.py                    # Wake word → STT → Claude API → TTS

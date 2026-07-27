@@ -1,0 +1,27 @@
+name: Python tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/python-tests.yml'
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      # weekly_plan.py resolves these at import time; the pure validators never use them.
+      CRON_SECRET: test
+      INTERNAL_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Deliberately no pip install: these tests cover the stdlib-only structural
+      # validators, so they must keep running on a bare interpreter. Anything needing
+      # supabase/requests belongs in a separate job with scripts/requirements.txt.
+      - name: Run unit tests
+        run: python3 -m unittest discover -s tests -v

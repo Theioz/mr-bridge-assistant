@@ -162,7 +162,7 @@ def main():
     def q_strength_sessions():
         return (
             client.table("strength_sessions")
-            .select("id,performed_on,perceived_effort,notes")
+            .select("id,performed_on,perceived_effort,notes,workout_plan_id")
             .eq("user_id", uid)
             .order("performed_on", desc=True)
             .limit(3)
@@ -509,12 +509,45 @@ def main():
     if sessions:
         for s in sessions:
             rows = sets_by_session.get(s["id"], [])
+            # Effort bands mirror coach_check.py::post_session. The target is 1-3 RIR on
+            # the last set of each exercise, so 7-9 is the productive zone, NOT a fault.
+            # The bands here used to cut load at >=8 and a set at >=9; that rule was
+            # retired 2026-07-18 because proximity to failure matters more at light
+            # loads and the dumbbells cap at 25 lb, making "light and far from failure"
+            # the one combination the evidence calls ineffective. Reductions come from
+            # measured performance decrement (coach_check.py::regressions), never from
+            # a set feeling hard.
+            #
+            # The bands only apply to PROGRAMMED LIFTING. Two kinds of session must be
+            # exempt, and they look different in the data:
+            #   1. Ad-hoc bonus work (basketball, walk pull-ups done off-plan) — null
+            #      workout_plan_id, the same filter coach_check.py::programmed_sessions uses.
+            #   2. Grease-the-groove pull-ups. These DO carry a workout_plan_id whenever a
+            #      "Daily Pull-ups (GtG)" plan exists for the date, so the null check alone
+            #      does not catch them. They are deliberately submaximal and never taken to
+            #      failure: at a ~4-rep max the limiter is strength/skill, so frequent
+            #      low-fatigue practice is what raises it. A low effort score on GtG is the
+            #      protocol working, not a shortfall — scoring it against the lifting bands
+            #      tells the coach to add load to the one thing that must stay easy.
+            # Detect (2) from the sets already in hand rather than a second query.
+            gtg = bool(rows) and all(
+                "grease-the-groove" in (r.get("exercise_name") or "").lower() for r in rows
+            )
             effort = s.get("perceived_effort")
-            flag = ""
-            if effort and effort >= 9:
-                flag = "  FLAG: effort >=9 — cut a set next session"
-            elif effort and effort >= 8:
-                flag = "  FLAG: effort >=8 — drop next session load 10%"
+            if s.get("workout_plan_id") is None:
+                flag = "  (unprogrammed bonus work — effort bands do not apply)"
+            elif gtg:
+                flag = "  (grease-the-groove — submaximal by design; effort bands do not apply)"
+            elif effort is None:
+                flag = "  FLAG: no effort score — it's what tunes the next session"
+            elif effort >= 10:
+                flag = "  FLAG: effort 10 — couldn't finish; that's a load problem, back off next session"
+            elif effort >= 7:
+                flag = "  — effort on target (1-3 reps left in the tank); hold or progress"
+            elif effort == 6:
+                flag = "  FLAG: effort 6 — fine for re-entry, light for growth; add reps before load"
+            else:
+                flag = f"  FLAG: effort {effort} — under target; add reps or load next session"
             print(f"- {s['performed_on']} | effort {effort or '—'}/10 | {len(rows)} sets{flag}")
             if s.get("notes"):
                 print(f"    note: {s['notes']}")

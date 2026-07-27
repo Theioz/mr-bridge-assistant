@@ -41,8 +41,16 @@ not be quietly interpreted away.
    python3 scripts/weekly_plan.py validate /tmp/plan.json
    ```
 
-   It checks weekly muscle coverage, recovery spacing between hard sessions, and same-day
-   redundancy. If it fails, FIX THE PLAN and re-run. Do not submit a plan that fails.
+   It checks weekly muscle coverage, recovery spacing between hard sessions, same-day
+   redundancy, and **superset metadata**. If it fails, FIX THE PLAN and re-run. Do not
+   submit a plan that fails.
+
+   On superset days, every working exercise needs `"superset"` (`"A1"`, `"A2"`, `"B1"`, …)
+   and `"pair_with"` (the partner's exact `exercise` name), with partners **adjacent** in
+   the `workout` array — the UI groups consecutive same-letter entries, so position is
+   load-bearing. A day named "(supersets)" with no slots renders as straight sets; the
+   validator now rejects that rather than letting the plan display something other than
+   what it means.
 
 4. **Submit:**
 
