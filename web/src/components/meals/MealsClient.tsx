@@ -123,15 +123,6 @@ const MEAL_ORDER: Record<string, number> = {
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealType = (typeof MEAL_TYPES)[number];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function normalizeName(s: string | null | undefined): string {
-  return (s ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle = {
@@ -653,13 +644,11 @@ function MealRowEdit({
 
 function TodayTab({
   todayMeals,
-  pastMeals,
   macroGoals,
   macroTotals,
   onDelete,
 }: {
   todayMeals: MealRow[];
-  pastMeals: MealRow[];
   macroGoals: MacroGoals;
   macroTotals: MacroTotals;
   onDelete: (id: string) => void;
@@ -731,17 +720,6 @@ function TodayTab({
       setReanalyzing(false);
     }
   }
-
-  const recentMeals = useMemo(() => {
-    const byKey = new Map<string, MealRow>();
-    const sorted = [...pastMeals].sort((a, b) => (a.date < b.date ? 1 : -1));
-    for (const m of sorted) {
-      const key = normalizeName(m.cooks?.name ?? m.recipes?.name ?? m.notes);
-      if (!key) continue;
-      if (!byKey.has(key)) byKey.set(key, m);
-    }
-    return Array.from(byKey.values()).slice(0, 10);
-  }, [pastMeals]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<MealRowEditFields>({
@@ -1089,24 +1067,6 @@ function TodayTab({
           </div>
         )}
       </section>
-
-      {/* Recent meals (deduped past 7 days) */}
-      {recentMeals.length > 0 && (
-        <section>
-          <h2 className="db-section-label">Recent meals</h2>
-          <div>
-            {recentMeals.map((m, i) => (
-              <div key={m.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
-                <MealRowDisplay
-                  meal={m}
-                  onClick={() => prefillLog(m)}
-                  onRelog={() => prefillLog(m)}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
@@ -2084,7 +2044,6 @@ function MealsClientInner({
       {tab === "today" && (
         <TodayTab
           todayMeals={visibleTodayMeals}
-          pastMeals={visiblePastMeals}
           macroGoals={macroGoals}
           macroTotals={displayedMacroTotals}
           onDelete={handleDelete}
