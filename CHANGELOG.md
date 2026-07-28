@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
+- **Meals page — dropped the "Recent meals" section.** It rendered inside the Today tab while
+  `PastMeals` ("Past 6 Days") renders unconditionally below the tab panels, so both were on screen
+  at the same time showing the same `pastMeals` rows — the first deduped to 10 by normalized name,
+  the second in full chronological order. Two views of one dataset, stacked. The dedupe was the only
+  thing "Recent meals" added, and it bought little: with a 6-day window most repeats are already
+  adjacent in "Past 6 Days", and the deduped list silently hid the *repeat* rows, which is exactly
+  what makes a meal worth re-logging. Removed the section, the `recentMeals` `useMemo`, the now-unused
+  `pastMeals` prop on `TodayTab`, and the `normalizeName` helper whose only caller it was. The
+  re-log path is unaffected: `MealRowDisplay`'s `onRelog` is still wired for today's meals, and
+  the Recipes tab remains the route for logging something cooked before.
+
 - **graphify — deleted the stale knowledge graph and every rule pointing at it.** `graphify-out/`
   was last regenerated **2026-05-05** and had been tracked, unchanged, for 83 days while the repo
   absorbed the self-host cutover, the Google Health port, inventory, dual units, the service-worker
