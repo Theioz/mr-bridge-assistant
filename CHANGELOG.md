@@ -7,6 +7,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **`weekly_plan.py` — warmups no longer count as programming errors.** `shape_plan()` flattened
+  `warmup + workout + cooldown` into the list feeding the recovery and same-day-redundancy checks,
+  while `_work_entries()` already excluded warmups for the superset check. The two disagreed, and
+  the consequence was that the RAMP protocol's **Potentiate** step was unrepresentable: it is a
+  ~50% ramp-up set of the day's *first lift*, and it only potentiates if it sits immediately before
+  the working sets — which the redundancy rule then read as two same-pattern exercises back-to-back
+  and rejected. Week 2 (7/27-8/01) passed only by accident, because its warmup happened to end on a
+  Band Pull-Apart rather than a squat. `day_plans` now counts the working block only, via the same
+  `_work_entries()` the superset check uses; coverage still counts every entry, since a warmup
+  movement does still demonstrate a pattern is present in the week. Verified both directions: the
+  already-executed Week 2 still validates clean (no regression) and Week 3 now validates clean.
+
+- **`log_habit.py` — the scripted habit path was broken for every call.** It upserts with
+  `on_conflict="habit_id,date"`, but the table's constraint is `user_id,habit_id,date`, so Postgres
+  rejected it with `42P10 there is no unique or exclusion constraint matching the ON CONFLICT
+  specification`. Not intermittent — it could never have succeeded.
+
+### Documented
+
+- **`EXERCISE_MUSCLE_MAP` now says out loud why grease-the-groove movements are absent from it.**
+  They are exempt from the 24h recovery rule because GtG is submaximal and daily by design; that
+  exemption was real but purely implicit (it worked only because the names were missing), so adding
+  them would have silently broken every GtG week. Same failure class as PR #650.
+
 ### Removed
 
 - **Meals page — dropped the "Recent meals" section.** It rendered inside the Today tab while
