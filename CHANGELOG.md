@@ -119,6 +119,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Google Health sync stored the same workout two and three times.** `filter_new_workouts()`
+  in `scripts/sync-google-health.py` has a ±5 min same-date overlap check, and it worked —
+  against rows already in the database. But `by_date` was built once from `existing` and never
+  updated as candidates were accepted, so two duplicates arriving in the **same** batch were
+  each measured against a database containing neither, and both passed. Google Health
+  aggregates several writers (watch, phone, connected apps) and routinely emits one activity
+  twice in a single response: once from the writer holding the HR sensor, with `hr_zones`
+  populated, and once as a coarse copy with `hr_zones` null and a wild calorie figure. On the
+  *next* run the pair is in `existing` and further copies are suppressed — which is why the
+  duplicates sat as stable pairs rather than multiplying, and why nothing looked wrong.
+  Separately, `existing` was filtered to `WORKOUT_SOURCES = ["google_health", "fitbit"]`, which
+  excludes `"manual"`, so a hand-logged session could neither suppress an auto-import nor be
+  suppressed by one. Accepted rows now join the comparison set, and reads use a new
+  `DEDUPE_SOURCES` that adds `"manual"` (`WORKOUT_SOURCES` still means "what this sync writes").
+  Observed damage: 2026-07-31 held a 13-minute walk twice at 84 and 467 kcal, and one
+  basketball game three times — 431 + 792 + 454 = 1677 kcal — inflating the day to 2963 active
+  calories against a 2500 *weekly* goal; 2026-08-02 held a phantom 295-minute "Cardio Workout"
+  worth 1867 kcal, the watch reading alcohol-elevated resting HR as five hours of exercise.
+  The affected rows were neutralised in place rather than deleted, since the 7-day lookback
+  re-imports deleted rows. Covered by `tests/test_google_health_dedupe.py`, which fails on the
+  pre-fix code. **The audit only covered 7/31 and 8/02 — other days likely carry the same
+  pairs.** Diagnostic: of a near-simultaneous pair, the phantom is the one with `hr_zones` null.
+
 - **The briefing stopped telling the coach to undo the current training rule.**
   `scripts/fetch_briefing_data.py` still printed `FLAG: effort >=8 — drop next session load 10%`
   and `FLAG: effort >=9 — cut a set next session` on every logged session. Those bands were
