@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Documentation
 
+- **Second drift pass — the first one missed three, including a rule file.**
+  `.claude/rules/briefing.md` still told the session-start protocol that `run-syncs.py` "runs both
+  sync scripts (oura, google_health) in parallel". It runs neither: it is one HTTP call that
+  refreshes five sources and needs the app container up. That file is *read by Claude at session
+  start*, so a stale instruction there is worse than a stale README.
+  `docs/fitness-tracker-setup.md` opened with "Two sync scripts pull data from fitness APIs and
+  write directly to Supabase" — the entire premise of the page.
+  `docs/architecture.d2` described the sync layer as "Python scripts · TypeScript modules".
+  **`docs/architecture.svg` is generated from that `.d2` and is now stale** — it needs a `d2`
+  regeneration, which was not available in this environment.
+
+  Lesson recorded because it cost two passes: grepping for the deleted *filenames* found the
+  obvious references. The damaging ones described the behaviour in prose without naming a file.
+
+### Documentation
+
 - **Swept the docs for drift left by #658.** Deleting the two Python syncs invalidated
   statements scattered well outside the files that changed: `README.md` still described the
   test workflow as "stdlib-only unittest run over `tests/`" (it now runs node too, and
