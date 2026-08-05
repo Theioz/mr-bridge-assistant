@@ -1,33 +1,54 @@
 #!/usr/bin/env python3
 """
-Parallel sync orchestrator for Mr. Bridge session startup.
+Sync orchestrator for Mr. Bridge session startup.
 
-Checks sync_log for recent runs and skips sources synced within the last
-30 minutes. Remaining syncs run in parallel via subprocesses.
+Delegates the actual syncing to the app's /api/cron/sync endpoint, then runs the
+alert scripts. This is the SAME endpoint the nightly cron calls, which is the point:
 
-Usage: python3 scripts/run-syncs.py
+  WHY THIS IS A THIN CLIENT AND NOT A SYNC IMPLEMENTATION
+  Until 2026-08-05 there were two complete sync implementations — Python
+  (scripts/sync-oura.py, scripts/sync-google-health.py, ~950 lines) and TypeScript
+  (web/src/lib/sync/*.ts). They drifted, silently. Both carried the same workout-dedup
+  bug; #656 fixed the Python copy, and because that read as "fixed", the nightly cron —
+  which runs the TypeScript copy — kept storing duplicate rows until #657. The duplicated
+  30-minute skip window even carried a comment saying "same as run-syncs.py", which is the
+  hazard stated out loud and then ignored.
+  There is now ONE implementation. Do not reintroduce a second one here: if a sync needs
+  changing, change it in web/src/lib/sync/ and it takes effect for both callers.
+
+Requires the app container to be up. That is a real trade-off versus the old scripts,
+which talked to the vendor APIs directly — see the error path below, which says so
+explicitly rather than failing with a bare connection error.
+
+Usage:
+  python3 scripts/run-syncs.py                # normal: 30-min skip window applies
+  python3 scripts/run-syncs.py --days 30      # backfill 30 days (implies --force)
+  python3 scripts/run-syncs.py --force        # ignore the skip window
+  python3 scripts/run-syncs.py --no-alerts    # syncs only
 """
 from __future__ import annotations
 
-import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
-from pathlib import Path
+import argparse
+import json
+import os
 import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from _supabase import get_client
-from _sync_log import log_sync
 
-SKIP_WINDOW_SECS = 30 * 60  # 30 minutes
+from dotenv import load_dotenv
 
-SYNCS: list[tuple[str, list[str]]] = [
-    ("oura",          ["scripts/sync-oura.py",          "--yes"]),
-    ("google_health", ["scripts/sync-google-health.py", "--yes"]),
-]
+load_dotenv(ROOT / ".env")
 
-# Alert scripts run after syncs — order matters (HRV needs fresh Oura data)
+# Generous: a 90-day backfill hits the vendor APIs many times over. The endpoint itself
+# is bounded at 90 days, so this only needs to outlast the slowest legitimate request.
+TIMEOUT_SECS = 600
+
+# Alert scripts run after syncs — order matters (HRV needs fresh Oura data).
 ALERTS: list[list[str]] = [
     ["scripts/check_hrv_alert.py"],
     ["scripts/check_task_due_alerts.py"],
@@ -35,95 +56,79 @@ ALERTS: list[list[str]] = [
 ]
 
 
-def last_sync_age(client, source: str) -> float | None:
-    """Return seconds since last successful sync for source, or None if never."""
-    rows = (
-        client.table("sync_log")
-        .select("synced_at")
-        .eq("source", source)
-        .eq("status", "ok")
-        .order("synced_at", desc=True)
-        .limit(1)
-        .execute()
-        .data
-    )
-    if not rows:
-        return None
-    raw = rows[0]["synced_at"]
-    # dateutil handles arbitrary ISO 8601 variants (fractional seconds, Z suffix)
-    from dateutil import parser as dtparser
-    last = dtparser.parse(raw)
-    return (datetime.now(timezone.utc) - last).total_seconds()
+def _app_url() -> str:
+    url = os.environ.get("INTERNAL_APP_URL") or os.environ.get("APP_URL")
+    if not url:
+        sys.exit("[run-syncs] INTERNAL_APP_URL (or APP_URL) is not set in .env")
+    return url.rstrip("/")
 
 
-def run_sync(source: str, cmd: list[str]) -> tuple[str, int, str]:
-    """Run one sync script as a subprocess. Returns (source, returncode, output)."""
-    result = subprocess.run(
-        [sys.executable] + cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(ROOT),
-    )
-    return source, result.returncode, result.stdout + result.stderr
+def _summarize(results: dict) -> None:
+    """Print one line per source. The endpoint reports per-source, so mirror that."""
+    for source, detail in results.items():
+        if not isinstance(detail, dict):
+            print(f"[run-syncs] {source}: {detail}")
+            continue
+        if detail.get("skipped"):
+            age = detail.get("ageSecs")
+            mins = f"{round(age / 60)}m" if isinstance(age, (int, float)) else "recently"
+            print(f"[run-syncs] {source}: skipped (synced {mins} ago)")
+            continue
+        failed = detail.get("usersFailed") or 0
+        if failed:
+            print(f"[run-syncs] {source}: FAILED for {failed} user(s)")
+            for err in detail.get("errors") or []:
+                print(f"    {err.get('userId', '?')}: {err.get('error')}")
+        else:
+            extra = {k: v for k, v in detail.items() if k not in ("usersSynced", "usersFailed", "errors")}
+            suffix = f"  {extra}" if extra else ""
+            print(f"[run-syncs] {source}: ok{suffix}")
 
 
-def main() -> None:
-    client = None
+def run_syncs(days: int | None, force: bool) -> int:
+    secret = os.environ.get("CRON_SECRET")
+    if not secret:
+        sys.exit("[run-syncs] CRON_SECRET is not set in .env — cannot authenticate to the app")
+
+    params = []
+    if days is not None:
+        params.append(f"days={days}")
+    if force or days is not None:
+        params.append("force=1")
+    url = f"{_app_url()}/api/cron/sync" + (f"?{'&'.join(params)}" if params else "")
+
+    scope = f"last {days} day(s)" if days is not None else "default window"
+    print(f"[run-syncs] POST {url.split('?')[0]} ({scope}{', forced' if force or days else ''})")
+
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {secret}"})
     try:
-        client = get_client()
-        to_run: list[tuple[str, list[str]]] = []
-        skipped: list[str] = []
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECS) as resp:
+            payload = json.loads(resp.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()[:500]
+        print(f"[run-syncs] HTTP {e.code} from the sync endpoint: {body}", file=sys.stderr)
+        if e.code == 401:
+            print("[run-syncs] CRON_SECRET in .env does not match the app's.", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as e:
+        # The one regression versus the deleted Python syncs: they reached the vendor APIs
+        # directly, so they worked with the app down. Say that plainly instead of leaking a
+        # bare socket error.
+        print(f"[run-syncs] Could not reach the app at {_app_url()} ({e.reason}).", file=sys.stderr)
+        print("[run-syncs] Syncing now requires the mr-bridge container to be running:", file=sys.stderr)
+        print("    docker compose -f ~/docker/mr-bridge/docker-compose.yml up -d mr-bridge", file=sys.stderr)
+        return 1
 
-        for source, cmd in SYNCS:
-            age = last_sync_age(client, source)
-            if age is not None and age < SKIP_WINDOW_SECS:
-                skipped.append(source)
-            else:
-                to_run.append((source, cmd))
-
-    except Exception as e:
-        print(f"[run-syncs] Warning: could not check sync_log ({e}); running all syncs")
-        to_run = list(SYNCS)
-        skipped = []
-
-    if skipped:
-        print(f"[run-syncs] Skipped (synced within 30m): {', '.join(skipped)}")
-
-    if not to_run:
-        print("[run-syncs] All syncs up to date.")
-        _run_alerts()
-        return
-
-    print(f"[run-syncs] Running in parallel: {', '.join(s for s, _ in to_run)}")
-
-    with ThreadPoolExecutor(max_workers=len(to_run)) as pool:
-        futures = {pool.submit(run_sync, source, cmd): source for source, cmd in to_run}
-        for future in as_completed(futures):
-            source, rc, output = future.result()
-            status = "ok" if rc == 0 else f"FAILED (exit {rc})"
-            print(f"[run-syncs] {source}: {status}")
-            if rc != 0 and output.strip():
-                print(output.strip())
-            elif rc == 0 and client is not None:
-                # Ensure a sync_log entry exists so skip-if-recent works next run,
-                # even if the individual script returned early (no new data to write).
-                try:
-                    log_sync(client, source, "ok", 0)
-                except Exception:
-                    pass
-
-    _run_alerts()
+    _summarize({k: v for k, v in payload.items() if k != "ok"})
+    return 0
 
 
-def _run_alerts() -> None:
+def run_alerts() -> None:
     """Run alert scripts sequentially after syncs. Errors are non-fatal."""
     for cmd in ALERTS:
         try:
             result = subprocess.run(
-                [sys.executable] + cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(ROOT),
+                [sys.executable] + cmd, capture_output=True, text=True, cwd=str(ROOT)
             )
             if result.returncode != 0:
                 print(f"[run-syncs] alert {cmd[0]} FAILED (exit {result.returncode})")
@@ -133,6 +138,24 @@ def _run_alerts() -> None:
                 print(result.stdout.strip())
         except Exception as e:
             print(f"[run-syncs] alert {cmd[0]} error: {e}", file=sys.stderr)
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Trigger the app's syncs, then run alerts")
+    p.add_argument("--days", type=int, help="backfill this many days (1-90); implies --force")
+    p.add_argument("--force", action="store_true", help="ignore the 30-minute skip window")
+    p.add_argument("--no-alerts", action="store_true", help="skip the alert scripts")
+    args = p.parse_args()
+
+    if args.days is not None and not (1 <= args.days <= 90):
+        sys.exit("[run-syncs] --days must be between 1 and 90")
+
+    rc = run_syncs(args.days, args.force)
+    # Alerts still run after a failed sync: check_task_due_alerts and check_weather_alert
+    # do not depend on sync data, and a stale HRV alert is better than none.
+    if not args.no_alerts:
+        run_alerts()
+    sys.exit(rc)
 
 
 if __name__ == "__main__":

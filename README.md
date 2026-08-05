@@ -587,9 +587,7 @@ mr-bridge-assistant/
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
-│   ├── run-syncs.py                       # Parallel sync orchestrator (skip-if-recent logic)
-│   ├── sync-oura.py                       # Oura Ring → recovery_metrics + workout_sessions
-│   ├── sync-google-health.py              # Google Health workouts + body comp → Supabase
+│   ├── run-syncs.py                       # Triggers /api/cron/sync, then the alert scripts
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
+import { filterNewWorkouts, type StoredWorkout } from "./workout-dedupe";
 import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import { loadIntegration } from "@/lib/integrations/tokens";
 
@@ -18,7 +19,6 @@ const BODY_SOURCES = ["google_health", "fitbit_body", "google_fit"];
 // the watch also reports; leaving it out meant a manual row could neither suppress an
 // auto-import nor be suppressed by one. One 2026-07-31 basketball game landed three
 // times that way (manual 454 kcal + two auto-imports) and was counted at 1677 kcal.
-// Mirrors DEDUPE_SOURCES in scripts/sync-google-health.py.
 const DEDUPE_SOURCES = [...WORKOUT_SOURCES, "manual"];
 
 // ---------------------------------------------------------------------------
@@ -216,12 +216,6 @@ function normalizeActivity(exerciseType: string | undefined, displayName?: strin
   return ACTIVITY_ALIASES[exerciseType] ?? titleCase(exerciseType);
 }
 
-function timeToMins(t: string | null): number | null {
-  if (!t) return null;
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
 // ---------------------------------------------------------------------------
 // Main sync
 // ---------------------------------------------------------------------------
@@ -234,10 +228,11 @@ export interface GoogleHealthSyncResult {
 export async function syncGoogleHealth(
   db: SupabaseClient,
   userId: string,
+  days = SYNC_DAYS,
 ): Promise<GoogleHealthSyncResult> {
   const accessToken = await getAccessToken(db, userId);
 
-  const startStr = daysAgoString(SYNC_DAYS);
+  const startStr = daysAgoString(days);
   // The filter's upper bound is exclusive, so it must land on the day *after* today for
   // today's own samples to be included.
   const endExclusive = addDays(todayString(), 1);
@@ -378,66 +373,9 @@ export async function syncGoogleHealth(
       .eq("user_id", userId)
       .in("source", DEDUPE_SOURCES);
 
-    const existingList = (existingWorkouts ?? []) as {
-      id: string;
-      date: string;
-      start_time: string | null;
-      activity: string;
-      avg_hr: number | null;
-      duration_mins: number | null;
-    }[];
+    const existingList = (existingWorkouts ?? []) as StoredWorkout[];
 
-    const existingKeys = new Set(
-      existingList.map((r) => `${r.date}|${r.start_time}|${r.activity}`),
-    );
-    const exactNew = workoutRows.filter((r) => !existingKeys.has(r._key as string));
-
-    // Time-overlap detection (±5 min on same date). Unlike the Fitbit sync, an
-    // overlapping row is never replaced: the pre-existing row is the same workout
-    // already stored under the old source, so re-inserting or swapping it would churn
-    // history for no gain.
-    //
-    // The window is checked against previously-stored rows AND against rows already
-    // accepted in this same batch. Google Health aggregates several writers (watch,
-    // phone, connected apps) and commonly emits one activity twice per response — once
-    // from the writer holding the HR sensor, with hr_zones populated, and once as a
-    // coarse copy with hr_zones null and a wild calorie figure. Both arrive together, so
-    // neither is stored yet when the other is judged: a plain .filter() over
-    // `existingList` lets both through. The next run does suppress further copies, which
-    // is why duplicates sat as stable pairs rather than multiplying, and why this went
-    // unnoticed. Mirrors filter_new_workouts() in scripts/sync-google-health.py.
-    const OVERLAP_MINS = 5;
-    const dateIndex = new Map<string, typeof existingList>();
-    for (const r of existingList) dateIndex.set(r.date, [...(dateIndex.get(r.date) ?? []), r]);
-
-    const toInsert: typeof exactNew = [];
-    for (const newRow of exactNew) {
-      const newMins = timeToMins(newRow.start_time as string | null);
-      const date = newRow.date as string;
-      let overlapped = false;
-      for (const ex of dateIndex.get(date) ?? []) {
-        const exMins = timeToMins(ex.start_time);
-        if (newMins == null || exMins == null) continue;
-        if (Math.abs(newMins - exMins) <= OVERLAP_MINS) {
-          overlapped = true;
-          break;
-        }
-      }
-      if (overlapped) continue;
-      toInsert.push(newRow);
-      // The accepted row joins the comparison set for the rest of this batch.
-      dateIndex.set(date, [
-        ...(dateIndex.get(date) ?? []),
-        {
-          id: "",
-          date,
-          start_time: newRow.start_time as string | null,
-          activity: newRow.activity as string,
-          avg_hr: null,
-          duration_mins: null,
-        },
-      ]);
-    }
+    const toInsert = filterNewWorkouts(existingList, workoutRows);
 
     const newWorkouts = toInsert.map(({ _key, ...rest }) => ({ ...rest, user_id: userId }));
     if (newWorkouts.length) {

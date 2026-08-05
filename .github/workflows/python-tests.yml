@@ -1,14 +1,16 @@
-name: Python tests
+name: Unit tests
 
 on:
   pull_request:
     paths:
       - 'scripts/**'
       - 'tests/**'
+      - 'web/src/**'
       - '.github/workflows/python-tests.yml'
 
 jobs:
   unittest:
+    name: python
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -25,3 +27,22 @@ jobs:
       # supabase/requests belongs in a separate job with scripts/requirements.txt.
       - name: Run unit tests
         run: python3 -m unittest discover -s tests -v
+
+  node:
+    name: node
+    runs-on: ubuntu-latest
+    # web/src/__tests__ existed since the nutrition-pipeline work but was never wired into
+    # CI, so nothing enforced it. That mattered on 2026-08-05: the workout dedup bug lived
+    # in TypeScript, the only test covering dedup was Python, and after the two sync
+    # implementations were merged into one the TS side became the ONLY implementation.
+    # An untested single implementation is worse than a tested duplicated one.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # No install step on purpose: these tests import source directly and run on Node's
+      # built-in runner with type-stripping, so they need no dependencies and stay fast.
+      - name: Run unit tests
+        working-directory: web
+        run: node --experimental-strip-types --test src/__tests__/*.test.ts

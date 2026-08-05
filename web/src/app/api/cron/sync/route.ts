@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
   const db = createServiceClient();
   const results: Record<string, unknown> = {};
 
+  // Optional ?days=N backfill, and ?force=1 to bypass the 30-minute skip window. Both
+  // exist so the CLI (scripts/run-syncs.py) keeps the reach the deleted Python syncs had
+  // — they took --days. Bounded at 90 so a typo cannot request a year of API calls.
+  const daysParam = Number(request.nextUrl.searchParams.get("days"));
+  const days =
+    Number.isFinite(daysParam) && daysParam >= 1 ? Math.min(Math.floor(daysParam), 90) : null;
+  const force = request.nextUrl.searchParams.get("force") === "1" || days !== null;
+
   // Purge notifications older than 30 days (TTL cleanup — runs once daily)
   await db
     .from("notifications")
@@ -38,9 +46,11 @@ export async function GET(request: NextRequest) {
     lastSyncAgeSecs(db, "google_health"),
   ]);
 
-  if (ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
+  if (force || ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
     const userIds = await listConnectedUsers(db, "oura");
-    const settled = await Promise.allSettled(userIds.map((uid) => syncOura(db, uid)));
+    const settled = await Promise.allSettled(
+      userIds.map((uid) => (days === null ? syncOura(db, uid) : syncOura(db, uid, days))),
+    );
     const errors = settled
       .map((s, i) =>
         s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,
@@ -55,9 +65,13 @@ export async function GET(request: NextRequest) {
     results.oura = { skipped: true, ageSecs: Math.round(ouraAge) };
   }
 
-  if (googleHealthAge === null || googleHealthAge >= SKIP_WINDOW_SECS) {
+  if (force || googleHealthAge === null || googleHealthAge >= SKIP_WINDOW_SECS) {
     const userIds = await listConnectedUsers(db, "google_health");
-    const settled = await Promise.allSettled(userIds.map((uid) => syncGoogleHealth(db, uid)));
+    const settled = await Promise.allSettled(
+      userIds.map((uid) =>
+        days === null ? syncGoogleHealth(db, uid) : syncGoogleHealth(db, uid, days),
+      ),
+    );
     const errors = settled
       .map((s, i) =>
         s.status === "rejected" ? { userId: userIds[i], error: (s.reason as Error).message } : null,

@@ -6,7 +6,7 @@ Two sync scripts pull data from fitness APIs and write directly to Supabase. Run
 
 ## Google Health — workouts + body composition
 
-**Script:** `scripts/sync-google-health.py`
+**Implementation:** `web/src/lib/sync/google-health.ts`, reached via `/api/cron/sync`.
 
 Replaced both `sync-fitbit.py` and `sync-googlefit.py` in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). The Fitbit Web API is turned down **September 2026** and the Google Fit REST API is deprecated; the Google Health API (`health.googleapis.com/v4`) supersedes both.
 
@@ -29,10 +29,12 @@ Writes:
 
 **Run:**
 ```bash
-python3 scripts/sync-google-health.py            # last 7 days (default)
-python3 scripts/sync-google-health.py --days 30  # last 30 days
-python3 scripts/sync-google-health.py --probe    # print without writing
+python3 scripts/run-syncs.py             # default window, 30-min skip applies
+python3 scripts/run-syncs.py --days 30   # backfill 30 days (implies --force)
 ```
+
+Both Oura and Google Health sync together — the endpoint runs them in parallel. There is no
+longer a `--probe` dry run; it went with the Python script it belonged to.
 
 **Known differences from the Fitbit sync it replaced:**
 | | Fitbit | Google Health |
@@ -46,7 +48,7 @@ python3 scripts/sync-google-health.py --probe    # print without writing
 
 ## Oura Ring — readiness, sleep, HRV, resting HR
 
-**Script:** `scripts/sync-oura.py`
+**Implementation:** `web/src/lib/sync/oura.ts`, reached via `/api/cron/sync`.
 
 Uses a Personal Access Token (no OAuth flow).
 
@@ -59,12 +61,12 @@ Uses a Personal Access Token (no OAuth flow).
    ```
    OURA_ACCESS_TOKEN=your_token_here
    ```
-   The script uses this as a fallback if no `user_integrations` row exists.
+   The sync uses this as a fallback if no `user_integrations` row exists.
 
 **Run:**
 ```bash
-python3 scripts/sync-oura.py           # last 7 days (default)
-python3 scripts/sync-oura.py --days 30  # last 30 days
+python3 scripts/run-syncs.py            # default window
+python3 scripts/run-syncs.py --days 30  # backfill 30 days
 ```
 
 **Recovery Metrics written to `recovery_metrics` table in Supabase:**

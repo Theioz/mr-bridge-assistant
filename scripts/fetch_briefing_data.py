@@ -391,7 +391,7 @@ def main():
             severity = "critical — rest day recommended" if r["readiness"] < 50 else "low — consider deload or rest day"
             print(f"FLAG: Readiness {severity}")
     else:
-        print("No recovery data. Run: python3 scripts/sync-oura.py --yes")
+        print("No recovery data. Run: python3 scripts/run-syncs.py --force")
 
     # Study Log
     study = results.get("study_log") or []

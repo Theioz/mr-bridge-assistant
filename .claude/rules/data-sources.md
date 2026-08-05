@@ -10,9 +10,9 @@ says "MCP tool", that tool is available to you directly in this session.
 | Supabase table | Source | How it's written |
 |---|---|---|
 | `user_integrations` | OAuth tokens — Google, Google Health, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so it carries no Gmail scope (Google revokes Gmail-scoped tokens on password change) |
-| `fitness_log` | Google Health (weight/fat, derived BMI) | `sync-google-health.py`, `/api/cron/sync` |
-| `workout_sessions` | Google Health | `sync-google-health.py`, `/api/cron/sync` |
-| `recovery_metrics` | Oura Ring | `sync-oura.py` |
+| `fitness_log` | Google Health (weight/fat, derived BMI) | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
+| `workout_sessions` | Google Health, Oura, manual | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
+| `recovery_metrics` | Oura Ring | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
 | `strength_sessions`, `strength_session_sets`, `exercise_prs` | In-app set logger | `/api/strength-sessions` |
 | `workout_plans` | Weekly planner | `/api/internal/plan` (AI-free) + `scripts/weekly_plan.py` |
 | `user_equipment` | Manual | `/settings` |
