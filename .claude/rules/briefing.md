@@ -7,7 +7,10 @@ Execute in this exact order:
    ```bash
    python3 scripts/run-syncs.py
    ```
-   This runs both sync scripts (oura, google_health) in parallel and skips any source synced within the last 30 minutes.
+   Since #658 this is a thin client of the app's `/api/cron/sync` — the same endpoint the nightly
+   cron uses — so it refreshes Oura, Google Health, stocks, sports and packages in one call and
+   skips any source synced within the last 30 minutes. It therefore **requires the mr-bridge
+   container to be up**. `--force` bypasses the skip window; `--days N` (1-90) backfills.
 2. Fetch all briefing data from Supabase:
    ```bash
    python3 scripts/fetch_briefing_data.py

@@ -1,6 +1,6 @@
 # Fitness Tracker Setup
 
-Two sync scripts pull data from fitness APIs and write directly to Supabase. Run them manually before sessions to get fresh data, or let `scripts/run-syncs.py` / `/api/cron/sync` do it.
+Both fitness integrations are synced by the app, in `web/src/lib/sync/`, and reached through the `/api/cron/sync` route. The nightly cron calls it; `scripts/run-syncs.py` calls the same endpoint for an on-demand refresh before a session. The standalone Python syncs were deleted in [#658](https://github.com/Theioz/mr-bridge-assistant/pull/658) — there is one implementation now, and it needs the app container running.
 
 ---
 
