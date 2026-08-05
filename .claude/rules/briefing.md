@@ -82,4 +82,4 @@ Recovery rules:
 - Readiness < 70 → append: "Readiness low — consider deload or rest day"
 - Readiness < 50 → append: "Readiness critical — rest day recommended"
 - HRV trending down 3+ consecutive days → append: "HRV declining — prioritize recovery"
-- If no recovery data returned → show: "No recovery data — run: python3 scripts/sync-oura.py --yes"
+- If no recovery data returned → show: "No recovery data — run: python3 scripts/run-syncs.py --force"

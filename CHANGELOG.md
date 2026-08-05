@@ -7,6 +7,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- **One sync implementation instead of two.** `scripts/sync-google-health.py` (458 lines) and
+  `scripts/sync-oura.py` (495 lines) are **deleted**. `scripts/run-syncs.py` is now a thin client
+  that calls `/api/cron/sync` — the same endpoint the nightly cron already used — and then runs
+  the alert scripts as before. The TypeScript modules under `web/src/lib/sync/` are the only
+  implementation left.
+
+  This is fallout from #656/#657, and the reason is worth stating plainly: the codebase held two
+  complete sync implementations that had silently drifted. Both carried the same workout-dedup
+  bug. #656 fixed the Python copy, which *read* as fixing the system, while the nightly cron —
+  running the TypeScript copy — kept writing duplicate rows until #657. The duplicated 30-minute
+  skip window even carried a comment saying "same as run-syncs.py": the hazard was written down
+  and then ignored. Fixing one copy of a duplicated rule is indistinguishable from fixing the
+  rule, right up until it isn't.
+
+  Preserved: `--days N` backfill, via a new bounded `?days=` (1–90) parameter on `/api/cron/sync`
+  that both syncs now honour, plus `?force=1` to bypass the skip window. `run-syncs.py --days 30`
+  works as `sync-google-health.py --days 30` did. **Dropped:** `--probe`, the Python dry-run.
+  **Regressed:** syncing now needs the app container running — the deleted scripts reached the
+  vendor APIs directly. `run-syncs.py` detects that case and says so, rather than surfacing a bare
+  connection error.
+
+  Dedup moved to `web/src/lib/sync/workout-dedupe.ts`, a leaf module with **zero imports** so it
+  is unit-testable on a bare `node --test` with no dependency install and no module aliasing.
+
+- **`web/src/__tests__` now runs in CI.** Those tests have existed since the nutrition-pipeline
+  work and nothing ever enforced them. That was tolerable when the only dedup test was the Python
+  one; it is not tolerable now that TypeScript holds the sole implementation — an untested single
+  implementation is worse than a tested duplicated one. The `Python tests` workflow is renamed
+  `Unit tests` and gains a `node` job. 39 node tests, 17 python.
+
+  `tests/test_google_health_dedupe.py` is deleted and ported to
+  `web/src/__tests__/google-health-dedupe.test.ts`, which additionally pins the ±5 min window
+  edges and documents a **known limitation**: the overlap index is keyed by date only, not
+  date+activity, so two *different* activities starting within 5 minutes collapse into one. That
+  predates this change (the Python sync indexed by date only too) and is asserted rather than
+  fixed — narrowing the key would stop losing real sessions but would re-admit duplicates whenever
+  two writers label one session differently, which is a live pattern in the 2026-07-31 data. That
+  is a semantic decision about dedup and belongs in its own change.
+
 ### Fixed
 
 - **`weekly_plan.py` — warmups no longer count as programming errors.** `shape_plan()` flattened
