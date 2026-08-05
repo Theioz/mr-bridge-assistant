@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Documentation
 
+- **`docs/architecture.svg` regenerated.** It is generated from `docs/architecture.d2`, which
+  changed in the previous entry, and no `d2` binary was available at the time. Rebuilt with
+  d2 v0.7.1 using the command recorded in the `.d2` header — note that header's post-processing
+  `sed -i ''` is BSD/macOS syntax and needs plain `sed -i` on Linux. The whole file rewrites
+  because the previous render used an older d2; output size is comparable (25,524 → 25,263 bytes)
+  and it parses as valid SVG.
+
+  **The diagram still carries older drift this does not fix** — it predates the sync work and is
+  listed here so it is recorded rather than rediscovered: the app node says "Next.js · Vercel"
+  though mr-bridge moved off Vercel to compute-core on 2026-07-13 (ADR 0017); Data Sources says
+  "Oura · Fitbit · Google Fit" though Fitbit and Google Fit were superseded by Google Health in
+  #607; External APIs lists "Anthropic" though the app is now zero-Anthropic (USDA for macros,
+  chat moved to MCP); and the "18 tables / 7 API routes / 10 pages" counts are unverified.
+
+### Documentation
+
 - **Second drift pass — the first one missed three, including a rule file.**
   `.claude/rules/briefing.md` still told the session-start protocol that `run-syncs.py` "runs both
   sync scripts (oura, google_health) in parallel". It runs neither: it is one HTTP call that
