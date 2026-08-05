@@ -56,11 +56,16 @@ ALERTS: list[list[str]] = [
 ]
 
 
+# run-syncs.py runs on the same host as the app container, so loopback is the correct
+# default and needs no configuration. Deliberately NO fallback to APP_URL: that is the
+# public vhost (mr-bridge.jl-infra-lab.com), which resolves to Surface's tailnet address
+# and is unreachable from compute-core — verified, it returns nothing. Falling back to it
+# would turn a missing env var into a confusing network error instead of just working.
+DEFAULT_APP_URL = "http://127.0.0.1:3000"
+
+
 def _app_url() -> str:
-    url = os.environ.get("INTERNAL_APP_URL") or os.environ.get("APP_URL")
-    if not url:
-        sys.exit("[run-syncs] INTERNAL_APP_URL (or APP_URL) is not set in .env")
-    return url.rstrip("/")
+    return (os.environ.get("INTERNAL_APP_URL") or DEFAULT_APP_URL).rstrip("/")
 
 
 def _summarize(results: dict) -> None:
@@ -119,7 +124,16 @@ def run_syncs(days: int | None, force: bool) -> int:
         print("    docker compose -f ~/docker/mr-bridge/docker-compose.yml up -d mr-bridge", file=sys.stderr)
         return 1
 
-    _summarize({k: v for k, v in payload.items() if k != "ok"})
+    # The endpoint answers {"success": true, "results": {<source>: {...}}} — read the
+    # nested object, not the envelope, or every source collapses into one "results" line.
+    if not payload.get("success", True):
+        print(f"[run-syncs] endpoint reported failure: {payload}", file=sys.stderr)
+        return 1
+    results = payload.get("results")
+    if not isinstance(results, dict):
+        print(f"[run-syncs] unexpected response shape: {payload}", file=sys.stderr)
+        return 1
+    _summarize(results)
     return 0
 
 
