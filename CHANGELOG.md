@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **`run-syncs.py`: wrong app URL fallback, and a summary that printed one useless line.**
+  Two defects shipped in #658 and caught by running it end-to-end on compute-core.
+  (1) It resolved the app as `INTERNAL_APP_URL or APP_URL`. `INTERNAL_APP_URL` is exported in
+  the shell but is **not in `.env`**, and `APP_URL` is the public vhost
+  (`mr-bridge.jl-infra-lab.com`), which resolves to Surface's tailnet address and is
+  **unreachable from compute-core** — confirmed, the request returns nothing. So a missing
+  export would have turned into a confusing network failure rather than working. It now
+  defaults to `http://127.0.0.1:3000`, which is correct by construction since the script runs
+  on the app's own host, with `INTERNAL_APP_URL` as the only override and no `APP_URL` fallback.
+  (2) The endpoint answers `{"success": true, "results": {...}}`, but `_summarize()` was handed
+  the envelope, so every source collapsed into a single `results: ok {…}` line instead of one
+  line per source. It now reads the nested object and fails loudly on an unexpected shape.
+
 ### Changed
 
 - **One sync implementation instead of two.** `scripts/sync-google-health.py` (458 lines) and
