@@ -8,7 +8,7 @@ Two sync scripts pull data from fitness APIs and write directly to Supabase. Run
 
 **Implementation:** `web/src/lib/sync/google-health.ts`, reached via `/api/cron/sync`.
 
-Replaced both `sync-fitbit.py` and `sync-googlefit.py` in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). The Fitbit Web API is turned down **September 2026** and the Google Fit REST API is deprecated; the Google Health API (`health.googleapis.com/v4`) supersedes both.
+Superseded the Fitbit and Google Fit syncs in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607); the Python implementation was later deleted in [#658](https://github.com/Theioz/mr-bridge-assistant/pull/658) when the duplicated sync implementations were collapsed into one. The Fitbit Web API is turned down **September 2026** and the Google Fit REST API is deprecated; the Google Health API (`health.googleapis.com/v4`) supersedes both.
 
 Writes:
 - `workout_sessions` — activity, duration, calories, average HR, and per-session heart-rate zones

@@ -133,7 +133,7 @@ This means a user's session JWT can only read or write their own rows — no cro
 
 ### Exception: `sync_log`
 
-`sync_log` has no per-user RLS policy. It is globally readable and writable by the authenticated role. Rationale: sync operations run under the service client or Python scripts and are an infrastructure concern, not user data. The table has no PII.
+`sync_log` has no per-user RLS policy. It is globally readable and writable by the authenticated role. Rationale: sync operations run under the service client and are an infrastructure concern, not user data. The table has no PII.
 
 ---
 

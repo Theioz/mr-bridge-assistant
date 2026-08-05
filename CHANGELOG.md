@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Documentation
+
+- **Swept the docs for drift left by #658.** Deleting the two Python syncs invalidated
+  statements scattered well outside the files that changed: `README.md` still described the
+  test workflow as "stdlib-only unittest run over `tests/`" (it now runs node too, and
+  `web/src/__tests__` is CI-enforced for the first time) and referred to "the sync scripts"
+  falling back to `OURA_ACCESS_TOKEN`; `docs/ARCHITECTURE.md` justified `sync_log`'s missing
+  RLS policy partly on "Python scripts" that no longer exist; `docs/fitness-tracker-setup.md`
+  described the Google Health sync as having "replaced `sync-fitbit.py` and `sync-googlefit.py`",
+  naming a script that is itself now gone. Historical references inside CHANGELOG entries and
+  the deliberate "why this is a thin client" comments in `run-syncs.py` / `workout-dedupe.ts`
+  are left intact — those are the record of why, not stale instructions.
+
 ### Fixed
 
 - **`run-syncs.py`: wrong app URL fallback, and a summary that printed one useless line.**
