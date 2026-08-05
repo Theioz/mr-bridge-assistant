@@ -67,7 +67,10 @@ def main():
         print("[log-habit] No valid habits to log.", file=sys.stderr)
         sys.exit(1)
 
-    resp = client.table("habits").upsert(rows, on_conflict="habit_id,date").execute()
+    # on_conflict must name the FULL unique constraint (user_id, habit_id, date). With just
+    # "habit_id,date" Postgres raises 42P10 "there is no unique or exclusion constraint
+    # matching the ON CONFLICT specification" — this path could never have succeeded.
+    resp = client.table("habits").upsert(rows, on_conflict="user_id,habit_id,date").execute()
     written = len(resp.data)
     log_sync(client, "log_habit", "ok", written)
     logged = [r["habit_id"] for r in resp.data]

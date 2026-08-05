@@ -114,6 +114,13 @@ EXERCISE_PATTERN_MAP: dict[str, list[str]] = {
 REQUIRED_PATTERNS = ["squat", "hinge", "push_horizontal", "push_vertical",
                      "pull_horizontal", "pull_vertical", "core"]
 
+# Grease-the-groove movements are DELIBERATELY ABSENT from this map, and must stay absent.
+# GtG is submaximal, sub-failure and daily BY DESIGN — that is the entire protocol — so scoring it
+# on the 24h recovery rule below is a category error. It is the same mistake PR #650 fixed in
+# fetch_briefing_data.py, where GtG sessions were being graded against the 1-3 RIR lifting bands.
+# Adding "Pull-ups (grease-the-groove)" or "Chin-ups (grease-the-groove)" here would make every
+# GtG week fail recovery validation. Plain "Pull-Up"/"Chin-Up" ARE mapped, because those names mean
+# a real working set inside a lift.
 EXERCISE_MUSCLE_MAP: dict[str, list[str]] = {
     "DB Goblet Squat": ["quads", "glutes"], "Goblet Squat": ["quads", "glutes"],
     "DB Sumo Squat": ["glutes", "quads"], "DB Bulgarian Split Squat": ["quads", "glutes"],
@@ -194,6 +201,20 @@ def shape_plan(plan: dict) -> tuple[list[str], list[dict]]:
     and [{dayOfWeek, exercises: [{name, sets}]}] (recovery spacing). Keeping the
     conversion in one place is what stops `validate` and `build_correction_prompt`
     drifting apart — they disagreed before, and `validate` was the one that was wrong.
+
+    Coverage counts EVERY entry (a warmup movement still demonstrates a pattern is in
+    the week), but `day_plans` — which feeds the recovery and same-day-redundancy checks
+    — counts the WORKING BLOCK ONLY, via the same `_work_entries()` the superset check
+    uses. Both of those rules are about how the training is programmed, not about warmups:
+    the redundancy rule's own example is "DB Bent-Over Row immediately followed by DB
+    Single-Arm Row", and the recovery rule measures training volume per muscle.
+
+    2026-08-02: flattening warmups in made the RAMP protocol's Potentiate step
+    unrepresentable. That step is a ~50% ramp-up set of the day's FIRST LIFT, and it only
+    potentiates if it sits immediately before the working sets — which the redundancy
+    check then read as two same-pattern exercises back-to-back and rejected. Week 2 passed
+    only because its warmup happened to end on a Band Pull-Apart. A correct warmup should
+    not be a validation error.
     """
     all_exercises: list[str] = []
     day_plans: list[dict] = []
@@ -209,8 +230,7 @@ def shape_plan(plan: dict) -> tuple[list[str], list[dict]]:
             "date": day["date"],
             "exercises": [
                 {"name": e["exercise"], "sets": e.get("sets", 1)}
-                for e in entries
-                if e.get("exercise")
+                for e in _work_entries(day)
             ],
         })
 
