@@ -119,6 +119,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **The app-side Google Health sync had the same duplicate bug — and it is the one that runs
+  nightly.** The previous entry fixed `scripts/sync-google-health.py`, but that path is only
+  reached by a manual `run-syncs.py`. The daily 14:00 cron calls `/api/cron/sync`, which runs
+  `syncGoogleHealth()` in `web/src/lib/sync/google-health.ts` — a parallel TypeScript
+  implementation carrying **both** identical defects. Its overlap check was a `.filter()` over
+  `existingList`, which structurally cannot accumulate: `dateIndex` was built once from stored
+  rows and never saw a row accepted earlier in the same pass, so same-batch duplicates all
+  survived. Its `WORKOUT_SOURCES` likewise omitted `"manual"`. Rewritten as an accumulating loop
+  that pushes each accepted row into `dateIndex`, and reads now use a matching `DEDUPE_SOURCES`.
+  Both files now carry cross-references, because the real hazard here is that a fix to one reads
+  as a fix to the system. **Anyone touching dedup must change both.**
+
 - **Google Health sync stored the same workout two and three times.** `filter_new_workouts()`
   in `scripts/sync-google-health.py` has a ±5 min same-date overlap check, and it worked —
   against rows already in the database. But `by_date` was built once from `existing` and never
