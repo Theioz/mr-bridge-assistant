@@ -49,6 +49,13 @@ HEALTH_API_BASE = "https://health.googleapis.com/v4"
 WORKOUT_SOURCES = ["google_health", "fitbit"]
 BODY_SOURCES = ["google_health", "fitbit_body", "google_fit"]
 
+# Rows the dedup must compare AGAINST — a superset of the ones this sync writes.
+# "manual" belongs here because a session logged by hand is the same real-world workout
+# the watch also reports; leaving it out meant a manual row could neither suppress an
+# auto-import nor be suppressed by one. One 2026-07-31 basketball game landed three
+# times that way (manual 454 kcal + two auto-imports) and was counted at 1677 kcal.
+DEDUPE_SOURCES = WORKOUT_SOURCES + ["manual"]
+
 # Fitbit returned display strings ("Walking"); Google returns an exerciseType enum
 # across 182 values. Alias the ones that had canonical names, title-case the rest.
 ACTIVITY_ALIASES = {
@@ -321,10 +328,17 @@ def filter_new_workouts(client, user_id: str, rows: list[dict]) -> list[dict]:
     Unlike the Fitbit sync, an overlapping row is never replaced: the existing row is
     the same workout already stored under the old source label, so swapping it would
     churn history for no gain.
+
+    The overlap window is checked against previously-stored rows AND against rows already
+    accepted earlier in this same batch. Google Health aggregates several writers (watch,
+    phone, connected apps) and commonly emits the same activity twice — once from the
+    writer holding the HR sensor, with `hr_zones` populated, and once as a coarse copy with
+    `hr_zones` null and a wild calorie figure. Both arrive in one response, so neither is in
+    the database yet when the other is judged.
     """
     existing = (client.table("workout_sessions")
                 .select("id,date,start_time,activity,avg_hr,duration_mins,source")
-                .eq("user_id", user_id).in_("source", WORKOUT_SOURCES).execute().data)
+                .eq("user_id", user_id).in_("source", DEDUPE_SOURCES).execute().data)
 
     existing_keys = {f"{r['date']}|{r['start_time']}|{r['activity']}" for r in existing}
     candidates = [r for r in rows if r["_key"] not in existing_keys]
@@ -347,6 +361,15 @@ def filter_new_workouts(client, user_id: str, rows: list[dict]) -> list[dict]:
                 break
         if not overlapped:
             new_rows.append(row)
+            # An accepted row joins the comparison set. Without this, `by_date` holds only
+            # what was already in the database, so two duplicates arriving in the same
+            # batch are each measured against a database containing neither — and both
+            # pass. That is exactly how 2026-07-31 stored Basketball at 13:12:00 and
+            # 13:13:05 (65 s apart) and two Walks 3 min apart, both pairs well inside
+            # OVERLAP_MINS. The next run does suppress further copies, since by then the
+            # pair is in `existing` — which is why duplicates sit as stable pairs rather
+            # than multiplying, and why this went unnoticed.
+            by_date.setdefault(row["date"], []).append(row)
     return new_rows
 
 
