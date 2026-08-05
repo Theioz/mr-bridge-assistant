@@ -121,7 +121,7 @@ Skip any integrations you don't use. The app works with none, one, or all of the
 **Oura Ring:**
 1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) and create a Personal Access Token.
 2. In your running app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
-3. *(Migration fallback)* If you set `OURA_ACCESS_TOKEN` in `.env` before connecting via Settings, the sync scripts will fall back to it until you connect via UI.
+3. *(Migration fallback)* If you set `OURA_ACCESS_TOKEN` in `.env` before connecting via Settings, the sync will fall back to it until you connect via UI.
 
 **Google Health** *(replaces Fitbit and Google Fit — see [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607))*:
 1. Enable the [Google Health API](https://console.cloud.google.com/apis/library/health.googleapis.com) on the **same** Google Cloud project from Step 4.
@@ -573,7 +573,7 @@ mr-bridge-assistant/
 │       ├── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
 │       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck
 │       ├── smoke.yml                      # Playwright a11y + perf smokes
-│       └── python-tests.yml               # stdlib-only unittest run over tests/
+│       └── python-tests.yml               # "Unit tests": python (tests/) + node (web/src/__tests__)
 │
 ├── docs/
 │   ├── notifications-setup.md             # Android, macOS, Windows ntfy setup guide
@@ -598,6 +598,8 @@ mr-bridge-assistant/
 │
 ├── tests/                                 # Python unit tests (stdlib unittest, no deps)
 │   └── test_weekly_plan_supersets.py      # Superset-metadata validator
+│                                          # TS unit tests live in web/src/__tests__/ and
+│                                          # run in the same workflow (node --test, no deps)
 │
 └── voice/                                 # Jarvis mode (voice interface)
     ├── bridge_voice.py                    # Wake word → STT → Claude API → TTS
