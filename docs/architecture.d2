@@ -4,15 +4,17 @@
 
 direction: right
 
-data_sources: "Data Sources\nOura · Fitbit · Google Fit"
+data_sources: "Data Sources\nOura · Google Health"
 
-sync: "Sync Layer\nTypeScript modules (web/src/lib/sync)\nNightly cron · scripts/run-syncs.py"
+sync: "Sync Layer\nTypeScript modules (web/src/lib/sync)\nCron 14:00 UTC (6am PT) · scripts/run-syncs.py"
 
-supabase: "Supabase Postgres\n18 tables · RLS enforced"
+supabase: "Supabase Postgres\n31 tables · RLS enforced"
 
-nextjs: "Next.js · Vercel\n7 API routes · 10 pages"
+nextjs: "Next.js · self-hosted (compute-core)\n52 route handlers · 23 pages"
 
-external: "External APIs\nAnthropic · Google Calendar · Gmail\nOpen-Meteo · Polygon.io · ntfy.sh"
+external: "External APIs\nGoogle Calendar · Gmail · USDA FoodData\nOpen-Meteo · Polygon · ESPN · TMDB · ntfy.sh"
+
+ollama: "Ollama (local, compute-core)\nqwen2.5vl:7b · food identification"
 
 user: "Browser / Mobile"
 
@@ -21,7 +23,8 @@ sync -> supabase: write / upsert
 supabase -> nextjs: query / SSR
 nextjs -> supabase: write
 nextjs -> user
-external -> nextjs: OAuth · stream · vision · EOD
+external -> nextjs: OAuth · macros · media · EOD
+ollama -> nextjs: vision (qty + unit only)
 
 data_sources.style.stroke: "#10B981"
 data_sources.style.font-color: "#10B981"
@@ -37,6 +40,9 @@ nextjs.style.stroke: "#38BDF8"
 
 external.style.stroke: "#475569"
 external.style.font-color: "#94A3B8"
+
+ollama.style.stroke: "#A78BFA"
+ollama.style.font-color: "#C4B5FD"
 
 user.style.fill: "#F8FAFC"
 user.style.stroke: "#CBD5E1"
