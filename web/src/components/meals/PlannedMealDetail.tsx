@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { KitchenPlannedMeal } from "./KitchenPanel";
-import { addWeightConversions } from "@/lib/units";
+import { IngredientList } from "./IngredientList";
 
 /**
  * The click-in view for a planned meal: what's in it, and what it costs you.
@@ -64,7 +64,7 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
         {recipe.ingredients ? (
           <div style={{ marginBottom: "var(--space-3)" }}>
             <p style={sectionLabelStyle}>Ingredients</p>
-            <p style={ingredientsStyle}>{addWeightConversions(recipe.ingredients)}</p>
+            <IngredientList text={recipe.ingredients} />
           </div>
         ) : (
           <p style={mutedStyle}>No ingredients recorded for this recipe yet.</p>

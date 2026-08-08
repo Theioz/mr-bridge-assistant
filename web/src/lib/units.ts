@@ -32,8 +32,8 @@ function round(n: number, decimals: number): number {
 // ── Ingredient-text weight conversions ──────────────────────────────────────────
 // Recipes are written in grams (USDA); the fridge is stocked in lb/oz. Showing a gram amount
 // without its imperial equivalent forces a mental conversion that is easy to get wrong ("we have
-// 1.25 lb of chicken but the recipe says 200 g"). `addWeightConversions` annotates each weight in
-// a free-text ingredient list with its other units, leaving the stored text unchanged.
+// 1.25 lb of chicken but the recipe says 200 g"). `annotateLine` annotates each weight with its
+// other units, leaving the stored text unchanged. Reached via `parseIngredients` below.
 
 const GRAMS_PER: Record<string, number> = {
   g: 1,
@@ -75,7 +75,65 @@ function annotateLine(line: string): string {
   return `${line.slice(0, end)} (${alts.join(" · ")})${line.slice(end)}`;
 }
 
-/** Annotate each line of a free-text ingredient list with imperial/metric equivalents. */
-export function addWeightConversions(text: string): string {
-  return text.split("\n").map(annotateLine).join("\n");
+// ── Rice: grams ↔ go ────────────────────────────────────────────────────────────
+// Jason scoops rice in *go* (合), the Japanese rice cup — 1 go = 150 g of DRY rice. Recipes are
+// written in grams because USDA is, and a cooked-weight line hides the number he actually measures
+// at the bag. Annotating at render time rather than in the stored text means every rice line gets
+// it, including rows written by a future script that forgets the convention.
+const GRAMS_PER_GO = 150;
+
+// Cooked yield differs by grain, so a cooked line is only convertible when it says which it is.
+const COOKED_YIELD: Record<string, number> = { white: 3.0, brown: 2.75 };
+
+const RICE_DRY = /(\d+(?:\.\d+)?)\s*g\s+dry\s+(?:\w+\s+)?rice\b/i;
+const RICE_COOKED = /(\d+(?:\.\d+)?)\s*g\s+cooked\s+(white|brown)\s+rice\b/i;
+
+function annotateRice(line: string): string {
+  if (/\bgo\b/i.test(line)) return line; // already carries its go — don't double-annotate
+
+  const dry = line.match(RICE_DRY);
+  if (dry) return `${line} (${round(parseFloat(dry[1]) / GRAMS_PER_GO, 2)} go)`;
+
+  const cooked = line.match(RICE_COOKED);
+  if (cooked) {
+    // Derive the go from the ROUNDED dry weight, not the raw one: both numbers are shown side by
+    // side, and a reader who divides the printed grams by 150 has to land on the printed go.
+    const dryGrams = Math.round(parseFloat(cooked[1]) / COOKED_YIELD[cooked[2].toLowerCase()]);
+    return `${line} (~${dryGrams} g dry = ${round(dryGrams / GRAMS_PER_GO, 2)} go)`;
+  }
+  return line;
+}
+
+// ── Ingredient lists ────────────────────────────────────────────────────────────
+// `recipes.ingredients` is a free-text column holding one ingredient per line. A batch script in
+// August 2026 wrote eight rows as a JSON-encoded array *into* that text column, so the UI rendered
+// the literal `["Chicken breast - 255 g", ...]` — the page was faithfully printing what was stored.
+// The rows were repaired, but parsing the array back out here means the next bad write degrades to
+// a correct list instead of leaking syntax at Jason.
+
+/** Split a stored ingredient list into display lines, annotated with unit and go conversions. */
+export function parseIngredients(text: string | null | undefined): string[] {
+  const trimmed = (text ?? "").trim();
+  if (!trimmed) return [];
+
+  let lines: string[];
+  if (trimmed.startsWith("[")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      parsed = null; // not valid JSON after all — fall back to line splitting
+    }
+    lines =
+      Array.isArray(parsed) && parsed.every((x) => typeof x === "string")
+        ? (parsed as string[])
+        : trimmed.split("\n");
+  } else {
+    lines = trimmed.split("\n");
+  }
+
+  // Rice first: `annotateLine` splices "(2.8 oz)" in between the number and the word that follows
+  // it, which would break the "<n> g dry rice" match. Going rice-first also parks the go at the end
+  // of the line, where it reads as a note rather than interrupting the amount.
+  return lines.map((l) => annotateLine(annotateRice(l.trim()))).filter(Boolean);
 }
