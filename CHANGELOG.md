@@ -7,6 +7,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recipe ingredients rendered as a raw JSON array, and rice lost its `go`.** Both were visible on
+  the same screen. `recipes.ingredients` is a free-text column holding one ingredient per line, and
+  both render sites (`PlannedMealDetail`, the `MealsClient` recipe browser) dropped it into a single
+  `<p>` with `white-space: pre-line`. That held only while every writer wrote clean newline text —
+  when a batch script JSON-encoded the array _into_ the text column, the page printed
+  `["Chicken breast, boneless skinless - 255 g", ...]` verbatim. Eight recipes were affected,
+  including four meals planned for the current week.
+
+  Ingredients now render through a shared `IngredientList` component backed by `parseIngredients`
+  (`web/src/lib/units.ts`), which recovers a JSON-array payload back into lines before display, so
+  the next bad write degrades to a correct list instead of leaking storage syntax. It emits a real
+  `<ul>` rather than a text blob — an ingredient list is a list, and screen readers announce the
+  item count. The two call sites now share one path and cannot drift apart again.
+
+  `parseIngredients` also annotates rice with **go** (合, the Japanese rice cup; 1 go = 150 g dry),
+  which is the unit Jason actually measures at the bag. The convention had been applied by hand to
+  the stored text and had drifted — 12 recipes carried it, 8 did not. Moving it to render time
+  covers every row including future ones. Cooked-weight lines are converted through per-grain yields
+  (white ~3.0×, brown ~2.75×) and are left alone when the line does not say which grain it is,
+  rather than guessing. Lines that already carry a hand-written go keep it and are not recomputed.
+
+  Rice annotation runs _before_ the imperial conversion: `annotateLine` splices `(2.8 oz)` in
+  between the number and the word after it, which would otherwise break the `<n> g dry rice` match.
+  The go is derived from the **rounded** dry weight so that the two figures shown side by side agree
+  with each other. Both behaviours are pinned by tests. `addWeightConversions` had no callers left
+  once the components moved to `parseIngredients` and was removed.
+
+  Ten tests in `web/src/__tests__/ingredients.test.ts`.
+
 ### Changed
 
 - **Journal is now a single free-write surface with contextual suggestions.** The editor had two
