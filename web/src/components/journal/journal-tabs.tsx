@@ -4,6 +4,7 @@ import { useState } from "react";
 import JournalEditor from "./journal-editor";
 import JournalHistory from "./journal-history";
 import type { JournalEntry, JournalResponses } from "@/lib/types";
+import type { JournalPrompt } from "@/lib/journal/prompts";
 
 type OuterTab = "write" | "history";
 
@@ -12,6 +13,7 @@ interface Props {
   initialResponses: JournalResponses;
   initialFreeWrite: string;
   allEntries: JournalEntry[];
+  prompts: JournalPrompt[];
   saveAction: (
     date: string,
     responses: JournalResponses,
@@ -24,6 +26,7 @@ export default function JournalTabs({
   initialResponses,
   initialFreeWrite,
   allEntries,
+  prompts,
   saveAction,
 }: Props) {
   const [tab, setTab] = useState<OuterTab>("write");
@@ -138,6 +141,8 @@ export default function JournalTabs({
             date={editorDate}
             initialResponses={editorResponses}
             initialFreeWrite={editorFreeWrite}
+            /* Prompts describe today; they'd be misleading on a back-dated entry. */
+            prompts={isEditingPast ? [] : prompts}
             saveAction={saveAction}
             onSubmit={handleSubmit}
           />

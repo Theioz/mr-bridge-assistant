@@ -7,6 +7,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- **Journal is now a single free-write surface with contextual suggestions.** The editor had two
+  inner tabs — "Reflect" (five fixed questions, each its own textarea) and "Free Write" — and
+  defaulted to Reflect on every open, with a `0 / 5` progress-dot row that filled in as questions
+  were answered. That framed journalling as a form with a completion state, and the entries show
+  what it produced: five of the six entries on record answer the prompts dutifully and briefly
+  ("Honestly not too sure", "Don't really feel gratitude for anything today"), while the single
+  entry that used Free Write is the only one with anything real in it. Removed the tabs, the five
+  `PROMPTS` fields and the progress dots; the page is now one textarea.
+
+  In their place, `web/src/lib/journal/prompts.ts` derives up to three **suggestions** from the day's
+  own data — alcohol habit rows, Oura recovery, strength sessions, habit streaks, weight swings,
+  intake vs. targets, and time since the last entry — falling back to a date-rotated evergreen pool
+  when nothing notable fires. Suggestions are tappable (they drop in as a line to write under),
+  dismissible, and never required. `buildJournalPrompts` is a pure function taking `today` on its
+  context object, so it can be exercised directly against real rows.
+
+  Deterministic rules, no model — same posture as the workout planner and the nutrition pipeline.
+  The `responses` column and its history rendering are retained so the six existing entries still
+  display, and the editor passes `initialResponses` back through the save untouched, so editing a
+  pre-2026-08 entry doesn't erase the answers it was written against. Prompts are suppressed when
+  back-dating an entry, since they describe today.
+
+### Fixed
+
+- **Grease-the-groove sessions were being classified as lifts.** Session classification tested that
+  *every* exercise name contained `grease-the-groove`, but a GtG session also carries accessory
+  movements with no such suffix (`Negative Pull-Up`, `Dead Hang`) — so real GtG sessions on 8/04,
+  8/05, 8/06 and 8/07 all failed the test and read as lifting sessions. GtG is walk work and never
+  appears inside a lift, so the correct test is *any*. Caught by running the new prompt engine
+  against live rows, where it produced a "you trained today" suggestion on a pull-up-only day. Same
+  class of bug as the GtG mis-scoring fixed in #650.
 ### Documentation
 
 - **`docs/architecture.svg` regenerated.** It is generated from `docs/architecture.d2`, which
