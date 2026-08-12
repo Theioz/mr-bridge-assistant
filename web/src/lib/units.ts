@@ -1,3 +1,5 @@
+import type { RecipeIngredient } from "./types";
+
 export type WeightUnit = "kg" | "lb";
 
 const LB_PER_KG = 2.2046226218;
@@ -111,8 +113,14 @@ function annotateRice(line: string): string {
 // The rows were repaired, but parsing the array back out here means the next bad write degrades to
 // a correct list instead of leaking syntax at Jason.
 
-/** Split a stored ingredient list into display lines, annotated with unit and go conversions. */
-export function parseIngredients(text: string | null | undefined): string[] {
+/**
+ * Split a stored ingredient list into raw lines — no annotation.
+ *
+ * Separate from `parseIngredients` because the structured-recipe editor seeds its rows from this
+ * and must see the text the author actually wrote. Annotated text would feed "200 g (7.1 oz) beef"
+ * back into the amount lexer, which then has two numbers to choose between.
+ */
+export function splitIngredientLines(text: string | null | undefined): string[] {
   const trimmed = (text ?? "").trim();
   if (!trimmed) return [];
 
@@ -131,9 +139,61 @@ export function parseIngredients(text: string | null | undefined): string[] {
   } else {
     lines = trimmed.split("\n");
   }
+  return lines.map((l) => l.trim()).filter(Boolean);
+}
 
+/** Split a stored ingredient list into display lines, annotated with unit and go conversions. */
+export function parseIngredients(text: string | null | undefined): string[] {
   // Rice first: `annotateLine` splices "(2.8 oz)" in between the number and the word that follows
   // it, which would break the "<n> g dry rice" match. Going rice-first also parks the go at the end
   // of the line, where it reads as a note rather than interrupting the amount.
-  return lines.map((l) => annotateLine(annotateRice(l.trim()))).filter(Boolean);
+  return splitIngredientLines(text).map((l) => annotateLine(annotateRice(l)));
+}
+
+// ── Structured ingredients ──────────────────────────────────────────────────────
+// `ingredients_json` stores the amount as data instead of prose. Rendering still goes through the
+// same annotators, so a structured row picks up the imperial and rice-go conversions for free and
+// the two storage shapes cannot drift into looking different on screen.
+
+/** Trim trailing zeros so 150 renders "150", not "150.00", while 1.5 survives. */
+function amountText(quantity: number, unit: string | null | undefined): string {
+  const n = round(quantity, 2);
+  return unit ? `${n} ${unit}` : `${n}`;
+}
+
+/**
+ * One structured ingredient as a display line: "454 g (16 oz) ground beef, 93/7, browned".
+ *
+ * Quantity and unit lead, because `annotateLine` only matches a weight at the START of a line —
+ * the same reason the legacy text convention put the amount first. `optional` and `note` are
+ * appended AFTER annotation: a note is free text and could contain a bare "go", which would make
+ * `annotateRice` treat the line as already carrying its go and skip the conversion.
+ */
+export function formatIngredient(ing: RecipeIngredient): string {
+  const head =
+    ing.quantity == null ? ing.item : `${amountText(ing.quantity, ing.unit)} ${ing.item}`;
+  const annotated = annotateLine(annotateRice(ing.prep ? `${head}, ${ing.prep}` : head));
+
+  let line = annotated;
+  if (ing.optional) line += " (optional)";
+  if (ing.note) line += ` — ${ing.note}`;
+  return line;
+}
+
+/**
+ * Ingredients bucketed by `group`, preserving first-seen order for both the groups and the rows
+ * inside them. Ungrouped rows collect under a null key, which the renderer prints without a
+ * heading — so a flat list stays flat rather than growing a spurious "Other" section.
+ */
+export function groupIngredients(
+  items: RecipeIngredient[],
+): { group: string | null; items: RecipeIngredient[] }[] {
+  const out: { group: string | null; items: RecipeIngredient[] }[] = [];
+  for (const ing of items) {
+    const key = ing.group?.trim() || null;
+    const bucket = out.find((b) => b.group === key);
+    if (bucket) bucket.items.push(ing);
+    else out.push({ group: key, items: [ing] });
+  }
+  return out;
 }

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { resolveRecipeMacros } from "@/lib/nutrition/recipe-macros";
+import {
+  RecipeShapeError,
+  parseIngredientRows,
+  parseStepRows,
+} from "@/lib/nutrition/recipe-structured";
 
 /**
  * Create a recipe — and, when asked, resolve its macros and adopt a planned meal in one call.
@@ -27,6 +32,8 @@ export async function POST(req: NextRequest) {
     name?: string;
     ingredients?: string;
     instructions?: string;
+    ingredients_json?: unknown;
+    steps_json?: unknown;
     tags?: string[];
     resolve?: boolean;
     link_plan_id?: string;
@@ -41,6 +48,20 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
   const ingredients = body.ingredients?.trim() || null;
 
+  // Validated before the insert so a malformed payload is a 400 rather than a stored row that
+  // silently drops ingredients out of a macro total later.
+  let ingredientsJson, stepsJson;
+  try {
+    ingredientsJson = parseIngredientRows(body.ingredients_json);
+    stepsJson = parseStepRows(body.steps_json);
+  } catch (e) {
+    if (e instanceof RecipeShapeError)
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    throw e;
+  }
+  // Structured counts as having something to resolve, same as ingredient text.
+  const resolvable = !!ingredientsJson?.length || !!ingredients;
+
   try {
     const db = createServiceClient();
     const { data: recipe, error } = await db
@@ -50,6 +71,8 @@ export async function POST(req: NextRequest) {
         name,
         ingredients,
         instructions: body.instructions?.trim() || null,
+        ingredients_json: ingredientsJson,
+        steps_json: stepsJson,
         tags: body.tags ?? null,
       })
       .select("id, name")
@@ -60,7 +83,7 @@ export async function POST(req: NextRequest) {
     // the recipe intact (text saved, macros null) rather than losing the user's input.
     let macrosResolved = false;
     let macrosError: string | null = null;
-    if (body.resolve && ingredients) {
+    if (body.resolve && resolvable) {
       try {
         await resolveRecipeMacros(db, user.id, recipe.id);
         macrosResolved = true;

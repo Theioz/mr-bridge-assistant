@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { KitchenPlannedMeal } from "./KitchenPanel";
 import { IngredientList } from "./IngredientList";
+import { StepList } from "./StepList";
+import { RecipeEditor } from "./RecipeEditor";
 
 /**
  * The click-in view for a planned meal: what's in it, and what it costs you.
@@ -52,6 +54,7 @@ function MacroLine({ m, label, portions }: { m: Macros; label: string; portions?
 
 export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const recipe = meal.recipes;
   const cook = meal.cooks;
 
@@ -59,20 +62,34 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
   if (recipe) {
     const hasMacros = !!recipe.macros_computed_at;
     const typ = recipe.typical_portions ?? null;
+    if (editing) {
+      return (
+        <RecipeEditor
+          recipe={recipe}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            // Macros are re-resolved server-side on save, so the numbers on screen are stale
+            // until the server components refetch.
+            router.refresh();
+          }}
+        />
+      );
+    }
     return (
       <div style={detailBoxStyle}>
-        {recipe.ingredients ? (
+        {recipe.ingredients_json?.length || recipe.ingredients ? (
           <div style={{ marginBottom: "var(--space-3)" }}>
             <p style={sectionLabelStyle}>Ingredients</p>
-            <IngredientList text={recipe.ingredients} />
+            <IngredientList items={recipe.ingredients_json} text={recipe.ingredients} />
           </div>
         ) : (
           <p style={mutedStyle}>No ingredients recorded for this recipe yet.</p>
         )}
-        {recipe.instructions && (
+        {(recipe.steps_json?.length || recipe.instructions) && (
           <div style={{ marginBottom: hasMacros ? "var(--space-3)" : 0 }}>
             <p style={sectionLabelStyle}>How to make it</p>
-            <p style={ingredientsStyle}>{recipe.instructions}</p>
+            <StepList steps={recipe.steps_json} text={recipe.instructions} />
           </div>
         )}
         {hasMacros ? (
@@ -88,6 +105,9 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
         ) : (
           <p style={mutedStyle}>Macros not resolved yet for this recipe.</p>
         )}
+        <button type="button" onClick={() => setEditing(true)} style={editLinkStyle}>
+          {recipe.ingredients_json?.length ? "Edit recipe" : "Edit — add amounts"}
+        </button>
       </div>
     );
   }
@@ -284,3 +304,15 @@ function saveButtonStyle(pending: boolean): React.CSSProperties {
     opacity: pending ? 0.5 : 1,
   };
 }
+
+const editLinkStyle: React.CSSProperties = {
+  display: "inline-block",
+  marginTop: "var(--space-3)",
+  fontSize: "var(--t-meta)",
+  color: "var(--color-text-muted)",
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  textDecoration: "underline",
+  cursor: "pointer",
+};

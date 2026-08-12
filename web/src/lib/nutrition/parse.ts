@@ -33,6 +33,20 @@ export type ParsedFood = {
    * not the model's recollection of it.
    */
   source?: string;
+  /**
+   * Set when `qty`/`unit` came from structured data (`recipes.ingredients_json`) rather than from
+   * prose. The whole lexer exists to recover a number the model may have altered; when the number
+   * was never routed through a model there is nothing to recover, so the lexer is skipped and the
+   * amount counts as quantified rather than guessed.
+   */
+  structured?: boolean;
+  /**
+   * A pinned USDA FoodData Central id. Present only on structured ingredients. Skips BOTH the
+   * search and the model's selection step, which is what makes re-resolution deterministic —
+   * USDA's top hit for "chicken breast, cooked" is breaded microwaved tenders (252 kcal vs ~165),
+   * so leaving that choice to a search means the same recipe can drift month to month.
+   */
+  fdcId?: number | null;
 };
 
 function ollamaUrl(): string {
