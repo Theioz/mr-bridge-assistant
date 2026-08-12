@@ -1,5 +1,49 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { estimateFromText } from "./estimate";
+import { estimateFromStructured, estimateFromText } from "./estimate";
+import type { ParsedFood } from "./parse";
+import type { RecipeIngredient } from "../types";
+
+/**
+ * Narrow whatever came back from the jsonb column into ingredient rows.
+ *
+ * The column is checked to be a JSON array at the database level but nothing constrains its
+ * ELEMENTS, and this value feeds the macro pipeline — so a malformed row must be dropped here
+ * rather than reaching USDA as `undefined`. Anything without a usable `item` string is discarded.
+ */
+function asIngredientRows(raw: unknown): RecipeIngredient[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((r): r is RecipeIngredient => {
+    if (!r || typeof r !== "object") return false;
+    const item = (r as RecipeIngredient).item;
+    return typeof item === "string" && item.trim().length > 0;
+  });
+}
+
+/**
+ * Structured rows -> the shape estimateOne consumes.
+ *
+ * Rows with no quantity are dropped, not guessed at: "salt, to taste" is an author stating there
+ * is no amount, which is different from prose that merely failed to mention one. Feeding it
+ * forward would invent a serving and drag the confidence down for an ingredient that genuinely
+ * contributes nothing.
+ *
+ * `prep` is folded into the query because it changes which USDA record is correct — "cooked" vs
+ * "raw" chicken is a ~40% difference in calories per 100 g, and a pinned fdc_id is the only other
+ * way to express that.
+ */
+function toParsedFoods(rows: RecipeIngredient[]): ParsedFood[] {
+  return rows
+    .filter((r) => typeof r.quantity === "number" && Number.isFinite(r.quantity) && r.quantity > 0)
+    .map((r) => ({
+      query: r.prep ? `${r.item}, ${r.prep}` : r.item,
+      qty: r.quantity as number,
+      unit: r.unit?.trim() || "g",
+      // The audit trail should read like the plate, not like a database row.
+      source: `${r.quantity} ${r.unit ?? ""} ${r.item}`.replace(/\s+/g, " ").trim(),
+      structured: true,
+      fdcId: r.fdc_id ?? null,
+    }));
+}
 
 /**
  * Resolve a recipe's ingredient list into measured macros.
@@ -78,7 +122,7 @@ export async function resolveRecipeMacros(
 ): Promise<RecipeMacros | null> {
   const { data: recipe, error } = await db
     .from("recipes")
-    .select("id, name, ingredients, typical_portions")
+    .select("id, name, ingredients, ingredients_json, typical_portions")
     .eq("id", recipeId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -86,16 +130,27 @@ export async function resolveRecipeMacros(
   if (error) throw new Error(`recipe load failed: ${error.message}`);
   if (!recipe) throw new Error("Recipe not found");
 
+  const structured = asIngredientRows(recipe.ingredients_json);
   const ingredients = (recipe.ingredients as string | null)?.trim();
-  if (!ingredients) return null;
+  if (!structured.length && !ingredients) return null;
 
-  // The recipe NAME is passed as the label, not as food to parse — naming the dish helps
-  // the identifier disambiguate ("Greek Salmon" -> salmon, not a generic fish), while the
-  // ingredient list remains the only thing quantities are read from.
-  // "recipe" mode, NOT the meal prompt. A recipe's ingredients are raw and dry; the meal
-  // prompt's examples all say "cooked", and fed a recipe it rewrote "2 cups dry brown rice"
-  // to cooked rice — ~90g of carbs instead of ~280g, reported as HIGH confidence.
-  const estimate = await estimateFromText(ingredients, recipe.name as string, "recipe");
+  // STRUCTURED FIRST — and it is not merely a nicer input format.
+  //
+  // The prose path spends a model call recovering {food, amount} pairs out of a sentence, then
+  // re-lexes every number back out of the source fragment because the model alters the ones it is
+  // asked to repeat (parse.ts: a large egg read as 105 g against a real ~50 g). ingredients_json
+  // already holds those pairs, so none of that machinery runs: no Ollama, no lexer, no rounding.
+  // With fdc_id pinned, USDA search and the model's record selection are skipped too, which is
+  // what makes a re-resolve next month return the same numbers as today.
+  const estimate = structured.length
+    ? await estimateFromStructured(toParsedFoods(structured), recipe.name as string)
+    : // The recipe NAME is passed as the label, not as food to parse — naming the dish helps
+      // the identifier disambiguate ("Greek Salmon" -> salmon, not a generic fish), while the
+      // ingredient list remains the only thing quantities are read from.
+      // "recipe" mode, NOT the meal prompt. A recipe's ingredients are raw and dry; the meal
+      // prompt's examples all say "cooked", and fed a recipe it rewrote "2 cups dry brown rice"
+      // to cooked rice — ~90g of carbs instead of ~280g, reported as HIGH confidence.
+      await estimateFromText(ingredients as string, recipe.name as string, "recipe");
 
   const total: RecipeMacroTotals = {
     calories: Math.round(estimate.totals.calories),
@@ -134,6 +189,23 @@ export async function resolveRecipeMacros(
   const incomplete = unquantified.length > 0 || estimate.unmatched.length > 0;
   if (incomplete) total.confidence = "low";
 
+  // DELIBERATELY AMOUNT-LESS ROWS ARE NOT "UNQUANTIFIED", and conflating the two would be a
+  // regression in both directions.
+  //
+  //   unquantified — an amount was needed, none was found, so one was INVENTED. The total is soft
+  //                  and confidence must drop.
+  //   amountless   — the author wrote `quantity: null`. "Salt, to taste" has no mass to add and
+  //                  contributes nothing; excluding it leaves the total exactly right.
+  //
+  // Capping confidence on the second would make every recipe containing salt read "low" and train
+  // Jason to ignore the badge. Dropping them without a trace would hide a genuinely forgotten
+  // amount. So: persisted for audit, no effect on confidence.
+  const amountless = structured
+    .filter(
+      (r) => typeof r.quantity !== "number" || !Number.isFinite(r.quantity) || r.quantity <= 0,
+    )
+    .map((r) => (r.prep ? `${r.item}, ${r.prep}` : r.item));
+
   const { error: writeErr } = await db
     .from("recipes")
     .update({
@@ -151,6 +223,11 @@ export async function resolveRecipeMacros(
         macro_notes: total.notes,
         macro_unmatched: estimate.unmatched,
         macro_unquantified: unquantified,
+        // Structured rows the author marked as having no amount. Empty on the prose path.
+        macro_amountless: amountless,
+        // Which path produced these numbers, so a re-resolve that changes a total can be
+        // attributed rather than guessed at.
+        macro_source: structured.length ? "structured" : "text",
       },
     })
     .eq("id", recipeId)

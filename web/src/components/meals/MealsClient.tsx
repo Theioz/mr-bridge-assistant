@@ -19,6 +19,7 @@ import { ChartFrame, TrendLine } from "@/components/charts/primitives";
 import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
 import { IngredientList } from "./IngredientList";
+import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 
 const FoodPhotoAnalyzer = dynamic(() => import("@/app/(protected)/meals/FoodPhotoAnalyzer"), {
   ssr: false,
@@ -51,6 +52,8 @@ export interface RecipeRow {
   tags: string[] | null;
   ingredients: string | null;
   instructions: string | null;
+  ingredients_json: RecipeIngredient[] | null;
+  steps_json: RecipeStep[] | null;
 }
 
 export interface MacroGoals {
@@ -1223,7 +1226,11 @@ function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                   >
                     {r.ingredients && (
                       <div style={{ marginBottom: "var(--space-3)" }}>
-                        <IngredientList text={r.ingredients} tone="muted" />
+                        <IngredientList
+                          items={r.ingredients_json}
+                          text={r.ingredients}
+                          tone="muted"
+                        />
                       </div>
                     )}
 

@@ -70,18 +70,6 @@ function isNutritionallyEmpty(m: {
 }
 
 async function estimateOne(food: ParsedFood, context?: string): Promise<EstimatedItem | null> {
-  const searched = await searchFoods(food.query, 5);
-
-  // Drop candidates that are not plausibly the food we asked for. USDA's search sometimes
-  // returns nothing relevant, and the model then picks the least-bad of a bad set — "salt"
-  // became "Syrups, table blends, pancake", which puts 20g of SYRUP into a zero-calorie
-  // ingredient. No prompt fixes that: the right answer was never in the list.
-  //
-  // Matching NOTHING is a better outcome than matching syrup. Salt genuinely has no macros;
-  // a bogus match invents some. The caller reports what went unmatched.
-  const candidates = searched.filter((c) => isPlausibleMatch(food.query, c.description));
-  if (candidates.length === 0) return null;
-
   // THE QUANTITY COMES FROM THE TEXT, NOT THE MODEL.
   //
   // The model is asked to echo the fragment it read (`source`) and we lex the number out of
@@ -93,10 +81,51 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   // When the source states nothing ("Green beans"), the model's qty/unit is an invention.
   // We still estimate — a rough total beats no total — but the item is flagged unquantified
   // and the confidence below is capped accordingly.
-  const lexed = food.source ? lexQuantity(food.source) : null;
+  //
+  // A STRUCTURED ingredient never went through the model at all: its qty/unit were read
+  // straight out of `recipes.ingredients_json`. There is no prose to lex and nothing to
+  // second-guess, so it is quantified by construction.
+  const lexed = !food.structured && food.source ? lexQuantity(food.source) : null;
   const qty = lexed ? lexed.qty : food.qty;
   const unit = lexed ? lexed.unit : food.unit;
-  const quantified = lexed !== null;
+  const quantified = lexed !== null || food.structured === true;
+
+  // Pinned record: skip the search AND the model's pick. Deliberately before searchFoods so a
+  // pinned ingredient costs one USDA fetch and zero model calls.
+  if (food.fdcId != null) {
+    const pinned = await getFood(food.fdcId).catch(() => null);
+    if (pinned && !isNutritionallyEmpty(pinned.per100g)) {
+      const { grams, exact, basis } = gramsFor(qty, unit, pinned.portions);
+      return {
+        input: (food.source ?? `${qty} ${unit} ${food.query}`).trim(),
+        matched: pinned.description,
+        fdcId: pinned.fdcId,
+        qty,
+        unit,
+        grams: Math.round(grams),
+        exactPortion: exact,
+        quantified,
+        basis: quantified
+          ? `${basis} — pinned fdcId`
+          : `${basis} — NO QUANTITY STATED, amount is a guess`,
+        macros: macrosForGrams(pinned.per100g, grams),
+      };
+    }
+    // A pinned id that 404s or carries no nutrition falls through to the normal search rather
+    // than failing the ingredient — a stale pin should degrade, not break the recipe.
+  }
+
+  const searched = await searchFoods(food.query, 5);
+
+  // Drop candidates that are not plausibly the food we asked for. USDA's search sometimes
+  // returns nothing relevant, and the model then picks the least-bad of a bad set — "salt"
+  // became "Syrups, table blends, pancake", which puts 20g of SYRUP into a zero-calorie
+  // ingredient. No prompt fixes that: the right answer was never in the list.
+  //
+  // Matching NOTHING is a better outcome than matching syrup. Salt genuinely has no macros;
+  // a bogus match invents some. The caller reports what went unmatched.
+  const candidates = searched.filter((c) => isPlausibleMatch(food.query, c.description));
+  if (candidates.length === 0) return null;
 
   // Never blind-trust candidates[0] — USDA's top hit for "chicken breast, cooked"
   // is breaded microwaved tenders (252 kcal vs ~165 for plain).
@@ -204,6 +233,34 @@ export async function estimateFromText(
     .filter((_, i) => settled[i] === null)
     .map((f) => f.source?.trim() || f.query);
   return assemble(items, label?.trim() || text.trim(), unmatched);
+}
+
+/**
+ * Structured ingredients — the model-free path.
+ *
+ * `estimateFromText` exists to recover {food, amount} pairs from prose, and everything downstream
+ * of it is damage control for a model that alters numbers (see parse.ts: a large egg read as 105 g
+ * against a real ~50 g). `recipes.ingredients_json` already holds those pairs as data, so this
+ * skips `parseFoodText` outright: no Ollama call, no lexer, no chance of a rounded amount.
+ *
+ * Rows with no quantity ("salt, to taste") are dropped rather than guessed at. In the prose path an
+ * amount-less ingredient still gets an invented serving and caps the confidence; here the author
+ * has explicitly said there is no amount, which is a statement, not an omission. Returning them as
+ * `unmatched` would also be wrong — they matched fine, they just have no mass. They are reported
+ * separately by the caller.
+ */
+export async function estimateFromStructured(
+  foods: ParsedFood[],
+  label: string,
+): Promise<MealEstimate> {
+  // No `context` argument: it exists to help the model disambiguate a USDA pick, and a structured
+  // row either pins its record or carries a prep-qualified name that already does that job.
+  const settled = await Promise.all(foods.map((f) => estimateOne(f).catch(() => null)));
+  const items = settled.filter((i): i is EstimatedItem => i !== null);
+  const unmatched = foods
+    .filter((_, i) => settled[i] === null)
+    .map((f) => f.source?.trim() || f.query);
+  return assemble(items, label.trim(), unmatched);
 }
 
 /**

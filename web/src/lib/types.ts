@@ -113,12 +113,60 @@ export interface Profile {
   updated_at: string;
 }
 
+/**
+ * One line of a recipe's ingredient list.
+ *
+ * The fields exist so the macro resolver never has to re-derive them from prose. A structured row
+ * with `quantity` + `unit` skips `parseFoodText()` (the local model) entirely; one that also
+ * carries `fdc_id` skips USDA search and model selection too. See the 20260812 migration for why
+ * that matters — in short, the model is measurably ~2x heavy on portion weights and the codebase
+ * already re-lexes every number to work around it.
+ */
+export interface RecipeIngredient {
+  /** The food, as close to a USDA name as is still readable: "ground beef, 93/7". */
+  item: string;
+  /** Null is legitimate — "salt, to taste" is a real ingredient. Ignored for macros. */
+  quantity: number | null;
+  /** "g", "ml", "tbsp", "clove", "can"… Null whenever `quantity` is. */
+  unit: string | null;
+  /** State at the time it goes in: "diced", "raw", "cooked", "drained". Affects USDA choice. */
+  prep?: string | null;
+  /** Section heading, e.g. "Sauce" / "For the tray". Ungrouped rows render as one list. */
+  group?: string | null;
+  optional?: boolean;
+  /** Free note shown after the amount — provenance, substitutions, error bars. */
+  note?: string | null;
+  /**
+   * USDA FoodData Central id. Pinning it makes re-resolution deterministic: USDA's top hit for
+   * "chicken breast, cooked" is breaded microwaved tenders (252 kcal vs ~165), so leaving the
+   * choice to a search means the same recipe can resolve differently month to month.
+   */
+  fdc_id?: number | null;
+}
+
+/** One step of the method. Display only — nothing in the macro path reads these. */
+export interface RecipeStep {
+  /** 1-based, and authoritative: render order comes from here, not array position. */
+  step: number;
+  text: string;
+  /** Short asides that would clutter the step itself, mirroring WorkoutExercise.tips. */
+  tips?: string[] | null;
+  duration_mins?: number | null;
+}
+
 export interface Recipe {
   id: string;
   name: string;
   cuisine: string | null;
+  /**
+   * LEGACY free text, one ingredient per line. Still the fallback while `ingredients_json` is
+   * backfilled; prefer the structured column for anything new.
+   */
   ingredients: string | null;
+  /** LEGACY free text. Fallback for `steps_json`. */
   instructions: string | null;
+  ingredients_json: RecipeIngredient[] | null;
+  steps_json: RecipeStep[] | null;
   tags: string[] | null;
   metadata: Record<string, unknown>;
   created_at: string;

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlannedMealDetail } from "./PlannedMealDetail";
+import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 
 /**
  * The kitchen: what's planned today, and what's already in the fridge.
@@ -42,6 +43,8 @@ export interface KitchenPlannedMeal {
     name: string;
     ingredients: string | null;
     instructions: string | null;
+    ingredients_json: RecipeIngredient[] | null;
+    steps_json: RecipeStep[] | null;
     calories: number | null;
     protein_g: number | null;
     carbs_g: number | null;
