@@ -320,8 +320,8 @@ const inputStyle: React.CSSProperties = {
   fontSize: "var(--t-meta)",
   padding: "0.35em 0.5em",
   border: "1px solid var(--rule-soft)",
-  borderRadius: "var(--radius-sm, 4px)",
-  background: "var(--color-surface, transparent)",
+  borderRadius: "var(--r-1)",
+  background: "var(--color-surface)",
   color: "var(--color-text)",
 };
 
@@ -331,7 +331,7 @@ const iconBtnStyle: React.CSSProperties = {
   justifyContent: "center",
   padding: "0.3em",
   border: "1px solid var(--rule-soft)",
-  borderRadius: "var(--radius-sm, 4px)",
+  borderRadius: "var(--r-1)",
   background: "transparent",
   color: "var(--color-text-muted)",
   cursor: "pointer",
@@ -357,7 +357,7 @@ const stepNumStyle: React.CSSProperties = {
 
 const errorStyle: React.CSSProperties = {
   fontSize: "var(--t-meta)",
-  color: "var(--color-danger, #c0392b)",
+  color: "var(--color-danger)",
   marginTop: "var(--space-2)",
 };
 
@@ -371,7 +371,7 @@ const warnStyle: React.CSSProperties = {
 const saveStyle = (busy: boolean): React.CSSProperties => ({
   fontSize: "var(--t-meta)",
   padding: "0.45em 0.9em",
-  borderRadius: "var(--radius-sm, 4px)",
+  borderRadius: "var(--r-1)",
   border: "1px solid var(--rule-soft)",
   background: "var(--color-text)",
   color: "var(--color-bg)",
@@ -382,7 +382,7 @@ const saveStyle = (busy: boolean): React.CSSProperties => ({
 const cancelStyle: React.CSSProperties = {
   fontSize: "var(--t-meta)",
   padding: "0.45em 0.9em",
-  borderRadius: "var(--radius-sm, 4px)",
+  borderRadius: "var(--r-1)",
   border: "1px solid var(--rule-soft)",
   background: "transparent",
   color: "var(--color-text-muted)",
