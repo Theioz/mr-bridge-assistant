@@ -68,7 +68,9 @@ const HEAT_CUE = new RegExp(
     // hot pan" and "boiling water" leave no doubt what to do; excluding them was flagging steps
     // that were already clear, and a check that cries wolf gets ignored.
     String.raw`\b(screaming|ripping|smoking|hot)\s+(hot\s+)?(pan|skillet|oven)\b`,
-    String.raw`\bdry hot pan\b|\bboiling water\b|\brolling boil\b|\bsteamer\b`,
+    // "boiling salted water" and "boiling well-salted water" are the same instruction as "boiling
+    // water" — allow an adjective or two between them rather than demanding the exact phrase.
+    String.raw`\bdry hot pan\b|\bboiling(\s+\w+){0,2}\s+water\b|\brolling boil\b|\bsteamer\b`,
   ].join("|"),
   "i",
 );
@@ -96,11 +98,20 @@ function timedStepsMissingHeat(steps: RecipeStep[] | null): string[] {
       if (mins < UNATTENDED_FLOOR_MINS) return false;
       const all = [s.text, ...(s.tips ?? [])].join(" ");
       if (HEAT_CUE.test(all)) return false;
+
       // Only exempt as non-thermal when the step names NO cooking verb — "sear 5 min then rest"
       // still needs a heat level for the searing half.
+      //
+      // Look for that verb in the INSTRUCTION ONLY: the first sentence, tips excluded. Cooking
+      // words turn up constantly in the surrounding rationale — "wet tofu will not BROWN", "pat
+      // them dry or they STEAM grey", "dry surface is the whole game in an air FRYER", and a tip
+      // on a resting step that mentions a "ROASTED vegetable". Every one of those was a false
+      // positive on the live run, and each would have had a heat level bolted onto a step that
+      // heats nothing.
+      const instruction = s.text.split(/(?<=[.!?])\s/)[0];
       const cooks =
         /\b(sear|brown|fry|saut|simmer|boil|roast|bake|steam|grill|braise|blister|char|wilt|reduce|toast)/i;
-      return !(NON_THERMAL.test(all) && !cooks.test(all));
+      return !(NON_THERMAL.test(all) && !cooks.test(instruction));
     })
     .map((s) => `step ${s.step}: "${s.text.slice(0, 60)}${s.text.length > 60 ? "…" : ""}"`);
 }

@@ -112,3 +112,49 @@ describe("timedStepsMissingHeat", () => {
     assert.deepEqual(timedStepsMissingHeat(null), []);
   });
 });
+
+describe("timedStepsMissingHeat — precision fixes from the live sweep", () => {
+  it("accepts boiling water with adjectives in the way", () => {
+    // "Pasta into boiling salted water in the last 12 min" was flagged by an exact-phrase match.
+    assert.deepEqual(
+      timedStepsMissingHeat([
+        { step: 1, text: "Pasta into boiling salted water in the last 12 min." },
+      ]),
+      [],
+    );
+  });
+
+  it("ignores cooking verbs that appear only in the rationale, not the instruction", () => {
+    // Every one of these was a live false positive: the step heats nothing, but a cooking word
+    // turns up in the sentence explaining WHY.
+    for (const text of [
+      "Press the tofu 20 min under something heavy. Wet tofu will not brown, it will only stick.",
+      "Thaw the 227 g shrimp in cold water ~15 min. Pat them properly DRY or they steam grey.",
+      "Thighs patted completely dry and salted at least 20 min ahead. Dry surface is the whole game in an air fryer.",
+    ]) {
+      assert.deepEqual(timedStepsMissingHeat([{ step: 1, text }]), [], text.slice(0, 40));
+    }
+  });
+
+  it("ignores a cooking verb that appears only in a tip", () => {
+    assert.deepEqual(
+      timedStepsMissingHeat([
+        {
+          step: 1,
+          text: "Rest the chicken 5-10 min before slicing, then portion into 3 containers.",
+          tips: ["The template: a big cut of meat, a roasted vegetable and a starch."],
+        },
+      ]),
+      [],
+    );
+  });
+
+  it("still flags a step whose INSTRUCTION cooks, even if it also rests", () => {
+    // The exemption must not swallow the searing half of "sear 5 min, then rest".
+    assert.equal(
+      timedStepsMissingHeat([{ step: 1, text: "Sear 5-6 min a side in the oil. Rest 5 min." }])
+        .length,
+      1,
+    );
+  });
+});
