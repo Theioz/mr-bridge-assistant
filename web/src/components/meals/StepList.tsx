@@ -1,4 +1,10 @@
 import type { RecipeStep } from "@/lib/types";
+import {
+  stepListStyle as listStyle,
+  stepDurationStyle as durationStyle,
+  stepTipsStyle as tipsStyle,
+  stepLegacyStyle as legacyStyle,
+} from "./step-list-styles";
 
 /**
  * A recipe's method, as numbered steps.
@@ -39,28 +45,3 @@ export function StepList({ steps, text }: { steps?: RecipeStep[] | null; text?: 
   if (!trimmed) return null;
   return <p style={legacyStyle}>{trimmed}</p>;
 }
-
-const listStyle: React.CSSProperties = {
-  fontSize: "var(--t-meta)",
-  color: "var(--color-text)",
-  lineHeight: 1.6,
-  paddingLeft: "1.3em",
-  margin: 0,
-};
-
-const durationStyle: React.CSSProperties = { color: "var(--color-text-muted)" };
-
-const tipsStyle: React.CSSProperties = {
-  listStyle: "disc outside",
-  paddingLeft: "1.1em",
-  margin: "0.2em 0 0",
-  color: "var(--color-text-muted)",
-};
-
-const legacyStyle: React.CSSProperties = {
-  fontSize: "var(--t-meta)",
-  color: "var(--color-text)",
-  lineHeight: 1.6,
-  whiteSpace: "pre-line",
-  margin: 0,
-};
