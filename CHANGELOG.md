@@ -9,6 +9,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A batch recipe logged the whole cook as one meal.** `resolveRecipeMacros` persisted
+  `total.calories` — the sum of the ingredient list — into `recipes.calories`, which every consumer
+  reads as ONE serving, because that is the only reading that makes sense on a planned plate. For a
+  recipe whose ingredient list is the batch, those are different numbers, and the gap went into
+  `meal_log` rather than onto a screen where it could be noticed. Two recipes were live in that
+  state with a valid `macros_computed_at`: the tofu rice bowl (`typical_portions` 2, stored 829 kcal,
+  whose own ingredient note read _"this makes a ~1,034 g plate, which is 2 servings, not 1"_) and the
+  gochujang beef batch (3, stored 1783). Every "Ate this" on them overlogged by 2× and 3×.
+
+  The resolver now divides by `typical_portions` on write, so the ingredient list can say _1 lb of
+  beef, serves 3_ while the stored plate stays ~594 kcal. Dividing on the way in rather than at each
+  read is deliberate: there are eight-odd consumers across TypeScript and Python, and one of them
+  forgetting is a silent 2× in a health log. The batch figure and the divisor are kept in
+  `metadata.macro_batch_total` / `macro_portions` so the division stays auditable.
+
+  `typical_portions` was documented as _"Hint only… Not a claim"_; it is now load-bearing, and
+  treating it as decorative is what allowed the two rows above. A null, zero, 1, fractional or
+  negative count all pass the total through untouched — a bad value must degrade to inert, never to
+  a multiplier. The portion maths moved to a leaf module (`recipe-portions.ts`) so it is reachable
+  by the bundler-free unit runner; `recipe-macros.ts` re-exports it, so no import site changed.
+
+- **Single-paragraph recipes got a "method" of one step.** `stepRowsFrom` split only on newlines,
+  which is right for the 49 recipes written line-per-step and a silent no-op for any recipe written
+  as one prose blob — producing a single step holding the entire text. Valid JSON, so the backfill
+  reported success. It hit 15 of 72 recipes, including all four on the current meal plan, which is
+  why it read as wholly broken rather than as a fifth broken.
+
+  There is now a sentence fallback for text with no newlines. USDA citations and shouty planning
+  asides (`BATCH OF 3 - macros above are ONE SERVING`) are pulled out of the numbered method and
+  attached as `tips` on the adjacent step, which `StepList` already renders muted — a citation is
+  real and load-bearing, and actively misleading as step 6. The aside rule anchors on specific
+  openers rather than on "looks like caps", because mis-classifying a real step would silently
+  delete it from the method. Decimals and mid-sentence semicolons do not split.
+
+- **"Logs no macros" was only ever said in a tooltip.** An unresolved recipe falls through to a
+  status-only path that marks the plan row eaten and writes no `meal_log` row. That was already
+  labelled — button copy "Ate it" rather than "Ate this", plus a `title` — but `title` never appears
+  on touch, and this panel is used from the installed PWA on a phone, where the two outcomes
+  differed by one word. The consequence is now stated inline in the row. The recipe "Ate this"
+  tooltip also described its figure as `kcal for the batch`, which stops being true with the
+  per-serving change above; it now reads _one serving_.
+
 - **Recipe ingredients rendered as a raw JSON array, and rice lost its `go`.** Both were visible on
   the same screen. `recipes.ingredients` is a free-text column holding one ingredient per line, and
   both render sites (`PlannedMealDetail`, the `MealsClient` recipe browser) dropped it into a single
@@ -65,12 +107,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Fixed
 
 - **Grease-the-groove sessions were being classified as lifts.** Session classification tested that
-  *every* exercise name contained `grease-the-groove`, but a GtG session also carries accessory
+  _every_ exercise name contained `grease-the-groove`, but a GtG session also carries accessory
   movements with no such suffix (`Negative Pull-Up`, `Dead Hang`) — so real GtG sessions on 8/04,
   8/05, 8/06 and 8/07 all failed the test and read as lifting sessions. GtG is walk work and never
-  appears inside a lift, so the correct test is *any*. Caught by running the new prompt engine
+  appears inside a lift, so the correct test is _any_. Caught by running the new prompt engine
   against live rows, where it produced a "you trained today" suggestion on a pull-up-only day. Same
   class of bug as the GtG mis-scoring fixed in #650.
+
 ### Documentation
 
 - **`docs/architecture.svg` regenerated.** It is generated from `docs/architecture.d2`, which
@@ -92,15 +135,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **Second drift pass — the first one missed three, including a rule file.**
   `.claude/rules/briefing.md` still told the session-start protocol that `run-syncs.py` "runs both
   sync scripts (oura, google_health) in parallel". It runs neither: it is one HTTP call that
-  refreshes five sources and needs the app container up. That file is *read by Claude at session
-  start*, so a stale instruction there is worse than a stale README.
+  refreshes five sources and needs the app container up. That file is _read by Claude at session
+  start_, so a stale instruction there is worse than a stale README.
   `docs/fitness-tracker-setup.md` opened with "Two sync scripts pull data from fitness APIs and
   write directly to Supabase" — the entire premise of the page.
   `docs/architecture.d2` described the sync layer as "Python scripts · TypeScript modules".
   **`docs/architecture.svg` is generated from that `.d2` and is now stale** — it needs a `d2`
   regeneration, which was not available in this environment.
 
-  Lesson recorded because it cost two passes: grepping for the deleted *filenames* found the
+  Lesson recorded because it cost two passes: grepping for the deleted _filenames_ found the
   obvious references. The damaging ones described the behaviour in prose without naming a file.
 
 ### Documentation
@@ -141,7 +184,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
   This is fallout from #656/#657, and the reason is worth stating plainly: the codebase held two
   complete sync implementations that had silently drifted. Both carried the same workout-dedup
-  bug. #656 fixed the Python copy, which *read* as fixing the system, while the nightly cron —
+  bug. #656 fixed the Python copy, which _read_ as fixing the system, while the nightly cron —
   running the TypeScript copy — kept writing duplicate rows until #657. The duplicated 30-minute
   skip window even carried a comment saying "same as run-syncs.py": the hazard was written down
   and then ignored. Fixing one copy of a duplicated rule is indistinguishable from fixing the
@@ -166,7 +209,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `tests/test_google_health_dedupe.py` is deleted and ported to
   `web/src/__tests__/google-health-dedupe.test.ts`, which additionally pins the ±5 min window
   edges and documents a **known limitation**: the overlap index is keyed by date only, not
-  date+activity, so two *different* activities starting within 5 minutes collapse into one. That
+  date+activity, so two _different_ activities starting within 5 minutes collapse into one. That
   predates this change (the Python sync indexed by date only too) and is asserted rather than
   fixed — narrowing the key would stop losing real sessions but would re-admit duplicates whenever
   two writers label one session differently, which is a live pattern in the 2026-07-31 data. That
@@ -178,7 +221,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `warmup + workout + cooldown` into the list feeding the recovery and same-day-redundancy checks,
   while `_work_entries()` already excluded warmups for the superset check. The two disagreed, and
   the consequence was that the RAMP protocol's **Potentiate** step was unrepresentable: it is a
-  ~50% ramp-up set of the day's *first lift*, and it only potentiates if it sits immediately before
+  ~50% ramp-up set of the day's _first lift_, and it only potentiates if it sits immediately before
   the working sets — which the redundancy rule then read as two same-pattern exercises back-to-back
   and rejected. Week 2 (7/27-8/01) passed only by accident, because its warmup happened to end on a
   Band Pull-Apart rather than a squat. `day_plans` now counts the working block only, via the same
@@ -189,7 +232,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **`log_habit.py` — the scripted habit path was broken for every call.** It upserts with
   `on_conflict="habit_id,date"`, but the table's constraint is `user_id,habit_id,date`, so Postgres
   rejected it with `42P10 there is no unique or exclusion constraint matching the ON CONFLICT
-  specification`. Not intermittent — it could never have succeeded.
+specification`. Not intermittent — it could never have succeeded.
 
 ### Documented
 
@@ -205,7 +248,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   at the same time showing the same `pastMeals` rows — the first deduped to 10 by normalized name,
   the second in full chronological order. Two views of one dataset, stacked. The dedupe was the only
   thing "Recent meals" added, and it bought little: with a 6-day window most repeats are already
-  adjacent in "Past 6 Days", and the deduped list silently hid the *repeat* rows, which is exactly
+  adjacent in "Past 6 Days", and the deduped list silently hid the _repeat_ rows, which is exactly
   what makes a meal worth re-logging. Removed the section, the `recentMeals` `useMemo`, the now-unused
   `pastMeals` prop on `TodayTab`, and the `normalizeName` helper whose only caller it was. The
   re-log path is unaffected: `MealRowDisplay`'s `onRelog` is still wired for today's meals, and
@@ -217,9 +260,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   fix, meal-plan constraints and the superset UI. The `graphify` binary is installed on **no**
   current host, so `CLAUDE.md`'s "run `graphify update .` after modifying code files" was
   unsatisfiable and the graph could only get staler. The problem was not that it had become useless
-  but that it was actively misleading: `CLAUDE.md` told agents to read `GRAPH_REPORT.md` *before*
-  answering architecture questions and to navigate `graphify-out/wiki/` *instead of reading raw
-  files* — a directory that does not exist — and a `PreToolUse` hook in `.claude/settings.json`
+  but that it was actively misleading: `CLAUDE.md` told agents to read `GRAPH_REPORT.md` _before_
+  answering architecture questions and to navigate `graphify-out/wiki/` _instead of reading raw
+  files_ — a directory that does not exist — and a `PreToolUse` hook in `.claude/settings.json`
   repeated that instruction on every `Glob`/`Grep`. A three-month-stale map that agents are told to
   trust over the source is worse than no map. Removed: the 6 tracked files (2.3 MB) from this
   **public** repo, the `CLAUDE.md` section, the `core.md` session-close step, the `PreToolUse` hook,
@@ -238,14 +281,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   straight sets. Nothing errored; the plan simply meant something different from what it showed,
   and only an eyeball caught it. `validate_supersets()` in `scripts/weekly_plan.py` now fails the
   plan on: a "(supersets)" day with no slots, partial slotting, malformed slots, non-contiguous
-  pairs (grouping is positional — `groupBySuperset` walks *consecutive* same-letter entries, so
+  pairs (grouping is positional — `groupBySuperset` walks _consecutive_ same-letter entries, so
   a split pair renders as two broken groups), lone or self-paired slots, `pair_with` that isn't
   reciprocal or names an exercise outside the group, out-of-order slot digits, and members of a
   pair disagreeing on `sets` (the group header shows one round count for both). Wired into both
   `validate` and the correction prompt, and the planner prompt now documents the fields so plans
   are written right rather than only caught afterward. Covered by `tests/` — the project's first
   Python tests — run in CI by a new stdlib-only `python-tests` workflow, since a guard against a
-  *silent* failure is itself worthless if it silently stops firing.
+  _silent_ failure is itself worthless if it silently stops firing.
 
 - **Sessions auto-load Mr. Bridge context on start.** A new `SessionStart` hook (wired in
   `.claude/settings.json`, handled by `.claude/hooks/scripts/hooks.py`) injects an instruction
@@ -330,7 +373,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   aggregates several writers (watch, phone, connected apps) and routinely emits one activity
   twice in a single response: once from the writer holding the HR sensor, with `hr_zones`
   populated, and once as a coarse copy with `hr_zones` null and a wild calorie figure. On the
-  *next* run the pair is in `existing` and further copies are suppressed — which is why the
+  _next_ run the pair is in `existing` and further copies are suppressed — which is why the
   duplicates sat as stable pairs rather than multiplying, and why nothing looked wrong.
   Separately, `existing` was filtered to `WORKOUT_SOURCES = ["google_health", "fitbit"]`, which
   excludes `"manual"`, so a hand-logged session could neither suppress an auto-import nor be
@@ -338,7 +381,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `DEDUPE_SOURCES` that adds `"manual"` (`WORKOUT_SOURCES` still means "what this sync writes").
   Observed damage: 2026-07-31 held a 13-minute walk twice at 84 and 467 kcal, and one
   basketball game three times — 431 + 792 + 454 = 1677 kcal — inflating the day to 2963 active
-  calories against a 2500 *weekly* goal; 2026-08-02 held a phantom 295-minute "Cardio Workout"
+  calories against a 2500 _weekly_ goal; 2026-08-02 held a phantom 295-minute "Cardio Workout"
   worth 1867 kcal, the watch reading alcohol-elevated resting HR as five hours of exercise.
   The affected rows were neutralised in place rather than deleted, since the 7-day lookback
   re-imports deleted rows. Covered by `tests/test_google_health_dedupe.py`, which fails on the
@@ -349,7 +392,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `scripts/fetch_briefing_data.py` still printed `FLAG: effort >=8 — drop next session load 10%`
   and `FLAG: effort >=9 — cut a set next session` on every logged session. Those bands were
   **retired 2026-07-18**: 8-9/10 is roughly 1-3 RIR, which is the productive zone the program
-  now targets, and proximity to failure matters *more* at light loads — with the dumbbells
+  now targets, and proximity to failure matters _more_ at light loads — with the dumbbells
   capped at 25 lb, "light load, far from failure" is the one combination the evidence calls
   clearly ineffective. `coach_check.py::post_session` was updated at the time; this script was
   missed, so the two halves of the coaching loop disagreed, and the briefing kept advising a
