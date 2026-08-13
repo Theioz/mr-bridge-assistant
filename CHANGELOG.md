@@ -7,6 +7,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Every recipe in the library now says how hot.** The `timed-step-no-heat` check went from 41
+  recipes to **zero**: 45 steps across 33 recipes were rewritten with the heat level, pan guidance,
+  covered/uncovered state and doneness cue taken from the sourced technique families in
+  `docs/technique-sources.md`. Quantities were not touched — only how the food is cooked.
+
+  Three timings were corrected against the sources rather than merely annotated. Brown rice was
+  written at 25-30 min in one recipe and 40 in another; ATK and The Kitchn both give **45 min**
+  covered on low, and 25-30 leaves it chalky. White rice was at 15 min against their **18-20**.
+
+  The check itself needed two precision fixes found by running it on real data. It demanded an exact
+  `boiling water`, so `boiling salted water` was flagged. And it looked for cooking verbs across the
+  whole step including tips, so it fired on _"wet tofu will not **brown**"_, _"pat them dry or they
+  **steam** grey"_, _"the whole game in an air **fryer**"_, and a tip mentioning a _"**roasted**
+  vegetable"_ on a resting step — all steps that heat nothing. It now reads the instruction (first
+  sentence, tips excluded), while still flagging a step whose instruction genuinely cooks before it
+  rests.
+
 ### Added
 
 - **The audit now catches a timed cooking step that never says how hot.** A recipe step read, in
