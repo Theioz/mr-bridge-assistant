@@ -7,6 +7,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Recipe invariants are enforced in the database, and audited on demand.** The write-path guard
+  added previously covers `POST /api/recipes` and `PATCH /api/recipes/[id]` — the app's own editor.
+  It does not cover anything talking to PostgREST with the service key, which is how every
+  assistant- and script-written recipe has ever been created, and therefore how every defect these
+  rules exist to prevent actually got in. A rule enforced only on the path that never broke it is
+  not enforcement.
+
+  `recipes_check_invariants` is a `BEFORE INSERT OR UPDATE` trigger that rejects a spoon-measured
+  ingredient given a bare gram quantity, and a recipe storing more than 1,200 kcal as a single
+  serving. It runs for every writer, psql included. Verified against the live database through
+  PostgREST: both violation classes rejected with an actionable message, legitimate writes
+  unaffected.
+
+  `fdc_id` pinning is deliberately **not** enforced. 45 ingredient lines have no safe USDA match —
+  gochujang has no record at all, and lines like "cod, cooked weight" need a prep-state judgement —
+  so a NOT NULL rule would make those recipes uneditable. `web/scripts/audit-recipes.ts` reports
+  them instead: visible, not fatal. It also reports undeclared batches, unstamped macros, single-step
+  methods and unsplit instructions, exits non-zero when anything is found, and reuses the shipped
+  `spoonViolations` rather than restating the rules.
+
+  The audit's first run found **four more recipes storing a whole batch as one serving**, all with
+  valid stamps and all silently overlogging: Lemon Garlic Chicken + Pasta at **4,646 kcal per
+  "meal"**, Ribeye Roast Meal Prep at 3,884, Chicken/Rice/Green Beans at 2,810, and Turkey Pasta at
+  1,623. Each declared its own portion count in its instructions and nothing read it. Corrected by
+  division — the batch totals were right, only the divide was missing — taking the lower bound where
+  a range was given, so the stored serving errs large and the log never understates.
+
 ### Fixed
 
 - **Recipe methods rendered with no numbers, so steps and their asides looked identical.**
