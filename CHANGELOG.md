@@ -7,6 +7,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Spoon-measured ingredients are now enforced at the write path, not just documented.** "Things
+  normally measured by spoon lead with the volume, grams in parentheses" has been a standing rule
+  since 2026-07-31 and has been broken twice — first by every recipe authored after the original
+  25-recipe sweep, then again by all four recipes on the 2026-08-13 meal plan, which carried
+  unmeasurable amounts like `13 g tomato paste` and `4 g avocado oil`. Both times a human caught it.
+  A convention that lives only in prose gets re-broken by whoever writes the next recipe.
+
+  `parseIngredientRows` now rejects a spoon-class ingredient given a bare gram quantity, naming the
+  item and the fix: `"avocado oil" 4 g -> 1 tsp (4.5 g)`. Suggestions round to a real spoon rather
+  than dividing exactly, because 1.78 tsp is not a measurement — rounding to a spoon is the entire
+  point, and a gram or two of oil is noise against a meal.
+
+  Gram weights come from each food's USDA `foodPortions` rather than a hand-kept table, because a
+  spoon quantity is now _resolved_ by `gramsFor` against the pinned record: the grams printed in the
+  recipe and the grams the macro path uses have to be the same number. (The hand-kept table had
+  avocado oil at 1 tsp = 5 g; USDA says 4.5.) **Gochujang is exempt** — it has no USDA record at all,
+  so no portion table exists to resolve a volume against, and writing `1 tbsp` would leave a
+  re-resolve with no way back to grams. It keeps grams and carries the spoon in its label.
+
+  Scoped to the two authoring routes. The backfill calls `ingredientRowsFrom` directly and is
+  deliberately unaffected: it converts legacy prose and should not be blocked by a rule about how
+  new recipes are written.
+
 ### Fixed
 
 - **A batch recipe logged the whole cook as one meal.** `resolveRecipeMacros` persisted
@@ -134,9 +159,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **Second drift pass — the first one missed three, including a rule file.**
   `.claude/rules/briefing.md` still told the session-start protocol that `run-syncs.py` "runs both
-  sync scripts (oura, google_health) in parallel". It runs neither: it is one HTTP call that
-  refreshes five sources and needs the app container up. That file is _read by Claude at session
-  start_, so a stale instruction there is worse than a stale README.
+  sync scripts (oura, google*health) in parallel". It runs neither: it is one HTTP call that
+  refreshes five sources and needs the app container up. That file is \_read by Claude at session
+  start*, so a stale instruction there is worse than a stale README.
   `docs/fitness-tracker-setup.md` opened with "Two sync scripts pull data from fitness APIs and
   write directly to Supabase" — the entire premise of the page.
   `docs/architecture.d2` described the sync layer as "Python scripts · TypeScript modules".
