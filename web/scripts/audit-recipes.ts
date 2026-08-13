@@ -57,8 +57,32 @@ const SINGLE_PLATE_CEILING = 1200;
  * without saying what to set the burner to, which is precisely the gap that caused the burn. What
  * counts is a burner level, an oven temperature, or an explicit instruction that the heat is off.
  */
-const HEAT_CUE =
-  /\b(low|medium|high|medium-low|medium-high|med-high)\b|\b\d{3}\s?°?\s?[FC]\b|\boff the heat\b|\bresidual heat\b|\bheat off\b/i;
+const HEAT_CUE = new RegExp(
+  [
+    // Burner levels and oven temperatures — the unambiguous forms.
+    String.raw`\b(low|medium|high|medium-low|medium-high|med-high)\b`,
+    String.raw`\b\d{3}\s?°?\s?[FC]\b`,
+    // Explicitly no heat.
+    String.raw`\boff the heat\b|\bresidual heat\b|\bheat off\b`,
+    // Plain-English cues that DO pin the temperature, even without a burner setting. "Screaming
+    // hot pan" and "boiling water" leave no doubt what to do; excluding them was flagging steps
+    // that were already clear, and a check that cries wolf gets ignored.
+    String.raw`\b(screaming|ripping|smoking|hot)\s+(hot\s+)?(pan|skillet|oven)\b`,
+    String.raw`\bdry hot pan\b|\bboiling water\b|\brolling boil\b|\bsteamer\b`,
+  ].join("|"),
+  "i",
+);
+
+/**
+ * Timed steps where nothing is being heated at all.
+ *
+ * Resting a steak, pressing tofu, thawing shrimp, brining a breast, bringing meat up from the
+ * fridge — these take time and involve no burner, so demanding a heat setting is nonsense. On the
+ * first live run 17 of 69 flagged steps were this, which is a false-positive rate that would have
+ * had me "correcting" steps that were already right.
+ */
+const NON_THERMAL =
+  /\b(rest|rested|resting|thaw|thawed|press(ed)?|brine[d]?|marinate[d]?|chill(ed)?|soak(ed)?|salt(ed)? .*(ahead|before)|out of the fridge|room temperature|come to temp|sit|stand|cool(ed)? (uncovered|completely)?)\b/i;
 
 /** Steps short enough to be unattended are exempt — a 1-2 minute step cannot scorch unwatched. */
 const UNATTENDED_FLOOR_MINS = 3;
@@ -70,8 +94,13 @@ function timedStepsMissingHeat(steps: RecipeStep[] | null): string[] {
       const inlineMins = /\b(\d+)(?:\s*[-–]\s*\d+)?\s*min\b/i.exec(s.text);
       const mins = s.duration_mins ?? (inlineMins ? Number(inlineMins[1]) : 0);
       if (mins < UNATTENDED_FLOOR_MINS) return false;
-      // Tips carry the "bare simmer means the lowest setting" style guidance, so they count too.
-      return !HEAT_CUE.test([s.text, ...(s.tips ?? [])].join(" "));
+      const all = [s.text, ...(s.tips ?? [])].join(" ");
+      if (HEAT_CUE.test(all)) return false;
+      // Only exempt as non-thermal when the step names NO cooking verb — "sear 5 min then rest"
+      // still needs a heat level for the searing half.
+      const cooks =
+        /\b(sear|brown|fry|saut|simmer|boil|roast|bake|steam|grill|braise|blister|char|wilt|reduce|toast)/i;
+      return !(NON_THERMAL.test(all) && !cooks.test(all));
     })
     .map((s) => `step ${s.step}: "${s.text.slice(0, 60)}${s.text.length > 60 ? "…" : ""}"`);
 }
