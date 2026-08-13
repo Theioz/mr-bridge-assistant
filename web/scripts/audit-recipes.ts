@@ -46,6 +46,36 @@ interface Finding {
  *  ribeye), and the smallest known batch is 1562. Anything past this deserves a human look. */
 const SINGLE_PLATE_CEILING = 1200;
 
+/**
+ * A timed cooking step has to say how hot.
+ *
+ * "Simmer 40 min." is a real step that was really written, and on 2026-08-13 it burned a chili to
+ * the bottom of the pan and dried it out — the timer did exactly what the step said. A duration
+ * without a heat setting is an instruction to walk away from a pan at an unknown temperature.
+ *
+ * `simmer`, `boil` and `saute` deliberately do NOT count as heat cues: they name a target state
+ * without saying what to set the burner to, which is precisely the gap that caused the burn. What
+ * counts is a burner level, an oven temperature, or an explicit instruction that the heat is off.
+ */
+const HEAT_CUE =
+  /\b(low|medium|high|medium-low|medium-high|med-high)\b|\b\d{3}\s?°?\s?[FC]\b|\boff the heat\b|\bresidual heat\b|\bheat off\b/i;
+
+/** Steps short enough to be unattended are exempt — a 1-2 minute step cannot scorch unwatched. */
+const UNATTENDED_FLOOR_MINS = 3;
+
+function timedStepsMissingHeat(steps: RecipeStep[] | null): string[] {
+  if (!steps) return [];
+  return steps
+    .filter((s) => {
+      const inlineMins = /\b(\d+)(?:\s*[-–]\s*\d+)?\s*min\b/i.exec(s.text);
+      const mins = s.duration_mins ?? (inlineMins ? Number(inlineMins[1]) : 0);
+      if (mins < UNATTENDED_FLOOR_MINS) return false;
+      // Tips carry the "bare simmer means the lowest setting" style guidance, so they count too.
+      return !HEAT_CUE.test([s.text, ...(s.tips ?? [])].join(" "));
+    })
+    .map((s) => `step ${s.step}: "${s.text.slice(0, 60)}${s.text.length > 60 ? "…" : ""}"`);
+}
+
 function audit(rows: Row[]): Finding[] {
   const out: Finding[] = [];
   for (const r of rows) {
@@ -105,6 +135,15 @@ function audit(rows: Row[]): Finding[] {
     if (!r.steps_json?.length && r.instructions?.trim()) {
       out.push({ kind: "no-structured-steps", recipe: r.name, detail: "instructions never split" });
     }
+
+    const noHeat = timedStepsMissingHeat(r.steps_json);
+    if (noHeat.length) {
+      out.push({
+        kind: "timed-step-no-heat",
+        recipe: r.name,
+        detail: `${noHeat.length} timed step(s) with no heat setting — ${noHeat.join("; ")}`,
+      });
+    }
   }
   return out;
 }
@@ -152,5 +191,5 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
   });
 }
 
-export { audit, SINGLE_PLATE_CEILING };
+export { audit, timedStepsMissingHeat, SINGLE_PLATE_CEILING, UNATTENDED_FLOOR_MINS };
 export type { Row, Finding };
