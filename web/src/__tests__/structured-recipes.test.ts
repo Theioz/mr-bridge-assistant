@@ -25,6 +25,7 @@ import {
   parseIngredientRows,
   parseStepRows,
 } from "../lib/nutrition/recipe-structured.ts";
+import { ingredientRowsFrom } from "../lib/nutrition/recipe-backfill.ts";
 
 // ── formatIngredient ────────────────────────────────────────────────────────────
 
@@ -191,4 +192,45 @@ test("blank tips are dropped rather than stored as empty strings", () => {
 
 test("a non-array payload is rejected", () => {
   assert.throws(() => parseIngredientRows({ item: "beef" }), RecipeShapeError);
+});
+
+// ── backfill converter ──────────────────────────────────────────────────────────
+// The all-or-nothing rule is only as good as its "this is just seasoning" test, and the first
+// draft of that test was wrong in the most dangerous possible direction.
+
+test("a line mixing seasoning with real food BLOCKS the recipe", () => {
+  // `/\bpepper\b/` over the whole line matched "Onion, bell pepper, marinara", classifying a line
+  // with marinara and onion in it as seasoning. quantity:null excludes a row from the total, so
+  // that would have silently deleted real calories from Turkey Pasta.
+  const { unresolved } = ingredientRowsFrom("Onion, bell pepper, marinara");
+  assert.equal(unresolved.length, 1);
+});
+
+test("a line that is only seasoning converts with a null amount", () => {
+  const { rows, unresolved } = ingredientRowsFrom("salt, pepper, garlic");
+  assert.equal(unresolved.length, 0);
+  assert.equal(rows[0].quantity, null);
+});
+
+test("'to taste' and 'to garnish' are amount-less by declaration", () => {
+  assert.equal(ingredientRowsFrom("Scallions to garnish").unresolved.length, 0);
+  assert.equal(ingredientRowsFrom("Truffle hot sauce to taste (zero-cal)").unresolved.length, 0);
+});
+
+test("a trailing amount is read — the shape the 2026-08-12 rows used", () => {
+  const { rows } = ingredientRowsFrom("kimchi 120 g");
+  assert.equal(rows[0].quantity, 120);
+  assert.equal(rows[0].unit, "g");
+  assert.match(rows[0].item, /kimchi/);
+});
+
+test("a leading amount still wins, and semicolon prose splits", () => {
+  const { rows } = ingredientRowsFrom("227 g cod; 2 large eggs");
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].quantity, 227);
+  assert.equal(rows[1].quantity, 2);
+});
+
+test("a real food with no amount anywhere blocks", () => {
+  assert.equal(ingredientRowsFrom("cherry tomatoes").unresolved.length, 1);
 });
