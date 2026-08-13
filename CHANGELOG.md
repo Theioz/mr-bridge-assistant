@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The audit now catches a timed cooking step that never says how hot.** A recipe step read, in
+  full, `Simmer 40 min.` Jason set a 40 minute timer and walked away; the chili burned to the bottom
+  of the pan and dried out, and was rescued with added water. The step was not wrong about the time
+  — it never said what to set the burner to, and a thick bean-and-tomato mixture scorches on
+  anything above the lowest setting long before 40 minutes.
+
+  That failure is mechanically detectable: a duration with no heat cue. `simmer`, `boil` and `saute`
+  deliberately do **not** count as cues — they name a target state without saying what to set the
+  burner to, which is exactly the gap. A burner level, an oven temperature, or an explicit "off the
+  heat" does count, and cues are read from a step's `tips` as well as its text. Steps under three
+  minutes are exempt, because a check that cries wolf gets ignored — which is how the spoon-unit
+  convention decayed twice.
+
+  **41 of 72 recipes matched on the first run.** The four on the current meal plan were rewritten by
+  hand with heat levels, pan guidance, stir intervals and doneness cues; the rest are reported.
+
 - **Recipe invariants are enforced in the database, and audited on demand.** The write-path guard
   added previously covers `POST /api/recipes` and `PATCH /api/recipes/[id]` — the app's own editor.
   It does not cover anything talking to PostgREST with the service key, which is how every
