@@ -224,6 +224,10 @@ function ExerciseRow({
               style={{
                 fontSize: "var(--t-micro)",
                 color: "var(--color-text-muted)",
+                // Explicit, because Tailwind v4's preflight resets `ol, ul { list-style: none }`.
+                // Without this the bullets never drew and the paddingLeft below was reserving
+                // space for a marker that was not there.
+                listStyle: "disc outside",
                 margin: "var(--space-1) 0 0",
                 paddingLeft: "var(--space-4)",
                 lineHeight: 1.5,

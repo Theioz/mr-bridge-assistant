@@ -7,6 +7,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recipe methods rendered with no numbers, so steps and their asides looked identical.**
+  `globals.css` begins with `@import "tailwindcss"`, and Tailwind v4's preflight resets
+  `ol, ul { list-style: none }`. `StepList` never restated it, so its `<ol>` drew no markers —
+  silently, since nothing errors and the markup is a perfectly correct ordered list. The component's
+  own doc comment claimed "numbered steps" and `<li value={s.step}>` set the numbering right; the
+  browser simply had nothing to draw. `IngredientList` escaped only because it happens to declare
+  `listStyle: "disc outside"`, which is why ingredients looked fine while the method did not.
+
+  The visible result was a recipe card whose method read as one undifferentiated run of lines, with
+  the `BATCH OF 2` header and the USDA citation indistinguishable from the cooking steps. Fixed by
+  declaring `decimal outside`, and the same latent bug is fixed in the workout plan's exercise
+  tips, which had been reserving `paddingLeft` for bullets that never drew.
+
+  The styles moved to `step-list-styles.ts` so a unit test can import them — the test runner cannot
+  load `.tsx`, and **the defect was an absent property**, which nothing but an assertion of its
+  presence will catch. Type checking cannot see it, and review did not.
+
 ### Added
 
 - **Spoon-measured ingredients are now enforced at the write path, not just documented.** "Things
