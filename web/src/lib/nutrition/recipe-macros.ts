@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { perPortion, storedMacrosFor } from "./recipe-portions";
+import type { RecipeMacroTotals } from "./recipe-portions";
 import { estimateFromStructured, estimateFromText } from "./estimate";
 import type { ParsedFood } from "./parse";
 import type { RecipeIngredient } from "../types";
@@ -59,15 +61,11 @@ function toParsedFoods(rows: RecipeIngredient[]): ParsedFood[] {
  * count therefore lives on a `cook`, and per-portion macros are derived there.
  */
 
-export interface RecipeMacroTotals {
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  fiber_g: number;
-  confidence: "high" | "medium" | "low";
-  notes: string;
-}
+// Re-exported so this module stays the single import site for macro types and portion maths.
+// The definitions live in the leaf module `recipe-portions.ts` because this file imports
+// `./estimate` (USDA + Ollama), which the bundler-free unit test runner cannot resolve.
+export type { RecipeMacroTotals, MacroKey } from "./recipe-portions";
+export { perPortion, storedMacrosFor } from "./recipe-portions";
 
 /** One resolved ingredient — the audit trail. A number you cannot audit is a number you
  *  cannot trust, and this is what makes the total checkable instead of hopeful. */
@@ -90,23 +88,15 @@ export interface RecipeMacros {
   unquantified: string[];
   /** Ingredients that matched no plausible USDA record and are ABSENT from the total. */
   unmatched: string[];
-  /** Hint only — what a portion would look like IF split this many ways. Not a claim. */
+  /**
+   * How many servings the ingredient list makes. LOAD-BEARING, not a hint: when this is >1 the
+   * ingredient list is a batch, and it is the divisor used to persist recipes.calories as ONE
+   * serving. It was documented as "a hint, not a claim" until 2026-08-13, and treating it as
+   * decorative is what let two batch recipes store whole-cook macros against a per-meal reading.
+   */
   typicalPortions: number | null;
+  /** One serving — the figure persisted to recipes.calories. `total` remains the whole batch. */
   perPortion: Omit<RecipeMacroTotals, "confidence" | "notes"> | null;
-}
-
-export function perPortion(
-  total: Pick<RecipeMacroTotals, "calories" | "protein_g" | "carbs_g" | "fat_g" | "fiber_g">,
-  portions: number,
-) {
-  const div = (n: number) => Math.round((n / portions) * 10) / 10;
-  return {
-    calories: Math.round(total.calories / portions),
-    protein_g: div(total.protein_g),
-    carbs_g: div(total.carbs_g),
-    fat_g: div(total.fat_g),
-    fiber_g: div(total.fiber_g),
-  };
 }
 
 /**
@@ -206,14 +196,34 @@ export async function resolveRecipeMacros(
     )
     .map((r) => (r.prep ? `${r.item}, ${r.prep}` : r.item));
 
+  // THE INGREDIENT LIST IS THE BATCH; THE STORED MACROS ARE ONE SERVING.
+  //
+  // `total` is the sum of the ingredient list, which for a batch recipe is the whole cook. Every
+  // consumer of recipes.calories — the meals page, PlannedMealDetail, the "Ate this" button,
+  // fetch_briefing_data.py — reads it as ONE meal, because that is the only reading that makes
+  // sense on a planned plate. Persisting the batch total against that assumption is not a display
+  // bug, it is a logging bug: "Ate this" writes the whole cook into meal_log for a single sitting.
+  //
+  // Two recipes were already doing exactly that when this was written — the tofu rice bowl
+  // (typical_portions 2, stored 829 kcal) and the gochujang beef batch (3, stored 1783) — both
+  // carrying whole-batch ingredient lists and a valid macros_computed_at, so both overlogged by
+  // 2x and 3x on every use. Dividing here is what lets the ingredient list say "1 lb of beef,
+  // serves 3" while the plate still says ~594 kcal.
+  //
+  // Divide on the way in rather than at each read: there are eight-odd consumers across TS and
+  // Python, and one of them forgetting is a silent 2x in a health log. The batch figure is kept
+  // in metadata so the division stays auditable and nothing is lost.
+  const typicalPortions = (recipe.typical_portions as number | null) ?? null;
+  const { portions, stored } = storedMacrosFor(total, typicalPortions);
+
   const { error: writeErr } = await db
     .from("recipes")
     .update({
-      calories: total.calories,
-      protein_g: total.protein_g,
-      carbs_g: total.carbs_g,
-      fat_g: total.fat_g,
-      fiber_g: total.fiber_g,
+      calories: stored.calories,
+      protein_g: stored.protein_g,
+      carbs_g: stored.carbs_g,
+      fat_g: stored.fat_g,
+      fiber_g: stored.fiber_g,
       macros_confidence: total.confidence,
       macros_computed_at: new Date().toISOString(),
       // Persist the working, not just the answer. Without this the only way to find out that
@@ -228,6 +238,11 @@ export async function resolveRecipeMacros(
         // Which path produced these numbers, so a re-resolve that changes a total can be
         // attributed rather than guessed at.
         macro_source: structured.length ? "structured" : "text",
+        // What the ingredient list actually sums to, and what it was divided by. Without these
+        // a stored 594 is indistinguishable from a recipe that genuinely holds 594 kcal of food,
+        // and the /3 becomes unverifiable after the fact.
+        macro_batch_total: portions > 1 ? total : null,
+        macro_portions: portions,
       },
     })
     .eq("id", recipeId)
@@ -235,7 +250,6 @@ export async function resolveRecipeMacros(
 
   if (writeErr) throw new Error(`recipe macro write failed: ${writeErr.message}`);
 
-  const typicalPortions = (recipe.typical_portions as number | null) ?? null;
   return {
     total,
     items,

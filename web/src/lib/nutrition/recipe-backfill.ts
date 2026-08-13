@@ -128,12 +128,87 @@ export function ingredientRowsFrom(text: string): {
   return { rows, unresolved };
 }
 
-/** Numbered or newline-separated instructions -> steps. Blank-line groups win over single lines. */
+/**
+ * A sentence that is not a thing to do at the stove.
+ *
+ *   citation — "USDA: chicken breast cooked 171477; broccoli cooked 170379." The audit trail for
+ *              the macros. Real, load-bearing, and actively misleading if numbered as step 6.
+ *   meta     — "BATCH OF 3 - macros above are ONE SERVING", "DO NOT scale this back up without
+ *              confirming freezer space first." Planning context, written in shouty caps by
+ *              convention, and equally not an instruction.
+ *
+ * Both are kept — as `tips` on the adjacent step, which StepList already renders muted underneath —
+ * rather than dropped. `instructions` also survives as the fallback column, so nothing is lost
+ * either way; the point is only that the numbered method should contain the method.
+ *
+ * Deliberately narrow. A sentence that is genuinely a cooking step but happens to start with a
+ * capitalised word must NOT match, so the meta rule anchors on specific openers rather than on
+ * "looks like caps" — mis-classifying a real step would silently delete it from the method.
+ */
+const CITATION = /\bUSDA\b/i;
+const META =
+  /^(BATCH\b|HALF BATCH\b|WHOLE COOK\b|MAKES \d|DO NOT\b|NOTE[: ]|NOTES[: ]|ASSUMPTION\b|THIS IS THE TEMPLATE\b|BATCH SIZE\b)/;
+function isAside(s: string): boolean {
+  return CITATION.test(s) || META.test(s);
+}
+
+/**
+ * Split a paragraph into sentences.
+ *
+ * Only breaks on terminal punctuation followed by whitespace and a capital or digit, which leaves
+ * decimals ("1.5 tbsp") and mid-sentence semicolons ("425F ~20 min; salmon skin-side down") intact.
+ * Semicolons are deliberately NOT separators: they join clauses of one action far more often than
+ * they separate two.
+ */
+function sentences(t: string): string[] {
+  return t
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Instructions -> numbered steps.
+ *
+ * Newline-separated text splits on lines, which is how it has always worked and how 49 of the 72
+ * live recipes were written. THE FALLBACK IS THE POINT OF THIS FUNCTION: the newline rule is a
+ * no-op on a single paragraph, so every recipe authored as one prose blob collapsed to a single
+ * "step" holding the entire text — valid JSON, so the backfill reported success, and the UI
+ * rendered a numbered list of one. That hit 15 of 72 recipes, including all four on the meal plan
+ * the week this was found, which is why it read as wholly broken rather than as a fifth broken.
+ */
 export function stepRowsFrom(text: string | null): RecipeStep[] | null {
   const t = (text ?? "").trim();
   if (!t) return null;
-  const chunks = (t.includes("\n\n") ? t.split(/\n{2,}/) : t.split("\n"))
+
+  const multiline = /\n/.test(t);
+  const chunks = (
+    multiline ? (t.includes("\n\n") ? t.split(/\n{2,}/) : t.split("\n")) : sentences(t)
+  )
     .map((c) => c.trim().replace(/^\d+[.)]\s*/, ""))
     .filter(Boolean);
-  return chunks.length ? chunks.map((text, i) => ({ step: i + 1, text })) : null;
+  if (!chunks.length) return null;
+
+  const steps: RecipeStep[] = [];
+  const leading: string[] = [];
+  for (const c of chunks) {
+    if (isAside(c)) {
+      if (steps.length) {
+        const last = steps[steps.length - 1];
+        last.tips = [...(last.tips ?? []), c];
+      } else {
+        leading.push(c);
+      }
+      continue;
+    }
+    steps.push({ step: steps.length + 1, text: c });
+  }
+
+  // Every sentence was an aside — a citation-only or notes-only instructions field. Returning no
+  // steps would render the recipe as having no method at all, which is worse than the blob: fall
+  // back to the original chunks so the text still reaches the reader.
+  if (!steps.length) return chunks.map((c, i) => ({ step: i + 1, text: c }));
+
+  if (leading.length) steps[0].tips = [...leading, ...(steps[0].tips ?? [])];
+  return steps;
 }

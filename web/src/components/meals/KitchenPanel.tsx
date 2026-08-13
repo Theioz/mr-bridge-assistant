@@ -252,7 +252,13 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                       <span style={subStyle}>
                         {p.meal_type}
                         {canEatRecipe ? " · from recipe" : ""}
-                        {!cook && recipe && !recipe.macros_computed_at ? " · needs cooking" : ""}
+                        {/* The consequence is stated INLINE, not only in the button's title.
+                            This panel is used from the installed PWA on a phone, where a title
+                            attribute never appears, so on touch the difference between logging a
+                            meal and merely flagging it was one word ("Ate this" vs "Ate it"). */}
+                        {!cook && recipe && !recipe.macros_computed_at
+                          ? " · needs cooking — logs no macros"
+                          : ""}
                         {!cook && !recipe ? " · tap for amounts" : ""}
                       </span>
                     </span>
@@ -278,8 +284,12 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                         }
                         style={eatButtonStyle(busyId === p.id)}
                         title={
+                          // "for the batch" was true while recipes.calories held the sum of the
+                          // ingredient list. Since 2026-08-13 the resolver divides by
+                          // typical_portions on write, so this figure is ONE SERVING and calling
+                          // it the batch would misstate it by the batch size on every tooltip.
                           recipe.calories != null
-                            ? `Logs this recipe's macros (~${recipe.calories} kcal for the batch) and adds any surplus to the fridge.`
+                            ? `Logs one serving (~${recipe.calories} kcal) and adds any surplus to the fridge.`
                             : "Cooks this recipe and logs a portion's macros."
                         }
                       >
