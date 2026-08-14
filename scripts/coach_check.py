@@ -17,7 +17,9 @@ from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 sys.path.insert(0, os.path.dirname(__file__))
-from _supabase import get_client, get_owner_user_id  # noqa: E402
+# NOTE: `_supabase` (and its `dotenv` dep) is imported lazily in main(), NOT here — so this
+# module stays importable on a bare interpreter and the pure helpers below (consecutive_misses)
+# can be unit-tested without pip installs. Same reason weekly_plan.py keeps its top imports stdlib.
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 TZ = os.environ.get("USER_TIMEZONE", "America/Los_Angeles")
@@ -124,6 +126,34 @@ def regressions(c, uid, today):
     return [ex for ex, v in cur.items() if ex in prev and prev[ex] > 0 and v < prev[ex] * 0.95]
 
 
+def consecutive_misses(recent, session_dates):
+    """Count consecutive missed sessions, most-recent day first.
+
+    `recent`: workout_plans rows ordered by date DESC, each `{"date", "status"}`.
+    `session_dates`: set of `performed_on` for logged PROGRAMMED sessions.
+
+    A miss is a **`planned` day with no logged session**. This deliberately reads `status`:
+    a `cancelled` or `skipped` day is a chosen rest, and a `completed` day is done — none of
+    them are misses, so they are skipped, not counted. A logged session ends the streak.
+
+    Why this cares about status: the escalation off this number is real (2 misses cuts volume,
+    3 says the program is wrong, not the user). Before #666 the app never set
+    `workout_plans.status`, so this loop keyed off session-existence alone and a deliberate rest
+    read as a miss — inflating the streak and firing a false "the program is too much" nudge.
+    That mis-read is the same open-loop defect that killed the May coaching attempt (see the
+    module docstring), which is why the rule lives here in code now instead of in a runbook: a
+    rest day must never be able to masquerade as a failure to train.
+    """
+    miss = 0
+    for p in recent:
+        if p["date"] in session_dates:
+            break
+        if p.get("status") != "planned":
+            continue
+        miss += 1
+    return miss
+
+
 def post_session(c, uid, today):
     planned = c.table("workout_plans").select("name,status").eq("user_id", uid) \
         .eq("date", today.isoformat()).execute().data
@@ -182,11 +212,7 @@ def post_session(c, uid, today):
     # session read as completed and `miss` never left 0 — the nudge silently died.
     sess = {r["performed_on"]
             for r in programmed_sessions(c, uid, today - timedelta(days=21), today)}
-    miss = 0
-    for p in recent:
-        if p["date"] in sess:
-            break
-        miss += 1
+    miss = consecutive_misses(recent, sess)
 
     name = planned[0]["name"]
     if miss >= 3:
@@ -244,6 +270,8 @@ def main():
     ap.add_argument("--post-session", action="store_true")
     ap.add_argument("--weekly", action="store_true")
     a = ap.parse_args()
+
+    from _supabase import get_client, get_owner_user_id  # lazy — see top-of-file note
 
     c, uid, t = get_client(), get_owner_user_id(), today_local()
     if a.weekly:
