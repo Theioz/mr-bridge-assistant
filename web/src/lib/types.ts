@@ -31,6 +31,9 @@ export interface Task {
   due_date: string | null;
   category: string | null;
   list_id: string | null;
+  calendar_event_id: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
   completed_at: string | null;
   created_at: string;
   parent_id: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Archive, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
+import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import type { Task, Subtask, TaskList } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 
@@ -35,6 +35,35 @@ interface Props {
   addSubtaskAction: (parentId: string, title: string) => Promise<{ error?: string }>;
   completeSubtaskAction: (id: string) => Promise<{ error?: string }>;
   deleteSubtaskAction: (id: string) => Promise<{ error?: string }>;
+  scheduleAction: (
+    id: string,
+    startISO: string,
+    endISO: string,
+  ) => Promise<{ error?: string; warning?: string }>;
+  unscheduleAction: (id: string) => Promise<{ error?: string; warning?: string }>;
+}
+
+const DURATIONS = [15, 30, 45, 60, 90] as const;
+
+/** Local YYYY-MM-DD / HH:MM parts of an ISO instant, for the date/time inputs. */
+function localParts(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+/** Short local label for the scheduled-block chip, e.g. "Aug 20, 2:00 PM". */
+function formatScheduled(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function SubtaskRow({
@@ -173,6 +202,8 @@ export default function TaskItem({
   addSubtaskAction,
   completeSubtaskAction,
   deleteSubtaskAction,
+  scheduleAction,
+  unscheduleAction,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
@@ -193,6 +224,59 @@ export default function TaskItem({
   const [editListId, setEditListId] = useState(task.list_id ?? "");
 
   const taskList = task.list_id ? lists.find((l) => l.id === task.list_id) : null;
+
+  // Scheduling — seed the inputs from an existing block, else empty / 30 min.
+  const seededStart = task.scheduled_start ? localParts(task.scheduled_start) : null;
+  const seededDuration =
+    task.scheduled_start && task.scheduled_end
+      ? Math.max(
+          15,
+          Math.round(
+            (new Date(task.scheduled_end).getTime() - new Date(task.scheduled_start).getTime()) /
+              60_000,
+          ),
+        )
+      : 30;
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [schedDate, setSchedDate] = useState(seededStart?.date ?? "");
+  const [schedTime, setSchedTime] = useState(seededStart?.time ?? "");
+  const [schedDuration, setSchedDuration] = useState<number>(seededDuration);
+  const [schedNote, setSchedNote] = useState<string | null>(null);
+
+  function saveSchedule() {
+    if (!schedDate || !schedTime) {
+      setSchedNote("Pick a date and time.");
+      return;
+    }
+    const start = new Date(`${schedDate}T${schedTime}`);
+    if (Number.isNaN(start.getTime())) {
+      setSchedNote("Invalid date/time.");
+      return;
+    }
+    const startISO = start.toISOString();
+    const endISO = new Date(start.getTime() + schedDuration * 60_000).toISOString();
+    setSchedNote(null);
+    startTransition(async () => {
+      const res = await scheduleAction(task.id, startISO, endISO);
+      if (res.error) {
+        setSchedNote(res.error);
+        return;
+      }
+      if (res.warning) setSchedNote(res.warning);
+      else setShowSchedule(false);
+    });
+  }
+
+  function removeSchedule() {
+    startTransition(async () => {
+      const res = await unscheduleAction(task.id);
+      if (res.error) setSchedNote(res.error);
+      else {
+        setSchedNote(res.warning ?? null);
+        if (!res.warning) setShowSchedule(false);
+      }
+    });
+  }
 
   useEffect(() => {
     if (editing) inputRef.current?.focus();
@@ -359,6 +443,18 @@ export default function TaskItem({
           </span>
         )}
 
+        {/* Scheduled block chip */}
+        {task.scheduled_start && (
+          <span
+            className="flex items-center flex-shrink-0 tnum"
+            style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--accent)" }}
+            title="On your calendar"
+          >
+            <CalendarClock size={11} />
+            {formatScheduled(task.scheduled_start)}
+          </span>
+        )}
+
         {/* Expand/collapse chevron */}
         {totalCount > 0 && (
           <button
@@ -370,6 +466,20 @@ export default function TaskItem({
             {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           </button>
         )}
+
+        {/* Schedule on calendar */}
+        <button
+          onClick={() => setShowSchedule((v) => !v)}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{
+            width: 32,
+            height: 32,
+            color: task.scheduled_start ? "var(--accent)" : "var(--color-text-faint)",
+          }}
+          title={task.scheduled_start ? "Edit calendar block" : "Add to calendar"}
+        >
+          <CalendarClock size={13} />
+        </button>
 
         {/* Edit due date / priority */}
         <button
@@ -500,6 +610,100 @@ export default function TaskItem({
           >
             <X size={12} />
           </button>
+        </div>
+      )}
+
+      {/* Calendar scheduling panel */}
+      {showSchedule && (
+        <div style={{ paddingBottom: "var(--space-3)", paddingLeft: 56 }}>
+          <div className="flex items-center flex-wrap" style={{ gap: "var(--space-2)" }}>
+            <input
+              type="date"
+              aria-label="Schedule date"
+              value={schedDate}
+              onChange={(e) => setSchedDate(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 8px",
+                color: "var(--color-text)",
+              }}
+            />
+            <input
+              type="time"
+              aria-label="Schedule time"
+              value={schedTime}
+              onChange={(e) => setSchedTime(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 8px",
+                color: "var(--color-text)",
+              }}
+            />
+            <select
+              aria-label="Duration"
+              value={schedDuration}
+              onChange={(e) => setSchedDuration(Number(e.target.value))}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 8px",
+                color: "var(--color-text)",
+              }}
+            >
+              {DURATIONS.map((d) => (
+                <option key={d} value={d}>
+                  {d} min
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={saveSchedule}
+              className="transition-opacity hover:opacity-80"
+              style={{
+                fontSize: "var(--t-micro)",
+                fontWeight: 500,
+                background: "var(--accent)",
+                color: "var(--color-text-on-cta)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 10px",
+              }}
+            >
+              {task.scheduled_start ? "Update" : "Add to calendar"}
+            </button>
+            {task.scheduled_start && (
+              <button
+                onClick={removeSchedule}
+                className="transition-opacity hover:opacity-70"
+                style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}
+              >
+                Remove
+              </button>
+            )}
+            <button
+              onClick={() => setShowSchedule(false)}
+              className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+              style={{ color: "var(--color-text-faint)" }}
+              title="Cancel"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          {schedNote && (
+            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)", marginTop: 4 }}>
+              {schedNote}
+            </p>
+          )}
         </div>
       )}
 
