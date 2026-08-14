@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { todayString } from "@/lib/timezone";
 import { upsertExercisePRs } from "@/lib/fitness/compute-prs";
+import { markPlanCompleted } from "@/lib/fitness/mark-plan-completed";
 
 interface LogSetBody {
   performed_on?: string;
@@ -106,7 +107,22 @@ export async function POST(req: Request) {
 
   if (setErr) return Response.json({ error: setErr.message }, { status: 500 });
 
-  return Response.json({ session_id: sessionId, set: setRow }, { status: 201 });
+  // A logged set means the day's plan was done — close the completion loop (#666). The plan id
+  // rides on the request; fall back to the existing session's link when the body omits it.
+  const planUpdateError = await markPlanCompleted(
+    supabase,
+    user.id,
+    body.workout_plan_id ?? existing?.workout_plan_id ?? null,
+  );
+
+  return Response.json(
+    {
+      session_id: sessionId,
+      set: setRow,
+      ...(planUpdateError ? { workout_plan_update_error: planUpdateError } : {}),
+    },
+    { status: 201 },
+  );
 }
 
 export async function PATCH(req: Request) {
@@ -186,10 +202,21 @@ export async function PATCH(req: Request) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
   if (!data) return Response.json({ error: "Session not found" }, { status: 404 });
 
+  // Saving a recap means the workout happened — flip the linked plan to completed (#666). Prefer
+  // the session's stored link; fall back to the plan id the recap carried when the session had none.
+  const planUpdateError = await markPlanCompleted(
+    supabase,
+    user.id,
+    (data.workout_plan_id as string | null) ?? body.workout_plan_id ?? null,
+  );
+
   // Fire-and-forget PR computation on session completion
   upsertExercisePRs(supabase, user.id, sessionId).catch(() => {});
 
-  return Response.json(data);
+  return Response.json({
+    ...data,
+    ...(planUpdateError ? { workout_plan_update_error: planUpdateError } : {}),
+  });
 }
 
 export async function DELETE(req: Request) {
