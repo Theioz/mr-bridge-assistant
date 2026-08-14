@@ -19,6 +19,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A deliberate rest day counted as a missed session.** `coach_check.py`'s miss streak keyed off
+  session-existence alone and ignored `workout_plans.status`, so a `cancelled`/`skipped` day (a
+  chosen rest) read as a miss — inflating the streak that escalates coaching (2 misses cuts volume,
+  3 concludes the program is wrong). With the completion flip from #666 now writing real statuses,
+  the count reads them: a miss is a `planned` day with no session; `cancelled`/`skipped`/`completed`
+  are skipped. Extracted the count into a pure `consecutive_misses()` with unit tests, and made
+  `coach_check` importable on a bare interpreter (its `_supabase` import moved into `main()`) so the
+  helper can be tested without dependencies. This is the residual half of #666 — the rule that "a
+  rest is not a miss" now lives in code instead of a memory note. (#666)
+
 - **A completed workout still read as a miss.** Nothing in the app ever moved
   `workout_plans.status` off `planned` — logging the workout left the plan `planned` forever, and
   `coach_check.py` escalates off consecutive missed *planned* days (2 misses drops volume, 3
