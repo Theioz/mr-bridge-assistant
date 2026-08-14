@@ -34,6 +34,7 @@ export interface Task {
   calendar_event_id: string | null;
   scheduled_start: string | null;
   scheduled_end: string | null;
+  scheduled_all_day: boolean;
   completed_at: string | null;
   created_at: string;
   parent_id: string | null;

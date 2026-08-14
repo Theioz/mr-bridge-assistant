@@ -9,6 +9,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Task calendar scheduling: all-day blocks, explicit end time, and add-from-create.** Refines the
+  Phase 2 scheduler on feedback: the per-task panel now takes a **start and end time** (15-minute
+  steps) instead of a duration dropdown, and **blank times mean an all-day event**. The add-task
+  form gains a **calendar toggle** — off by default — that reveals start/end time inputs, so a task
+  can be dropped on the calendar as it's created (using its due-date, or today, as the date; all-day
+  if no times). New `tasks.scheduled_all_day` flag; `scheduleTask` and the `schedule_task` MCP tool
+  now take a discriminated block (all-day date vs timed range). All-day dates are stored as noon-UTC
+  so the calendar day never shifts across time zones.
+
 - **Schedule a task onto Google Calendar (time block).** A task can now be dropped on the calendar
   as an explicit block: a calendar button on each row opens a date + time + duration picker
   ("Add to calendar"), and the row shows a chip with the block time. New nullable columns

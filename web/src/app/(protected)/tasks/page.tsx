@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
 import ListTabs from "@/components/tasks/list-tabs";
-import { scheduleTask, unscheduleTask } from "@/lib/tasks/schedule-task";
+import { scheduleTask, unscheduleTask, type ScheduleBlock } from "@/lib/tasks/schedule-task";
 import type { Task, TaskList } from "@/lib/types";
 
 async function addTask(
@@ -20,7 +20,8 @@ async function addTask(
   priority: string,
   dueDate: string,
   listId: string,
-): Promise<{ error?: string }> {
+  schedule: ScheduleBlock | null,
+): Promise<{ error?: string; warning?: string }> {
   "use server";
   try {
     const supabase = await createClient();
@@ -28,17 +29,34 @@ async function addTask(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
-    const { error } = await supabase.from("tasks").insert({
-      user_id: user.id,
-      title,
-      priority: priority || "medium",
-      status: "active",
-      due_date: dueDate || null,
-      list_id: listId || null,
-    });
+    const { data: inserted, error } = await supabase
+      .from("tasks")
+      .insert({
+        user_id: user.id,
+        title,
+        priority: priority || "medium",
+        status: "active",
+        due_date: dueDate || null,
+        list_id: listId || null,
+      })
+      .select("id")
+      .single();
     if (error) return { error: error.message };
     revalidatePath("/tasks");
     revalidatePath("/dashboard");
+    // Optionally drop it on the calendar in the same action.
+    if (schedule && inserted?.id) {
+      const res = await scheduleTask({
+        supabase,
+        userId: user.id,
+        taskId: inserted.id,
+        block: schedule,
+      });
+      revalidatePath("/tasks");
+      if (res.ok && !res.calendar_synced) {
+        return { warning: `Task added; calendar didn't sync: ${res.calendar_error ?? "unknown"}` };
+      }
+    }
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to add task" };
@@ -232,8 +250,7 @@ async function deleteList(id: string): Promise<{ error?: string }> {
 
 async function scheduleTaskAction(
   taskId: string,
-  startISO: string,
-  endISO: string,
+  block: ScheduleBlock,
 ): Promise<{ error?: string; warning?: string }> {
   "use server";
   try {
@@ -242,7 +259,7 @@ async function scheduleTaskAction(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
-    const res = await scheduleTask({ supabase, userId: user.id, taskId, startISO, endISO });
+    const res = await scheduleTask({ supabase, userId: user.id, taskId, block });
     if (!res.ok) return { error: res.error ?? "Failed to schedule" };
     revalidatePath("/tasks");
     revalidatePath("/dashboard");

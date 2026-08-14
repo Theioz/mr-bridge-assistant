@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import type { Task, Subtask, TaskList } from "@/lib/types";
+import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 import { todayString } from "@/lib/timezone";
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
@@ -37,13 +38,10 @@ interface Props {
   deleteSubtaskAction: (id: string) => Promise<{ error?: string }>;
   scheduleAction: (
     id: string,
-    startISO: string,
-    endISO: string,
+    block: ScheduleBlock,
   ) => Promise<{ error?: string; warning?: string }>;
   unscheduleAction: (id: string) => Promise<{ error?: string; warning?: string }>;
 }
-
-const DURATIONS = [15, 30, 45, 60, 90] as const;
 
 /** Local YYYY-MM-DD / HH:MM parts of an ISO instant, for the date/time inputs. */
 function localParts(iso: string): { date: string; time: string } {
@@ -55,7 +53,16 @@ function localParts(iso: string): { date: string; time: string } {
   };
 }
 
-/** Short local label for the scheduled-block chip, e.g. "Aug 20, 2:00 PM". */
+/** All-day date label ("Aug 20") from the noon-UTC marker, without a tz shift. */
+function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** Timed label, e.g. "Aug 20, 2:00 PM". */
 function formatScheduled(iso: string): string {
   return new Date(iso).toLocaleString("en-US", {
     month: "short",
@@ -225,39 +232,42 @@ export default function TaskItem({
 
   const taskList = task.list_id ? lists.find((l) => l.id === task.list_id) : null;
 
-  // Scheduling — seed the inputs from an existing block, else empty / 30 min.
+  // Scheduling — seed from an existing block. All-day: date only, times blank. Timed: date + times.
   const seededStart = task.scheduled_start ? localParts(task.scheduled_start) : null;
-  const seededDuration =
-    task.scheduled_start && task.scheduled_end
-      ? Math.max(
-          15,
-          Math.round(
-            (new Date(task.scheduled_end).getTime() - new Date(task.scheduled_start).getTime()) /
-              60_000,
-          ),
-        )
-      : 30;
+  const seededEnd = task.scheduled_end ? localParts(task.scheduled_end) : null;
+  const seededDate = task.scheduled_all_day
+    ? (task.scheduled_start ?? "").slice(0, 10) // noon-UTC marker → the intended date
+    : (seededStart?.date ?? "");
   const [showSchedule, setShowSchedule] = useState(false);
-  const [schedDate, setSchedDate] = useState(seededStart?.date ?? "");
-  const [schedTime, setSchedTime] = useState(seededStart?.time ?? "");
-  const [schedDuration, setSchedDuration] = useState<number>(seededDuration);
+  const [schedDate, setSchedDate] = useState(seededDate);
+  const [schedStart, setSchedStart] = useState(
+    task.scheduled_all_day ? "" : (seededStart?.time ?? ""),
+  );
+  const [schedEnd, setSchedEnd] = useState(task.scheduled_all_day ? "" : (seededEnd?.time ?? ""));
   const [schedNote, setSchedNote] = useState<string | null>(null);
 
   function saveSchedule() {
-    if (!schedDate || !schedTime) {
-      setSchedNote("Pick a date and time.");
+    if (!schedDate) {
+      setSchedNote("Pick a date.");
       return;
     }
-    const start = new Date(`${schedDate}T${schedTime}`);
-    if (Number.isNaN(start.getTime())) {
-      setSchedNote("Invalid date/time.");
+    if (schedStart && schedEnd && schedEnd <= schedStart) {
+      setSchedNote("End time must be after start time.");
       return;
     }
-    const startISO = start.toISOString();
-    const endISO = new Date(start.getTime() + schedDuration * 60_000).toISOString();
+    // A start time → timed (blank end defaults to +30 min). No start time → all-day.
+    const block: ScheduleBlock = schedStart
+      ? (() => {
+          const s = new Date(`${schedDate}T${schedStart}`);
+          const e = schedEnd
+            ? new Date(`${schedDate}T${schedEnd}`)
+            : new Date(s.getTime() + 30 * 60_000);
+          return { allDay: false as const, startISO: s.toISOString(), endISO: e.toISOString() };
+        })()
+      : { allDay: true, date: schedDate };
     setSchedNote(null);
     startTransition(async () => {
-      const res = await scheduleAction(task.id, startISO, endISO);
+      const res = await scheduleAction(task.id, block);
       if (res.error) {
         setSchedNote(res.error);
         return;
@@ -451,7 +461,9 @@ export default function TaskItem({
             title="On your calendar"
           >
             <CalendarClock size={11} />
-            {formatScheduled(task.scheduled_start)}
+            {task.scheduled_all_day
+              ? `${formatDay(task.scheduled_start)} · all day`
+              : formatScheduled(task.scheduled_start)}
           </span>
         )}
 
@@ -634,9 +646,10 @@ export default function TaskItem({
             />
             <input
               type="time"
-              aria-label="Schedule time"
-              value={schedTime}
-              onChange={(e) => setSchedTime(e.target.value)}
+              step={900}
+              aria-label="Start time"
+              value={schedStart}
+              onChange={(e) => setSchedStart(e.target.value)}
               className="focus:outline-none"
               style={{
                 fontSize: "var(--t-micro)",
@@ -644,13 +657,16 @@ export default function TaskItem({
                 border: "1px solid var(--rule)",
                 borderRadius: "var(--r-1)",
                 padding: "4px 8px",
-                color: "var(--color-text)",
+                color: schedStart ? "var(--color-text)" : "var(--color-text-faint)",
               }}
             />
-            <select
-              aria-label="Duration"
-              value={schedDuration}
-              onChange={(e) => setSchedDuration(Number(e.target.value))}
+            <span style={{ color: "var(--color-text-faint)", fontSize: "var(--t-micro)" }}>–</span>
+            <input
+              type="time"
+              step={900}
+              aria-label="End time"
+              value={schedEnd}
+              onChange={(e) => setSchedEnd(e.target.value)}
               className="focus:outline-none"
               style={{
                 fontSize: "var(--t-micro)",
@@ -658,15 +674,15 @@ export default function TaskItem({
                 border: "1px solid var(--rule)",
                 borderRadius: "var(--r-1)",
                 padding: "4px 8px",
-                color: "var(--color-text)",
+                color: schedEnd ? "var(--color-text)" : "var(--color-text-faint)",
               }}
+            />
+            <span
+              style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+              title="Leave times blank for an all-day event"
             >
-              {DURATIONS.map((d) => (
-                <option key={d} value={d}>
-                  {d} min
-                </option>
-              ))}
-            </select>
+              {schedStart ? "" : "all-day"}
+            </span>
             <button
               onClick={saveSchedule}
               className="transition-opacity hover:opacity-80"
