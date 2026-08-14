@@ -95,8 +95,17 @@ export function EndOfWorkoutRecap({
             marginBottom: 4,
           }}
         >
-          Perceived effort{" "}
-          <span style={{ color: "var(--color-text-faint)" }}>(1 easy — 10 max)</span>
+          {/* ANCHOR THIS TO REPS IN RESERVE, and say which set.
+              "Perceived effort (1 easy — 10 max)" was ambiguous between RPE and satisfaction with
+              the session, and on 2026-08-13 Jason answered the second: he logged 7, then said
+              "I think effort is actually 8 since some of the reps I was dying — I thought you
+              meant how I felt about the workout overall." Those two readings routinely move in
+              opposite directions (a hard session can feel great), and this number drives load
+              progression, so the question has to name the set and the scale it is on. */}
+          Effort on your <strong>last set</strong>{" "}
+          <span style={{ color: "var(--color-text-faint)" }}>
+            (8 = 1–3 reps left · 10 = failure)
+          </span>
         </label>
         <div className="flex items-center gap-1.5 print:hidden" style={{ flexWrap: "wrap" }}>
           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {

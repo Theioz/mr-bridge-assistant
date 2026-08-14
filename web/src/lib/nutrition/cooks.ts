@@ -82,12 +82,23 @@ export async function createCook(
     }
 
     name = name || (recipe.name as string);
+    // `cooks` stores the WHOLE COOK; `recipes` stores ONE SERVING. Scale by the portions being
+    // made, or the cook comes out short by exactly the batch size — and `eatFromCook`, which
+    // divides the cook total by `portions` to get a serving, then hands back a fraction of a plate.
+    //
+    // This is a regression from the change that made recipes.calories per-serving. Before it, that
+    // column held the sum of the ingredient list and copying it straight in was correct. After it,
+    // a 2-portion recipe was silently halved: a 902 kcal serving of Lamb Pasta reached meal_log as
+    // 451 on 2026-08-13. The reason it survived review is that the wrong number is the right one
+    // divided by an integer, so it reads as a plausible small meal rather than as an error.
+    const scale = input.portions;
+    const round1 = (n: number) => Math.round(n * scale * 10) / 10;
     totals = {
-      calories: recipe.calories as number,
-      protein_g: Number(recipe.protein_g),
-      carbs_g: Number(recipe.carbs_g),
-      fat_g: Number(recipe.fat_g),
-      fiber_g: Number(recipe.fiber_g),
+      calories: Math.round((recipe.calories as number) * scale),
+      protein_g: round1(Number(recipe.protein_g)),
+      carbs_g: round1(Number(recipe.carbs_g)),
+      fat_g: round1(Number(recipe.fat_g)),
+      fiber_g: round1(Number(recipe.fiber_g)),
     };
   } else if (input.ingredients?.trim()) {
     // Ad-hoc cook — resolve its own macros through USDA, same as a recipe would.
