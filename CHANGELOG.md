@@ -19,6 +19,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A completed workout still read as a miss.** Nothing in the app ever moved
+  `workout_plans.status` off `planned` — logging the workout left the plan `planned` forever, and
+  `coach_check.py` escalates off consecutive missed *planned* days (2 misses drops volume, 3
+  concludes the program is wrong). A stale past `planned` row is indistinguishable from a miss, so
+  an audit found 11 past plans still `planned`, **9 of them sessions actually completed** — the
+  coaching loop was reading near-total failure during a consistent training block, the same
+  open-loop defect that killed the first coaching attempt.
+
+  Logging a set (`POST /api/strength-sessions`) or saving the end-of-workout recap (`PATCH`) now
+  flips the linked plan to `completed` via a shared `markPlanCompleted` helper. The recap is
+  optional, so both paths write it — a sets-only workout no longer stays `planned`. The flip is
+  idempotent (a `.neq('status','completed')` guard makes repeat set-logs a no-op) and non-fatal
+  (a failure is surfaced as `workout_plan_update_error`, never swallowed). A migration backfills
+  historical rows by FK or same-date match. (#666)
+
 - **"Ate this" logged a fraction of a batch meal.** `cooks` stores the whole cook; `recipes` stores
   one serving. `createCook` copied the recipe's figures in unscaled, so a cook came out short by
   exactly its batch size — and `eatFromCook`, which divides the cook total by `portions` to get a
