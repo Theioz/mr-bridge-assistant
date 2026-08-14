@@ -9,6 +9,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **"Ate this" logged a fraction of a batch meal.** `cooks` stores the whole cook; `recipes` stores
+  one serving. `createCook` copied the recipe's figures in unscaled, so a cook came out short by
+  exactly its batch size — and `eatFromCook`, which divides the cook total by `portions` to get a
+  serving, then wrote a fraction of a real plate to `meal_log`. A 902 kcal serving of Lamb Pasta was
+  logged as **451**.
+
+  This was a regression from making `recipes.calories` per-serving. Before that change the column
+  held the sum of the ingredient list, so copying it straight in was correct. It survived review
+  because the wrong number is the right one divided by an integer: 451 reads as a plausible small
+  lunch, not as an error. The round trip is now pinned by tests — cook total ÷ portions must equal
+  the serving you started from, for every batch size.
+
+- **The effort field asked an ambiguous question.** `Perceived effort (1 easy — 10 max)` does not
+  say _which set_ or _what the scale means_, and it was answered as satisfaction with the session
+  rather than RPE: a lift was logged 7, then corrected to 8 with _"some of the reps I was dying — I
+  thought you meant how I felt about the workout overall."_ Those readings routinely move in
+  opposite directions, and this number drives load progression. Now reads **"Effort on your last
+  set (8 = 1–3 reps left · 10 = failure)"**.
+
+  Historical values remain ambiguous by construction; nothing in the data says which question a past
+  number answered.
+
+### Fixed
+
 - **Every recipe in the library now says how hot.** The `timed-step-no-heat` check went from 41
   recipes to **zero**: 45 steps across 33 recipes were rewritten with the heat level, pan guidance,
   covered/uncovered state and doneness cue taken from the sourced technique families in
