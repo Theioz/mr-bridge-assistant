@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Schedule a task onto Google Calendar (time block).** A task can now be dropped on the calendar
+  as an explicit block: a calendar button on each row opens a date + time + duration picker
+  ("Add to calendar"), and the row shows a chip with the block time. New nullable columns
+  `tasks.calendar_event_id / scheduled_start / scheduled_end`, and a `scheduleTask` / `unscheduleTask`
+  helper that mirrors the workout_plans calendar pattern — create/patch/delete the event on
+  `primary`, store the event id back on the task, and **partial-success** on failure (the block is
+  saved even if Google isn't connected; the UI shows a soft warning). MCP tools added:
+  `schedule_task`, `unschedule_task`; `get_tasks` now returns the block. Phase 2 of the tasks
+  overhaul (lists → **calendar** → history → dependencies #470). Completing/archiving a task leaves
+  its event in place for now — auto-clearing a future block is a possible follow-up.
+
 - **Task lists (TickTick-style folders).** Tasks can now be grouped into named lists — Groceries,
   Health, etc. — instead of a flat checklist. New `task_lists` table (RLS-scoped per user) + a
   nullable `tasks.list_id` (`on delete set null`, so deleting a list never deletes its tasks — they

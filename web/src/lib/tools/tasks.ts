@@ -1,6 +1,7 @@
 import { tool, jsonSchema } from "ai";
 import { ok, err } from "./_contract";
 import type { ToolContext } from "./_context";
+import { scheduleTask, unscheduleTask } from "@/lib/tasks/schedule-task";
 
 export function buildTasksTools({ supabase, userId }: ToolContext) {
   return {
@@ -20,7 +21,7 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         let q = supabase
           .from("tasks")
           .select(
-            "id, title, priority, status, due_date, category, list_id, completed_at, created_at",
+            "id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at",
           )
           .eq("status", status)
           .order("created_at", { ascending: false });
@@ -188,6 +189,61 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         if (!data)
           return err(`No active task found with id ${id} for this user — nothing was changed.`);
         return ok({ task: data });
+      },
+    }),
+
+    schedule_task: tool({
+      description:
+        "Put a task on the user's Google Calendar as a time block (or move an existing block). Provide start as an ISO 8601 datetime WITH offset (e.g. 2026-08-20T14:00:00-07:00) and a duration in minutes. Records the block on the task and creates/updates the calendar event. Partial success: if Google isn't connected the block is still saved and calendar_synced is false.",
+      inputSchema: jsonSchema<{ id: string; start: string; duration_minutes?: number }>({
+        type: "object",
+        required: ["id", "start"],
+        properties: {
+          id: { type: "string", description: "Task UUID." },
+          start: {
+            type: "string",
+            description: "ISO 8601 start datetime with UTC offset, e.g. 2026-08-20T14:00:00-07:00.",
+          },
+          duration_minutes: {
+            type: "number",
+            description: "Block length in minutes. Defaults to 30.",
+          },
+        },
+      }),
+      execute: async ({ id, start, duration_minutes }) => {
+        if (!userId) return err("No user context.");
+        const startMs = Date.parse(start);
+        if (Number.isNaN(startMs)) return err(`start is not a valid ISO datetime: "${start}"`);
+        const mins = duration_minutes && duration_minutes > 0 ? duration_minutes : 30;
+        const startISO = new Date(startMs).toISOString();
+        const endISO = new Date(startMs + mins * 60_000).toISOString();
+        const res = await scheduleTask({ supabase, userId, taskId: id, startISO, endISO });
+        if (!res.ok) return err(res.error ?? "Failed to schedule task.");
+        return ok({
+          scheduled_start: startISO,
+          scheduled_end: endISO,
+          calendar_synced: res.calendar_synced,
+          ...(res.calendar_error ? { calendar_error: res.calendar_error } : {}),
+        });
+      },
+    }),
+
+    unschedule_task: tool({
+      description:
+        "Remove a task's calendar block: deletes its Google Calendar event and clears the block on the task.",
+      inputSchema: jsonSchema<{ id: string }>({
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", description: "Task UUID." } },
+      }),
+      execute: async ({ id }) => {
+        if (!userId) return err("No user context.");
+        const res = await unscheduleTask({ supabase, userId, taskId: id });
+        if (!res.ok) return err(res.error ?? "Failed to unschedule task.");
+        return ok({
+          calendar_synced: res.calendar_synced,
+          ...(res.calendar_error ? { calendar_error: res.calendar_error } : {}),
+        });
       },
     }),
   };

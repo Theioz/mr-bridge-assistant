@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
 import ListTabs from "@/components/tasks/list-tabs";
+import { scheduleTask, unscheduleTask } from "@/lib/tasks/schedule-task";
 import type { Task, TaskList } from "@/lib/types";
 
 async function addTask(
@@ -229,6 +230,53 @@ async function deleteList(id: string): Promise<{ error?: string }> {
   }
 }
 
+async function scheduleTaskAction(
+  taskId: string,
+  startISO: string,
+  endISO: string,
+): Promise<{ error?: string; warning?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await scheduleTask({ supabase, userId: user.id, taskId, startISO, endISO });
+    if (!res.ok) return { error: res.error ?? "Failed to schedule" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    // The block saved even if Google didn't — surface that as a soft warning, not a failure.
+    return res.calendar_synced
+      ? {}
+      : { warning: `Saved, but calendar didn't sync: ${res.calendar_error ?? "unknown"}` };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to schedule" };
+  }
+}
+
+async function unscheduleTaskAction(taskId: string): Promise<{ error?: string; warning?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await unscheduleTask({ supabase, userId: user.id, taskId });
+    if (!res.ok) return { error: res.error ?? "Failed to remove from calendar" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return res.calendar_synced
+      ? {}
+      : {
+          warning: `Block cleared, but the calendar event may remain: ${res.calendar_error ?? "unknown"}`,
+        };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to remove from calendar" };
+  }
+}
+
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default async function TasksPage({
@@ -382,6 +430,8 @@ export default async function TasksPage({
                         addSubtaskAction={addSubtask}
                         completeSubtaskAction={completeSubtask}
                         deleteSubtaskAction={deleteSubtask}
+                        scheduleAction={scheduleTaskAction}
+                        unscheduleAction={unscheduleTaskAction}
                       />
                     </div>
                   ))}
