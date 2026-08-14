@@ -30,10 +30,18 @@ export interface Task {
   status: "active" | "completed" | "archived";
   due_date: string | null;
   category: string | null;
+  list_id: string | null;
   completed_at: string | null;
   created_at: string;
   parent_id: string | null;
   subtasks?: Task[];
+}
+
+export interface TaskList {
+  id: string;
+  name: string;
+  color: string | null;
+  sort_order: number;
 }
 
 export interface FitnessLog {

@@ -11,12 +11,14 @@ export const metadata: Metadata = {
 };
 import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
-import type { Task } from "@/lib/types";
+import ListTabs from "@/components/tasks/list-tabs";
+import type { Task, TaskList } from "@/lib/types";
 
 async function addTask(
   title: string,
   priority: string,
   dueDate: string,
+  listId: string,
 ): Promise<{ error?: string }> {
   "use server";
   try {
@@ -31,6 +33,7 @@ async function addTask(
       priority: priority || "medium",
       status: "active",
       due_date: dueDate || null,
+      list_id: listId || null,
     });
     if (error) return { error: error.message };
     revalidatePath("/tasks");
@@ -77,7 +80,12 @@ async function archiveTask(taskId: string): Promise<{ error?: string }> {
 
 async function updateTask(
   taskId: string,
-  fields: { title?: string; due_date?: string | null; priority?: string | null },
+  fields: {
+    title?: string;
+    due_date?: string | null;
+    priority?: string | null;
+    list_id?: string | null;
+  },
 ): Promise<{ error?: string }> {
   "use server";
   try {
@@ -160,37 +168,132 @@ async function deleteSubtask(id: string): Promise<{ error?: string }> {
   }
 }
 
+async function createList(name: string): Promise<{ error?: string; id?: string }> {
+  "use server";
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return { error: "List name cannot be empty" };
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    // A list is a folder — dedup case-insensitively so two "Groceries" can't exist.
+    const { data: existing } = await supabase
+      .from("task_lists")
+      .select("id")
+      .eq("user_id", user.id)
+      .ilike("name", trimmed)
+      .maybeSingle();
+    if (existing) return { id: existing.id };
+    const { data, error } = await supabase
+      .from("task_lists")
+      .insert({ user_id: user.id, name: trimmed })
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    return { id: data?.id };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to create list" };
+  }
+}
+
+async function renameList(id: string, name: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return { error: "List name cannot be empty" };
+    const supabase = await createClient();
+    const { error } = await supabase.from("task_lists").update({ name: trimmed }).eq("id", id);
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to rename list" };
+  }
+}
+
+async function deleteList(id: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    // FK is `on delete set null`, so a list's tasks survive as uncategorised.
+    const { error } = await supabase.from("task_lists").delete().eq("id", id);
+    if (error) return { error: error.message };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to delete list" };
+  }
+}
+
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
-export default async function TasksPage() {
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ list?: string }>;
+}) {
   const supabase = await createClient();
+  const selected = (await searchParams).list ?? "all"; // "all" | "none" | <listId>
 
-  const [activeResult, completedResult, subtasksResult] = await Promise.all([
-    supabase
-      .from("tasks")
-      .select("*")
-      .is("parent_id", null)
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("tasks")
-      .select("*")
-      .is("parent_id", null)
-      .eq("status", "completed")
-      .order("completed_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("tasks")
-      .select("id, title, status, created_at, parent_id")
-      .not("parent_id", "is", null)
-      .eq("status", "active"),
-  ]);
+  let activeQuery = supabase
+    .from("tasks")
+    .select("*")
+    .is("parent_id", null)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  let completedQuery = supabase
+    .from("tasks")
+    .select("*")
+    .is("parent_id", null)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false })
+    .limit(10);
+  if (selected === "none") {
+    activeQuery = activeQuery.is("list_id", null);
+    completedQuery = completedQuery.is("list_id", null);
+  } else if (selected !== "all") {
+    activeQuery = activeQuery.eq("list_id", selected);
+    completedQuery = completedQuery.eq("list_id", selected);
+  }
+
+  const [listsResult, countRowsResult, activeResult, completedResult, subtasksResult] =
+    await Promise.all([
+      supabase
+        .from("task_lists")
+        .select("id, name, color, sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+      // Only list_id, across all lists — used to badge each tab with its active count.
+      supabase.from("tasks").select("list_id").is("parent_id", null).eq("status", "active"),
+      activeQuery,
+      completedQuery,
+      supabase
+        .from("tasks")
+        .select("id, title, status, created_at, parent_id")
+        .not("parent_id", "is", null)
+        .eq("status", "active"),
+    ]);
 
   if (activeResult.error) console.error("[tasks] active query error:", activeResult.error.message);
   if (completedResult.error)
     console.error("[tasks] completed query error:", completedResult.error.message);
   if (subtasksResult.error)
     console.error("[tasks] subtasks query error:", subtasksResult.error.message);
+  if (listsResult.error) console.error("[tasks] lists query error:", listsResult.error.message);
+
+  const lists = (listsResult.data ?? []) as TaskList[];
+
+  // Per-tab active counts. "none" = uncategorised; totals feed the "All" tab.
+  const counts: Record<string, number> = { all: 0, none: 0 };
+  for (const row of (countRowsResult.data ?? []) as { list_id: string | null }[]) {
+    counts.all += 1;
+    const key = row.list_id ?? "none";
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
 
   const subtasksByParent = new Map<string, Task[]>();
   for (const s of (subtasksResult.data ?? []) as Task[]) {
@@ -212,6 +315,9 @@ export default async function TasksPage() {
   const medium = tasks.filter((t) => t.priority === "medium");
   const low = tasks.filter((t) => t.priority === "low" || !t.priority);
 
+  // New tasks default into the list you're viewing ("all"/"none" → uncategorised).
+  const defaultListId = selected === "all" || selected === "none" ? "" : selected;
+
   return (
     <div className="max-w-2xl">
       {/* Header */}
@@ -231,8 +337,18 @@ export default async function TasksPage() {
         </p>
       </div>
 
+      {/* List tabs — TickTick-style folders (All · lists · +) */}
+      <ListTabs
+        lists={lists}
+        selected={selected}
+        counts={counts}
+        createAction={createList}
+        renameAction={renameList}
+        deleteAction={deleteList}
+      />
+
       {/* Always-visible add form — inline, hairline bottom rule, transparent */}
-      <AddTaskForm addAction={addTask} />
+      <AddTaskForm addAction={addTask} lists={lists} defaultListId={defaultListId} />
 
       {/* Priority groups — hairline-separated rows, no card shell */}
       {tasks.length > 0 && (
@@ -259,6 +375,7 @@ export default async function TasksPage() {
                     >
                       <TaskItem
                         task={task}
+                        lists={lists}
                         completeAction={completeTask}
                         archiveAction={archiveTask}
                         updateAction={updateTask}
@@ -283,7 +400,7 @@ export default async function TasksPage() {
             paddingTop: "var(--space-6)",
           }}
         >
-          No tasks. Add one above.
+          {selected === "all" ? "No tasks. Add one above." : "No tasks in this list yet."}
         </p>
       )}
 

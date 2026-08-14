@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Task lists (TickTick-style folders).** Tasks can now be grouped into named lists — Groceries,
+  Health, etc. — instead of a flat checklist. New `task_lists` table (RLS-scoped per user) + a
+  nullable `tasks.list_id` (`on delete set null`, so deleting a list never deletes its tasks — they
+  fall back to Uncategorised). A migration promotes each existing distinct `tasks.category` to a
+  list and backfills `list_id`. The `/tasks` page gains a scrollable tab bar (All · each list ·
+  Uncategorised · + new), filters via `?list=`, and lets you create/rename/delete lists and assign
+  a task's list from the add form or its edit panel. MCP tools added: `get_task_lists`,
+  `create_task_list`; `add_task` gains `list_id`. List dots are neutral for now — a colored-dot
+  pass (via `globals.css` tokens) is a fast-follow. First phase of the tasks overhaul (lists →
+  calendar → history → dependencies #470).
+
 ### Documentation
 
 - **`data-sources.md` mislabelled `user_metric_preferences` as a units table.** The row read

@@ -2,9 +2,17 @@
 
 import { useState, useTransition, useRef } from "react";
 import { Plus } from "lucide-react";
+import type { TaskList } from "@/lib/types";
 
 interface Props {
-  addAction: (title: string, priority: string, dueDate: string) => Promise<{ error?: string }>;
+  addAction: (
+    title: string,
+    priority: string,
+    dueDate: string,
+    listId: string,
+  ) => Promise<{ error?: string }>;
+  lists: TaskList[];
+  defaultListId: string;
 }
 
 const PRIORITIES = [
@@ -13,10 +21,11 @@ const PRIORITIES = [
   { key: "low", label: "Low", color: "var(--color-text-faint)" },
 ] as const;
 
-export default function AddTaskForm({ addAction }: Props) {
+export default function AddTaskForm({ addAction, lists, defaultListId }: Props) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
   const [dueDate, setDueDate] = useState("");
+  const [listId, setListId] = useState(defaultListId);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +35,7 @@ export default function AddTaskForm({ addAction }: Props) {
     if (!title.trim() || isPending) return;
     setError(null);
     startTransition(async () => {
-      const result = await addAction(title.trim(), priority, dueDate);
+      const result = await addAction(title.trim(), priority, dueDate, listId);
       if (result.error) {
         setError(result.error);
         return;
@@ -34,6 +43,7 @@ export default function AddTaskForm({ addAction }: Props) {
       setTitle("");
       setPriority("medium");
       setDueDate("");
+      // Keep the list selection — you're usually adding several to the same list.
       inputRef.current?.focus();
     });
   }
@@ -100,6 +110,31 @@ export default function AddTaskForm({ addAction }: Props) {
             </button>
           ))}
         </div>
+
+        {lists.length > 0 && (
+          <select
+            aria-label="List"
+            value={listId}
+            onChange={(e) => setListId(e.target.value)}
+            className="focus:outline-none flex-shrink-0"
+            style={{
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 8px",
+              color: listId ? "var(--color-text)" : "var(--color-text-faint)",
+              maxWidth: 120,
+            }}
+          >
+            <option value="">No list</option>
+            {lists.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <input
           type="date"

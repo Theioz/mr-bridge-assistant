@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { Archive, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
-import type { Task, Subtask } from "@/lib/types";
+import type { Task, Subtask, TaskList } from "@/lib/types";
 import { todayString } from "@/lib/timezone";
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
@@ -20,11 +20,17 @@ function relativeDue(dateStr: string): { label: string; urgent: boolean } {
 
 interface Props {
   task: Task;
+  lists: TaskList[];
   completeAction: (id: string) => Promise<{ error?: string }>;
   archiveAction: (id: string) => Promise<{ error?: string }>;
   updateAction: (
     id: string,
-    fields: { title?: string; due_date?: string | null; priority?: string | null },
+    fields: {
+      title?: string;
+      due_date?: string | null;
+      priority?: string | null;
+      list_id?: string | null;
+    },
   ) => Promise<{ error?: string }>;
   addSubtaskAction: (parentId: string, title: string) => Promise<{ error?: string }>;
   completeSubtaskAction: (id: string) => Promise<{ error?: string }>;
@@ -160,6 +166,7 @@ function SubtaskRow({
 
 export default function TaskItem({
   task,
+  lists,
   completeAction,
   archiveAction,
   updateAction,
@@ -183,6 +190,9 @@ export default function TaskItem({
   const [editPriority, setEditPriority] = useState<"high" | "medium" | "low">(
     (task.priority as "high" | "medium" | "low") ?? "medium",
   );
+  const [editListId, setEditListId] = useState(task.list_id ?? "");
+
+  const taskList = task.list_id ? lists.find((l) => l.id === task.list_id) : null;
 
   useEffect(() => {
     if (editing) inputRef.current?.focus();
@@ -297,13 +307,31 @@ export default function TaskItem({
               {task.title}
             </span>
           )}
-          {task.category && (
+          {taskList ? (
             <span
-              className="flex-shrink-0"
-              style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+              className="flex items-center flex-shrink-0"
+              style={{ gap: 4, fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
             >
-              {task.category}
+              <span
+                className="rounded-full block"
+                style={{
+                  width: 6,
+                  height: 6,
+                  background: taskList.color ?? "var(--color-text-faint)",
+                }}
+                aria-hidden
+              />
+              {taskList.name}
             </span>
+          ) : (
+            task.category && (
+              <span
+                className="flex-shrink-0"
+                style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+              >
+                {task.category}
+              </span>
+            )
           )}
           {totalCount > 0 && (
             <span
@@ -418,6 +446,29 @@ export default function TaskItem({
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
+          {lists.length > 0 && (
+            <select
+              aria-label="List"
+              value={editListId}
+              onChange={(e) => setEditListId(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 8px",
+                color: "var(--color-text)",
+              }}
+            >
+              <option value="">No list</option>
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => {
               setShowEditPanel(false);
@@ -425,6 +476,7 @@ export default function TaskItem({
                 await updateAction(task.id, {
                   due_date: editDueDate || null,
                   priority: editPriority || null,
+                  list_id: editListId || null,
                 });
               });
             }}
