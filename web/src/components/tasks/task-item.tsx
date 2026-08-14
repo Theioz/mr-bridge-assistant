@@ -5,6 +5,7 @@ import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, X } from "lu
 import type { Task, Subtask, TaskList } from "@/lib/types";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 import { todayString } from "@/lib/timezone";
+import TimeSelect from "./time-select";
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
   const today = todayString();
@@ -644,38 +645,18 @@ export default function TaskItem({
                 color: "var(--color-text)",
               }}
             />
-            <input
-              type="time"
-              step={900}
-              aria-label="Start time"
+            <TimeSelect
+              ariaLabel="Start time"
               value={schedStart}
-              onChange={(e) => setSchedStart(e.target.value)}
-              className="focus:outline-none"
-              style={{
-                fontSize: "var(--t-micro)",
-                background: "transparent",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--r-1)",
-                padding: "4px 8px",
-                color: schedStart ? "var(--color-text)" : "var(--color-text-faint)",
-              }}
+              onChange={setSchedStart}
+              placeholder="all-day"
             />
             <span style={{ color: "var(--color-text-faint)", fontSize: "var(--t-micro)" }}>–</span>
-            <input
-              type="time"
-              step={900}
-              aria-label="End time"
+            <TimeSelect
+              ariaLabel="End time"
               value={schedEnd}
-              onChange={(e) => setSchedEnd(e.target.value)}
-              className="focus:outline-none"
-              style={{
-                fontSize: "var(--t-micro)",
-                background: "transparent",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--r-1)",
-                padding: "4px 8px",
-                color: schedEnd ? "var(--color-text)" : "var(--color-text-faint)",
-              }}
+              onChange={setSchedEnd}
+              placeholder="end"
             />
             <span
               style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
