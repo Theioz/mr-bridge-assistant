@@ -4,6 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { Plus, CalendarClock } from "lucide-react";
 import type { TaskList } from "@/lib/types";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
+import TimeSelect from "./time-select";
 
 interface Props {
   addAction: (
@@ -103,14 +104,23 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
+            // preventDefault stops the form's native submit from ALSO firing handleSubmit — a
+            // double-fire raced two adds and left the transition wedged (issue: box "disappeared").
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSubmit();
+            }
           }}
           placeholder="Add a task…"
-          className="flex-1 bg-transparent focus:outline-none min-w-0"
+          className="bg-transparent focus:outline-none"
           style={{
             color: "var(--color-text)",
             fontSize: "var(--t-body)",
             caretColor: "var(--accent)",
+            // flex-grow, but never shrink below a legible width — with min-w-0 the extra controls
+            // in this row could squeeze the input to zero and it looked like it had vanished.
+            flex: "1 1 160px",
+            minWidth: 160,
           }}
         />
 
@@ -206,38 +216,18 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
 
         {calendarOn && (
           <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }}>
-            <input
-              type="time"
-              step={900}
-              aria-label="Start time"
+            <TimeSelect
+              ariaLabel="Start time"
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="focus:outline-none"
-              style={{
-                fontSize: "var(--t-micro)",
-                background: "transparent",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--r-1)",
-                padding: "4px 6px",
-                color: startTime ? "var(--color-text)" : "var(--color-text-faint)",
-              }}
+              onChange={setStartTime}
+              placeholder="all-day"
             />
             <span style={{ color: "var(--color-text-faint)", fontSize: "var(--t-micro)" }}>–</span>
-            <input
-              type="time"
-              step={900}
-              aria-label="End time"
+            <TimeSelect
+              ariaLabel="End time"
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="focus:outline-none"
-              style={{
-                fontSize: "var(--t-micro)",
-                background: "transparent",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--r-1)",
-                padding: "4px 6px",
-                color: endTime ? "var(--color-text)" : "var(--color-text-faint)",
-              }}
+              onChange={setEndTime}
+              placeholder="end"
             />
           </div>
         )}

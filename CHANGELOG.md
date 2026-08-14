@@ -52,6 +52,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Add-task box could "disappear" after adding, and time pickers ignored 15-min steps.** Two
+  regressions from the calendar work: (1) the title input was `flex-1 min-w-0`, so the extra
+  scheduling controls in the row could squeeze it to zero width — it now has a real minimum width;
+  and pressing Enter fired the submit twice (the input's key handler *and* the form's native
+  submit), racing two adds — the key handler now `preventDefault`s. (2) `<input type="time"
+  step="900">` doesn't actually constrain the picker to quarter hours (especially on mobile), so
+  start/end time are now a `TimeSelect` dropdown of 15-minute slots, identical on phone and desktop.
+
 - **A deliberate rest day counted as a missed session.** `coach_check.py`'s miss streak keyed off
   session-existence alone and ignored `workout_plans.status`, so a `cancelled`/`skipped` day (a
   chosen rest) read as a miss — inflating the streak that escalates coaching (2 misses cuts volume,
