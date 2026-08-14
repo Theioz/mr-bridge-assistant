@@ -25,19 +25,27 @@ export interface ScheduleResult {
   calendar_error?: string; // soft failure — the block saved, the Google event did not
 }
 
-/** Create or move the Google event for a task and record the block. startISO/endISO are absolute (UTC). */
+/** A task's calendar block: an all-day date, or a timed range (absolute UTC ISO instants). */
+export type ScheduleBlock =
+  | { allDay: true; date: string } // YYYY-MM-DD
+  | { allDay: false; startISO: string; endISO: string };
+
+/** Add one calendar day to a YYYY-MM-DD date — Google's all-day `end.date` is exclusive. */
+function nextDay(date: string): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Create or move the Google event for a task and record the block. */
 export async function scheduleTask({
   supabase,
   userId,
   taskId,
-  startISO,
-  endISO,
+  block,
 }: {
   supabase: SupabaseClient;
   userId: string;
   taskId: string;
-  startISO: string;
-  endISO: string;
+  block: ScheduleBlock;
 }): Promise<ScheduleResult> {
   const { data: task, error: fetchErr } = await supabase
     .from("tasks")
@@ -48,10 +56,22 @@ export async function scheduleTask({
   if (fetchErr) return { ok: false, error: fetchErr.message, calendar_synced: false };
   if (!task) return { ok: false, error: "Task not found.", calendar_synced: false };
 
-  // Persist the block first, so the schedule survives even if Google is unreachable.
+  // Persist the block first, so the schedule survives even if Google is unreachable. All-day is
+  // stored as noon-UTC of the date (never shifts across time zones), with a null end.
+  const stored = block.allDay
+    ? {
+        scheduled_all_day: true,
+        scheduled_start: `${block.date}T12:00:00.000Z`,
+        scheduled_end: null,
+      }
+    : {
+        scheduled_all_day: false,
+        scheduled_start: block.startISO,
+        scheduled_end: block.endISO,
+      };
   const { error: saveErr } = await supabase
     .from("tasks")
-    .update({ scheduled_start: startISO, scheduled_end: endISO })
+    .update(stored)
     .eq("id", taskId)
     .eq("user_id", userId);
   if (saveErr) return { ok: false, error: saveErr.message, calendar_synced: false };
@@ -59,13 +79,19 @@ export async function scheduleTask({
   try {
     const auth = await getGoogleAuthClient({ db: supabase, userId });
     const calendar = google.calendar({ version: "v3", auth });
-    // startISO/endISO carry a UTC offset (…Z), so Google places the event correctly without a
-    // separate timeZone field, and displays it in the calendar's own zone.
-    const body = {
-      summary: task.title,
-      start: { dateTime: startISO },
-      end: { dateTime: endISO },
-    };
+    // Timed blocks carry a UTC offset (…Z), so Google places the event without a separate timeZone
+    // field. All-day uses {date}; Google's end.date is exclusive, hence nextDay().
+    const body = block.allDay
+      ? {
+          summary: task.title,
+          start: { date: block.date },
+          end: { date: nextDay(block.date) },
+        }
+      : {
+          summary: task.title,
+          start: { dateTime: block.startISO },
+          end: { dateTime: block.endISO },
+        };
 
     let eventId: string | null = task.calendar_event_id ?? null;
     if (eventId) {
@@ -143,7 +169,12 @@ export async function unscheduleTask({
 
   const { error: clearErr } = await supabase
     .from("tasks")
-    .update({ calendar_event_id: null, scheduled_start: null, scheduled_end: null })
+    .update({
+      calendar_event_id: null,
+      scheduled_start: null,
+      scheduled_end: null,
+      scheduled_all_day: false,
+    })
     .eq("id", taskId)
     .eq("user_id", userId);
   if (clearErr) return { ok: false, error: clearErr.message, calendar_synced: false };

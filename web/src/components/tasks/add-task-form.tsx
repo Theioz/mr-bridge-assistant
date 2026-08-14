@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, CalendarClock } from "lucide-react";
 import type { TaskList } from "@/lib/types";
+import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 
 interface Props {
   addAction: (
@@ -10,9 +11,17 @@ interface Props {
     priority: string,
     dueDate: string,
     listId: string,
-  ) => Promise<{ error?: string }>;
+    schedule: ScheduleBlock | null,
+  ) => Promise<{ error?: string; warning?: string }>;
   lists: TaskList[];
   defaultListId: string;
+}
+
+/** Today as YYYY-MM-DD in the browser's local zone. */
+function todayLocal(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 const PRIORITIES = [
@@ -26,24 +35,47 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
   const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
   const [dueDate, setDueDate] = useState("");
   const [listId, setListId] = useState(defaultListId);
+  const [calendarOn, setCalendarOn] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Build the calendar block from the toggle + date + times. Blank times → all-day; a lone start
+  // gets a default 30-min end. Event date is the due-date, or today if none is set.
+  function buildSchedule(): ScheduleBlock | null {
+    if (!calendarOn) return null;
+    const date = dueDate || todayLocal();
+    if (startTime) {
+      const s = new Date(`${date}T${startTime}`);
+      const e = endTime ? new Date(`${date}T${endTime}`) : new Date(s.getTime() + 30 * 60_000);
+      return { allDay: false, startISO: s.toISOString(), endISO: e.toISOString() };
+    }
+    return { allDay: true, date };
+  }
+
   function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!title.trim() || isPending) return;
+    if (calendarOn && startTime && endTime && endTime <= startTime) {
+      setError("End time must be after start time.");
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await addAction(title.trim(), priority, dueDate, listId);
+      const result = await addAction(title.trim(), priority, dueDate, listId, buildSchedule());
       if (result.error) {
         setError(result.error);
         return;
       }
+      setError(result.warning ?? null);
       setTitle("");
       setPriority("medium");
       setDueDate("");
-      // Keep the list selection — you're usually adding several to the same list.
+      setStartTime("");
+      setEndTime("");
+      // Keep the list selection and calendar toggle — you're usually adding several similar tasks.
       inputRef.current?.focus();
     });
   }
@@ -152,6 +184,63 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
             width: 120,
           }}
         />
+
+        {/* Calendar toggle + optional time block */}
+        <button
+          type="button"
+          onClick={() => setCalendarOn((v) => !v)}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-80"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "var(--r-1)",
+            border: "1px solid var(--rule)",
+            color: calendarOn ? "var(--color-text-on-cta)" : "var(--color-text-faint)",
+            background: calendarOn ? "var(--accent)" : "transparent",
+          }}
+          title={calendarOn ? "On calendar (click to turn off)" : "Add to calendar"}
+          aria-pressed={calendarOn}
+        >
+          <CalendarClock size={14} />
+        </button>
+
+        {calendarOn && (
+          <div className="flex items-center flex-shrink-0" style={{ gap: "var(--space-1)" }}>
+            <input
+              type="time"
+              step={900}
+              aria-label="Start time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 6px",
+                color: startTime ? "var(--color-text)" : "var(--color-text-faint)",
+              }}
+            />
+            <span style={{ color: "var(--color-text-faint)", fontSize: "var(--t-micro)" }}>–</span>
+            <input
+              type="time"
+              step={900}
+              aria-label="End time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 6px",
+                color: endTime ? "var(--color-text)" : "var(--color-text-faint)",
+              }}
+            />
+          </div>
+        )}
 
         <button
           type="submit"

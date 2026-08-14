@@ -194,30 +194,72 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
 
     schedule_task: tool({
       description:
-        "Put a task on the user's Google Calendar as a time block (or move an existing block). Provide start as an ISO 8601 datetime WITH offset (e.g. 2026-08-20T14:00:00-07:00) and a duration in minutes. Records the block on the task and creates/updates the calendar event. Partial success: if Google isn't connected the block is still saved and calendar_synced is false.",
-      inputSchema: jsonSchema<{ id: string; start: string; duration_minutes?: number }>({
+        "Put a task on the user's Google Calendar as a calendar block (or move an existing one). For a TIMED block, provide start (ISO 8601 with offset, e.g. 2026-08-20T14:00:00-07:00) and either end or duration_minutes. For an ALL-DAY block, set all_day:true and date (YYYY-MM-DD). Partial success: if Google isn't connected the block is still saved and calendar_synced is false.",
+      inputSchema: jsonSchema<{
+        id: string;
+        all_day?: boolean;
+        date?: string;
+        start?: string;
+        end?: string;
+        duration_minutes?: number;
+      }>({
         type: "object",
-        required: ["id", "start"],
+        required: ["id"],
         properties: {
           id: { type: "string", description: "Task UUID." },
+          all_day: { type: "boolean", description: "True for an all-day block (needs date)." },
+          date: { type: "string", description: "All-day date, YYYY-MM-DD." },
           start: {
             type: "string",
-            description: "ISO 8601 start datetime with UTC offset, e.g. 2026-08-20T14:00:00-07:00.",
+            description: "Timed block start, ISO 8601 with offset, e.g. 2026-08-20T14:00:00-07:00.",
           },
+          end: { type: "string", description: "Timed block end, ISO 8601 with offset." },
           duration_minutes: {
             type: "number",
-            description: "Block length in minutes. Defaults to 30.",
+            description: "Timed block length if end is omitted. Defaults to 30.",
           },
         },
       }),
-      execute: async ({ id, start, duration_minutes }) => {
+      execute: async ({ id, all_day, date, start, end, duration_minutes }) => {
         if (!userId) return err("No user context.");
+        if (all_day) {
+          if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return err("all_day requires date in YYYY-MM-DD format.");
+          }
+          const res = await scheduleTask({
+            supabase,
+            userId,
+            taskId: id,
+            block: { allDay: true, date },
+          });
+          if (!res.ok) return err(res.error ?? "Failed to schedule task.");
+          return ok({
+            all_day: true,
+            date,
+            calendar_synced: res.calendar_synced,
+            ...(res.calendar_error ? { calendar_error: res.calendar_error } : {}),
+          });
+        }
+        if (!start) return err("A timed block needs start (or set all_day + date).");
         const startMs = Date.parse(start);
         if (Number.isNaN(startMs)) return err(`start is not a valid ISO datetime: "${start}"`);
-        const mins = duration_minutes && duration_minutes > 0 ? duration_minutes : 30;
+        let endMs: number;
+        if (end) {
+          endMs = Date.parse(end);
+          if (Number.isNaN(endMs)) return err(`end is not a valid ISO datetime: "${end}"`);
+        } else {
+          const mins = duration_minutes && duration_minutes > 0 ? duration_minutes : 30;
+          endMs = startMs + mins * 60_000;
+        }
+        if (endMs <= startMs) return err("end must be after start.");
         const startISO = new Date(startMs).toISOString();
-        const endISO = new Date(startMs + mins * 60_000).toISOString();
-        const res = await scheduleTask({ supabase, userId, taskId: id, startISO, endISO });
+        const endISO = new Date(endMs).toISOString();
+        const res = await scheduleTask({
+          supabase,
+          userId,
+          taskId: id,
+          block: { allDay: false, startISO, endISO },
+        });
         if (!res.ok) return err(res.error ?? "Failed to schedule task.");
         return ok({
           scheduled_start: startISO,
