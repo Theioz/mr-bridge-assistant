@@ -19,7 +19,9 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
       execute: async ({ status = "active" }) => {
         let q = supabase
           .from("tasks")
-          .select("id, title, priority, status, due_date, category, completed_at, created_at")
+          .select(
+            "id, title, priority, status, due_date, category, list_id, completed_at, created_at",
+          )
           .eq("status", status)
           .order("created_at", { ascending: false });
         if (userId) q = q.eq("user_id", userId);
@@ -29,13 +31,64 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
       },
     }),
 
+    get_task_lists: tool({
+      description:
+        "List the user's task lists (TickTick-style folders, e.g. Groceries, Health). Use to find a list_id before creating a task in it, or to check whether a list already exists.",
+      inputSchema: jsonSchema<Record<string, never>>({ type: "object", properties: {} }),
+      execute: async () => {
+        let q = supabase
+          .from("task_lists")
+          .select("id, name, color, sort_order")
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true });
+        if (userId) q = q.eq("user_id", userId);
+        const { data, error } = await q;
+        if (error) return { error: error.message };
+        return data ?? [];
+      },
+    }),
+
+    create_task_list: tool({
+      description:
+        "Create a new task list (folder). Check get_task_lists first to avoid duplicates. Returns the new list including its id, which you can pass to add_task as list_id.",
+      inputSchema: jsonSchema<{ name: string }>({
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", description: "List name, e.g. 'Groceries' or 'Health'." },
+        },
+      }),
+      execute: async ({ name }) => {
+        const trimmed = name.trim();
+        if (!trimmed) return err("List name cannot be empty.");
+        // Case-insensitive dedup — a list is a folder, not a note; two 'Groceries' is a bug.
+        const { data: existing } = await supabase
+          .from("task_lists")
+          .select("id, name, color, sort_order")
+          .eq("user_id", userId)
+          .ilike("name", trimmed)
+          .maybeSingle();
+        if (existing) return ok({ list: existing, deduped: true });
+
+        const { data, error: insertError } = await supabase
+          .from("task_lists")
+          .insert({ user_id: userId, name: trimmed })
+          .select("id, name, color, sort_order")
+          .single();
+        if (insertError) return err(insertError.message);
+        if (!data) return err("Insert returned no row — list may not have been saved.");
+        return ok({ list: data });
+      },
+    }),
+
     add_task: tool({
       description:
-        "Add a new task or subtask to the tasks table. To add an item to a list (e.g. shopping list, grocery list), first call get_tasks to find the parent task ID, then call add_task with parent_id set.",
+        "Add a new task or subtask. To put a task in a list (Groceries, Health, etc.), set list_id — call get_task_lists first, or create_task_list if the list doesn't exist yet. To add a checklist item UNDER an existing task, set parent_id (a subtask) instead. list_id groups top-level tasks; parent_id nests a task under another.",
       inputSchema: jsonSchema<{
         title: string;
         priority?: "high" | "medium" | "low";
         category?: string;
+        list_id?: string;
         due_date?: string;
         parent_id?: string;
       }>({
@@ -48,7 +101,15 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             enum: ["high", "medium", "low"],
             description: "Task priority. Omit for subtasks.",
           },
-          category: { type: "string", description: "Task category." },
+          category: {
+            type: "string",
+            description: "Deprecated free-text category — prefer list_id.",
+          },
+          list_id: {
+            type: "string",
+            description:
+              "Task list UUID (from get_task_lists / create_task_list) to file this task under.",
+          },
           due_date: {
             type: "string",
             description: "Due date in YYYY-MM-DD format. Omit for subtasks.",
@@ -56,11 +117,11 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
           parent_id: {
             type: "string",
             description:
-              "Parent task UUID. Set this to add a subtask/list item under an existing task.",
+              "Parent task UUID. Set this to add a subtask/checklist item under an existing task.",
           },
         },
       }),
-      execute: async ({ title, priority, category, due_date, parent_id }) => {
+      execute: async ({ title, priority, category, list_id, due_date, parent_id }) => {
         if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
           return err(`due_date must be YYYY-MM-DD format, got: "${due_date}"`);
         }
@@ -91,11 +152,13 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             title,
             priority: parent_id ? null : (priority ?? null),
             category: category ?? null,
+            // A subtask inherits its parent's list; only top-level tasks carry a list_id.
+            list_id: parent_id ? null : (list_id ?? null),
             due_date: parent_id ? null : (due_date ?? null),
             status: "active",
             parent_id: parent_id ?? null,
           })
-          .select("id, title, priority, status, due_date, category, parent_id, created_at")
+          .select("id, title, priority, status, due_date, category, list_id, parent_id, created_at")
           .single();
         if (insertError) return err(insertError.message);
         if (!data) return err("Insert returned no row — task may not have been saved.");
