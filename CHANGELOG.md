@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Documentation
+
+- **`data-sources.md` mislabelled `user_metric_preferences` as a units table.** The row read
+  "Unit preferences (kg/lb)", but the table has nothing to do with units — it maps a metric
+  category to a preferred data source (`(user_id, metric, preferred_source)`, e.g. HRV from Oura,
+  body composition from Google Health) and is written by the `/settings` integrations panel. The
+  wrong label sent a session hunting a unit-conversion bug that did not exist. Corrected the row and
+  added a note that units live solely in `profile.weight_unit` — storage is canonical kg, converted
+  at the UI boundary by `web/src/lib/units.ts`. (#653)
+
 ### Fixed
 
 - **"Ate this" logged a fraction of a batch meal.** `cooks` stores the whole cook; `recipes` stores

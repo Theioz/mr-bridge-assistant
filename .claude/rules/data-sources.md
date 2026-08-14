@@ -27,8 +27,10 @@ says "MCP tool", that tool is available to you directly in this session.
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools** |
 | `notifications`, `packages` | ntfy push history; Gmail package scan | `/api/cron/sync` |
 | `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/stocks/refresh`, `/api/sports/refresh` |
-| `user_metric_preferences` | Unit preferences (kg/lb) | `/settings` |
+| `user_metric_preferences` | Per-metric **source** preference — which integration to trust for each metric (e.g. HRV from Oura, body composition from Google Health). Rows are `(user_id, metric, preferred_source)`; `metric` ∈ sleep/hrv/steps/active_calories/readiness/body_composition. **Not units.** Empty in prod → falls back to `METRIC_DEFAULTS` (`web/src/lib/metric-preferences.ts`) | `/settings` (integrations panel writes it via the `saveMetricPreferences` server action; per-metric upsert) |
 | `chat_sessions`, `chat_messages` | **Orphaned.** Retained for history; nothing writes them since the chat was deleted (#476) | — |
+
+**Units are not a table.** Display units come solely from `profile.weight_unit`. Weights are stored canonically in **kg** (`strength_session_sets.weight_kg`, `exercise_prs.weight_pr_kg`) and converted at the UI boundary by `kgToDisplay` / `displayToKg` in `web/src/lib/units.ts`. There is no separate units table — if you are hunting a unit bug, this is the only place units live.
 
 ## Nutrition: the numbers come from data, not from a model
 
