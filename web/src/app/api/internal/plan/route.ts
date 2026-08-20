@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateWeights } from "@/lib/fitness/equipment-validation";
+import { todayString, comingMonday, addDays } from "@/lib/timezone";
 
 interface WorkoutExercise {
   exercise: string;
@@ -34,28 +35,17 @@ function checkAuth(request: NextRequest): boolean {
   return !!(process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`);
 }
 
-function getComingMonday(weekStart?: string): Date {
-  if (weekStart) {
-    const [y, m, d] = weekStart.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const pyDow = (today.getDay() + 6) % 7; // 0=Mon … 6=Sun
-  const days = (7 - pyDow) % 7 || 7;
-  const monday = new Date(today);
-  monday.setDate(monday.getDate() + days);
-  return monday;
-}
-
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
+/**
+ * The Monday that starts the week being planned, as YYYY-MM-DD.
+ *
+ * Everything downstream is a date STRING in the user's timezone. This route used to
+ * carry `Date` objects and stringify them with `toISOString()`, which is UTC — on a
+ * container running UTC (which is what mr-bridge runs), planning on a Sunday evening
+ * Pacific read the clock as Monday and jumped to the Monday AFTER the week that was
+ * about to start. Keeping the whole window as strings removes the conversion entirely.
+ */
+function getComingMondayStr(weekStart?: string): string {
+  return weekStart ?? comingMonday(todayString());
 }
 
 function fmtHrs(h: number | null | undefined): string {
@@ -76,13 +66,11 @@ export async function GET(request: NextRequest) {
 
   const db = createServiceClient();
   const weekStartParam = request.nextUrl.searchParams.get("week_start") ?? undefined;
-  const nextMonday = getComingMonday(weekStartParam);
+  const nextMonday = getComingMondayStr(weekStartParam);
   const priorMonday = addDays(nextMonday, -7);
   const priorSunday = addDays(nextMonday, -1);
   const nextSunday = addDays(nextMonday, 6);
-  const [nMon, pMon, pSun, nSun] = [nextMonday, priorMonday, priorSunday, nextSunday].map(
-    toDateStr,
-  );
+  const [nMon, pMon, pSun, nSun] = [nextMonday, priorMonday, priorSunday, nextSunday];
 
   const [
     profileR,
@@ -416,7 +404,7 @@ export async function GET(request: NextRequest) {
       if (!habitMap[name]) habitMap[name] = {};
       habitMap[name][h.date] = h.completed;
     }
-    const dates = Array.from({ length: 7 }, (_, i) => toDateStr(addDays(priorMonday, i)));
+    const dates = Array.from({ length: 7 }, (_, i) => addDays(priorMonday, i));
     for (const reg of registry) {
       const rowData = habitMap[reg.name] ?? {};
       const completed = dates.filter((d) => rowData[d] === true).length;
@@ -443,7 +431,7 @@ export async function GET(request: NextRequest) {
 
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   lines.push("\n## COMING WEEK — dates available for scheduling");
-  for (let i = 0; i < 7; i++) lines.push(`- ${toDateStr(addDays(nextMonday, i))} (${dayNames[i]})`);
+  for (let i = 0; i < 7; i++) lines.push(`- ${addDays(nextMonday, i)} (${dayNames[i]})`);
 
   return new Response(lines.join("\n"), {
     headers: { "Content-Type": "text/plain; charset=utf-8" },
@@ -475,9 +463,8 @@ export async function POST(request: NextRequest) {
   }
 
   const db = createServiceClient();
-  const nextMonday = getComingMonday(week_start);
-  const nextMondayStr = toDateStr(nextMonday);
-  const nextSundayStr = toDateStr(addDays(nextMonday, 6));
+  const nextMondayStr = getComingMondayStr(week_start);
+  const nextSundayStr = addDays(nextMondayStr, 6);
 
   const { count } = await db
     .from("workout_plans")

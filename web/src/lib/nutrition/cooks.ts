@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateFromText } from "./estimate";
 import { perPortion } from "./recipe-macros";
+import { todayString } from "@/lib/timezone";
 
 /**
  * A cook is one time the user actually made food.
@@ -124,7 +125,9 @@ export async function createCook(
       user_id: userId,
       recipe_id: input.recipeId ?? null,
       name,
-      cooked_on: input.cookedOn ?? new Date().toISOString().slice(0, 10),
+      // todayString(), not toISOString() — the server runs UTC, so an evening Pacific
+      // cook used to be stamped with tomorrow's date and land in the fridge a day early.
+      cooked_on: input.cookedOn ?? todayString(),
       portions: input.portions,
       portions_remaining: input.portions,
       notes: input.notes ?? null,
@@ -229,7 +232,9 @@ export async function eatFromCook(
       .maybeSingle();
     logDate = (plan?.date as string | undefined) ?? undefined;
   }
-  logDate = logDate ?? new Date().toISOString().slice(0, 10);
+  // Same UTC trap as cooked_on: an evening Pacific meal must log to the day the user
+  // ate it, not the next UTC day, or it lands on the wrong day's intake total.
+  logDate = logDate ?? todayString();
 
   const { data: logged, error: logErr } = await db
     .from("meal_log")

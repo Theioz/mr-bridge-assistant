@@ -104,3 +104,26 @@ export function addDays(date: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+/**
+ * Returns the Monday that STARTS the coming week, as YYYY-MM-DD.
+ *
+ * `from` must itself be a YYYY-MM-DD string already in the user's timezone —
+ * pass `todayString()`, never a `Date`. Taking a string is the point: the caller
+ * cannot accidentally hand this a UTC instant, which is exactly how the weekly
+ * planner used to skip a week (see below).
+ *
+ * If `from` is itself a Monday the result is the NEXT Monday, never `from`. This
+ * drives "plan the coming week", which is always the week that has not started yet.
+ *
+ * WHY THIS IS NOT INLINE ARITHMETIC ON A Date. The planner previously did
+ * `new Date()` + `getDay()` on a server running UTC. Sunday evening Pacific is
+ * already Monday in UTC, so `getDay()` returned Mon, the "coming Monday" became
+ * Mon + 7, and planning on a Sunday night silently skipped the week that was
+ * about to start.
+ */
+export function comingMonday(from: string): string {
+  // Anchor at noon UTC so the weekday never shifts under a DST boundary.
+  const dow = (new Date(`${from}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon … 6=Sun
+  return addDays(from, (7 - dow) % 7 || 7);
+}
