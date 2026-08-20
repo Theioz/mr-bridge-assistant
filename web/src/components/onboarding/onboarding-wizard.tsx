@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { WatchlistSettings } from "@/components/settings/watchlist-settings";
 import { SportsSettings } from "@/components/settings/sports-settings";
 import type { SportsFavorite } from "@/lib/sync/sports";
+import { todayString } from "@/lib/timezone";
 
 const TOTAL_STEPS = 8;
 
@@ -576,7 +577,7 @@ export function OnboardingWizard({
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                max={new Date().toISOString().split("T")[0]}
+                max={todayString()}
                 className="focus:outline-none input-focus-ring"
                 style={inputStyle}
               />

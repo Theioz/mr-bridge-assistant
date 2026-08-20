@@ -52,6 +52,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Dates were logged in UTC, so anything after ~5 PM Pacific was stamped with tomorrow.** The
+  container clock is UTC, so `new Date().toISOString().slice(0, 10)` — used to default
+  `cooks.cooked_on` and `meal_log.date` — returned the _next_ day for the last 7-8 hours of every
+  day. A shrimp dinner cooked at 5:53 PM PDT on 2026-08-19 was written as `cooked_on 2026-08-20`,
+  dating the leftovers into the future in a fridge list whose whole job is "eat the oldest thing
+  first"; any meal logged after 5 PM would likewise have landed on the next day's intake total.
+  Both defaults now use `todayString()` from `lib/timezone`, which formats in `USER_TIMEZONE`
+  (default `America/Los_Angeles`) — the helper already existed and this module simply never used it.
+  Same fix applied to the two other user-facing "today" defaults: the new-calendar-event date and
+  the onboarding date-of-birth `max`.
+
+  The weekly planner (`/api/internal/plan`) had the same bug in a nastier form: it built its week
+  window from `new Date()` + `getDay()` on a UTC server, so planning on a **Sunday evening Pacific**
+  read the clock as Monday and returned the Monday _after_ the week that was about to start —
+  silently skipping a week. Its window is now date strings throughout, via a new
+  `comingMonday(from)` helper. New `src/__tests__/timezone-dates.test.ts` pins all of it, including
+  DST boundaries and the exact instant that produced the bad row.
+
+  Deliberately **not** changed: `addDays`, `journal/prompts.shiftDate` and `sync/google-health.dateStr`
+  also call `toISOString()`, but each is anchored to an explicit UTC instant (noon-UTC, or an
+  already-offset-shifted timestamp) and is correct as written.
+
 - **Add-task box could "disappear" after adding, and time pickers ignored 15-min steps.** Two
   regressions from the calendar work: (1) the title input was `flex-1 min-w-0`, so the extra
   scheduling controls in the row could squeeze it to zero width — it now has a real minimum width;

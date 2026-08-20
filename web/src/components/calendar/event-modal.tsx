@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { CalendarRangeEvent } from "@/lib/calendar-types";
+import { todayString } from "@/lib/timezone";
 
 interface EventModalProps {
   open: boolean;
@@ -50,9 +51,7 @@ export default function EventModal({
   // target event or slot changes, so these initializers always run fresh.
   const [title, setTitle] = useState(editEvent?.title ?? "");
   const [date, setDate] = useState(
-    editEvent
-      ? editEvent.start.slice(0, 10)
-      : (initialDate ?? new Date().toISOString().slice(0, 10)),
+    editEvent ? editEvent.start.slice(0, 10) : (initialDate ?? todayString()),
   );
   const [allDay, setAllDay] = useState(editEvent?.allDay ?? false);
   const [startTime, setStartTime] = useState(() => {
