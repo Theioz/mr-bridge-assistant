@@ -9,6 +9,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The recipe audit now actually runs.** `GET /api/cron/audit-recipes` runs the full library audit
+  weekly from the compute-core crontab, bearer-authed exactly like `/api/cron/sync`, and pushes an
+  ntfy notification plus an in-app `notifications` row **only when there are findings**. Silence is
+  the normal case; a job that pings every week regardless gets muted and is worth nothing again.
+
+  This closes the gap that produced the previous PR. `scripts/audit-recipes.ts` has existed since
+  **#673**, already exited 1 "so it can gate a cron or a CI job" — and nothing ever gated on it, so
+  29 recipes drifted straight past a heat check that was already implemented. Two constraints ruled
+  out the obvious homes: CI can't reach the tailnet-only database from a GitHub runner, and
+  **compute-core has no `node` installed**, so a TypeScript file cannot execute on the host at all.
+  The app container is the only runtime available, which is why this is an endpoint.
+
+### Changed
+
+- The audit moves from `web/scripts/audit-recipes.ts` into `web/src/lib/nutrition/recipe-audit.ts`,
+  shared by the CLI and the new route. Two copies of a drift detector is precisely the failure the
+  detector exists to catch. The script keeps its human-readable output and stays the by-hand entry
+  point.
+
+### Added
+
 - **Recipe invariants for rice naming and gochujang measurement, enforced at every writer.** Jason
   spot-checked one recipe on 2026-08-23 and found three convention breaches; a scan of all 82
   recipes found the rules had drifted library-wide. Two are now hard invariants, in

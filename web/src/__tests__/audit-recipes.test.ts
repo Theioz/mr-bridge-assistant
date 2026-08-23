@@ -11,8 +11,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { audit, SINGLE_PLATE_CEILING } from "../../scripts/audit-recipes.ts";
-import type { Row } from "../../scripts/audit-recipes.ts";
+import { audit, SINGLE_PLATE_CEILING } from "../lib/nutrition/recipe-audit.ts";
+import type { Row } from "../lib/nutrition/recipe-audit.ts";
 
 const recipe = (o: Partial<Row> = {}): Row => ({
   id: "r1",
