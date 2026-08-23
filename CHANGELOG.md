@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **The weekly recipe audit no longer notifies about its own known backlog.** Its first live run
+  returned 45 findings, **43 of which were `unpinned-fdc-id`** — a documented, accepted pile that
+  `20260813120000_recipe_invariants.sql` deliberately declines to enforce because those foods have
+  no safe USDA match ("visible, not fatal"). Left as-is it would have pushed every Monday forever,
+  and an alert that is always on is an alert that gets muted — which is exactly how #673's heat
+  check sat unread while 29 recipes drifted past it. The notification now fires on **actionable**
+  findings only; the backlog is still returned in the JSON and named in the message body.
+- Two remaining timed steps that never said how hot (`Chicken + Black Beans + Roasted Sweet Potato`,
+  `Chicken Breast + Brussels Sprouts + Black Beans`). The library is now clean on every enforced and
+  advisory check except that standing backlog.
+
 ### Added
 
 - **The recipe audit now actually runs.** `GET /api/cron/audit-recipes` runs the full library audit
