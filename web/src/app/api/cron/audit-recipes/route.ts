@@ -3,6 +3,22 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { audit, RECIPE_AUDIT_SELECT, type Row } from "@/lib/nutrition/recipe-audit";
 
 /**
+ * Findings that are a KNOWN, ACCEPTED backlog rather than something to act on this week.
+ *
+ * `unpinned-fdc-id` is 43 ingredient lines whose food genuinely has no safe USDA match — broccolini
+ * (the resolver once matched it to a tropical fruit), Pacific cod at a cooked weight, cabernet.
+ * `20260813120000_recipe_invariants.sql` says so explicitly and declines to enforce it: *"A NOT NULL
+ * rule would block editing those recipes at all. audit-recipes.ts reports them instead — visible,
+ * not fatal."*
+ *
+ * They are still returned in the JSON. What they must NOT do is fire a push every Monday forever:
+ * an alert that is always on is an alert that gets muted, and a muted alert is how #673's heat check
+ * sat unread while 29 recipes drifted past it. That is the failure this whole job exists to prevent,
+ * so it must not be rebuilt into the notification.
+ */
+const STANDING_BACKLOG = new Set(["unpinned-fdc-id"]);
+
+/**
  * Weekly recipe-library drift report.
  *
  * WHY AN ENDPOINT AND NOT A HOST SCRIPT. `scripts/audit-recipes.ts` has existed since #673 and was
@@ -48,15 +64,21 @@ export async function GET(request: NextRequest) {
   const byKind: Record<string, number> = {};
   for (const f of findings) byKind[f.kind] = (byKind[f.kind] ?? 0) + 1;
 
-  // Silence is the normal case and must stay silent — a job that pings every week whether or not
-  // anything is wrong gets muted, and then it is worth nothing again.
-  if (findings.length) {
+  const actionable = findings.filter((f) => !STANDING_BACKLOG.has(f.kind));
+  const backlog = findings.length - actionable.length;
+
+  // Silence is the normal case and must stay silent. Only ACTIONABLE findings notify — see
+  // STANDING_BACKLOG above for why the unpinned-fdc-id pile is excluded.
+  if (actionable.length) {
     const summary = Object.entries(byKind)
+      .filter(([kind]) => !STANDING_BACKLOG.has(kind))
       .sort((a, b) => b[1] - a[1])
       .map(([kind, n]) => `${kind}: ${n}`)
       .join(", ");
-    const title = `Recipe audit — ${findings.length} finding${findings.length === 1 ? "" : "s"}`;
-    const body = `${rows.length} recipes scanned. ${summary}`;
+    const title = `Recipe audit — ${actionable.length} finding${actionable.length === 1 ? "" : "s"}`;
+    const body =
+      `${rows.length} recipes scanned. ${summary}` +
+      (backlog ? ` (plus ${backlog} known-unpinned, not counted)` : "");
 
     // In-app notification. Non-fatal: a failed insert must not fail the audit.
     await db
@@ -81,6 +103,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     scanned: rows.length,
     count: findings.length,
+    actionable: actionable.length,
+    backlog,
+    notified: actionable.length > 0,
     byKind,
     findings,
   });
