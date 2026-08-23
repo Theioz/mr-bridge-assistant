@@ -13,7 +13,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { timedStepsMissingHeat, UNATTENDED_FLOOR_MINS } from "../../scripts/audit-recipes.ts";
+import { timedStepsMissingHeat, UNATTENDED_FLOOR_MINS } from "../lib/nutrition/recipe-audit.ts";
 import type { RecipeStep } from "../lib/types.ts";
 
 const step = (o: Partial<RecipeStep> & { text: string }): RecipeStep => ({ step: 1, ...o });
