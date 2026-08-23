@@ -20,7 +20,11 @@
  * Needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and OWNER_USER_ID. Exits 1 if anything is found,
  * so it can gate a cron or a CI job.
  */
-import { spoonViolations } from "../src/lib/nutrition/recipe-structured.ts";
+import {
+  gochujangLabelViolations,
+  riceNamingViolations,
+  spoonViolations,
+} from "../src/lib/nutrition/recipe-structured.ts";
 import type { RecipeIngredient, RecipeStep } from "../src/lib/types.ts";
 
 interface Row {
@@ -174,6 +178,18 @@ function audit(rows: Row[]): Finding[] {
 
     if (!r.steps_json?.length && r.instructions?.trim()) {
       out.push({ kind: "no-structured-steps", recipe: r.name, detail: "instructions never split" });
+    }
+
+    for (const v of gochujangLabelViolations(ings)) {
+      out.push({ kind: "gochujang-label", recipe: r.name, detail: `"${v.item}" — ${v.detail}` });
+    }
+
+    for (const v of riceNamingViolations(ings)) {
+      out.push({
+        kind: "rice-not-annotatable",
+        recipe: r.name,
+        detail: `"${v.item}" — ${v.detail}`,
+      });
     }
 
     const noHeat = timedStepsMissingHeat(r.steps_json);

@@ -97,12 +97,109 @@ const SPOON_CLASS: { match: RegExp; tsp?: number; tbsp: number }[] = [
 ];
 
 /**
- * Looks spoon-class, but has NO USDA record — so no portion table exists to resolve a volume
- * against. Grams are label-derived and must stay the quantity: writing `1 tbsp` would leave a
- * re-resolve with no way back to grams, which is the silent-drop failure this pipeline has already
- * been bitten by. These carry the spoon in the item label instead — `gochujang (1 tbsp)`.
+ * Looks spoon-class, but cannot resolve a VOLUME against a USDA portion table — so grams must stay
+ * the quantity and the spoon goes in the item label instead: `gochujang (1 tbsp)`.
+ *
+ * A branded record DOES exist (FDC 2113732, SUNCHANG — 200 kcal / 5P / 45C / 5 fib per 100 g, and
+ * its serving size of 20 g = 1 Tbsp is where that conversion comes from). But `isPlausibleMatch`
+ * rejects branded records outright, so the resolver still cannot reach it and writing `1 tbsp` as
+ * the quantity would leave a re-resolve with no way back to grams. Hand-pin 2113732 as the basis.
+ *
+ * Do NOT proxy gochujang with sriracha. On 2026-08-23 two rows did exactly that (FDC 171188, 79
+ * kcal/100 g) — a 2.5x understatement — and a third cited 171141, which is condensed black bean
+ * soup. Across the library the same ingredient was priced at 93, 190, 210 and 230 kcal/100 g.
  */
 const NO_USDA_PORTION = /\bgochujang\b/i;
+
+/** A spoon measure written into the item label: `gochujang (1 tbsp)`, `gochujang (2.2 tsp)`. */
+const SPOON_IN_LABEL = /\b\d+(?:\.\d+)?\s*(?:tsp|tbsp|teaspoons?|tablespoons?)\b/i;
+
+export interface LabelViolation {
+  item: string;
+  detail: string;
+}
+
+/**
+ * Gochujang given a bare gram quantity with no spoon anywhere in its label.
+ *
+ * The grams-as-quantity exception above is about the MACRO path; it was never a licence to drop the
+ * volume entirely. Jason measures it with a spoon and asked for it back on 2026-08-23:
+ * *"gochujang is showing as 60g ... but that should be measured in teaspoons since you scoop it."*
+ *
+ * On that date all 7 gochujang rows in the library were wrong, in two OPPOSITE directions: three
+ * had bare grams and no spoon (`60 g Gochujang`), and four had the spoon as the QUANTITY
+ * (`2.5 tbsp gochujang (45 g)`) — the inverse error, and the one that actually breaks a re-resolve.
+ * Both are rejected here.
+ */
+export function gochujangLabelViolations(rows: RecipeIngredient[] | null): LabelViolation[] {
+  if (!rows) return [];
+  const out: LabelViolation[] = [];
+  for (const r of rows) {
+    if (!NO_USDA_PORTION.test(r.item)) continue;
+    if (r.quantity == null) continue;
+    if (r.unit !== "g") {
+      out.push({
+        item: r.item,
+        detail:
+          `quantity is "${r.quantity} ${r.unit}" — gochujang keeps GRAMS as the quantity ` +
+          `(1 tbsp = 20 g) and carries the spoon in its label, e.g. ` +
+          `{ quantity: 20, unit: "g", item: "gochujang (1 tbsp)" }`,
+      });
+      continue;
+    }
+    if (!SPOON_IN_LABEL.test(r.item)) {
+      const tbsp = r.quantity / 20;
+      const spoon =
+        tbsp >= 1 ? `${+tbsp.toFixed(2)} tbsp` : `${+(r.quantity / 6.7).toFixed(1)} tsp`;
+      out.push({
+        item: r.item,
+        detail: `${r.quantity} g with no spoon in the label — write "gochujang (${spoon})"`,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Rice must be NAMED so the render-time `go` annotation can fire.
+ *
+ * Jason measures rice with the 180 ml Japanese cup (1 go = 150 g dry) and nothing else.
+ * `annotateRice` in `lib/units.ts` appends that conversion automatically — you never write it into
+ * a structured row — but it matches against the RENDERED line and only in two shapes:
+ *
+ *     "<n> g dry <grain> rice"      -> "150 g dry brown rice"    (1 go)
+ *     "<n> g cooked white|brown rice" -> "220 g cooked brown rice" (~80 g dry = 0.5 go)
+ *
+ * So `dry`/`cooked` has to sit BETWEEN the grams and the word `rice`, with at most one word
+ * between. `Brown rice, long-grain, DRY` reads correctly to a human and matches nothing — on
+ * 2026-08-23, 9 rice lines across 5 recipes rendered no `go` at all for exactly that reason, and
+ * the defect was invisible because the text looked right.
+ */
+const RICE_ITEM = /\brice\b/i;
+const RICE_NOT_GRAIN = /\brice\s+(vinegar|powder|paper|wine|flour|noodles?|cakes?|krispies)\b/i;
+const RICE_DRY = /(\d+(?:\.\d+)?)\s*g\s+dry\s+(?:\w+\s+)?rice\b/i;
+const RICE_COOKED = /(\d+(?:\.\d+)?)\s*g\s+cooked\s+(white|brown)\s+rice\b/i;
+const ALREADY_GO = /\bgo\b/i;
+
+export function riceNamingViolations(rows: RecipeIngredient[] | null): LabelViolation[] {
+  if (!rows) return [];
+  const out: LabelViolation[] = [];
+  for (const r of rows) {
+    if (!RICE_ITEM.test(r.item) || RICE_NOT_GRAIN.test(r.item)) continue;
+    if (r.quantity == null || r.unit !== "g") continue;
+    // Mirror how `formatIngredient` builds the line: quantity, unit, then item.
+    const head = `${+r.quantity.toFixed(2)} ${r.unit} ${r.item}`;
+    if (ALREADY_GO.test(head) || RICE_DRY.test(head) || RICE_COOKED.test(head)) continue;
+    out.push({
+      item: r.item,
+      detail:
+        `renders as "${head}", which annotateRice cannot match, so no go is shown. ` +
+        `Name it "dry <grain> rice, ..." or "cooked white|brown rice, ..." — e.g. ` +
+        `"dry brown rice, long-grain"`,
+    });
+  }
+  return out;
+}
 
 export interface SpoonViolation {
   item: string;
@@ -163,6 +260,23 @@ export function parseIngredientRows(raw: unknown): RecipeIngredient[] | null {
         bad.map((b) => `"${b.item}" ${b.grams} g -> ${b.suggestion}`).join("; "),
     );
   }
+  const badGoch = gochujangLabelViolations(rows);
+  if (badGoch.length) {
+    throw new RecipeShapeError(
+      "ingredients_json: gochujang keeps grams as the quantity and carries the spoon in its " +
+        "label. " +
+        badGoch.map((b) => `"${b.item}": ${b.detail}`).join("; "),
+    );
+  }
+
+  const badRice = riceNamingViolations(rows);
+  if (badRice.length) {
+    throw new RecipeShapeError(
+      "ingredients_json: rice must be named so the go annotation renders. " +
+        badRice.map((b) => `"${b.item}": ${b.detail}`).join("; "),
+    );
+  }
+
   return rows;
 }
 

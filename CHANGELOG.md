@@ -9,6 +9,45 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Recipe invariants for rice naming and gochujang measurement, enforced at every writer.** Jason
+  spot-checked one recipe on 2026-08-23 and found three convention breaches; a scan of all 82
+  recipes found the rules had drifted library-wide. Two are now hard invariants, in
+  `parseIngredientRows` **and** the `recipes_check_invariants` trigger, so PostgREST and psql are
+  covered as well as the app editor.
+  - **Rice must be named so `annotateRice` can fire.** The `go` is appended at render time and only
+    matches `"<n> g dry <grain> rice"` or `"<n> g cooked white|brown rice"`. Nine lines across five
+    recipes were stored as `Brown rice, long-grain, DRY` — correct-looking to a human, invisible to
+    the annotator, so no `go` rendered at all. All 26 rice rows now render one.
+  - **Gochujang keeps grams as the quantity and carries the spoon in its label.** All seven rows
+    were wrong, in two _opposite_ directions: three had bare grams with no spoon, four had the spoon
+    as the quantity (`2.5 tbsp gochujang (45 g)`) — the inverse error, and the one that actually
+    breaks a re-resolve. The previous trigger exempted gochujang from the spoon rule outright, which
+    was too blunt.
+
+### Fixed
+
+- **Gochujang was priced four different ways across the library — 93, 190, 210 and 230 kcal/100 g.**
+  Two rows proxied it with **sriracha** (FDC 171188, 79 kcal/100 g, a 2.5x understatement) and one
+  cited FDC 171141, which is _condensed black bean soup_. All re-based onto FDC **2113732**
+  (SUNCHANG gochujang, 200 kcal / 5P / 45C / 5 fib per 100 g), whose 20 g serving size also confirms
+  the `1 tbsp = 20 g` conversion the recipes already assumed. Net effect was small: Spicy Udon
+  +25 kcal, Gochujang Beef + Kimchi +11/serving, everything else under 5.
+- **Two more mis-pinned `fdc_id`s with correct arithmetic and wrong citations**, so no total looked
+  off: `172346` (cited as chicken thigh) is **margarine**, and `169704` (cited as dry brown rice) is
+  the **cooked** record — the latter sitting on a 100 g dry line, a latent 247 kcal loss on the next
+  re-resolve.
+- **Heat levels added to 31 recipes.** `timedStepsMissingHeat` has reported these since #673 and
+  nothing ever ran it, so 29 recipes still gave times with no burner setting. Steps now name
+  `HIGH`/`MEDIUM`/`LOW`, an oven temperature, or an explicit water state, and say when the heat
+  _changes_. Four recipes had no `steps_json` at all.
+
+### Changed
+
+- `audit-recipes.ts` gains `gochujang-label` and `rice-not-annotatable` findings. Heat remains
+  advisory rather than a trigger on purpose — inferring "this step applies heat" from prose has a
+  real false-positive rate (17 of 69 on its first run, 8 of 11 again on 2026-08-23), and a trigger
+  that throws on a false positive would block editing a correct recipe.
+
 - **Task calendar scheduling: all-day blocks, explicit end time, and add-from-create.** Refines the
   Phase 2 scheduler on feedback: the per-task panel now takes a **start and end time** (15-minute
   steps) instead of a duration dropdown, and **blank times mean an all-day event**. The add-task
@@ -77,9 +116,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **Add-task box could "disappear" after adding, and time pickers ignored 15-min steps.** Two
   regressions from the calendar work: (1) the title input was `flex-1 min-w-0`, so the extra
   scheduling controls in the row could squeeze it to zero width — it now has a real minimum width;
-  and pressing Enter fired the submit twice (the input's key handler *and* the form's native
+  and pressing Enter fired the submit twice (the input's key handler _and_ the form's native
   submit), racing two adds — the key handler now `preventDefault`s. (2) `<input type="time"
-  step="900">` doesn't actually constrain the picker to quarter hours (especially on mobile), so
+step="900">` doesn't actually constrain the picker to quarter hours (especially on mobile), so
   start/end time are now a `TimeSelect` dropdown of 15-minute slots, identical on phone and desktop.
 
 - **A deliberate rest day counted as a missed session.** `coach_check.py`'s miss streak keyed off
@@ -94,7 +133,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **A completed workout still read as a miss.** Nothing in the app ever moved
   `workout_plans.status` off `planned` — logging the workout left the plan `planned` forever, and
-  `coach_check.py` escalates off consecutive missed *planned* days (2 misses drops volume, 3
+  `coach_check.py` escalates off consecutive missed _planned_ days (2 misses drops volume, 3
   concludes the program is wrong). A stale past `planned` row is indistinguishable from a miss, so
   an audit found 11 past plans still `planned`, **9 of them sessions actually completed** — the
   coaching loop was reading near-total failure during a consistent training block, the same
