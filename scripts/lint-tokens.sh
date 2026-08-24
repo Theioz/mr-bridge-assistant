@@ -71,6 +71,10 @@ fi
 # comment citing one failed this guard. That is what the .ts exclusion above was working
 # around; it does not help once the comment is in a .tsx. Skipping comments fixes the
 # actual defect — a colour in a comment styles nothing.
+#
+# The optional leading `{` covers JSX comments — `{/* see #468 */}` is the common form inside
+# a component's markup, and without it the skip above only caught plain // and /* lines, so a
+# JSX comment citing an issue still failed (hit by #468).
 HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
   | grep -v 'globals\.css' \
@@ -86,7 +90,7 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'LibraryDetailClient' \
   | grep -v 'share/backlog' \
   | grep -v 'share/library' \
-  | awk '{ body = $0; sub(/^[^:]+:[0-9]+:/, "", body); if (body !~ /^[[:space:]]*(\/\/|\/\*|\*)/) print }' \
+  | awk '{ body = $0; sub(/^[^:]+:[0-9]+:/, "", body); if (body !~ /^[[:space:]]*(\{[[:space:]]*)?(\/\/|\/\*|\*)/) print }' \
   || true)
 
 if [[ -n "$HEX_HITS" ]]; then
