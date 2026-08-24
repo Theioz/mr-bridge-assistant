@@ -1,0 +1,28 @@
+-- Remove the packages table (#693).
+--
+-- Package detection was a heuristic scrape of shipping-confirmation emails out of Gmail. It missed
+-- shipments — #572 was filed for exactly that, closed, and the accuracy problem persisted. Data
+-- that cannot be trusted to be complete is worse than no data on a dashboard, because you stop
+-- checking the real source and still do not learn anything.
+--
+-- The table goes rather than being left orphaned because the POINT of #693 is dropping the
+-- `gmail.readonly` OAuth scope, and that is only honest once nothing reads Gmail and nothing
+-- retains what Gmail produced.
+--
+-- NOT REVERSIBLE BY `git revert`. This removes ~47 rows of scraped tracking data. They come back
+-- only from the nightly pg_dump on the NAS (/mnt/data/backups/mr-bridge/), not by reverting the
+-- commit. Accepted: the rows are stale scrape output for deliveries that have long since arrived,
+-- and the feature that produced them is gone.
+--
+-- Verified against the LIVE database before writing this, rather than assumed:
+--   * `estimate_user_storage` does not enumerate packages, so it needs no rewrite — unlike the
+--     chat-table removal in #611, which did (20260713000001).
+--   * No dependent views and no inbound foreign keys. The only dependent object is the table's own
+--     RLS policy, which goes with it.
+--
+-- Deliberately NOT touched: `sync_log` still holds ~233 rows with source='packages'. They are inert
+-- history — nothing reads them now that the settings page no longer asks for a packages sync status
+-- — and deleting log rows is not required to drop the scope. Left as a separate decision instead of
+-- being folded into a schema migration.
+
+drop table if exists public.packages;
