@@ -4,7 +4,6 @@
 //   - chat_sessions / chat_messages  — interaction state, not user-authored content
 //   - user_equipment                 — app config, not portable data
 //   - notifications                  — ephemeral (30-day TTL)
-//   - packages                       — derived from scraped Gmail
 //   - stocks_cache / sports_cache    — provider caches
 //   - user_integrations              — pgp_sym_encrypt'd OAuth refresh tokens
 //   - sync_log                       — internal observability

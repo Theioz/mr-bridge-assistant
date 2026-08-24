@@ -21,9 +21,7 @@ import {
 import TodayScoresStrip from "@/components/dashboard/today-scores-strip";
 import HabitsCheckin from "@/components/dashboard/habits-checkin";
 import UpcomingBirthdayWidget from "@/components/dashboard/upcoming-birthday";
-import PackagesBanner from "@/components/dashboard/packages-banner";
 import ScheduleToday from "@/components/dashboard/schedule-today";
-import ImportantEmails from "@/components/dashboard/important-emails";
 import TasksSummary from "@/components/dashboard/tasks-summary";
 import { WatchlistWidget } from "@/components/dashboard/watchlist-widget";
 import { SportsCard } from "@/components/dashboard/sports-card";
@@ -302,11 +300,6 @@ export default async function DashboardPage() {
         <UpcomingBirthdayWidget />
       </div>
 
-      {/* ── Package deliveries banner (null when no active deliveries) ── */}
-      <div className="print:order-7" data-reveal data-stagger="2">
-        <PackagesBanner />
-      </div>
-
       {/* ── Today's scores strip (readiness + sleep focal) ─────────── */}
       {todayScores && (
         <div className="print:order-6" data-reveal data-stagger="2">
@@ -333,14 +326,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Row 1: Schedule + Inbox ──────────────────────────────────── */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2 print:order-2"
-        style={rowStyle}
-        data-reveal
-        data-stagger="4"
-      >
+      <div className="grid grid-cols-1 print:order-2" style={rowStyle} data-reveal data-stagger="4">
         <ScheduleToday />
-        <ImportantEmails />
       </div>
 
       {/* ── Row 2: Tasks + Habits ────────────────────────────────────── */}

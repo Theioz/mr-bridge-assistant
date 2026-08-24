@@ -3,7 +3,6 @@ import { buildTasksTools } from "@/lib/tools/tasks";
 import { buildHabitsTools } from "@/lib/tools/habits";
 import { buildFitnessTools } from "@/lib/tools/fitness";
 import { buildProfileTools } from "@/lib/tools/profile";
-import { buildGmailTools } from "@/lib/tools/gmail";
 import { buildCalendarTools } from "@/lib/tools/calendar";
 import { buildMealsTools } from "@/lib/tools/meals";
 import { buildSessionTools } from "@/lib/tools/session";
@@ -28,7 +27,6 @@ export function buildChatTools(context: ToolContext) {
     ...buildHabitsTools(context),
     ...buildFitnessTools(context),
     ...buildProfileTools(context),
-    ...buildGmailTools(context),
     ...buildCalendarTools(context),
     ...buildMealsTools(context),
     ...buildSessionTools(context),

@@ -18,8 +18,8 @@ Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, hab
 
 ## What you get
 
-- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, Gmail highlights, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **35 tools** (tasks, habits, fitness, meals, calendar, Gmail read/search, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
+- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
+- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **44 tools** (tasks, habits, fitness, meals, calendar, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
 - **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, optional ntfy.sh push on completion, kill-switch in Settings → Fitness)
@@ -42,7 +42,7 @@ This runs on your own hardware. You need:
 | **A Linux host with Docker** | The reference deployment is a homelab node (`compute-core`). ~5 GB RAM for the app + Supabase + a 7B model. |
 | **Tailscale** (or equivalent) | The app and its database are **tailnet-only** — never publicly routable. Every device you use it from must be on the tailnet. |
 | **A domain** | For TLS + hostnames. The reference uses `jl-infra-lab.com` via Cloudflare. |
-| **Google Cloud project** | Calendar + Gmail + Google Health OAuth. Free. |
+| **Google Cloud project** | Calendar + Google Health OAuth. Free. |
 | **USDA FoodData Central key** | Free, instant: <https://fdc.nal.usda.gov/api-key-signup.html>. This is where macros come from. |
 | **Ollama** | Local model for food identification. CPU is fine. |
 | Google Health / Oura *(optional)* | Google Health replaced Fitbit + Google Fit in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). |
@@ -84,14 +84,13 @@ This is what replaced Claude for nutrition. The macros are read from measured da
 
 ### Step 4 — Set up Google Cloud OAuth
 
-This step enables Calendar, Gmail, and optionally Google Health. It's the most involved step but only needs to be done once.
+This step enables Calendar and optionally Google Health. It's the most involved step but only needs to be done once.
 
 **Create a Google Cloud project and enable APIs:**
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com) → click the project dropdown → **New Project**. Name it anything (e.g. `mr-bridge`).
 2. In the left sidebar: **APIs & Services → Library**. Search for and enable each of these:
    - **Google Calendar API**
-   - **Gmail API**
    - **Google Health API** *(only if you sync workouts / body composition)*
 
 **Configure the OAuth consent screen:**
@@ -134,7 +133,7 @@ Skip any integrations you don't use. The app works with none, one, or all of the
 4. Add `https://<your-host>/api/auth/google-health/callback` as an authorized redirect URI on the **existing** OAuth client and set `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` in `.env`. There is no separate client ID or secret — it reuses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 5. In your running app, go to **Settings → Integrations → Connect Google Health**. Click through the "Google hasn't verified this app" screen. The refresh token is stored encrypted in `user_integrations`.
 
-   It is consented *separately* from the `google` integration on purpose: Google revokes refresh tokens carrying Gmail scopes when the account password changes, so a health-only token keeps the fitness sync alive through a password change.
+   It is consented *separately* from the `google` integration on purpose. The original reason was Gmail — Google revokes refresh tokens carrying Gmail scopes on password change — and #693 removed that scope, but the split still earns its keep: this token feeds an unattended cron, and an interactive Calendar re-consent should not be able to invalidate it.
 
 ### Step 6 — Set up push notifications via ntfy.sh *(optional)*
 
@@ -444,7 +443,6 @@ mr-bridge-assistant/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
 │   │   │   │   │   ├── google-health/route.ts  # POST — sync last 7d body + workouts
 │   │   │   │   │   ├── googlefit/route.ts # POST — sync last 7d Google Fit body comp
-│   │   │   │   │   └── packages/route.ts  # POST — sync package deliveries from email → packages table
 │   │   │   │   ├── backlog/
 │   │   │   │   │   ├── search/route.ts          # GET — proxy TMDB/IGDB/OpenLibrary metadata search
 │   │   │   │   │   ├── route.ts                 # GET list, POST create
@@ -471,8 +469,6 @@ mr-bridge-assistant/
 │   │   │   │   ├── notifications/
 │   │   │   │   │   ├── push/route.ts            # POST — send push notification via ntfy.sh
 │   │   │   │   │   └── unread-count/route.ts    # GET — count unread notifications for badge
-│   │   │   │   ├── packages/
-│   │   │   │   │   └── route.ts                 # GET — list tracked package deliveries from packages table
 │   │   │   │   ├── strength-sessions/
 │   │   │   │   │   └── route.ts                 # GET/POST — strength session log (sets, reps, weight per exercise)
 │   │   │   │   ├── workout-plans/
@@ -496,7 +492,6 @@ mr-bridge-assistant/
 │   │   │   │       ├── calendar/events/[eventId]/route.ts # PATCH/DELETE — update or delete a specific event
 │   │   │   │       ├── calendar/range/route.ts        # GET — events over a date range (weekly workout plan sync)
 │   │   │   │       ├── calendar/upcoming-birthday/route.ts # GET — next birthday event from Calendar
-│   │   │   │       └── gmail/route.ts                # GET — important unread emails (dashboard widget)
 │   │   │   ├── share/
 │   │   │   │   └── backlog/[token]/page.tsx # Public read-only backlog item view (no auth; token = auth)
 │   │   │   ├── error.tsx                   # Top-level error boundary (friendly + retry)
@@ -522,7 +517,6 @@ mr-bridge-assistant/
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
-│   │   │       ├── important-emails.tsx   # Gmail card
 │   │   │       ├── sync-button.tsx        # Calls all 3 sync routes; spinner + router.refresh()
 │   │   │       ├── tasks-summary.tsx      # Active tasks card
 │   │   │       └── watchlist-widget.tsx   # Stock ticker rows: sparkline + price/change; refresh button
@@ -630,7 +624,6 @@ The demo account is fully interactive: toggle habits, add tasks, log meals, brow
 | Feature | Demo behaviour |
 |---------|----------------|
 | Habits, tasks, fitness, recovery | Real data from Supabase (seeded) |
-| Gmail | Hardcoded mock emails |
 | Google Calendar | Hardcoded mock events |
 | Google Health / Oura sync | Not connected — seed data covers it |
 

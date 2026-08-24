@@ -74,7 +74,6 @@ export async function POST(req: Request) {
       "chat_messages",
       "user_equipment",
       "notifications",
-      "packages",
       "stocks_cache",
       "sports_cache",
       "user_integrations",

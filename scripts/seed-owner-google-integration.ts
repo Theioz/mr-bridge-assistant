@@ -125,7 +125,7 @@ async function main() {
   }
 
   console.log(`\nSeeded user_integrations for OWNER_USER_ID=${ownerUserId} with provider=google.`);
-  console.log("Jason's calendar/gmail/fit calls will now use the DB row instead of the env var.");
+  console.log("Jason's calendar/fit calls will now use the DB row instead of the env var.");
   console.log("Once verified, file a follow-up issue to remove the GOOGLE_REFRESH_TOKEN env fallback.");
 }
 

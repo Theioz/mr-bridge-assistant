@@ -4,6 +4,12 @@ Covers how a primary Gmail account and a secondary (e.g. professional) Gmail acc
 
 Replace `<your-primary@gmail.com>` and `<your-secondary@gmail.com>` with your actual addresses throughout this guide.
 
+> **Scope note (#693):** the web app no longer reads Gmail — the important-emails and package
+> widgets and the `gmail.readonly` OAuth scope were removed. The forwarding and `Professional`
+> label setup below is still worth doing: it serves the **Claude Code session briefing**, which
+> reads mail through the claude.ai Gmail connector, not through the app's OAuth token. The two
+> were always separate integrations; only the app's is gone.
+
 ---
 
 ## Gmail — auto-forwarding aggregation
@@ -51,15 +57,20 @@ Once auto-forwarding is working and verified, remove the old POP3 source:
 
 ### How emails surface in Mr. Bridge
 
-| Email type | Source | Label in primary inbox | Dashboard? |
+| Email type | Source | Label in primary inbox | In the briefing? |
 |---|---|---|---|
 | Personal, high-signal | primary directly | none | Yes, if subject matches filter |
-| Professional | secondary via auto-forward | `Professional` | Yes, if subject matches filter — shown with `work` badge |
+| Professional | secondary via auto-forward | `Professional` | Yes, if subject matches filter — noted as `work` |
 | Personal, noise | primary directly | none | No — subject keyword filter blocks it |
 
-**Dashboard query:** `is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)`
+**Briefing query:** `is:unread subject:(meeting OR urgent OR invoice OR "action required" OR deadline)`
 
-**How the `work` badge works:** The Gmail API returns internal label IDs (opaque strings like `Label_XXXXXXXXXX`), not display names. On each request, `/api/google/gmail` fetches the full label list first to resolve the `Professional` display name to its internal ID, then checks each message's `labelIds` against that ID. This is why the label name in Gmail settings must match exactly — the code looks for a label named `Professional` (case-insensitive).
+The `Professional` label is what lets the briefing tell a work email from a personal one, so the
+label name must match exactly (case-insensitive).
+
+> Until #693 this section also documented how `/api/google/gmail` resolved the label's internal ID
+> for the dashboard's `work` badge. That route and widget are gone; the claude.ai connector handles
+> label matching itself.
 
 ---
 
@@ -103,4 +114,4 @@ Non-primary calendar events show the `calendarName` as a subtitle in the Schedul
 Steps 4 and 5 of the Session Start Protocol reflect multi-account coverage:
 
 - **Calendar**: `List Calendar Events` returns events from all connected calendars. Note the source for non-primary events.
-- **Gmail**: `Search Gmail Emails` covers both accounts (secondary emails arrive via auto-forwarding with label `Professional`). Note "personal" or "work" when surfacing emails in the briefing.
+- **Gmail**: `Search Gmail Emails` (claude.ai connector — not the app's OAuth, which no longer has Gmail access) covers both accounts; secondary emails arrive via auto-forwarding with label `Professional`. Note "personal" or "work" when surfacing emails in the briefing.

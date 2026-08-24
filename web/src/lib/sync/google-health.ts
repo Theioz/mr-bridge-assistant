@@ -56,10 +56,16 @@ interface DataPoint {
 }
 
 // ---------------------------------------------------------------------------
-// OAuth — the Google Health token lives under its own provider row, separate from
-// the "google" (Calendar/Gmail/Fit) token. Google revokes refresh tokens carrying
-// Gmail scopes when the account password changes; keeping the health token free of
-// Gmail scopes means a password change doesn't take the fitness sync down with it.
+// OAuth — the Google Health token lives under its own provider row, separate from the
+// "google" (Calendar) token.
+//
+// The original reason was Gmail: Google revokes refresh tokens carrying Gmail scopes when
+// the account password changes, so keeping the unattended fitness sync on its own token
+// meant a password change couldn't take it down. #693 dropped the Gmail scope, so that
+// specific hazard is gone once the user re-consents — but the separation still earns its
+// keep. The health token is used by an unattended cron; an interactive re-consent for
+// Calendar should not be able to invalidate it, and the two have genuinely different
+// lifetimes. Kept deliberately, not by inertia.
 // ---------------------------------------------------------------------------
 
 async function getAccessToken(db: SupabaseClient, userId: string): Promise<string> {

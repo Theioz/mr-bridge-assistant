@@ -14,7 +14,7 @@ This document captures Mr. Bridge's architectural intent: why decisions were mad
 | Conversation | **MCP server** (`web/mcp/`) → Claude Code, on the existing subscription. No API key. The in-app chat was deleted (#476). |
 | Auth | Supabase Auth | JWT; SSR cookie-based via `@supabase/ssr` |
 | Hosting / Cron | Self-hosted on compute-core. Cron is the **node's crontab** — `web/vercel.json` is deleted. |
-| External APIs | Google Calendar, Gmail, Google Health, Oura, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
+| External APIs | Google Calendar, Google Health, Oura, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
 
 ---
 
@@ -75,12 +75,11 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 | `chat_sessions` | Chat session metadata: device, started_at, summary, soft-delete flag |
 | `chat_messages` | Individual messages: role, content, parts (tool calls/results), position for ordering |
 
-### Notifications & Packages
+### Notifications
 
 | Table | Purpose |
 |-------|---------|
 | `notifications` | Push notification history: type, title, body, read status; 30-day TTL |
-| `packages` | Package delivery tracking: carrier, tracking number, ETA, status — parsed from Gmail |
 
 ### Integrations & Sync
 

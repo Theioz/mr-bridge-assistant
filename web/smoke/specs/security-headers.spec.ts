@@ -55,7 +55,7 @@ test("security headers — authenticated route", async ({ signedInPage, consoleE
   expect(response, "no response for /dashboard").toBeTruthy();
   assertHeaders(response!.headers());
 
-  // Dashboard pulls calendar/gmail widgets that 403 on the smoke account
+  // Dashboard pulls calendar widgets that 403 on the smoke account
   // without Google connected — those console errors are pre-existing and
   // out of scope here.
   consoleErrors.length = 0;

@@ -168,8 +168,7 @@ export function DataSettings() {
         </p>
         <p>
           <strong style={{ color: "var(--color-text)" }}>Not included:</strong> chat history,
-          notifications, package tracking, equipment inventory, provider caches, and encrypted OAuth
-          tokens.
+          notifications, equipment inventory, provider caches, and encrypted OAuth tokens.
         </p>
       </div>
     </section>

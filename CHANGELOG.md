@@ -7,6 +7,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Removed
+
+- **Package tracking and important-emails widgets, and with them the `gmail.readonly` OAuth
+  scope (#693).** Both carried data too unreliable to act on: packages were a heuristic scrape of
+  shipping-confirmation mail that missed shipments (#572 was filed for exactly that, closed, and
+  the accuracy problem persisted), and "important emails" was a keyword match on unread mail.
+  Neither earned the dashboard space, and together they were the only reason the app could read a
+  mailbox at all.
+
+  Full teardown rather than hiding the widgets, because the scope only comes off once nothing
+  reads Gmail: both dashboard components, `/api/packages`, `/api/sync/packages`,
+  `/api/google/gmail`, `lib/sync/packages.ts`, the Gmail MCP tools, the `packages` step in the
+  cron sync, the `Package` type, `packages.json` from the export archive, and the `packages`
+  table.
+
+  - **The scope does not shrink retroactively.** Google keeps an existing grant intact, so a
+    refresh token issued before this change still carries Gmail until the account re-consents.
+    `include_granted_scopes: false` means a fresh authorization issues a correctly narrowed
+    token — so **disconnect and reconnect Google in settings after deploying**, then confirm at
+    myaccount.google.com. Until you do, the integrations settings page shows
+    "Still granted: Gmail. Disconnect and reconnect to drop it." on the Google row; it clears
+    itself once the grant is narrowed.
+  - The Google row's "last synced" line is gone. It was fed by the packages sync — the only thing
+    the Google integration ever synced — so with packages removed it would have read "Never
+    synced" forever.
+  - `estimate_user_storage` needed no rewrite: unlike the chat-table removal in #611, it never
+    enumerated `packages`. Verified against the live function rather than assumed.
+  - `sync_log` keeps its historical `source='packages'` rows. Nothing reads them, and deleting log
+    history is not required to drop the scope.
+
 ### Added
 
 - **Recurring tasks (#468) — a series rule plus generated occurrences, with an end date that warns
