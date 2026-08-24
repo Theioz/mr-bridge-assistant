@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -205,7 +206,9 @@ export default async function DashboardPage() {
   const allCompleted = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks = computeStreaks(allCompleted, today);
 
-  const tasks = ((tasksRes.data ?? []) as Task[]).sort(
+  // Same collapse as /tasks — otherwise the "N active" count and the top-tasks list both treat a
+  // fortnight of generated occurrences as a fortnight of separate chores.
+  const tasks = collapseSeriesOccurrences((tasksRes.data ?? []) as Task[], today).sort(
     (a, b) =>
       (({ high: 0, medium: 1, low: 2 })[a.priority ?? "low"] ?? 2) -
       ({ high: 0, medium: 1, low: 2 }[b.priority ?? "low"] ?? 2),

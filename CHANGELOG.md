@@ -7,6 +7,40 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- **A recurring task is now one row, not a fortnight of rows.** The spawner materializes
+  occurrences two weeks ahead (#468) and the list rendered every one of them, so five "Water the
+  plants" rows read as five chores rather than one recurring chore. The repeat was expressed as
+  duplication instead of as a property of a task, which buried the real to-do list and hid the
+  recurrence itself.
+
+  `/tasks` and the dashboard now show the **oldest outstanding occurrence** per series; completing
+  it hands the row to the next one. Purely a rendering change — occurrences, history, `ends_on` and
+  the expiry warning (#689) are untouched.
+
+  - **`+N missed`** badge when earlier occurrences went by undone, so being three waterings behind
+    is visible without three near-identical rows competing for attention. Only occurrences that
+    were actually **due** count; future ones would otherwise make every series look permanently
+    overdue.
+  - The dashboard's "N active" count and top-tasks list use the same collapse — previously a
+    fortnight of generated dates inflated both.
+  - A **detached** occurrence ("this occurrence, not the series") keeps its own row, which is the
+    point of detaching.
+
+### Added
+
+- **"Stop repeating" on a recurring row.** `deleteSeries` has existed since #468 but only as an MCP
+  tool — the UI could *create* a series and never end one. The only lever the app offered was
+  archiving occurrences, which looks like stopping the chore and isn't: archive skips those dates,
+  and the next spawn window repopulates. Two-step confirm; completed history is kept, future
+  unfinished occurrences are removed.
+
+- `src/__tests__/collapse-series.test.ts` — 7 cases pinning the two things that fail
+  *plausibly*: showing the newest occurrence instead of the oldest (three days behind reads as up
+  to date) and counting future occurrences as missed (every series looks overdue). Both produce a
+  believable list, which is why they need a test rather than a look.
+
 ### Fixed
 
 - **Task mutations failed silently (#687).** Complete, archive, rename, add-subtask,
