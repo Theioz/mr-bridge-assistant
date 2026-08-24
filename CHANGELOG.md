@@ -7,6 +7,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Task due-date notifications have never once fired.** Two independent defects, either of which
+  alone was enough:
+
+  1. The tasks query used `.not_("due_date", "is", None)`. In supabase-py v2 `.not_` is a
+     **property** returning a builder, not a callable, so every run raised
+     `'SyncSelectRequestBuilder' object is not callable` before reading a single task. The correct
+     form — `.not_.is_(col, "null")` — was already in `coach_check.py`,
+     `fetch_planning_data.py` and `fetch_briefing_data.py`; this file was the lone holdout.
+  2. It was scheduled nowhere. `scripts/install-notifications.sh` looks like it owns the
+     scheduling, but nothing ever ran it on compute-core: `crontab -l` had **zero** `check_*.py`
+     entries. The live wiring is jl-homelab's `system/cron/compute-core-crontab`.
+
+  The failure was invisible because the except block printed to stderr and returned **0**, so cron
+  saw a clean exit and "no tasks were due" was indistinguishable from "the query crashed". Both
+  error paths now `sys.exit(1)`, so the next failure is loud.
+
+  Found while wiring the recurring-task jobs from #468 — the issue told me to mirror this script,
+  and mirroring it meant reading it.
+
+  Verified live: fires an Overdue and a Due Today push for seeded tasks (both `curl_exit=0`),
+  stays silent on a second same-day run via the existing 24h per-task dedup, and exits 1 against an
+  unreachable database instead of pretending success.
+
+  **Scheduling note:** `.env` sets `SUPABASE_URL` to `http://host.docker.internal:8000`, a
+  container-internal address that does not resolve on the host. Host-side cron entries must
+  override it to `http://localhost:8000` — the same override every existing entry already carries.
+  Scheduling it without that would have reproduced the silent failure in a new way.
+
 ### Removed
 
 - **Package tracking and important-emails widgets, and with them the `gmail.readonly` OAuth
