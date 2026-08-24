@@ -8,6 +8,27 @@ notified within the last 24 hours — tracked per task ID in profile key
 'task_notif_cache' (JSON dict: {task_id: ISO timestamp}).
 
 Requires: supabase, python-dotenv
+
+HISTORY — this script never once fired.
+
+Two independent defects, each of which alone was enough to make it do nothing:
+
+  1. The tasks query used `.not_("due_date", "is", None)`. In supabase-py v2 `.not_` is a
+     PROPERTY returning a builder, not a callable, so the line raised
+     `'SyncSelectRequestBuilder' object is not callable` on every run. The correct form —
+     `.not_.is_(col, "null")` — was already used in coach_check.py, fetch_planning_data.py and
+     fetch_briefing_data.py; this file was the lone holdout.
+  2. It was scheduled nowhere. `scripts/install-notifications.sh` looks like it owns the
+     scheduling, but nothing ever ran it on compute-core — `crontab -l` had zero check_*.py
+     entries. The live wiring is jl-homelab `system/cron/compute-core-crontab`.
+
+The failure was invisible because the except block printed to stderr and returned 0, so cron saw
+a clean exit and "no notifications today" was indistinguishable from "the query crashed". Both
+error paths now exit non-zero.
+
+NOTE FOR SCHEDULING: `.env` sets SUPABASE_URL to http://host.docker.internal:8000, which is a
+CONTAINER-internal address and does not resolve on the host. Every host-side cron entry therefore
+overrides it to http://localhost:8000 — copy the coach_check.py invocation, do not rely on .env.
 """
 from __future__ import annotations
 
@@ -92,7 +113,7 @@ def main() -> None:
         owner_user_id = get_owner_user_id()
     except Exception as e:
         print(f"[check_task_due_alerts] Supabase connection error: {e}", file=sys.stderr)
-        return
+        sys.exit(1)
 
     today_str = date.today().isoformat()
 
@@ -103,15 +124,19 @@ def main() -> None:
             .select("id, title, due_date")
             .eq("user_id", owner_user_id)
             .eq("status", "active")
-            .not_("due_date", "is", None)
+            .not_.is_("due_date", "null")
             .lte("due_date", today_str)
             .order("due_date", desc=False)
             .execute()
             .data
         )
     except Exception as e:
+        # Exit non-zero. Returning 0 here is how this script hid a total failure: the query has
+        # been raising since the supabase-py v2 upgrade (`.not_` is a property, not a callable),
+        # and a silent success code makes "no tasks were due" and "the query blew up" look
+        # identical to cron. See the module docstring.
         print(f"[check_task_due_alerts] tasks query error: {e}", file=sys.stderr)
-        return
+        sys.exit(1)
 
     if not rows:
         return
