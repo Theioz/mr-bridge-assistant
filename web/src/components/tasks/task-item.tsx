@@ -89,6 +89,51 @@ function formatScheduled(iso: string): string {
   });
 }
 
+/** What every tasks server action returns: a soft failure, not a throw. */
+type ActionResult = { error?: string; warning?: string } | void | undefined;
+
+/**
+ * Await a server action and surface its outcome into a row-level error slot.
+ *
+ * The bug this exists to kill (#687): every mutation here used to be `await someAction(...)`
+ * with the return value dropped. The actions signal failure by RETURNING `{ error }` rather than
+ * throwing, so nothing rejected, `useTransition` resolved normally, `isPending` flipped back, and
+ * the row un-greyed looking exactly as it had. The UI reported success by omission and the write
+ * was gone. Reloading was the only way to find out.
+ *
+ * Returns true on success so callers can chain — the edit-scope handlers must not apply an edit
+ * after a failed detach.
+ */
+async function runAction(
+  fn: () => Promise<ActionResult>,
+  setError: (msg: string | null) => void,
+): Promise<boolean> {
+  try {
+    const res = await fn();
+    if (res && res.error) {
+      setError(res.error);
+      return false;
+    }
+    // A successful mutation clears whatever failure was showing on this row, and surfaces a
+    // partial-success warning (e.g. saved but the calendar didn't sync) in the same slot.
+    setError(res?.warning ?? null);
+    return true;
+  } catch (e) {
+    // A server action can also reject outright — a dropped connection, an RSC transport error.
+    // That path produced an unhandled rejection and the same silent grey-then-nothing.
+    setError(e instanceof Error ? e.message : "Something went wrong — the change was not saved.");
+    return false;
+  }
+}
+
+/** Shared style for the row-level error line. */
+const rowErrorStyle = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-danger)",
+  paddingLeft: 56,
+  paddingBottom: "var(--space-2)",
+} as const;
+
 function SubtaskRow({
   subtask,
   completeSubtaskAction,
@@ -106,6 +151,7 @@ function SubtaskRow({
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(subtask.title);
+  const [rowError, setRowError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -117,7 +163,9 @@ function SubtaskRow({
     const trimmed = editTitle.trim();
     if (trimmed && trimmed !== subtask.title) {
       startTransition(async () => {
-        await updateAction(subtask.id, { title: trimmed });
+        const ok = await runAction(() => updateAction(subtask.id, { title: trimmed }), setRowError);
+        // Put the old title back so the row never shows a value the database does not hold.
+        if (!ok) setEditTitle(subtask.title);
       });
     } else {
       setEditTitle(subtask.title);
@@ -127,92 +175,99 @@ function SubtaskRow({
   const done = subtask.status === "completed";
 
   return (
-    <div
-      className="flex items-center gap-2"
-      style={{
-        opacity: isPending ? 0.4 : 1,
-        transition: "opacity var(--motion-fast) var(--ease-out-quart)",
-        borderLeft: "1px solid var(--rule-soft)",
-        marginLeft: 18,
-        paddingLeft: "var(--space-3)",
-      }}
-    >
-      {/* Checkbox — 32px touch target */}
-      <button
-        onClick={() =>
-          !done &&
-          startTransition(async () => {
-            await completeSubtaskAction(subtask.id);
-          })
-        }
-        disabled={isPending || done}
-        className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-        style={{ width: 32, height: 32 }}
-        title={done ? "Completed" : "Mark complete"}
+    <>
+      <div
+        className="flex items-center gap-2"
+        style={{
+          opacity: isPending ? 0.4 : 1,
+          transition: "opacity var(--motion-fast) var(--ease-out-quart)",
+          borderLeft: "1px solid var(--rule-soft)",
+          marginLeft: 18,
+          paddingLeft: "var(--space-3)",
+        }}
       >
-        <span
-          className="block flex items-center justify-center"
-          style={{
-            width: 14,
-            height: 14,
-            borderRadius: 3,
-            border: "1.5px solid var(--rule)",
-            background: done ? "var(--color-text-faint)" : "transparent",
-            borderColor: done ? "var(--color-text-faint)" : "var(--rule)",
-          }}
-        />
-      </button>
-
-      {/* Title */}
-      <div className="flex-1 min-w-0">
-        {editing ? (
-          <input
-            ref={inputRef}
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitEdit();
-              if (e.key === "Escape") {
-                setEditTitle(subtask.title);
-                setEditing(false);
-              }
-            }}
-            className="w-full bg-transparent focus:outline-none"
-            style={{ color: "var(--color-text)", fontSize: "var(--t-micro)" }}
-          />
-        ) : (
-          <span
-            className="cursor-text"
-            style={{
-              fontSize: "var(--t-micro)",
-              color: done ? "var(--color-text-faint)" : "var(--color-text)",
-              textDecoration: done ? "line-through" : "none",
-            }}
-            onClick={() => !done && setEditing(true)}
-          >
-            {subtask.title}
-          </span>
-        )}
-      </div>
-
-      {/* Delete */}
-      {!done && (
+        {/* Checkbox — 32px touch target */}
         <button
           onClick={() =>
+            !done &&
             startTransition(async () => {
-              await deleteSubtaskAction(subtask.id);
+              await runAction(() => completeSubtaskAction(subtask.id), setRowError);
             })
           }
-          disabled={isPending}
-          className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
-          style={{ color: "var(--color-text-faint)" }}
-          title="Remove"
+          disabled={isPending || done}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+          style={{ width: 32, height: 32 }}
+          title={done ? "Completed" : "Mark complete"}
         >
-          <X size={12} />
+          <span
+            className="block flex items-center justify-center"
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 3,
+              border: "1.5px solid var(--rule)",
+              background: done ? "var(--color-text-faint)" : "transparent",
+              borderColor: done ? "var(--color-text-faint)" : "var(--rule)",
+            }}
+          />
         </button>
+
+        {/* Title */}
+        <div className="flex-1 min-w-0">
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitEdit();
+                if (e.key === "Escape") {
+                  setEditTitle(subtask.title);
+                  setEditing(false);
+                }
+              }}
+              className="w-full bg-transparent focus:outline-none"
+              style={{ color: "var(--color-text)", fontSize: "var(--t-micro)" }}
+            />
+          ) : (
+            <span
+              className="cursor-text"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: done ? "var(--color-text-faint)" : "var(--color-text)",
+                textDecoration: done ? "line-through" : "none",
+              }}
+              onClick={() => !done && setEditing(true)}
+            >
+              {subtask.title}
+            </span>
+          )}
+        </div>
+
+        {/* Delete */}
+        {!done && (
+          <button
+            onClick={() =>
+              startTransition(async () => {
+                await runAction(() => deleteSubtaskAction(subtask.id), setRowError);
+              })
+            }
+            disabled={isPending}
+            className="flex-shrink-0 p-1 rounded transition-opacity hover:opacity-70"
+            style={{ color: "var(--color-text-faint)" }}
+            title="Remove"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+      {rowError && (
+        <p role="alert" style={{ ...rowErrorStyle, paddingLeft: 8 }}>
+          {rowError}
+        </p>
       )}
-    </div>
+    </>
   );
 }
 
@@ -268,6 +323,10 @@ export default function TaskItem({
   );
   const [schedEnd, setSchedEnd] = useState(task.scheduled_all_day ? "" : (seededEnd?.time ?? ""));
   const [schedNote, setSchedNote] = useState<string | null>(null);
+  // ONE slot for the whole row (#687), not one per mutation. schedNote stays separate on purpose:
+  // it belongs inside the schedule panel, next to the form that produced it, and was already
+  // handling its result correctly.
+  const [rowError, setRowError] = useState<string | null>(null);
 
   function saveSchedule() {
     if (!schedDate) {
@@ -324,13 +383,13 @@ export default function TaskItem({
 
   function handleComplete() {
     startTransition(async () => {
-      await completeAction(task.id);
+      await runAction(() => completeAction(task.id), setRowError);
     });
   }
 
   function handleArchive() {
     startTransition(async () => {
-      await archiveAction(task.id);
+      await runAction(() => archiveAction(task.id), setRowError);
     });
   }
 
@@ -347,7 +406,9 @@ export default function TaskItem({
       return;
     }
     startTransition(async () => {
-      await updateAction(task.id, { title: trimmed });
+      const ok = await runAction(() => updateAction(task.id, { title: trimmed }), setRowError);
+      // Restore the old title on failure so the row never displays a value the database rejected.
+      if (!ok) setEditTitle(task.title);
     });
   }
 
@@ -357,16 +418,24 @@ export default function TaskItem({
     setScopePrompt(null);
     if (!prompt || !detachAction) return;
     startTransition(async () => {
-      await detachAction(task.id);
-      if (prompt.kind === "title") {
-        await updateAction(task.id, { title: editTitle.trim() });
-      } else {
-        await updateAction(task.id, {
-          due_date: editDueDate || null,
-          priority: editPriority || null,
-          list_id: editListId || null,
-        });
+      const detached = await runAction(() => detachAction(task.id), setRowError);
+      if (!detached) {
+        setEditTitle(task.title);
+        return;
       }
+      const ok =
+        prompt.kind === "title"
+          ? await runAction(() => updateAction(task.id, { title: editTitle.trim() }), setRowError)
+          : await runAction(
+              () =>
+                updateAction(task.id, {
+                  due_date: editDueDate || null,
+                  priority: editPriority || null,
+                  list_id: editListId || null,
+                }),
+              setRowError,
+            );
+      if (!ok) setEditTitle(task.title);
     });
   }
 
@@ -376,14 +445,21 @@ export default function TaskItem({
     setScopePrompt(null);
     if (!prompt || !series || !updateSeriesAction) return;
     startTransition(async () => {
-      if (prompt.kind === "title") {
-        await updateSeriesAction(series.id, { title: editTitle.trim() });
-      } else {
-        await updateSeriesAction(series.id, {
-          priority: editPriority || null,
-          list_id: editListId || null,
-        });
-      }
+      const ok =
+        prompt.kind === "title"
+          ? await runAction(
+              () => updateSeriesAction(series.id, { title: editTitle.trim() }),
+              setRowError,
+            )
+          : await runAction(
+              () =>
+                updateSeriesAction(series.id, {
+                  priority: editPriority || null,
+                  list_id: editListId || null,
+                }),
+              setRowError,
+            );
+      if (!ok) setEditTitle(task.title);
     });
   }
 
@@ -393,7 +469,7 @@ export default function TaskItem({
     if (!trimmed) return;
     setAddInput("");
     startTransition(async () => {
-      await addSubtaskAction(task.id, trimmed);
+      await runAction(() => addSubtaskAction(task.id, trimmed), setRowError);
     });
     setTimeout(() => addInputRef.current?.focus(), 50);
   }
@@ -595,6 +671,29 @@ export default function TaskItem({
         </button>
       </div>
 
+      {/* Row-level mutation error (#687). Persists until the next successful mutation on this row
+          or an explicit dismiss — never cleared on a timer, or the failure goes invisible again,
+          which is the whole bug. */}
+      {rowError && (
+        <div
+          className="flex items-start"
+          style={{ gap: "var(--space-2)", ...rowErrorStyle }}
+          role="alert"
+        >
+          <span style={{ flex: 1, minWidth: 0 }}>{rowError}</span>
+          <button
+            type="button"
+            onClick={() => setRowError(null)}
+            className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+            style={{ color: "var(--color-text-faint)" }}
+            title="Dismiss"
+            aria-label="Dismiss error"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       {/* Edit scope: this occurrence, or the whole series? (#468) */}
       {scopePrompt && (
         <div
@@ -741,11 +840,15 @@ export default function TaskItem({
                 return;
               }
               startTransition(async () => {
-                await updateAction(task.id, {
-                  due_date: editDueDate || null,
-                  priority: editPriority || null,
-                  list_id: editListId || null,
-                });
+                await runAction(
+                  () =>
+                    updateAction(task.id, {
+                      due_date: editDueDate || null,
+                      priority: editPriority || null,
+                      list_id: editListId || null,
+                    }),
+                  setRowError,
+                );
               });
             }}
             className="transition-opacity hover:opacity-80"

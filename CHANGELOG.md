@@ -9,6 +9,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Task mutations failed silently (#687).** Complete, archive, rename, add-subtask,
+  complete-subtask, delete-subtask and the edit panel all greyed the row, un-greyed, and left the
+  task unchanged. The write never landed, and nothing said so.
+
+  The server actions in `tasks/page.tsx` signal failure by **returning** `{ error }` rather than
+  throwing. Every consumer in `task-item.tsx` awaited them and dropped the return value, so nothing
+  rejected, `useTransition` resolved normally, `isPending` flipped back, and the row un-greyed
+  looking exactly as it had. **The UI reported success by omission.** A hand reload was the only
+  way to discover the change was gone.
+
+  All mutations now route through a single `runAction` helper that surfaces the outcome into **one**
+  row-level error slot per row — not one per mutation. It also catches outright rejections (a
+  dropped connection, an RSC transport error), which previously produced an unhandled rejection and
+  the same silent grey-then-nothing.
+
+  - Errors persist until dismissed or until the next successful mutation on that row. Not
+    auto-cleared on a timer — that would make the failure invisible again, which is the bug.
+  - A failed rename restores the previous title, so the row never displays a value the database
+    rejected. A rename that succeeded only in the browser is the same lie as a silent failure.
+  - The edit-scope chain ("this occurrence" → detach, then edit) now stops if the detach fails,
+    instead of applying the edit to a row still governed by its series.
+  - **13 call sites, not the 8 the issue listed** — five more arrived with the recurring-task work
+    in #697, which reproduced the same pattern before this was fixed.
+  - `smoke/specs/tasks-mutation-errors.spec.ts` pins the user-visible contract: a stubbed 500 shows
+    a message and preserves the old value, and a subsequent success clears it.
+
+  Out of scope, as the issue specifies: optimistic updates. The bug was that failures were
+  invisible, not that success was slow.
+
+### Fixed
+
 - **Task due-date notifications have never once fired.** Two independent defects, either of which
   alone was enough:
 
