@@ -332,23 +332,6 @@ export interface SportsCache {
   fetched_at: string;
 }
 
-export interface Package {
-  id: string;
-  user_id: string;
-  tracking_number: string;
-  carrier: string;
-  aftership_slug: string | null;
-  aftership_id: string | null;
-  description: string | null;
-  retailer: string | null;
-  status: string | null;
-  estimated_delivery: string | null;
-  delivered_at: string | null;
-  gmail_message_id: string | null;
-  last_synced_at: string;
-  created_at: string;
-}
-
 // ── Backlog ──────────────────────────────────────────────────────────────────
 
 export type MediaType = "game" | "show" | "movie" | "book";

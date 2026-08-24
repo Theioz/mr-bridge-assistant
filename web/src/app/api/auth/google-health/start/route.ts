@@ -5,11 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 
 // Google Health replaces the Fitbit Web API (turned down September 2026).
 //
-// These scopes are deliberately requested in a SEPARATE consent from the Calendar/Gmail
-// flow, against the same OAuth client. Google revokes a refresh token on password change
-// if that token carries Gmail scopes — issuing a health-only token keeps the unattended
-// fitness sync alive through a password change. `include_granted_scopes: false` is what
-// keeps the two tokens from merging.
+// These scopes are deliberately requested in a SEPARATE consent from the Calendar flow,
+// against the same OAuth client.
+//
+// The original driver was Gmail: Google revokes a refresh token on password change if that
+// token carries Gmail scopes, so a health-only token kept the unattended fitness sync alive
+// through one. #693 dropped the Gmail scope from the Calendar flow, so that hazard clears
+// once the user re-consents — but the split stays on its own merits: this token feeds an
+// unattended cron and should not be invalidated by an interactive Calendar re-consent.
+// `include_granted_scopes: false` is what keeps the two tokens from merging.
 const GOOGLE_HEALTH_SCOPES = [
   "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
   "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",

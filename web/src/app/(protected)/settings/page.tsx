@@ -268,7 +268,6 @@ async function SettingsContent({
       googleIntegration,
       ouraIntegration,
       googleHealthIntegration,
-      googleLastSync,
       ouraLastSync,
       googleHealthLastSync,
       metricPreferences,
@@ -278,7 +277,6 @@ async function SettingsContent({
       user
         ? loadIntegration(db, user.id, "google_health").catch((): null => null)
         : Promise.resolve(null),
-      lastSyncStatus(db, "packages").catch((): null => null),
       lastSyncStatus(db, "oura").catch((): null => null),
       lastSyncStatus(db, "google_health").catch((): null => null),
       user
@@ -292,7 +290,6 @@ async function SettingsContent({
       <IntegrationsSettings
         googleIntegration={googleIntegration}
         disconnectAction={disconnectGoogle}
-        googleLastSync={googleLastSync}
         ouraIntegration={ouraIntegration}
         saveOuraTokenAction={saveOuraToken}
         disconnectOuraAction={disconnectOura}

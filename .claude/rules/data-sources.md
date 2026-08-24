@@ -9,7 +9,7 @@ says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
 |---|---|---|
-| `user_integrations` | OAuth tokens — Google, Google Health, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so it carries no Gmail scope (Google revokes Gmail-scoped tokens on password change) |
+| `user_integrations` | OAuth tokens — Google, Google Health, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so an interactive Calendar re-consent cannot invalidate the unattended fitness sync (#693 dropped the Gmail scope that was the original reason for the split) |
 | `fitness_log` | Google Health (weight/fat, derived BMI) | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
 | `workout_sessions` | Google Health, Oura, manual | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
 | `recovery_metrics` | Oura Ring | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
@@ -25,7 +25,7 @@ says "MCP tool", that tool is available to you directly in this session.
 | `meal_log` | What was actually eaten | `POST /api/meals/eat` (one-tap confirm of a cook — macros already known) or `/api/meals/log` (photo/text → USDA, for off-plan food). **There is still no `log_meal` tool** — the model never records that food went in a mouth |
 | `journal_entries` | Manual | `/journal` server action. **No tool writes journal entries** |
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools** |
-| `notifications`, `packages` | ntfy push history; Gmail package scan | `/api/cron/sync` |
+| `notifications` | ntfy push history | `/api/cron/sync` |
 | `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/stocks/refresh`, `/api/sports/refresh` |
 | `user_metric_preferences` | Per-metric **source** preference — which integration to trust for each metric (e.g. HRV from Oura, body composition from Google Health). Rows are `(user_id, metric, preferred_source)`; `metric` ∈ sleep/hrv/steps/active_calories/readiness/body_composition. **Not units.** Empty in prod → falls back to `METRIC_DEFAULTS` (`web/src/lib/metric-preferences.ts`) | `/settings` (integrations panel writes it via the `saveMetricPreferences` server action; per-metric upsert) |
 | `chat_sessions`, `chat_messages` | **Orphaned.** Retained for history; nothing writes them since the chat was deleted (#476) | — |

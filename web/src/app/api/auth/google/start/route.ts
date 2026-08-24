@@ -3,17 +3,23 @@ import { google } from "googleapis";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
-// Scopes requested in a single consent flow covering Calendar and Gmail (read).
+// Scopes requested in a single consent flow. Calendar only, as of #693.
+//
+// gmail.readonly was dropped in #693 along with the package-tracking and important-email
+// widgets — nothing reads the mailbox any more, so nothing should ask for it.
+//
+// IMPORTANT: removing it here narrows only NEW grants. Google does not shrink an existing
+// grant, so a refresh token issued before #693 keeps its Gmail scope until the account
+// re-consents. `include_granted_scopes: false` below is what makes a fresh authorization
+// issue a correctly narrowed token rather than re-federating the old scope set; the
+// integrations settings page flags a stale grant until the user disconnects and reconnects.
 //
 // The fitness.* scopes were removed in #607: the Google Fit REST API is deprecated and
 // its sync was folded into Google Health, which is consented separately via
-// /api/auth/google-health/start so the health token carries no Gmail scope. (Google
-// revokes Gmail-scoped refresh tokens on password change; keeping them apart means a
-// password change can't take the unattended fitness sync down with it.)
+// /api/auth/google-health/start.
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/gmail.readonly",
 ];
 
 export async function GET() {

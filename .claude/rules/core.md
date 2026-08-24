@@ -15,8 +15,8 @@
 
 ## Interface
 - There is **no in-app chat** (deleted #476). You ARE the chat: the MCP server
-  (`web/mcp/run.sh`) exposes 35 tools to this session — tasks, habits, fitness,
-  meals, calendar, Gmail, backlog, profile.
+  (`web/mcp/run.sh`) exposes 44 tools to this session — tasks, habits, fitness,
+  meals, calendar, backlog, profile.
 - Prefer an MCP tool over shelling out to a script when both exist.
 
 ## Memory Update Rules

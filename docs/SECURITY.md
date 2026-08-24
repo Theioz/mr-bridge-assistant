@@ -14,7 +14,7 @@ Public-by-design variables (the only ones that may omit the flag):
 
 ## What never goes in environment variables
 
-User OAuth tokens — Google (Calendar, Gmail), Google Health refresh tokens, and Oura PATs — are stored **encrypted** in the `user_integrations` Supabase table using `pgp_sym_encrypt` keyed by `ENCRYPTION_KEY`. They are never placed in env vars. See `web/src/lib/integrations/tokens.ts`.
+User OAuth tokens — Google (Calendar), Google Health refresh tokens, and Oura PATs — are stored **encrypted** in the `user_integrations` Supabase table using `pgp_sym_encrypt` keyed by `ENCRYPTION_KEY`. They are never placed in env vars. See `web/src/lib/integrations/tokens.ts`.
 
 ## Rotation cadence
 

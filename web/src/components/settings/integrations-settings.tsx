@@ -13,7 +13,6 @@ interface Integration {
 interface IntegrationsSettingsProps {
   googleIntegration: Integration | null;
   disconnectAction: () => Promise<void>;
-  googleLastSync: SyncStatus | null;
   ouraIntegration: Integration | null;
   saveOuraTokenAction: (pat: string) => Promise<void>;
   disconnectOuraAction: () => Promise<void>;
@@ -60,8 +59,20 @@ function formatConnectedDate(iso: string): string {
 function scopeSummary(scopes: string[]): string {
   const labels: string[] = [];
   if (scopes.some((s) => s.includes("calendar"))) labels.push("Calendar");
-  if (scopes.some((s) => s.includes("gmail"))) labels.push("Gmail");
   return labels.length ? labels.join(", ") : "Google";
+}
+
+/**
+ * True when the stored grant still carries Gmail.
+ *
+ * Gmail was torn out in #693, but Google does not shrink an existing grant — the refresh token
+ * keeps whatever it was issued with until the account re-consents. Removing this check along with
+ * everything else would leave the page reporting a clean "Calendar" while the live token still
+ * granted mailbox read access, which is precisely the failure the teardown is meant to close. It
+ * disappears on its own once the user disconnects and reconnects.
+ */
+function hasStaleGmailScope(scopes: string[]): boolean {
+  return scopes.some((s) => s.includes("gmail"));
 }
 
 function syncLabel(sync: SyncStatus | null): React.ReactElement {
@@ -201,7 +212,6 @@ function connectLinkStyle(): React.CSSProperties {
 export function IntegrationsSettings({
   googleIntegration,
   disconnectAction,
-  googleLastSync,
   ouraIntegration,
   saveOuraTokenAction,
   disconnectOuraAction,
@@ -300,12 +310,20 @@ export function IntegrationsSettings({
               <span style={descStyle}>
                 {`Connected ${formatConnectedDate(googleIntegration.connectedAt)} · ${scopeSummary(googleIntegration.scopes)}`}
               </span>
-              <span style={{ ...descStyle, marginTop: "var(--space-1)" }}>
-                {syncLabel(googleLastSync)}
-              </span>
+              {hasStaleGmailScope(googleIntegration.scopes) && (
+                <span
+                  style={{
+                    ...descStyle,
+                    marginTop: "var(--space-1)",
+                    color: "var(--color-danger)",
+                  }}
+                >
+                  Still granted: Gmail. Disconnect and reconnect to drop it.
+                </span>
+              )}
             </>
           ) : (
-            <span style={descStyle}>Calendar, Gmail, and Fitness</span>
+            <span style={descStyle}>Calendar and Fitness</span>
           )}
         </div>
 

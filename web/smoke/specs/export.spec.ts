@@ -68,7 +68,6 @@ test("data export — JSON zip downloads with manifest + per-table files", async
     "user_integrations.json",
     "notifications.json",
     "user_equipment.json",
-    "packages.json",
     "stocks_cache.json",
     "sports_cache.json",
     "sync_log.json",

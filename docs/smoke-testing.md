@@ -57,7 +57,7 @@ One-time setup in the Supabase dashboard:
    `display_name`, `timezone`, and `location` via Settings — this initialises
    the `profiles` row.
 
-**Do NOT connect OAuth integrations** (Gmail, Calendar, Fitbit, Oura, Google
+**Do NOT connect OAuth integrations** (Calendar, Fitbit, Oura, Google
 Fit) on this account. Mutating-tool smokes are deferred to a follow-up issue
 and will need a separate test Google Calendar.
 

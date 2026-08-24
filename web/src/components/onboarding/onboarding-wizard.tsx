@@ -130,7 +130,7 @@ const SEX_OPTIONS = [
 const INTEGRATION_CARDS = [
   {
     id: "google",
-    label: "Google Calendar & Gmail",
+    label: "Google Calendar",
     description: "Daily schedule, meetings, and important emails synced automatically.",
   },
   {
