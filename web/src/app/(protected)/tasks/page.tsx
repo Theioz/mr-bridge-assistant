@@ -15,12 +15,14 @@ import ListTabs from "@/components/tasks/list-tabs";
 import { scheduleTask, unscheduleTask, type ScheduleBlock } from "@/lib/tasks/schedule-task";
 import {
   createSeries,
+  deleteSeries,
   detachOccurrence,
   dismissSeriesExpiry,
   extendSeries,
   updateSeries,
 } from "@/lib/tasks/series";
 import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
+import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
 import SeriesExpiringBanner from "@/components/tasks/series-expiring-banner";
 import { todayString } from "@/lib/timezone";
 import type { Task, TaskList, TaskSeries } from "@/lib/types";
@@ -418,6 +420,24 @@ async function updateSeriesAction(
   }
 }
 
+async function stopSeriesAction(seriesId: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await deleteSeries({ supabase, userId: user.id, seriesId });
+    if (!res.ok) return { error: res.error ?? "Failed to stop repeating" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to stop repeating" };
+  }
+}
+
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default async function TasksPage({
@@ -521,7 +541,10 @@ export default async function TasksPage({
     subtasksByParent.set(s.parent_id, arr);
   }
 
-  const tasks = ((activeResult.data ?? []) as Task[])
+  // Collapse each recurring series to its oldest outstanding occurrence BEFORE sorting, so the
+  // list shows one row per chore rather than one per generated date (#468 rendered all of them,
+  // which read as N separate tasks and hid the recurrence itself).
+  const tasks = collapseSeriesOccurrences((activeResult.data ?? []) as Task[], todayStr)
     .map((t) => ({ ...t, subtasks: subtasksByParent.get(t.id) ?? [] }))
     .sort(
       (a, b) =>
@@ -612,6 +635,8 @@ export default async function TasksPage({
                         scheduleAction={scheduleTaskAction}
                         unscheduleAction={unscheduleTaskAction}
                         series={task.series_id ? (seriesById.get(task.series_id) ?? null) : null}
+                        missedCount={task.missedCount}
+                        stopSeriesAction={stopSeriesAction}
                         detachAction={detachOccurrenceAction}
                         updateSeriesAction={updateSeriesAction}
                       />

@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, Repeat, X } from "lucide-react";
+import {
+  Archive,
+  CalendarClock,
+  ChevronDown,
+  ChevronRight,
+  Pencil,
+  Repeat,
+  CircleSlash,
+  X,
+} from "lucide-react";
 import type { Task, Subtask, TaskList, TaskSeries } from "@/lib/types";
 import { cadenceLabel, type Freq } from "@/lib/tasks/recurrence";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
@@ -45,6 +54,10 @@ interface Props {
   unscheduleAction: (id: string) => Promise<{ error?: string; warning?: string }>;
   /** The rule behind this occurrence, when the task carries a series_id (#468). */
   series?: TaskSeries | null;
+  /** Occurrences of this series already due and not done, behind the one shown. */
+  missedCount?: number;
+  /** "Stop repeating" — removes the rule and its future unfinished occurrences. */
+  stopSeriesAction?: (seriesId: string) => Promise<{ error?: string }>;
   /** "This occurrence only" — split the row out of its series so a series edit won't overwrite it. */
   detachAction?: (taskId: string) => Promise<{ error?: string }>;
   /** "Whole series" — edit the rule; future unfinished occurrences are regenerated from it. */
@@ -283,9 +296,13 @@ export default function TaskItem({
   scheduleAction,
   unscheduleAction,
   series = null,
+  missedCount = 0,
+  stopSeriesAction,
   detachAction,
   updateSeriesAction,
 }: Props) {
+  // Two-step so "stop repeating" can't be a single misclick — it removes future occurrences.
+  const [confirmStop, setConfirmStop] = useState(false);
   const [isPending, startTransition] = useTransition();
   // Which edit a pending change should apply to. Null = no prompt showing. This is the part that
   // gets skipped and then hurts: silently editing one occurrence when the user meant the rule
@@ -609,6 +626,16 @@ export default function TaskItem({
           </span>
         )}
 
+        {missedCount > 0 && (
+          <span
+            className="flex-shrink-0 tnum"
+            style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}
+            title={`${missedCount} earlier occurrence${missedCount === 1 ? "" : "s"} of this series were due and not done`}
+          >
+            +{missedCount} missed
+          </span>
+        )}
+
         {/* Scheduled block chip */}
         {task.scheduled_start && (
           <span
@@ -660,6 +687,39 @@ export default function TaskItem({
         </button>
 
         {/* Archive */}
+        {task.series_id && series && stopSeriesAction && (
+          <button
+            onClick={() => {
+              if (!confirmStop) {
+                setConfirmStop(true);
+                return;
+              }
+              setConfirmStop(false);
+              startTransition(async () => {
+                await runAction(() => stopSeriesAction(series.id), setRowError);
+              });
+            }}
+            onBlur={() => setConfirmStop(false)}
+            disabled={isPending}
+            className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+            style={{
+              height: 32,
+              paddingLeft: confirmStop ? 8 : 0,
+              paddingRight: confirmStop ? 8 : 0,
+              width: confirmStop ? "auto" : 32,
+              fontSize: "var(--t-micro)",
+              color: confirmStop ? "var(--color-danger)" : "var(--color-text-faint)",
+            }}
+            title={
+              confirmStop
+                ? "Click again to stop this repeating task"
+                : "Stop repeating — keeps completed history, removes future occurrences"
+            }
+          >
+            {confirmStop ? "Stop repeating?" : <CircleSlash size={13} />}
+          </button>
+        )}
+
         <button
           onClick={handleArchive}
           disabled={isPending}
