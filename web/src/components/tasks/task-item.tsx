@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
-import type { Task, Subtask, TaskList } from "@/lib/types";
+import { Archive, CalendarClock, ChevronDown, ChevronRight, Pencil, Repeat, X } from "lucide-react";
+import type { Task, Subtask, TaskList, TaskSeries } from "@/lib/types";
+import { cadenceLabel, type Freq } from "@/lib/tasks/recurrence";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 import { todayString } from "@/lib/timezone";
 import TimeSelect from "./time-select";
@@ -42,6 +43,20 @@ interface Props {
     block: ScheduleBlock,
   ) => Promise<{ error?: string; warning?: string }>;
   unscheduleAction: (id: string) => Promise<{ error?: string; warning?: string }>;
+  /** The rule behind this occurrence, when the task carries a series_id (#468). */
+  series?: TaskSeries | null;
+  /** "This occurrence only" — split the row out of its series so a series edit won't overwrite it. */
+  detachAction?: (taskId: string) => Promise<{ error?: string }>;
+  /** "Whole series" — edit the rule; future unfinished occurrences are regenerated from it. */
+  updateSeriesAction?: (
+    seriesId: string,
+    fields: {
+      title?: string;
+      priority?: string | null;
+      list_id?: string | null;
+      ends_on?: string | null;
+    },
+  ) => Promise<{ error?: string }>;
 }
 
 /** Local YYYY-MM-DD / HH:MM parts of an ISO instant, for the date/time inputs. */
@@ -212,8 +227,15 @@ export default function TaskItem({
   deleteSubtaskAction,
   scheduleAction,
   unscheduleAction,
+  series = null,
+  detachAction,
+  updateSeriesAction,
 }: Props) {
   const [isPending, startTransition] = useTransition();
+  // Which edit a pending change should apply to. Null = no prompt showing. This is the part that
+  // gets skipped and then hurts: silently editing one occurrence when the user meant the rule
+  // (or vice versa) is the classic recurring-task bug.
+  const [scopePrompt, setScopePrompt] = useState<null | { kind: "title" | "fields" }>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -315,13 +337,54 @@ export default function TaskItem({
   function commitEdit() {
     setEditing(false);
     const trimmed = editTitle.trim();
-    if (trimmed && trimmed !== task.title) {
-      startTransition(async () => {
-        await updateAction(task.id, { title: trimmed });
-      });
-    } else {
+    if (!trimmed || trimmed === task.title) {
       setEditTitle(task.title);
+      return;
     }
+    // A recurring occurrence must not silently pick a scope for the user.
+    if (task.series_id && series && detachAction && updateSeriesAction) {
+      setScopePrompt({ kind: "title" });
+      return;
+    }
+    startTransition(async () => {
+      await updateAction(task.id, { title: trimmed });
+    });
+  }
+
+  /** Apply the pending edit to just this row, detaching it from the series first. */
+  function applyToOccurrence() {
+    const prompt = scopePrompt;
+    setScopePrompt(null);
+    if (!prompt || !detachAction) return;
+    startTransition(async () => {
+      await detachAction(task.id);
+      if (prompt.kind === "title") {
+        await updateAction(task.id, { title: editTitle.trim() });
+      } else {
+        await updateAction(task.id, {
+          due_date: editDueDate || null,
+          priority: editPriority || null,
+          list_id: editListId || null,
+        });
+      }
+    });
+  }
+
+  /** Apply the pending edit to the rule, so future occurrences follow it. */
+  function applyToSeries() {
+    const prompt = scopePrompt;
+    setScopePrompt(null);
+    if (!prompt || !series || !updateSeriesAction) return;
+    startTransition(async () => {
+      if (prompt.kind === "title") {
+        await updateSeriesAction(series.id, { title: editTitle.trim() });
+      } else {
+        await updateSeriesAction(series.id, {
+          priority: editPriority || null,
+          list_id: editListId || null,
+        });
+      }
+    });
   }
 
   function handleAddSubtask(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -454,6 +517,22 @@ export default function TaskItem({
           </span>
         )}
 
+        {/* Recurring-series chip */}
+        {task.series_id && series && (
+          <span
+            className="flex items-center flex-shrink-0"
+            style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+            title={`Repeats ${cadenceLabel({ freq: series.freq as Freq, interval: series.interval, byweekday: series.byweekday })}${series.ends_on ? ` until ${series.ends_on}` : ""}`}
+          >
+            <Repeat size={11} />
+            {cadenceLabel({
+              freq: series.freq as Freq,
+              interval: series.interval,
+              byweekday: series.byweekday,
+            })}
+          </span>
+        )}
+
         {/* Scheduled block chip */}
         {task.scheduled_start && (
           <span
@@ -515,6 +594,68 @@ export default function TaskItem({
           <Archive size={13} />
         </button>
       </div>
+
+      {/* Edit scope: this occurrence, or the whole series? (#468) */}
+      {scopePrompt && (
+        <div
+          role="group"
+          aria-label="Apply this change to"
+          className="flex items-center flex-wrap"
+          style={{
+            gap: "var(--space-2)",
+            paddingBottom: "var(--space-3)",
+            paddingLeft: 56,
+          }}
+        >
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
+            Apply to
+          </span>
+          <button
+            type="button"
+            onClick={applyToOccurrence}
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: "var(--t-micro)",
+              background: "transparent",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 10px",
+              color: "var(--color-text)",
+            }}
+            title="Splits this one out of the series — future occurrences are unaffected"
+          >
+            This occurrence
+          </button>
+          <button
+            type="button"
+            onClick={applyToSeries}
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              background: "var(--accent)",
+              color: "var(--color-text-on-cta)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 10px",
+            }}
+            title="Changes the rule — future unfinished occurrences are regenerated"
+          >
+            The whole series
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setScopePrompt(null);
+              setEditTitle(task.title);
+            }}
+            className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+            style={{ color: "var(--color-text-faint)" }}
+            title="Cancel"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Due date / priority edit panel */}
       {showEditPanel && (
@@ -595,6 +736,10 @@ export default function TaskItem({
           <button
             onClick={() => {
               setShowEditPanel(false);
+              if (task.series_id && series && detachAction && updateSeriesAction) {
+                setScopePrompt({ kind: "fields" });
+                return;
+              }
               startTransition(async () => {
                 await updateAction(task.id, {
                   due_date: editDueDate || null,

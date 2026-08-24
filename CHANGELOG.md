@@ -7,6 +7,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Recurring tasks (#468) — a series rule plus generated occurrences, with an end date that warns
+  before it lapses (#689).** "Dose the aquarium every Sunday until 2026-12-31" and "water the
+  plants every 3 days" are now expressible, and a series that is about to run out says so while you
+  still remember what it was for.
+
+  `task_series` holds the rule; `tasks` rows carry `series_id` + `occurrence_date` and are
+  materialized two weeks ahead. The shape was chosen over the cheaper `repeat_days`-on-`tasks`
+  option specifically because that one has no series object — nothing to hang `ends_on` off,
+  nothing to warn about, and no way to extend "the series" because none exists. It also drifts:
+  roll-forward-on-complete means finishing Sunday's chore on Wednesday moves every future
+  occurrence, so "every Sunday" quietly stops being every Sunday. Occurrence dates here always
+  derive from `starts_on`, never from the previous occurrence or its completion.
+
+  - `tasks_series_occurrence_uniq` on `(series_id, occurrence_date)` is what makes spawning
+    idempotent — a re-run, an overlapping window, or the cron racing a UI create cannot
+    double-create a chore. Both spawners lean on the index rather than on their own bookkeeping.
+  - **Editing an occurrence asks which you meant** — this occurrence, or the whole series. Picking
+    one silently is the classic recurring-task bug. "This occurrence" detaches the row so a later
+    rule change cannot overwrite it; "the whole series" regenerates future *unfinished* occurrences
+    and leaves completed ones with the title they were done under.
+  - Deleting a series keeps completed occurrences as ordinary tasks (`on delete set null`) and
+    removes only future unfinished ones.
+  - `scripts/spawn_task_occurrences.py` (cron) keeps the window full; `web/src/lib/tasks/series.ts`
+    spawns eagerly on create/extend so a new series is visible immediately instead of looking
+    broken until the next cron run.
+  - `scripts/check_series_expiring.py` warns at `max(14 days, 3 x interval)` — a weekly series
+    gives you fewer chances to notice than a daily one — pushing via ntfy and writing a
+    `series_expiring` notification. **Extend** (+3 months or a picked date) re-arms the warning for
+    the new date; **Let it end** suppresses it permanently, because an explicit dismissal is not
+    forgetting. Open-ended series never warn, by design.
+  - Seven MCP tools: `get_task_series`, `create_task_series`, `update_task_series`,
+    `extend_task_series`, `dismiss_series_expiry`, `delete_task_series`, `detach_task_occurrence`.
+  - `tests/test_recurrence.py` pins the arithmetic that fails silently: month-end clamping (Jan 31
+    + 1 month is Feb 28, not Mar 3), biweekly phase across a resumed window, a weekly series not
+    emitting days earlier in its own first week than `starts_on`, and inclusive `ends_on`.
+
+  **"Every 2–3 days" is stored as every 3 days.** A range is not a cadence, and a `flex_days`
+  column is easy to add later but awkward to backfill meaning onto. Shipping rounded to see whether
+  the imprecision actually matters.
+
+  Calendar blocks are deliberately not applied to a series in v1 — scheduling a whole series onto
+  Google Calendar is its own problem, and blocking only the first occurrence would be a lie. The
+  add form says so rather than failing quietly.
+
 ### Fixed
 
 - **The weekly recipe audit no longer notifies about its own known backlog.** Its first live run
