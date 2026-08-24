@@ -13,7 +13,17 @@ import AddTaskForm from "@/components/tasks/add-task-form";
 import CompletedTasks from "@/components/tasks/completed-tasks";
 import ListTabs from "@/components/tasks/list-tabs";
 import { scheduleTask, unscheduleTask, type ScheduleBlock } from "@/lib/tasks/schedule-task";
-import type { Task, TaskList } from "@/lib/types";
+import {
+  createSeries,
+  detachOccurrence,
+  dismissSeriesExpiry,
+  extendSeries,
+  updateSeries,
+} from "@/lib/tasks/series";
+import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
+import SeriesExpiringBanner from "@/components/tasks/series-expiring-banner";
+import { todayString } from "@/lib/timezone";
+import type { Task, TaskList, TaskSeries } from "@/lib/types";
 
 async function addTask(
   title: string,
@@ -21,6 +31,7 @@ async function addTask(
   dueDate: string,
   listId: string,
   schedule: ScheduleBlock | null,
+  recurrence: SeriesDraft | null,
 ): Promise<{ error?: string; warning?: string }> {
   "use server";
   try {
@@ -29,6 +40,32 @@ async function addTask(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return { error: "Unauthorized" };
+
+    // A repeating task is a SERIES, not a task — createSeries writes the rule and materializes the
+    // occurrences, so there is no standalone row to insert here. Calendar blocks are deliberately
+    // not applied to a series in v1 (#468): scheduling a whole series onto Google Calendar is its
+    // own problem, and silently blocking only the first occurrence would be a lie.
+    if (recurrence) {
+      const res = await createSeries({
+        supabase,
+        userId: user.id,
+        title,
+        freq: recurrence.freq,
+        interval: recurrence.interval,
+        byweekday: recurrence.byweekday,
+        starts_on: recurrence.starts_on,
+        ends_on: recurrence.ends_on,
+        priority: (priority || "medium") as "high" | "medium" | "low",
+        list_id: listId || null,
+      });
+      if (!res.ok) return { error: res.error };
+      revalidatePath("/tasks");
+      revalidatePath("/dashboard");
+      return schedule
+        ? { warning: "Repeating task created. Calendar blocks aren't applied to a series yet." }
+        : {};
+    }
+
     const { data: inserted, error } = await supabase
       .from("tasks")
       .insert({
@@ -294,6 +331,93 @@ async function unscheduleTaskAction(taskId: string): Promise<{ error?: string; w
   }
 }
 
+async function extendSeriesAction(
+  seriesId: string,
+  endsOn: string | null,
+): Promise<{ error?: string; ends_on?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await extendSeries({
+      supabase,
+      userId: user.id,
+      seriesId,
+      newEndsOn: endsOn,
+      months: 3,
+    });
+    if (!res.ok) return { error: res.error ?? "Failed to extend" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return { ends_on: (res.series?.ends_on as string) ?? undefined };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to extend" };
+  }
+}
+
+async function dismissSeriesAction(seriesId: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await dismissSeriesExpiry({ supabase, userId: user.id, seriesId });
+    if (!res.ok) return { error: res.error ?? "Failed to dismiss" };
+    revalidatePath("/tasks");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to dismiss" };
+  }
+}
+
+async function detachOccurrenceAction(taskId: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await detachOccurrence({ supabase, userId: user.id, taskId });
+    if (!res.ok) return { error: res.error ?? "Failed to detach" };
+    revalidatePath("/tasks");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to detach" };
+  }
+}
+
+async function updateSeriesAction(
+  seriesId: string,
+  fields: {
+    title?: string;
+    priority?: string | null;
+    list_id?: string | null;
+    ends_on?: string | null;
+  },
+): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await updateSeries({ supabase, userId: user.id, seriesId, fields });
+    if (!res.ok) return { error: res.error ?? "Failed to update series" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to update series" };
+  }
+}
+
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default async function TasksPage({
@@ -325,23 +449,34 @@ export default async function TasksPage({
     completedQuery = completedQuery.eq("list_id", selected);
   }
 
-  const [listsResult, countRowsResult, activeResult, completedResult, subtasksResult] =
-    await Promise.all([
-      supabase
-        .from("task_lists")
-        .select("id, name, color, sort_order")
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      // Only list_id, across all lists — used to badge each tab with its active count.
-      supabase.from("tasks").select("list_id").is("parent_id", null).eq("status", "active"),
-      activeQuery,
-      completedQuery,
-      supabase
-        .from("tasks")
-        .select("id, title, status, created_at, parent_id")
-        .not("parent_id", "is", null)
-        .eq("status", "active"),
-    ]);
+  const [
+    listsResult,
+    countRowsResult,
+    activeResult,
+    completedResult,
+    subtasksResult,
+    seriesResult,
+  ] = await Promise.all([
+    supabase
+      .from("task_lists")
+      .select("id, name, color, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    // Only list_id, across all lists — used to badge each tab with its active count.
+    supabase.from("tasks").select("list_id").is("parent_id", null).eq("status", "active"),
+    activeQuery,
+    completedQuery,
+    supabase
+      .from("tasks")
+      .select("id, title, status, created_at, parent_id")
+      .not("parent_id", "is", null)
+      .eq("status", "active"),
+    supabase
+      .from("task_series")
+      .select(
+        "id, list_id, title, priority, freq, interval, byweekday, starts_on, ends_on, last_spawned, expiry_dismissed_at, created_at, updated_at",
+      ),
+  ]);
 
   if (activeResult.error) console.error("[tasks] active query error:", activeResult.error.message);
   if (completedResult.error)
@@ -349,8 +484,26 @@ export default async function TasksPage({
   if (subtasksResult.error)
     console.error("[tasks] subtasks query error:", subtasksResult.error.message);
   if (listsResult.error) console.error("[tasks] lists query error:", listsResult.error.message);
+  if (seriesResult.error) console.error("[tasks] series query error:", seriesResult.error.message);
 
   const lists = (listsResult.data ?? []) as TaskList[];
+
+  // Series are looked up by id when rendering an occurrence's repeat chip, and scanned for the
+  // #689 expiry warning. Small set — one row per repeating chore, not per occurrence.
+  const series = (seriesResult.data ?? []) as TaskSeries[];
+  const seriesById = new Map(series.map((sr) => [sr.id, sr]));
+  const todayStr = todayString();
+  const expiring = series.filter((sr) =>
+    isExpiringSoon(
+      {
+        freq: sr.freq as Freq,
+        interval: sr.interval,
+        ends_on: sr.ends_on,
+        expiry_dismissed_at: sr.expiry_dismissed_at,
+      },
+      todayStr,
+    ),
+  );
 
   // Per-tab active counts. "none" = uncategorised; totals feed the "All" tab.
   const counts: Record<string, number> = { all: 0, none: 0 };
@@ -413,6 +566,15 @@ export default async function TasksPage({
       />
 
       {/* Always-visible add form — inline, hairline bottom rule, transparent */}
+      {expiring.length > 0 && (
+        <SeriesExpiringBanner
+          series={expiring}
+          today={todayStr}
+          extendAction={extendSeriesAction}
+          dismissAction={dismissSeriesAction}
+        />
+      )}
+
       <AddTaskForm addAction={addTask} lists={lists} defaultListId={defaultListId} />
 
       {/* Priority groups — hairline-separated rows, no card shell */}
@@ -449,6 +611,9 @@ export default async function TasksPage({
                         deleteSubtaskAction={deleteSubtask}
                         scheduleAction={scheduleTaskAction}
                         unscheduleAction={unscheduleTaskAction}
+                        series={task.series_id ? (seriesById.get(task.series_id) ?? null) : null}
+                        detachAction={detachOccurrenceAction}
+                        updateSeriesAction={updateSeriesAction}
                       />
                     </div>
                   ))}

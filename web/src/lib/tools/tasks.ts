@@ -2,6 +2,15 @@ import { tool, jsonSchema } from "ai";
 import { ok, err } from "./_contract";
 import type { ToolContext } from "./_context";
 import { scheduleTask, unscheduleTask } from "@/lib/tasks/schedule-task";
+import {
+  createSeries,
+  deleteSeries,
+  detachOccurrence,
+  dismissSeriesExpiry,
+  extendSeries,
+  updateSeries,
+} from "@/lib/tasks/series";
+import { cadenceLabelWithEnd, type Freq } from "@/lib/tasks/recurrence";
 
 export function buildTasksTools({ supabase, userId }: ToolContext) {
   return {
@@ -21,7 +30,7 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         let q = supabase
           .from("tasks")
           .select(
-            "id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at",
+            "id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at, series_id, occurrence_date",
           )
           .eq("status", status)
           .order("created_at", { ascending: false });
@@ -164,6 +173,234 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         if (insertError) return err(insertError.message);
         if (!data) return err("Insert returned no row — task may not have been saved.");
         return ok({ task: data });
+      },
+    }),
+
+    get_task_series: tool({
+      description:
+        "List the user's recurring task series (the repeat RULES, not the individual occurrences). Use to find a series_id before extending, editing or deleting a repeat. Individual occurrences come back from get_tasks and carry series_id.",
+      inputSchema: jsonSchema<Record<string, never>>({ type: "object", properties: {} }),
+      execute: async () => {
+        let q = supabase
+          .from("task_series")
+          .select(
+            "id, title, priority, list_id, freq, interval, byweekday, starts_on, ends_on, last_spawned, expiry_dismissed_at",
+          )
+          .order("created_at", { ascending: false });
+        if (userId) q = q.eq("user_id", userId);
+        const { data, error } = await q;
+        if (error) return { error: error.message };
+        return (data ?? []).map((s) => ({
+          ...s,
+          cadence: cadenceLabelWithEnd({
+            freq: s.freq as Freq,
+            interval: s.interval as number,
+            byweekday: s.byweekday as number[] | null,
+            ends_on: s.ends_on as string | null,
+          }),
+        }));
+      },
+    }),
+
+    create_task_series: tool({
+      description:
+        "Create a RECURRING task, e.g. 'dose the aquarium every Sunday until 2026-12-31' or 'water the plants every 3 days'. This creates the repeat rule AND immediately materializes the next two weeks of occurrences as ordinary tasks. Use add_task instead for a one-off. Set ends_on whenever the user names a horizon — an open-ended series never warns before it stops.",
+      inputSchema: jsonSchema<{
+        title: string;
+        freq: "daily" | "weekly" | "monthly";
+        interval?: number;
+        byweekday?: number[];
+        starts_on?: string;
+        ends_on?: string;
+        priority?: "high" | "medium" | "low";
+        list_id?: string;
+      }>({
+        type: "object",
+        required: ["title", "freq"],
+        properties: {
+          title: { type: "string", description: "Task title, repeated for every occurrence." },
+          freq: {
+            type: "string",
+            enum: ["daily", "weekly", "monthly"],
+            description: "Base cadence. 'every 3 days' is freq=daily with interval=3.",
+          },
+          interval: {
+            type: "number",
+            description:
+              "Repeat every N of freq. Defaults to 1. 'Every other week' is freq=weekly, interval=2.",
+          },
+          byweekday: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Weekly only: days as 0=Sunday … 6=Saturday. 'Every Sunday' is [0]. Omit to use the weekday starts_on falls on.",
+          },
+          starts_on: { type: "string", description: "First date, YYYY-MM-DD. Defaults to today." },
+          ends_on: {
+            type: "string",
+            description:
+              "Last date, YYYY-MM-DD. Omit only for a genuinely open-ended chore — a series with no end date never produces an expiry warning.",
+          },
+          priority: { type: "string", enum: ["high", "medium", "low"] },
+          list_id: { type: "string", description: "Task list UUID from get_task_lists." },
+        },
+      }),
+      execute: async ({
+        title,
+        freq,
+        interval,
+        byweekday,
+        starts_on,
+        ends_on,
+        priority,
+        list_id,
+      }) => {
+        if (!userId) return err("No user context.");
+        for (const [label, value] of [
+          ["starts_on", starts_on],
+          ["ends_on", ends_on],
+        ] as const) {
+          if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return err(`${label} must be YYYY-MM-DD format, got: "${value}"`);
+          }
+        }
+        const today = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+        const res = await createSeries({
+          supabase,
+          userId,
+          title,
+          freq,
+          interval: interval ?? 1,
+          byweekday: byweekday ?? null,
+          starts_on: starts_on ?? todayStr,
+          ends_on: ends_on ?? null,
+          priority: priority ?? null,
+          list_id: list_id ?? null,
+        });
+        if (!res.ok) return err(res.error ?? "Failed to create series.");
+        return ok({ series: res.series, occurrences_created: res.spawned ?? 0 });
+      },
+    }),
+
+    update_task_series: tool({
+      description:
+        "Change a recurring task's RULE — its cadence, title, priority, list or end date. Future unfinished occurrences are regenerated from the new rule; completed ones keep the title they were done under. To change only ONE occurrence (move a single week's chore), use detach_task_occurrence then update the task normally.",
+      inputSchema: jsonSchema<{
+        id: string;
+        title?: string;
+        freq?: "daily" | "weekly" | "monthly";
+        interval?: number;
+        byweekday?: number[];
+        starts_on?: string;
+        ends_on?: string | null;
+        priority?: "high" | "medium" | "low" | null;
+        list_id?: string | null;
+      }>({
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: { type: "string", description: "Series UUID from get_task_series." },
+          title: { type: "string" },
+          freq: { type: "string", enum: ["daily", "weekly", "monthly"] },
+          interval: { type: "number" },
+          byweekday: { type: "array", items: { type: "number" }, description: "0=Sun … 6=Sat." },
+          starts_on: { type: "string", description: "YYYY-MM-DD." },
+          ends_on: { type: "string", description: "YYYY-MM-DD, or null to make it open-ended." },
+          priority: { type: "string", enum: ["high", "medium", "low"] },
+          list_id: { type: "string" },
+        },
+      }),
+      execute: async ({ id, ...fields }) => {
+        if (!userId) return err("No user context.");
+        const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+        if (!Object.keys(clean).length) return err("No fields to update.");
+        const res = await updateSeries({
+          supabase,
+          userId,
+          seriesId: id,
+          fields: clean as Parameters<typeof updateSeries>[0]["fields"],
+        });
+        if (!res.ok) return err(res.error ?? "Failed to update series.");
+        return ok({ series: res.series, occurrences_respawned: res.spawned ?? 0 });
+      },
+    }),
+
+    extend_task_series: tool({
+      description:
+        "Push a recurring task's end date further out — the answer to an expiring-series warning. Defaults to 3 months past the current end (or past today if it has already lapsed), or pass ends_on for a specific date. Occurrences resume spawning immediately and the expiry warning re-arms for the new date.",
+      inputSchema: jsonSchema<{ id: string; ends_on?: string; months?: number }>({
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: { type: "string", description: "Series UUID." },
+          ends_on: { type: "string", description: "Explicit new end date, YYYY-MM-DD." },
+          months: { type: "number", description: "Months to add instead. Defaults to 3." },
+        },
+      }),
+      execute: async ({ id, ends_on, months }) => {
+        if (!userId) return err("No user context.");
+        const res = await extendSeries({
+          supabase,
+          userId,
+          seriesId: id,
+          newEndsOn: ends_on ?? null,
+          months: months ?? 3,
+        });
+        if (!res.ok) return err(res.error ?? "Failed to extend series.");
+        return ok({ series: res.series, occurrences_created: res.spawned ?? 0 });
+      },
+    }),
+
+    dismiss_series_expiry: tool({
+      description:
+        "'Let it end' — acknowledge that a recurring task is meant to stop, suppressing its expiry warning permanently. Use only when the user says the series should end; use extend_task_series if they want it to continue.",
+      inputSchema: jsonSchema<{ id: string }>({
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", description: "Series UUID." } },
+      }),
+      execute: async ({ id }) => {
+        if (!userId) return err("No user context.");
+        const res = await dismissSeriesExpiry({ supabase, userId, seriesId: id });
+        if (!res.ok) return err(res.error ?? "Failed to dismiss.");
+        return ok({ series: res.series });
+      },
+    }),
+
+    delete_task_series: tool({
+      description:
+        "Stop a recurring task for good. Removes the rule and its future unfinished occurrences; already-completed ones stay in history as ordinary tasks.",
+      inputSchema: jsonSchema<{ id: string }>({
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", description: "Series UUID." } },
+      }),
+      execute: async ({ id }) => {
+        if (!userId) return err("No user context.");
+        const res = await deleteSeries({ supabase, userId, seriesId: id });
+        if (!res.ok) return err(res.error ?? "Failed to delete series.");
+        return ok({ deleted: true });
+      },
+    }),
+
+    detach_task_occurrence: tool({
+      description:
+        "Split ONE occurrence out of its recurring series so it can be edited alone — move this week's chore to Tuesday without moving every future week. The task stays in the list but stops being governed by the rule, so a later series edit will not overwrite it. This is the 'this occurrence, not the series' path.",
+      inputSchema: jsonSchema<{ id: string }>({
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: { type: "string", description: "Task UUID (the occurrence, not the series)." },
+        },
+      }),
+      execute: async ({ id }) => {
+        if (!userId) return err("No user context.");
+        const res = await detachOccurrence({ supabase, userId, taskId: id });
+        if (!res.ok) return err(res.error ?? "Failed to detach occurrence.");
+        return ok({ detached: true, task_id: id });
       },
     }),
 

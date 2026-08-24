@@ -39,6 +39,31 @@ export interface Task {
   created_at: string;
   parent_id: string | null;
   subtasks?: Task[];
+  /** Set when this task is a generated occurrence of a recurring series (#468). */
+  series_id: string | null;
+  /** The series-calendar date this row represents. Distinct from due_date, which the user may edit
+   *  on a single occurrence without moving the series. */
+  occurrence_date: string | null;
+}
+
+/** A recurring task rule. Occurrences are `tasks` rows carrying its `series_id` (#468). */
+export interface TaskSeries {
+  id: string;
+  list_id: string | null;
+  title: string;
+  priority: "high" | "medium" | "low" | null;
+  freq: "daily" | "weekly" | "monthly";
+  interval: number;
+  /** 0=Sun … 6=Sat. Weekly only; null for daily and monthly. */
+  byweekday: number[] | null;
+  starts_on: string;
+  /** null = open-ended. #689 never warns about these. */
+  ends_on: string | null;
+  last_spawned: string | null;
+  /** Set when the user chose "Let it end" — suppresses the expiry warning permanently. */
+  expiry_dismissed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TaskList {

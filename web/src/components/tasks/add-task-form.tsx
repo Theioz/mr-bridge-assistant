@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Plus, CalendarClock } from "lucide-react";
+import { Plus, CalendarClock, Repeat } from "lucide-react";
 import type { TaskList } from "@/lib/types";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
+import type { Freq, SeriesDraft } from "@/lib/tasks/recurrence";
 import TimeSelect from "./time-select";
+import RepeatControl, { toDraft } from "./repeat-control";
 
 interface Props {
   addAction: (
@@ -13,6 +15,7 @@ interface Props {
     dueDate: string,
     listId: string,
     schedule: ScheduleBlock | null,
+    recurrence: SeriesDraft | null,
   ) => Promise<{ error?: string; warning?: string }>;
   lists: TaskList[];
   defaultListId: string;
@@ -37,6 +40,12 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
   const [dueDate, setDueDate] = useState("");
   const [listId, setListId] = useState(defaultListId);
   const [calendarOn, setCalendarOn] = useState(false);
+  // Repeats is off by default — a one-off task should not pay for this.
+  const [repeatOn, setRepeatOn] = useState(false);
+  const [freq, setFreq] = useState<Freq>("weekly");
+  const [interval, setInterval] = useState(1);
+  const [byweekday, setByweekday] = useState<number[]>([]);
+  const [endsOn, setEndsOn] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +74,17 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
     }
     setError(null);
     startTransition(async () => {
-      const result = await addAction(title.trim(), priority, dueDate, listId, buildSchedule());
+      const recurrence = repeatOn
+        ? toDraft(freq, interval, byweekday, dueDate || todayLocal(), endsOn)
+        : null;
+      const result = await addAction(
+        title.trim(),
+        priority,
+        dueDate,
+        listId,
+        buildSchedule(),
+        recurrence,
+      );
       if (result.error) {
         setError(result.error);
         return;
@@ -76,7 +95,11 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
       setDueDate("");
       setStartTime("");
       setEndTime("");
-      // Keep the list selection and calendar toggle — you're usually adding several similar tasks.
+      setByweekday([]);
+      setEndsOn("");
+      setInterval(1);
+      // Keep the list selection, calendar toggle and repeat toggle — you're usually adding several
+      // similar tasks.
       inputRef.current?.focus();
     });
   }
@@ -233,6 +256,24 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
         )}
 
         <button
+          type="button"
+          onClick={() => setRepeatOn((v) => !v)}
+          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-80"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "var(--r-1)",
+            border: "1px solid var(--rule)",
+            color: repeatOn ? "var(--color-text-on-cta)" : "var(--color-text-faint)",
+            background: repeatOn ? "var(--accent)" : "transparent",
+          }}
+          title={repeatOn ? "Repeats (click to turn off)" : "Make this repeat"}
+          aria-pressed={repeatOn}
+        >
+          <Repeat size={14} />
+        </button>
+
+        <button
           type="submit"
           disabled={!title.trim() || isPending}
           className="flex-shrink-0 transition-opacity disabled:opacity-30 hover:opacity-80"
@@ -248,6 +289,22 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
           {isPending ? "…" : "Add"}
         </button>
       </div>
+
+      {repeatOn && (
+        <RepeatControl
+          freq={freq}
+          interval={interval}
+          byweekday={byweekday}
+          endsOn={endsOn}
+          startsOn={dueDate || todayLocal()}
+          onChange={(patch) => {
+            if (patch.freq !== undefined) setFreq(patch.freq);
+            if (patch.interval !== undefined) setInterval(patch.interval);
+            if (patch.byweekday !== undefined) setByweekday(patch.byweekday);
+            if (patch.endsOn !== undefined) setEndsOn(patch.endsOn);
+          }}
+        />
+      )}
 
       {error && (
         <p
