@@ -30,6 +30,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Macros and `macros_computed_at` are one unit, enforced for every writer**
+  (`20260825120000_recipe_macros_atomic.sql`). `macros_computed_at` is the only column the UI reads
+  to decide a recipe is real — `KitchenPanel` gates `canEatRecipe` on it — and it is stamped in
+  exactly one place, the USDA resolver in `recipe-macros.ts`. A writer that fills `calories`/
+  `protein_g`/etc. directly never stamps it, so the row carries perfect macros, renders "Macros not
+  resolved yet", hides "Ate this", and falls through to the status-only button: the plan flips to
+  `eaten` and **no `meal_log` row is written**. The meal silently logs nothing.
+
+  This happened twice, both from direct PostgREST writes with the service key — 18 recipes on
+  2026-08-08 (found only because the logged meals were missing) and `Avocado Toast` on 2026-08-25,
+  planned into the snack slot for 8/25 and 8/26 and caught before either was tapped. Same reasoning
+  as `20260813120000`: the TypeScript guard from #670 covers the app's own editor, the one path that
+  has never broken this.
+
+  The rule extends the existing `recipes_check_invariants` trigger rather than adding a separate
+  constraint, and **widens its column list** — it previously fired on
+  `(ingredients_json, calories, typical_portions, name)`, so clearing `macros_computed_at` alone
+  tripped nothing. Partial macros are rejected, complete macros without the stamp are rejected, and
+  a stamp with nothing behind it is rejected. **All-null stays legal** — the `Eating out`
+  placeholder deliberately carries no macros so a meal out still satisfies "every plan has a
+  recipe" (`20260721000001`); this rejects *partial* macros, not their absence. `fiber_g` is in the
+  required set: a null reads as 0 against the 30 g daily target, an understatement that looks like a
+  real number. No backfill — 83 recipes, 82 complete, 1 intentional placeholder, 0 with `fiber_g`
+  null.
+
 - **"Stop repeating" on a recurring row.** `deleteSeries` has existed since #468 but only as an MCP
   tool — the UI could *create* a series and never end one. The only lever the app offered was
   archiving occurrences, which looks like stopping the chore and isn't: archive skips those dates,
