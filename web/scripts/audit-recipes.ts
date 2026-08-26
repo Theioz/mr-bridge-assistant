@@ -13,10 +13,14 @@
  */
 import {
   audit,
+  auditPins,
+  pinnedFdcIds,
+  resolvePinDescriptions,
   RECIPE_AUDIT_SELECT,
   type Finding,
   type Row,
 } from "../src/lib/nutrition/recipe-audit.ts";
+import { getFood } from "../src/lib/nutrition/fdc.ts";
 
 async function main() {
   const url = process.env.SUPABASE_URL?.replace("host.docker.internal", "localhost");
@@ -32,7 +36,21 @@ async function main() {
   if (!res.ok) throw new Error(`recipe fetch failed: ${res.status} ${await res.text()}`);
   const rows = (await res.json()) as Row[];
 
-  const findings = audit(rows);
+  // The pin check needs one FDC lookup per distinct id, so it is opt-in here: `--pins` (or
+  // FDC_API_KEY being set) turns it on. Without a key the rest of the audit still runs — a missing
+  // key must not make the whole report unavailable.
+  const wantPins = process.argv.includes("--pins") || !!process.env.FDC_API_KEY;
+  let pinFindings: Finding[] = [];
+  if (wantPins) {
+    const ids = pinnedFdcIds(rows);
+    const descriptions = await resolvePinDescriptions(ids, getFood);
+    pinFindings = auditPins(rows, (id) => descriptions.get(id));
+    if (!process.argv.includes("--json")) {
+      console.log(`resolved ${descriptions.size}/${ids.length} pinned USDA ids`);
+    }
+  }
+
+  const findings = [...audit(rows), ...pinFindings];
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify({ scanned: rows.length, findings }, null, 2));
   } else {
