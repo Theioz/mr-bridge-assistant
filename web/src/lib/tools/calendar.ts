@@ -2,7 +2,7 @@ import { tool, jsonSchema } from "ai";
 import { google } from "googleapis";
 import { getGoogleAuthClient } from "@/lib/google-auth";
 import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
-import { todayString, addDays, startOfDayRFC3339, endOfDayRFC3339 } from "@/lib/timezone";
+import { todayString, addDays, startOfDayRFC3339, endOfDayRFC3339, USER_TZ } from "@/lib/timezone";
 import { ok, err } from "./_contract";
 import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
@@ -238,6 +238,11 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
                 calendarId: cal.id!,
                 timeMin: startOfDayRFC3339(startDate),
                 timeMax: endOfDayRFC3339(endDate),
+                // Ask Google for the response in the USER'S timezone. Without this it answers in
+                // each CALENDAR's own default zone — Jason's "Formula 1" and "Family" calendars are
+                // UTC, so their events come back as bare-Z instants and `start.slice(0, 10)` buckets
+                // an evening Pacific event onto the next day.
+                timeZone: USER_TZ,
                 singleEvents: true,
                 orderBy: "startTime",
                 maxResults: 25,

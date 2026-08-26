@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, type CSSProperties } from "react";
 import type { CalendarRangeEvent } from "@/lib/calendar-types";
+import { localDateString } from "@/lib/timezone";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,10 +20,6 @@ function formatHour(h: number): string {
   if (h === 0) return "12 AM";
   if (h === 12) return "12 PM";
   return h < 12 ? `${h} AM` : `${h - 12} PM`;
-}
-
-function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function startOfWeek(date: Date): Date {
@@ -130,7 +127,7 @@ export default function WeekView({
   const weekStart = view === "week" ? startOfWeek(currentDate) : currentDate;
   const dayCount = view === "week" ? 7 : 1;
   const days = Array.from({ length: dayCount }, (_, i) => addDay(weekStart, i));
-  const todayStr = isoDate(new Date());
+  const todayStr = localDateString(new Date());
 
   // Group events by date
   const eventsByDate: Record<string, CalendarRangeEvent[]> = {};
@@ -142,7 +139,7 @@ export default function WeekView({
   // All-day events for this range
   const allDayByDate: Record<string, CalendarRangeEvent[]> = {};
   for (const day of days) {
-    const key = isoDate(day);
+    const key = localDateString(day);
     const allDay = (eventsByDate[key] ?? []).filter((e) => e.allDay);
     if (allDay.length) allDayByDate[key] = allDay;
   }
@@ -163,7 +160,7 @@ export default function WeekView({
       >
         <div style={{ background: "var(--color-bg)" }} /> {/* spacer */}
         {days.map((day) => {
-          const key = isoDate(day);
+          const key = localDateString(day);
           const isToday = key === todayStr;
           const { dow, day: dayNum } = formatDayHeader(day);
           const dayOfWeek = day.getDay();
@@ -227,7 +224,7 @@ export default function WeekView({
             all-day
           </div>
           {days.map((day) => {
-            const key = isoDate(day);
+            const key = localDateString(day);
             const allDay = allDayByDate[key] ?? [];
             return (
               <div
@@ -304,7 +301,7 @@ export default function WeekView({
 
           {/* Day columns */}
           {days.map((day) => {
-            const key = isoDate(day);
+            const key = localDateString(day);
             const dayEvents = eventsByDate[key] ?? [];
             const laid = layoutDayEvents(dayEvents);
             const dow = day.getDay(); // 0=Sun, 6=Sat

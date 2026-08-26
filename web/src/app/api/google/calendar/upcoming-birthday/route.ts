@@ -84,6 +84,10 @@ export async function GET() {
             calendarId: cal.id!,
             timeMin,
             timeMax,
+            // Birthdays are normally all-day (`start.date`, timezone-free), but a TIMED
+            // "…'s Birthday" event falls back to `dateTime.slice(0, 10)` — which is only a
+            // user-timezone date if Google answers in the user's timezone.
+            timeZone: USER_TZ,
             singleEvents: true,
             orderBy: "startTime",
             maxResults: 50,

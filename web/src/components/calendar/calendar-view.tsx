@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CalendarRangeEvent, CalendarRangeResponse } from "@/lib/calendar-types";
+import { localDateString } from "@/lib/timezone";
 import WeekView from "./week-view";
 import MonthView from "./month-view";
 import EventModal from "./event-modal";
@@ -11,10 +12,6 @@ import EventDetailDialog from "./event-detail-dialog";
 // ── Types & helpers ───────────────────────────────────────────────────────────
 
 type View = "week" | "day" | "month";
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function addDays(d: Date, n: number): Date {
   const copy = new Date(d);
@@ -38,17 +35,17 @@ function endOfMonth(d: Date): Date {
 
 function rangeForView(view: View, current: Date): { timeMin: string; timeMax: string } {
   if (view === "day") {
-    const s = isoDate(current);
+    const s = localDateString(current);
     return { timeMin: s, timeMax: s };
   }
   if (view === "week") {
     const s = startOfWeek(current);
-    return { timeMin: isoDate(s), timeMax: isoDate(addDays(s, 6)) };
+    return { timeMin: localDateString(s), timeMax: localDateString(addDays(s, 6)) };
   }
   // month — add a buffer week on each side so partial weeks are visible
   return {
-    timeMin: isoDate(addDays(startOfMonth(current), -7)),
-    timeMax: isoDate(addDays(endOfMonth(current), 7)),
+    timeMin: localDateString(addDays(startOfMonth(current), -7)),
+    timeMax: localDateString(addDays(endOfMonth(current), 7)),
   };
 }
 
@@ -263,7 +260,7 @@ export default function CalendarView() {
         {/* Add event */}
         <button
           onClick={() => {
-            setCreateDate(isoDate(today));
+            setCreateDate(localDateString(today));
             setCreateTime("09:00");
             setEditEvent(null);
             setCreateOpen(true);

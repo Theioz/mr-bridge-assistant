@@ -25,7 +25,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { todayString, addDays, comingMonday } from "../lib/timezone.ts";
+import { todayString, addDays, comingMonday, localDateString } from "../lib/timezone.ts";
 
 test("todayString returns the user-timezone date, not the UTC date", () => {
   const tz = "America/Los_Angeles";
@@ -79,4 +79,56 @@ test("comingMonday holds across a DST boundary", () => {
   // And spring forward, 2026-03-08.
   assert.equal(comingMonday("2026-03-06"), "2026-03-09");
   assert.equal(comingMonday("2026-03-08"), "2026-03-09");
+});
+
+// ── localDateString ──────────────────────────────────────────────────────────
+//
+// The calendar grid is built entirely from LOCAL Date fields — `new Date(y, m, d)`,
+// `setDate()`, `getDay()` — and then needed a YYYY-MM-DD key back out. Reading those
+// fields back through `toISOString()` reads them as UTC, so the "today" highlight in the
+// week and month views moved to tomorrow every Pacific evening after 5 PM, the day view
+// fetched and rendered tomorrow's events, and "Add event" pre-filled tomorrow's date.
+//
+// These assertions are written to hold in ANY runtime timezone: each one builds a Date
+// from local components and asserts it formats back to those same components. That is
+// the whole contract.
+
+test("localDateString round-trips a Date built from local fields", () => {
+  assert.equal(localDateString(new Date(2026, 7, 26, 18, 30)), "2026-08-26");
+  assert.equal(localDateString(new Date(2026, 7, 26, 0, 0)), "2026-08-26");
+  assert.equal(localDateString(new Date(2026, 7, 26, 23, 59, 59)), "2026-08-26");
+});
+
+test("localDateString zero-pads month and day", () => {
+  assert.equal(localDateString(new Date(2026, 0, 1)), "2026-01-01");
+  assert.equal(localDateString(new Date(2026, 8, 9)), "2026-09-09");
+  assert.match(localDateString(new Date()), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("localDateString holds at the year boundary", () => {
+  assert.equal(localDateString(new Date(2026, 11, 31, 23, 0)), "2026-12-31");
+  assert.equal(localDateString(new Date(2027, 0, 1, 0, 30)), "2027-01-01");
+});
+
+test("localDateString never drifts across a 400-day local sweep", () => {
+  const d = new Date(2026, 0, 1, 20, 0); // 8 PM local — the hour the UTC read broke
+  for (let i = 0; i < 400; i++) {
+    const expected = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+    assert.equal(localDateString(d), expected);
+    d.setDate(d.getDate() + 1);
+  }
+});
+
+test("localDateString disagrees with toISOString west of Greenwich in the evening", () => {
+  // Pins the actual defect rather than just the fix. Only meaningful when the runtime
+  // is behind UTC — in any other zone the two agree at 8 PM and there is nothing to
+  // assert, so the check is conditional on the offset rather than skipped outright.
+  const evening = new Date(2026, 7, 26, 20, 0); // 8 PM local
+  const behindUTC = evening.getTimezoneOffset() > 0;
+  assert.equal(localDateString(evening), "2026-08-26");
+  if (behindUTC) {
+    assert.equal(evening.toISOString().slice(0, 10), "2026-08-27"); // what the bug rendered
+  }
 });

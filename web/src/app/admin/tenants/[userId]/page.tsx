@@ -13,7 +13,7 @@ import type {
   TenantProfileEntry,
   TenantQuotaRow,
 } from "@/lib/admin-types";
-import { USER_TZ } from "@/lib/timezone";
+import { USER_TZ, todayString } from "@/lib/timezone";
 
 // ─── server actions ────────────────────────────────────────────────────────
 
@@ -260,7 +260,9 @@ const QUOTA_DEFAULTS: TenantQuotaRow = {
   daily_tool_calls_override: null,
   daily_demo_turns: 50,
   demo_turns_used_today: 0,
-  last_reset: new Date().toISOString().slice(0, 10),
+  // todayString(), not toISOString() — the server clock is UTC, so a quota row
+  // rendered on a Pacific evening would claim it had already reset tomorrow.
+  last_reset: todayString(),
 };
 
 function UsageBar({ used, cap }: { used: number; cap: number }) {

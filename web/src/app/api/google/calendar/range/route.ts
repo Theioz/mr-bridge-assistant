@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
-import { startOfDayRFC3339, endOfDayRFC3339, todayString, addDays } from "@/lib/timezone";
+import { startOfDayRFC3339, endOfDayRFC3339, todayString, addDays, USER_TZ } from "@/lib/timezone";
 import { getGoogleAuthClient, GoogleNotConnectedError } from "@/lib/google-auth";
 import { getExcludedCalendarIds } from "@/lib/calendar/excluded";
 import { createClient } from "@/lib/supabase/server";
@@ -265,6 +265,11 @@ export async function GET(req: NextRequest) {
           calendarId: cal.id!,
           timeMin: startOfDayRFC3339(timeMinDate),
           timeMax: endOfDayRFC3339(timeMaxDate),
+          // Ask Google for the response in the USER'S timezone. Without this it answers in
+          // each CALENDAR's own default zone — Jason's "Formula 1" and "Family" calendars are
+          // UTC, so their events come back as bare-Z instants and `start.slice(0, 10)` buckets
+          // an evening Pacific event onto the next day.
+          timeZone: USER_TZ,
           singleEvents: true,
           orderBy: "startTime",
           maxResults: 100,
