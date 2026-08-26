@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlannedMealDetail } from "./PlannedMealDetail";
+import CookItDialog from "./CookItDialog";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 
 /**
@@ -100,6 +101,13 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The recipe whose "Cooked it" sheet is open. A batch is cooked once and eaten over days,
+  // so recording the cook is a separate act from logging a serving of it.
+  const [cookingRecipe, setCookingRecipe] = useState<{
+    id: string;
+    name: string;
+    portions: number;
+  } | null>(null);
 
   // Data comes from the server component, so "Ate this" just needs to invalidate it:
   // router.refresh() re-runs the page query, which updates the fridge AND the macro
@@ -193,6 +201,22 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
 
   return (
     <section style={{ marginBottom: "var(--space-6)" }}>
+      {/* Portalled, so it renders here regardless of where in the list it was opened from.
+          Keyed on the recipe so reopening for a different one remounts with fresh state
+          rather than showing the previous recipe's plan for a frame. */}
+      {cookingRecipe ? (
+        <CookItDialog
+          key={cookingRecipe.id}
+          recipeId={cookingRecipe.id}
+          recipeName={cookingRecipe.name}
+          defaultPortions={cookingRecipe.portions}
+          open
+          onOpenChange={(o) => {
+            if (!o) setCookingRecipe(null);
+          }}
+          onCooked={() => router.refresh()}
+        />
+      ) : null}
       <h2
         className="font-heading font-semibold"
         style={{
@@ -275,26 +299,48 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                         {busyId === p.id ? "Logging…" : "Ate this"}
                       </button>
                     ) : canEatRecipe ? (
-                      // Recipe-backed with known macros: cook it and log a portion in one tap.
-                      <button
-                        type="button"
-                        disabled={busyId === p.id}
-                        onClick={() =>
-                          eatRecipe(recipe.id, { mealType: p.meal_type, mealPlanId: p.id })
-                        }
-                        style={eatButtonStyle(busyId === p.id)}
-                        title={
-                          // "for the batch" was true while recipes.calories held the sum of the
-                          // ingredient list. Since 2026-08-13 the resolver divides by
-                          // typical_portions on write, so this figure is ONE SERVING and calling
-                          // it the batch would misstate it by the batch size on every tooltip.
-                          recipe.calories != null
-                            ? `Logs one serving (~${recipe.calories} kcal) and adds any surplus to the fridge.`
-                            : "Cooks this recipe and logs a portion's macros."
-                        }
-                      >
-                        {busyId === p.id ? "Logging…" : "Ate this"}
-                      </button>
+                      <>
+                        {/* Cooking a batch and eating a serving of it are different events, and
+                          only the first one spends raw ingredients. "Cooked it" records the
+                          batch and draws the kitchen down; "Ate this" below still bundles both
+                          for the single-serving case, and deliberately draws nothing — it has
+                          no confirmation step, and an unconfirmed draw is the failure mode this
+                          whole feature exists to avoid. */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCookingRecipe({
+                              id: recipe.id,
+                              name: recipe.name,
+                              portions: recipe.typical_portions ?? 1,
+                            })
+                          }
+                          style={secondaryButtonStyle}
+                          title="Record the batch and take its raw ingredients out of the kitchen."
+                        >
+                          Cooked it
+                        </button>
+                        {/* Recipe-backed with known macros: cook it and log a portion in one tap. */}
+                        <button
+                          type="button"
+                          disabled={busyId === p.id}
+                          onClick={() =>
+                            eatRecipe(recipe.id, { mealType: p.meal_type, mealPlanId: p.id })
+                          }
+                          style={eatButtonStyle(busyId === p.id)}
+                          title={
+                            // "for the batch" was true while recipes.calories held the sum of the
+                            // ingredient list. Since 2026-08-13 the resolver divides by
+                            // typical_portions on write, so this figure is ONE SERVING and calling
+                            // it the batch would misstate it by the batch size on every tooltip.
+                            recipe.calories != null
+                              ? `Logs one serving (~${recipe.calories} kcal) and adds any surplus to the fridge.`
+                              : "Cooks this recipe and logs a portion's macros."
+                          }
+                        >
+                          {busyId === p.id ? "Logging…" : "Ate this"}
+                        </button>
+                      </>
                     ) : (
                       // No cook and no resolved recipe — nothing to log macros from, but the
                       // outcome is still worth recording. Confirming intent beats a silent row.
@@ -416,6 +462,23 @@ const subStyle: React.CSSProperties = {
   fontSize: "var(--t-micro)",
   color: "var(--color-text-muted)",
   marginTop: 2,
+};
+
+// "Cooked it" sits beside "Ate this" but is not the primary action on a planned meal — most
+// taps here are still "I ate the thing". Outlined rather than filled so the two are told apart
+// at a glance, since one of them spends inventory and the other does not.
+const secondaryButtonStyle: React.CSSProperties = {
+  fontFamily: "var(--font-body), system-ui, sans-serif",
+  fontSize: "var(--t-micro)",
+  fontWeight: 500,
+  color: "var(--color-text)",
+  background: "transparent",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--r-1)",
+  padding: "0 var(--space-3)",
+  minHeight: 36,
+  flexShrink: 0,
+  cursor: "pointer",
 };
 
 // Skipping is a legitimate outcome, not a failure — it gets a quiet button, not a red one.

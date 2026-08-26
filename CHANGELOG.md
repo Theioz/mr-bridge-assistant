@@ -30,6 +30,63 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **"Cooked it" — cooking now moves raw ingredients out of the kitchen (#649).** `cooks` holds
+  prepared leftovers and `inventory_items` holds the raw ingredients they were made from; the
+  schema has called them counterparts since #641, but nothing ever moved mass between them.
+  Cooking a batch spent 1149 g of chicken and the fridge went on reporting it.
+
+  The failure is **silent and directional** — inventory only ever over-reports, so the next fridge
+  audit plans a meal around food that is already eaten and the expiry flags fire on ghosts. Seen at
+  least twice (broccolini 2026-08-08, red bell pepper 2026-08-12), both caught only because
+  something else prompted a look. Until now the only fix was to decrement by hand in a session.
+
+  A new **"Cooked it"** button on a recipe-backed planned meal records the batch and draws its
+  ingredients down. It **previews before it commits**: every matched line with its amount, and
+  every skipped line with the reason. Inventory has no second source of truth — a draw on the
+  wrong row is wrong forever and looks exactly like a draw that is right — so the amounts are
+  shown rather than reported after the fact.
+
+  - **The ingredient list is the BATCH.** `ingredients_json` describes `typical_portions`
+    servings while `recipes.calories` describes one, so the draw is the list scaled by
+    `portionsCooked / typicalPortions`. Reading the list as per-serving would have drawn four
+    times the chicken a 4-portion batch actually used.
+  - **Matching is `fdc_id` first, normalized name second.** Recipe lines already pin the USDA
+    record their macros came from; the new `inventory_items.fdc_id` lets a stock row carry the
+    same id, which turns the match into an equality test. The name fallback strips brand
+    parentheticals and state words and then requires the token sets to be **equal** — not
+    overlapping, not a subset. Subset matching looks more helpful and is not: `{garlic}` is a
+    subset of `{garlic, powder}`, so a recipe wanting fresh garlic would quietly draw down the
+    jar of powder.
+  - **Nothing is ever guessed.** Staples (`quantity` null), rows whose unit is not a weight
+    (`4 can`, `1 bottle`), lines with no weight to read, and anything unmatched are skipped and
+    listed with a reason. A recipe wanting 250 g of black beans against a row holding "4 can" has
+    no honest conversion, and inventing a can size is exactly the fabrication the nutrition
+    pipeline forbids. Most lines will be skipped most of the time — showing them is what keeps
+    the panel trustworthy, since silence is indistinguishable from a draw that did nothing.
+  - **Perishable-first** when the same food is in two places: fridge → counter → freezer →
+    pantry, then soonest-to-expire within a location. Drawing the frozen copy first would leave
+    the one with a deadline to rot while the count still looked right.
+  - **Draws are reversible.** `inventory_draws` records what each cook actually took, and
+    deleting the cook gives it back. The amount restored is the delta that was **applied**, not
+    the amount requested: a 60 g request against a 40 g row draws 40, and recomputing "60" from
+    the recipe at delete time would hand back 20 g that never left.
+
+  The restore is a **database trigger**, not delete-handler code, for the reason `20260813120000`
+  and `20260825120000` already record: cooks get deleted straight through PostgREST with the
+  service key — that is how the duplicate Lamb Pasta rows were removed on 2026-08-16 — and a rule
+  enforced only on the app's own path is not enforced.
+
+  **Deliberately unchanged: "Ate this" still draws nothing.** It bundles cook-and-eat into one tap
+  and has no confirmation step, and an unconfirmed draw is the exact failure this feature exists
+  to avoid. Use "Cooked it" for a batch; the raw ingredients are spent when the pan comes off the
+  heat, not portion by portion as the leftovers get eaten (Jason's rule, 2026-08-16).
+
+- **`src/__tests__/inventory-draw.test.ts`** — 20 cases, most of them asserting **refusal**: that
+  "Garlic, raw" does not match "Garlic powder", that 93/7 beef is not 80/20, that a count unit is
+  never converted, that a staple is left alone, that two lines wanting the same row cannot
+  together spend more than the row holds. Names and quantities are taken from the live library and
+  live kitchen, since the matcher's whole job is to work on those exact strings.
+
 - **Macros and `macros_computed_at` are one unit, enforced for every writer**
   (`20260825120000_recipe_macros_atomic.sql`). `macros_computed_at` is the only column the UI reads
   to decide a recipe is real — `KitchenPanel` gates `canEatRecipe` on it — and it is stamped in
