@@ -234,9 +234,22 @@ function isBrandedOrRestaurant(description: string): boolean {
   return head.length > 2 && /[A-Z]{2,}/.test(head) && head === head.toUpperCase();
 }
 
-/** True when the candidate plausibly IS the queried food. */
-export function isPlausibleMatch(query: string, description: string): boolean {
-  if (isBrandedOrRestaurant(description)) return false;
+/**
+ * True when the candidate plausibly IS the queried food.
+ *
+ * `allowBranded` exists for the ONE caller that is checking a pin rather than choosing one.
+ * Rejecting branded records is right at search time — a manufacturer entry should never win a
+ * lookup — but wrong when auditing an id a human deliberately pinned. Gochujang is the standing
+ * example: `20260823120000` pins it to FDC 2113732 (SUNCHANG) *because* USDA has no generic
+ * record, and notes that `isPlausibleMatch` rejects it. An audit that re-applied that rule would
+ * report four correct, deliberate pins as errors every week, which is how a report gets muted.
+ */
+export function isPlausibleMatch(
+  query: string,
+  description: string,
+  opts: { allowBranded?: boolean } = {},
+): boolean {
+  if (!opts.allowBranded && isBrandedOrRestaurant(description)) return false;
   // The query must be matched on a DISTINCTIVE word ("marinara"), not a category one
   // ("sauce"). The description keeps its category words — "Sauce, marinara" should still
   // match on "marinara".

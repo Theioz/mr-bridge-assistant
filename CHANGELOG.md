@@ -30,6 +30,60 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **The recipe audit now checks whether an `fdc_id` names the right food (#708).** Every existing
+  check verified a pin for *consistency* — that the arithmetic adds up, that a batch declared its
+  portions. None asked whether the pinned USDA record actually describes the ingredient on the line,
+  which is the defect that keeps recurring and has never once been caught by tooling:
+
+  - **#672** — gochujang priced as **sriracha** (171188) and as **condensed black bean soup**
+    (171141).
+  - **#707** — `frozen blueberries` pinned to **171706, "Avocados, raw, California"**.
+  - Both found by a person happening to look.
+
+  These survive because a wrong pin is invisible in the totals. In #707 the pin had never even been
+  spent — the stored macros came from the right food — so **every number on the page was correct
+  while the citation was wrong**. That makes it a landmine rather than an error: re-resolving is
+  routine, and re-resolving that recipe would have taken it from 256 to 321 kcal and 2.1 to 9.9 g
+  fat.
+
+  Three checks, in decreasing order of how much they cost to run:
+
+  - **`pin-inconsistent`** — one food pinned two different ways across the library. Pure, no
+    network, so it runs inside `audit()` and is always available. It is also the sharpest: the
+    disagreement is the signal, and a library that prices one food two ways is wrong at least once
+    whichever way is right. Names are compared through `normalizeFoodName`, shared with the
+    inventory draw from #706, so "chicken breast, boneless skinless" and "Chicken breast raw" count
+    as one food.
+  - **`pin-wrong-food`** — the stored item text and the resolved USDA description share no word.
+    Costs one FDC lookup per distinct id (74 today, cached a day by `getFood`, six at a time).
+  - **`pin-wrong-state`** — both sides declare a value on the same axis and they differ: the line
+    says `nonfat`, the record is `lowfat`; the line says `frozen`, the record is `raw`. Both are
+    real #707 cases that the head-noun check passes, since yogurt is still yogurt.
+
+  **A note explaining the substitution silences a finding.** Some pins are deliberately not the same
+  food because USDA has no record for the real one — burrata is priced on whole-milk mozzarella,
+  Thai basil on sweet basil — and the library already writes that down. Honouring that convention is
+  what keeps the report worth reading: an audit that flags known, documented, deliberate choices
+  every week is an audit that gets muted, which is the failure `STANDING_BACKLOG` already exists to
+  prevent and the one that let #673's heat check sit unread while 29 recipes drifted past it. The
+  escape hatch has the right incentive too — the way to silence it is to write down why.
+
+  `isPlausibleMatch` gained an `allowBranded` option for the one caller that is *checking* a pin
+  rather than choosing one. Rejecting branded records is correct at search time and wrong here:
+  `20260823120000` pins gochujang to FDC 2113732 (SUNCHANG) precisely because USDA has no generic
+  record, and re-applying the search rule would report four correct pins every week.
+
+  **What it found on the first run over the real library** — 8 findings in 83 recipes, no false
+  positives, including three genuine mis-pins nobody knew about: `scallions` pinned to
+  **"Onions, canned"** (371 mg sodium/100 g vs 16), `chicken breast` pinned once to **"Chicken,
+  broilers or fryers, meat only"**, and `olive oil` pinned twice to **"Oil, corn, peanut, and
+  olive"** — a blend. The other five are duplicate USDA records for one food.
+
+- **`src/__tests__/pin-audit.test.ts`** — 20 cases built from the real stored strings and the real
+  USDA descriptions, covering all three historical defects, the corrected pins staying silent, the
+  branded-pin exemption, the parenthetical that bridges "Thai chilies" to "Peppers, hot chili", and
+  the `dry` vs `raw` pair that is the same food said two ways and must not flag.
+
 - **"Cooked it" — cooking now moves raw ingredients out of the kitchen (#649).** `cooks` holds
   prepared leftovers and `inventory_items` holds the raw ingredients they were made from; the
   schema has called them counterparts since #641, but nothing ever moved mass between them.

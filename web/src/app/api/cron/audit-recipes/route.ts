@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { audit, RECIPE_AUDIT_SELECT, type Row } from "@/lib/nutrition/recipe-audit";
+import {
+  audit,
+  auditPins,
+  pinnedFdcIds,
+  resolvePinDescriptions,
+  RECIPE_AUDIT_SELECT,
+  type Row,
+} from "@/lib/nutrition/recipe-audit";
+import { getFood } from "@/lib/nutrition/fdc";
 
 /**
  * Findings that are a KNOWN, ACCEPTED backlog rather than something to act on this week.
@@ -59,7 +67,25 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = (data ?? []) as unknown as Row[];
-  const findings = audit(rows);
+
+  // The pin check costs one FDC lookup per distinct id (~74 today, cached a day by getFood). It is
+  // wrapped because it is the only part of this audit that depends on a third party: if FDC is
+  // down or the key is missing, the rest of the report must still arrive. A weekly report that
+  // fails whole rather than partially is a report that stops being trusted.
+  let pinFindings: Awaited<ReturnType<typeof auditPins>> = [];
+  let pinsResolved = 0;
+  let pinsTotal = 0;
+  try {
+    const ids = pinnedFdcIds(rows);
+    pinsTotal = ids.length;
+    const descriptions = await resolvePinDescriptions(ids, getFood);
+    pinsResolved = descriptions.size;
+    pinFindings = auditPins(rows, (id) => descriptions.get(id));
+  } catch (err) {
+    console.error("[cron/audit-recipes] pin check skipped", err);
+  }
+
+  const findings = [...audit(rows), ...pinFindings];
 
   const byKind: Record<string, number> = {};
   for (const f of findings) byKind[f.kind] = (byKind[f.kind] ?? 0) + 1;
@@ -102,6 +128,8 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     scanned: rows.length,
+    pinsChecked: pinsResolved,
+    pinsTotal,
     count: findings.length,
     actionable: actionable.length,
     backlog,

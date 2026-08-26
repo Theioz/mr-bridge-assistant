@@ -23,6 +23,8 @@ import {
   riceNamingViolations,
   spoonViolations,
 } from "./recipe-structured.ts";
+import { isPlausibleMatch } from "./fdc.ts";
+import { normalizeFoodName } from "./inventory-draw.ts";
 import type { RecipeIngredient, RecipeStep } from "../types.ts";
 
 export interface Row {
@@ -119,7 +121,7 @@ export function timedStepsMissingHeat(steps: RecipeStep[] | null): string[] {
 }
 
 export function audit(rows: Row[]): Finding[] {
-  const out: Finding[] = [];
+  const out: Finding[] = [...pinInconsistencies(rows)];
   for (const r of rows) {
     const ings = r.ingredients_json ?? [];
     const quantified = ings.filter((i) => typeof i.quantity === "number" && i.quantity > 0);
@@ -197,6 +199,196 @@ export function audit(rows: Row[]): Finding[] {
         recipe: r.name,
         detail: `${noHeat.length} timed step(s) with no heat setting — ${noHeat.join("; ")}`,
       });
+    }
+  }
+  return out;
+}
+
+// ── Is the pin the RIGHT food? ──────────────────────────────────────────────
+//
+// Every other check here verifies a pin for CONSISTENCY — that one id is not used for two
+// differently named lines, that the arithmetic adds up. None of them ask whether the id names the
+// food on the line, which is the failure that keeps recurring:
+//
+//   * #672 — gochujang priced as SRIRACHA (171188) and as CONDENSED BLACK BEAN SOUP (171141).
+//   * #707 — `frozen blueberries` pinned to 171706, "Avocados, raw, California".
+//   * found by this check on first run — `scallions` pinned to 170003, "Onions, CANNED".
+//
+// All three were found by a person happening to look. They survive because a wrong pin is
+// invisible in the totals: in #707 the pin had never even been spent — the stored macros came from
+// the right food — so every number on the page was correct while the citation was wrong. There is
+// nothing to notice.
+//
+// That makes it a landmine rather than an error. Re-resolving is routine, and re-resolving #707
+// would have taken a correct recipe from 256 to 321 kcal and 2.1 to 9.9 g fat.
+//
+// These two functions are PURE and take the descriptions already resolved. The audit stays
+// synchronous, its callers own the network, and the checks stay testable without one.
+
+/**
+ * One food, two different pins.
+ *
+ * Needs no network, so it runs inside `audit()` and is always available — unlike the description
+ * checks below, which cost an FDC lookup each. It catches what those cannot: a pin that describes a
+ * *plausible* food which is nonetheless not the one the rest of the library uses.
+ *
+ * This is how the real defects actually look. `scallions` is pinned to 170005 ("Onions, spring or
+ * scallions") in one recipe and 170003 ("Onions, CANNED") in another — and 170003 shares the word
+ * "onion", so a description check passes it. `chicken breast` is pinned to the breast record ten
+ * times and once to "Chicken, broilers or fryers, MEAT ONLY". `olive oil` is pinned four times to
+ * olive oil and twice to "Oil, corn, peanut, AND olive", a blend.
+ *
+ * The disagreement is the signal. A library that prices one food two ways is wrong at least once,
+ * whichever way is right — and it is wrong invisibly, because each individual line reads fine.
+ *
+ * Names are compared through `normalizeFoodName` (shared with the inventory draw) so "chicken
+ * breast, boneless skinless" and "Chicken breast raw" count as the same food.
+ */
+export function pinInconsistencies(rows: Row[]): Finding[] {
+  const byFood = new Map<string, Map<number, number>>();
+  for (const r of rows) {
+    for (const i of r.ingredients_json ?? []) {
+      if (!i.fdc_id) continue;
+      const key = [...normalizeFoodName(i.item)].sort().join(" ");
+      if (!key) continue;
+      const ids = byFood.get(key) ?? new Map<number, number>();
+      ids.set(i.fdc_id, (ids.get(i.fdc_id) ?? 0) + 1);
+      byFood.set(key, ids);
+    }
+  }
+
+  const out: Finding[] = [];
+  for (const [food, ids] of [...byFood].sort()) {
+    if (ids.size < 2) continue;
+    const spread = [...ids]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, n]) => `${id} (${n}x)`)
+      .join(" vs ");
+    out.push({
+      kind: "pin-inconsistent",
+      // Library-wide rather than per-recipe: the defect is the disagreement, and naming one of the
+      // two recipes would imply that one is the wrong one before anyone has looked.
+      recipe: "(library)",
+      detail: `"${food}" is pinned ${ids.size} different ways — ${spread}. One food, one record: pick one.`,
+    });
+  }
+  return out;
+}
+
+/**
+ * A note that explains the substitution silences the finding.
+ *
+ * Some pins are deliberately not the same food because USDA has no record for the real one:
+ * burrata is priced on whole-milk mozzarella, Thai basil on sweet basil. Those are decisions, not
+ * defects, and the library already writes them down — "USDA has no burrata record", "priced as
+ * basil, fresh".
+ *
+ * Honouring that convention is what keeps this check worth reading. An audit that reports known,
+ * documented, deliberate choices every week is an audit that gets muted — the exact failure
+ * `STANDING_BACKLOG` in the cron route exists to prevent, and the one that let #673's heat check
+ * sit unread while 29 recipes drifted past it. The escape hatch also has the right incentive: the
+ * way to silence it is to write down WHY.
+ */
+export const SUBSTITUTION_NOTE =
+  /no usda|priced (?:as|on)|stand-?in|proxy|closest|substitut|nearest/i;
+
+/**
+ * Mutually exclusive descriptors along one axis. Both sides have to declare a value for a
+ * contradiction to exist — a line that says nothing about form is not disagreeing with anything.
+ *
+ * `dry`, `dried` and `fresh` are deliberately absent from `form`. "dry brown rice" against
+ * "Rice, brown, long-grain, raw" is the same food said two ways, and including them turned a
+ * silent check into a noisy one.
+ */
+const STATE_AXES: { axis: string; groups: string[][] }[] = [
+  { axis: "form", groups: [["raw"], ["cooked"], ["frozen"], ["canned"]] },
+  { axis: "fat level", groups: [["nonfat", "fatfree", "skim"], ["lowfat"], ["whole", "fullfat"]] },
+];
+
+/** The single value `text` declares on this axis, or null when it declares none or several. */
+function declaredState(text: string, groups: string[][]): string | null {
+  const padded = ` ${text.toLowerCase().replace(/[^a-z]+/g, " ")} `;
+  const hit = groups.filter((g) => g.some((w) => padded.includes(` ${w} `)));
+  return hit.length === 1 ? hit[0][0] : null;
+}
+
+/** Every distinct fdc_id in these rows, so a caller can resolve descriptions once. */
+export function pinnedFdcIds(rows: Row[]): number[] {
+  const ids = new Set<number>();
+  for (const r of rows) {
+    for (const i of r.ingredients_json ?? []) if (i.fdc_id) ids.add(i.fdc_id);
+  }
+  return [...ids];
+}
+
+/**
+ * Resolve one description per distinct id, for the two callers that own the network.
+ *
+ * `fetchFood` is injected rather than imported so this file never has to reach the FDC client in a
+ * test. Failures are per-id and swallowed: an id that will not resolve is left out of the map, and
+ * `auditPins` skips it. A rate limit is not a data defect, and an audit that reports one as though
+ * it were would be lying about the library.
+ *
+ * Six at a time. The library has ~74 distinct ids; sequential is needlessly slow for a weekly cron
+ * and unbounded parallelism is how a shared API key gets throttled.
+ */
+export async function resolvePinDescriptions(
+  ids: number[],
+  fetchFood: (fdcId: number) => Promise<{ description: string }>,
+): Promise<Map<number, string>> {
+  const out = new Map<number, string>();
+  const CONCURRENCY = 6;
+  for (let i = 0; i < ids.length; i += CONCURRENCY) {
+    await Promise.all(
+      ids.slice(i, i + CONCURRENCY).map(async (id) => {
+        try {
+          const food = await fetchFood(id);
+          if (food?.description) out.set(id, food.description);
+        } catch {
+          // Unresolvable — skipped, not reported. See the doc comment.
+        }
+      }),
+    );
+  }
+  return out;
+}
+
+/**
+ * Findings for pins that do not describe the food on the line.
+ *
+ * `describe` returns the USDA description for an id, or undefined when it could not be resolved —
+ * an unresolvable id is skipped rather than reported, because a rate limit is not a data defect.
+ */
+export function auditPins(rows: Row[], describe: (fdcId: number) => string | undefined): Finding[] {
+  const out: Finding[] = [];
+  for (const r of rows) {
+    for (const ing of r.ingredients_json ?? []) {
+      if (!ing.fdc_id) continue;
+      const description = describe(ing.fdc_id);
+      if (!description) continue;
+      if (SUBSTITUTION_NOTE.test(ing.note ?? "")) continue;
+
+      // `allowBranded` — a deliberately pinned branded record is not a defect. See fdc.ts.
+      if (!isPlausibleMatch(ing.item, description, { allowBranded: true })) {
+        out.push({
+          kind: "pin-wrong-food",
+          recipe: r.name,
+          detail: `"${ing.item}" is pinned to ${ing.fdc_id} = "${description}" — no word in common. Re-pin it, or write the substitution into its note.`,
+        });
+        continue;
+      }
+
+      for (const { axis, groups } of STATE_AXES) {
+        const onLine = declaredState(ing.item, groups);
+        const onRecord = declaredState(description, groups);
+        if (onLine && onRecord && onLine !== onRecord) {
+          out.push({
+            kind: "pin-wrong-state",
+            recipe: r.name,
+            detail: `"${ing.item}" says ${onLine} but ${ing.fdc_id} = "${description}" is ${onRecord} (${axis})`,
+          });
+        }
+      }
     }
   }
   return out;
