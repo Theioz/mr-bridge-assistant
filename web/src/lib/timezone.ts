@@ -6,6 +6,32 @@ export function todayString(tz = USER_TZ): string {
 }
 
 /**
+ * Formats a `Date` as YYYY-MM-DD using its LOCAL calendar fields, not UTC.
+ *
+ * This is the counterpart to `todayString()`, and the two are not interchangeable:
+ *
+ * - `todayString()` answers "what day is it for the user right now" and is the right
+ *   default for anything the user DID (a cook, a meal log). It ignores the `Date` you
+ *   hand it because there isn't one — it reads the clock.
+ * - `localDateString(d)` answers "which calendar square does this `Date` sit in". Use it
+ *   wherever a `Date` was built from local fields — `new Date(y, m, d)`, `setDate()`,
+ *   `getDay()` — and needs a key back out. `toISOString().slice(0, 10)` re-reads those
+ *   local fields as UTC, which shifts the date by one for part of every day: west of
+ *   Greenwich any evening instant reads as tomorrow, east of it a local midnight reads
+ *   as yesterday.
+ *
+ * Deliberately NOT timezone-parameterised. Its whole job is to round-trip a `Date` that
+ * was constructed in the runtime's own timezone; formatting it in some other zone would
+ * reintroduce the mismatch this exists to remove.
+ */
+export function localDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Returns the last N days as YYYY-MM-DD strings in the user's timezone,
  * oldest first (index 0 = N-1 days ago, last index = today).
  */

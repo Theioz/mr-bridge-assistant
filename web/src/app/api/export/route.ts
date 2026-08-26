@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { createClient } from "@/lib/supabase/server";
 import { EXPORT_TABLES, rangeToSinceIso } from "@/lib/export/tables";
 import { toCSV } from "@/lib/export/csv";
+import { todayString } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -93,7 +94,9 @@ export async function POST(req: Request) {
   }
 
   const content = await zip.generateAsync({ type: "nodebuffer" });
-  const yyyymmdd = exportedAt.toISOString().slice(0, 10).replace(/-/g, "");
+  // The filename is the user's day, not the server's. `exportedAt` stays a UTC instant
+  // inside the manifest, where it is a timestamp rather than a calendar date.
+  const yyyymmdd = todayString().replace(/-/g, "");
   const filename = `mr-bridge-export-${yyyymmdd}.zip`;
 
   return new Response(new Uint8Array(content), {

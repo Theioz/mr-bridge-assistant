@@ -1,12 +1,9 @@
 "use client";
 
 import type { CalendarRangeEvent } from "@/lib/calendar-types";
+import { localDateString } from "@/lib/timezone";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function buildMonthGrid(year: number, month: number): Date[] {
   const first = new Date(year, month, 1);
@@ -50,7 +47,7 @@ export default function MonthView({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const days = buildMonthGrid(year, month);
-  const todayStr = isoDate(new Date());
+  const todayStr = localDateString(new Date());
 
   // Group events by date
   const eventsByDate: Record<string, CalendarRangeEvent[]> = {};
@@ -73,7 +70,7 @@ export default function MonthView({
         }}
       >
         {days.map((day, idx) => {
-          const key = isoDate(day);
+          const key = localDateString(day);
           const isCurrentMonth = day.getMonth() === month;
           const isToday = key === todayStr;
           const dayEvents = (eventsByDate[key] ?? []).sort((a, b) =>

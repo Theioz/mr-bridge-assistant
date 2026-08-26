@@ -68,6 +68,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **The calendar showed tomorrow every evening after 5 PM (#685).** The week and month grids are
+  built entirely from local `Date` fields — `new Date(y, m, d)`, `setDate()`, `getDay()` — but each
+  view then read the key back out with `toISOString().slice(0, 10)`, which re-reads those local
+  fields as UTC. West of Greenwich that shifts any evening instant forward a day, so:
+
+  - the **"today" highlight** in the week and month views moved to tomorrow's column at 5 PM PDT,
+  - the **day view** fetched and rendered *tomorrow's* events for the rest of the evening, because
+    its request window is `isoDate(current)` on a `new Date()`,
+  - **"Add event"** pre-filled tomorrow's date — overriding the `todayString()` default that #686
+    had already put in `EventModal`.
+
+  The three views each carried their own copy of the same wrong `isoDate` helper. All three now use
+  one **`localDateString(d)`** in `lib/timezone`, which reads the local fields it was given instead
+  of routing them through UTC. This also fixes the grid east of Greenwich, where the error runs the
+  other way: a local-midnight cell read as UTC lands on *yesterday*, so **every cell** in the month
+  grid was mislabelled — not just the evening hours. That matters for a trip to Japan, not only in
+  theory.
+
+  Same class as #686, which fixed the two *writes* (`cooks.cooked_on`, `meal_log.date`) and left the
+  read-side calendar keys as out of scope. This closes that remainder.
+
+- **Google Calendar answered in each calendar's own timezone, not the user's.** `events.list` was
+  called without a `timeZone`, so Google formatted `start.dateTime` in whatever zone each calendar
+  defaults to. Jason's **Formula 1** and **Family** calendars are UTC, and their events came back as
+  bare-`Z` instants — `start.slice(0, 10)`, which is the bucketing key in both calendar views and
+  the filter in the `list_events` tool, then put an evening Pacific event on the next day. All three
+  `events.list` call sites now pass `timeZone: USER_TZ`.
+
+- **Two more UTC-derived "today" defaults**, the same expression #686 replaced elsewhere: the admin
+  tenant quota card's `last_reset` placeholder, and the data-export filename
+  (`mr-bridge-export-YYYYMMDD.zip`), which named an evening export after tomorrow.
+
+- Not changed, and deliberately: `habits/momentum-line.tsx` was on #685's audit list but is
+  **correct** — it anchors at `T00:00:00Z`, steps with `setUTCDate`, and reads back with
+  `toISOString()`, so it is UTC end to end and its window comes from the already-tz-correct
+  `getLastNDays()`. `addDays`, `journal/prompts.shiftDate`, `sync/google-health.dateStr` and
+  `backlog/igdb` are anchored to explicit instants, as #686 recorded. `api/packages/route.ts`, also
+  on the list, no longer exists — packages were dropped in `20260824120000`.
+
+- **`src/__tests__/timezone-dates.test.ts`** gains 5 cases for `localDateString`, written to hold in
+  **any** runtime timezone: each builds a `Date` from local components and asserts it formats back
+  to those components. 196/196 pass under `America/Los_Angeles`, `America/New_York`, `UTC` and
+  `Asia/Tokyo`. Against the **old** helper those same 5 cases fail 3/5 in Pacific, 2/5 in Tokyo and
+  New York — and **0/5 under UTC**, which is why the bug survived: UTC is the only zone in which the
+  wrong implementation looks right, and UTC is what the container runs.
+
 - **Task mutations failed silently (#687).** Complete, archive, rename, add-subtask,
   complete-subtask, delete-subtask and the edit panel all greyed the row, un-greyed, and left the
   task unchanged. The write never landed, and nothing said so.
