@@ -67,10 +67,28 @@ export type ChatMessage = {
   images?: string[];
 };
 
+/**
+ * Context window for the VISION calls.
+ *
+ * Ollama defaults to 4096 tokens, and a photo does not fit in that. qwen2.5vl is loaded with
+ * image_max_pixels = 3211264 and spends one token per 28x28 patch, so any photo at or above
+ * ~3.2 MP becomes ~4100 image tokens BY ITSELF — more than the whole default context, before a
+ * word of the prompt. Ollama answers 400 "request (4727 tokens) exceeds the available context
+ * size (4096 tokens)", which surfaced to the user as a bare "local model failed (400)".
+ *
+ * It passed every small test image and failed every real phone photo, which is why it survived.
+ *
+ * 8192 leaves room for a full-resolution label (~4100 tokens) plus the prompt, with headroom to
+ * spare. The KV cache for that is ~470 MB on a 28 GB node — cheap next to the 6 GB of weights.
+ */
+const VISION_NUM_CTX = 8192;
+
 export async function chatJSON<T>(
   messages: ChatMessage[],
   schema: Record<string, unknown>,
   timeoutMs = 120_000,
+  /** Override Ollama's 4096-token default. Required for images; see VISION_NUM_CTX. */
+  numCtx?: number,
 ): Promise<T> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), timeoutMs);
@@ -84,10 +102,21 @@ export async function chatJSON<T>(
         messages,
         stream: false,
         format: schema, // Ollama enforces the JSON schema on the output
-        options: { temperature: 0 }, // deterministic: same meal -> same parse
+        options: {
+          temperature: 0, // deterministic: same meal -> same parse
+          ...(numCtx ? { num_ctx: numCtx } : {}),
+        },
       }),
     });
-    if (!res.ok) throw new Error(`local model failed (${res.status})`);
+    if (!res.ok) {
+      // Carry Ollama's own message through. Without it every failure read as an opaque
+      // "local model failed (400)", and the actual cause (context overflow) was visible
+      // only by reading the model server's logs on the node.
+      const detail = await res.text().catch(() => "");
+      throw new Error(
+        `local model failed (${res.status})${detail ? `: ${detail.slice(0, 300)}` : ""}`,
+      );
+    }
     const json = (await res.json()) as { message?: { content?: string } };
     const content = json.message?.content ?? "";
     return JSON.parse(content) as T;
@@ -278,6 +307,7 @@ export async function parseFoodPhoto(
     ],
     PARSE_SCHEMA,
     180_000, // vision is slower than text
+    VISION_NUM_CTX,
   );
   return (out.items ?? []).filter((i) => i.query?.trim());
 }
@@ -357,6 +387,7 @@ export async function readNutritionLabel(base64Jpeg: string): Promise<LabelReadi
     ],
     LABEL_SCHEMA,
     180_000,
+    VISION_NUM_CTX,
   );
 }
 

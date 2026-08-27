@@ -1,3 +1,5 @@
+import sharp from "sharp";
+
 import { createClient } from "@/lib/supabase/server";
 import { estimateFromPhoto } from "@/lib/nutrition/estimate";
 import { readNutritionLabel } from "@/lib/nutrition/parse";
@@ -66,6 +68,41 @@ function mealTypeByHour(): FoodAnalysis["meal_type_guess"] {
 const MAX_SIZE = 5 * 1024 * 1024;
 const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
+/**
+ * Longest edge a FOOD photo is shrunk to before it reaches the model.
+ *
+ * Not an arbitrary number: qwen2.5vl is loaded with image_min_pixels = 802816 (~0.8 MP), below
+ * which it UPSCALES the image again — so there is nothing to gain from going smaller. 1200 on the
+ * long edge is ~1.1 MP for a 4:3 phone photo, just above that floor.
+ *
+ * The point is cost, not correctness: the model charges one token per 28x28 patch, so a 4 MP photo
+ * costs ~4100 prompt tokens and roughly 100 s of CPU prompt-eval on this node, against ~1400 tokens
+ * for the same plate at 1.1 MP. Identifying "chicken, rice, green beans" does not need 4 MP, and
+ * portion-from-pixels is scale-based (plate, utensils) rather than detail-based.
+ *
+ * Labels are deliberately NOT downscaled — that path is OCR of small print, where resolution is the
+ * whole job. VISION_NUM_CTX is what keeps those inside the context window.
+ */
+const FOOD_MAX_EDGE = 1200;
+
+/**
+ * `.rotate()` first, with no argument: that applies the EXIF orientation tag and then drops it.
+ * Phone photos are routinely stored sideways with a "rotate 90" flag, and the resize below would
+ * otherwise hand the model a plate on its side.
+ */
+async function shrinkFoodPhoto(raw: Buffer): Promise<Buffer> {
+  return sharp(raw)
+    .rotate()
+    .resize({
+      width: FOOD_MAX_EDGE,
+      height: FOOD_MAX_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -105,7 +142,21 @@ export async function POST(req: Request) {
 
   const mode = formData.get("mode") === "label" ? "label" : "food";
 
-  const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
+  const raw = Buffer.from(await imageFile.arrayBuffer());
+
+  let base64: string;
+  if (mode === "label") {
+    base64 = raw.toString("base64");
+  } else {
+    // A failed re-encode is not a reason to fail the upload — send the original and let the
+    // larger context window carry it, slowly.
+    base64 = await shrinkFoodPhoto(raw)
+      .then((b) => b.toString("base64"))
+      .catch((err) => {
+        console.warn("[analyze-photo] downscale failed, sending original:", err);
+        return raw.toString("base64");
+      });
+  }
 
   try {
     if (mode === "label") {
