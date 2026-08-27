@@ -49,6 +49,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/app ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# sharp's native library is invisible to the tracer, so copy the packages whole.
+#
+# The trace follows `require`. sharp's .node addon is required and gets copied, but that
+# addon then dlopen()s libvips-cpp.so.8.18.3 from a path built at runtime — nothing the
+# tracer can see. The result is a @img/sharp-libvips-linuxmusl-x64 directory that exists
+# and contains no library, so sharp throws the moment it is imported:
+#
+#   ERR_DLOPEN_FAILED: Error loading shared library libvips-cpp.so.8.18.3:
+#   No such file or directory
+#
+# This was silent for as long as nothing imported sharp: it is a next/image optimisation
+# dependency, and unoptimised images still render. The meal photo downscaler (#711) is the
+# first code to import it directly, which would have made every /api/meals/analyze-photo
+# request a 500. Copy from `deps`, AFTER the standalone copy, so these overwrite the stubs.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@img ./node_modules/@img
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/sharp ./node_modules/sharp
+
 USER nextjs
 EXPOSE 3000
 
