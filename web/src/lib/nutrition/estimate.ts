@@ -21,7 +21,14 @@ import {
   searchFoods,
   type Macros,
 } from "./fdc";
-import { parseFoodPhoto, parseFoodText, pickBestFood, type ParsedFood } from "./parse";
+import {
+  parseFoodPhoto,
+  parseFoodText,
+  pickBestFood,
+  pickBestFoods,
+  type ParsedFood,
+} from "./parse";
+import { lookupPicks, normalizeQuery, recordPick, type CachedPick } from "./pick-cache";
 import { lexQuantity } from "./quantity";
 
 export type EstimatedItem = {
@@ -69,7 +76,28 @@ function isNutritionallyEmpty(m: {
   return m.calories <= 0 && m.protein_g <= 0 && m.carbs_g <= 0 && m.fat_g <= 0;
 }
 
-async function estimateOne(food: ParsedFood, context?: string): Promise<EstimatedItem | null> {
+type Prepared = {
+  food: ParsedFood;
+  qty: number;
+  unit: string;
+  quantified: boolean;
+  /** Resolved with NO model call: pinned by the caller, or remembered from a previous meal. */
+  knownId?: number;
+  /** Whether knownId came from the memo (as opposed to a caller-pinned ingredient). */
+  remembered: boolean;
+  /** Plausible USDA candidates, when a selection is still needed. */
+  candidates: { fdcId: number; description: string }[];
+};
+
+/**
+ * Everything that can be decided about one food WITHOUT asking the model to choose.
+ *
+ * The quantity rules are unchanged and deliberately so — see the note below on why the number
+ * comes from the text and not from the model. What is new is that a food already known to the
+ * memo skips the USDA search entirely: there is nothing to choose between if the choice was
+ * made on a previous meal.
+ */
+async function prepare(food: ParsedFood, cached: Map<string, CachedPick>): Promise<Prepared> {
   // THE QUANTITY COMES FROM THE TEXT, NOT THE MODEL.
   //
   // The model is asked to echo the fragment it read (`source`) and we lex the number out of
@@ -90,29 +118,18 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   const unit = lexed ? lexed.unit : food.unit;
   const quantified = lexed !== null || food.structured === true;
 
-  // Pinned record: skip the search AND the model's pick. Deliberately before searchFoods so a
-  // pinned ingredient costs one USDA fetch and zero model calls.
+  const base = { food, qty, unit, quantified };
+
+  // Pinned record: skip the search AND the model's pick.
   if (food.fdcId != null) {
-    const pinned = await getFood(food.fdcId).catch(() => null);
-    if (pinned && !isNutritionallyEmpty(pinned.per100g)) {
-      const { grams, exact, basis } = gramsFor(qty, unit, pinned.portions);
-      return {
-        input: (food.source ?? `${qty} ${unit} ${food.query}`).trim(),
-        matched: pinned.description,
-        fdcId: pinned.fdcId,
-        qty,
-        unit,
-        grams: Math.round(grams),
-        exactPortion: exact,
-        quantified,
-        basis: quantified
-          ? `${basis} — pinned fdcId`
-          : `${basis} — NO QUANTITY STATED, amount is a guess`,
-        macros: macrosForGrams(pinned.per100g, grams),
-      };
-    }
-    // A pinned id that 404s or carries no nutrition falls through to the normal search rather
-    // than failing the ingredient — a stale pin should degrade, not break the recipe.
+    return { ...base, knownId: food.fdcId, remembered: false, candidates: [] };
+  }
+
+  // Remembered from a previous meal: same shortcut, and the reason the second meal costs
+  // neither a search nor a selection.
+  const memo = cached.get(normalizeQuery(food.query));
+  if (memo) {
+    return { ...base, knownId: memo.fdcId, remembered: true, candidates: [] };
   }
 
   const searched = await searchFoods(food.query, 5);
@@ -125,42 +142,137 @@ async function estimateOne(food: ParsedFood, context?: string): Promise<Estimate
   // Matching NOTHING is a better outcome than matching syrup. Salt genuinely has no macros;
   // a bogus match invents some. The caller reports what went unmatched.
   const candidates = searched.filter((c) => isPlausibleMatch(food.query, c.description));
-  if (candidates.length === 0) return null;
+  return { ...base, remembered: false, candidates };
+}
 
-  // Never blind-trust candidates[0] — USDA's top hit for "chicken breast, cooked"
-  // is breaded microwaved tenders (252 kcal vs ~165 for plain).
-  let idx: number | null = null;
-  try {
-    idx = await pickBestFood(food.query, candidates, context);
-  } catch {
-    idx = null; // model unavailable -> fall through to first hit, flagged low-confidence
+function buildItem(
+  p: Prepared,
+  detail: { fdcId: number; description: string; per100g: Macros },
+  opts: { grams: number; exact: boolean; basis: string },
+): EstimatedItem {
+  return {
+    input: (p.food.source ?? `${p.qty} ${p.unit} ${p.food.query}`).trim(),
+    matched: detail.description,
+    fdcId: detail.fdcId,
+    qty: p.qty,
+    unit: p.unit,
+    grams: Math.round(opts.grams),
+    exactPortion: opts.exact,
+    quantified: p.quantified,
+    basis: p.quantified ? opts.basis : `${opts.basis} — NO QUANTITY STATED, amount is a guess`,
+    macros: macrosForGrams(detail.per100g, opts.grams),
+  };
+}
+
+/**
+ * Turn a prepared food plus the model's choice into an item.
+ *
+ * `idx` is the chosen candidate, or null for "no confident choice" — in which case we still
+ * answer, from the top candidate, but nothing is written to the memo. Pinning a guess is how a
+ * wrong food would become permanent.
+ */
+async function finalize(
+  p: Prepared,
+  idx: number | null,
+  context?: string,
+): Promise<EstimatedItem | null> {
+  if (p.knownId != null) {
+    const known = await getFood(p.knownId).catch(() => null);
+    if (known && !isNutritionallyEmpty(known.per100g)) {
+      const { grams, exact, basis } = gramsFor(p.qty, p.unit, known.portions);
+      return buildItem(p, known, {
+        grams,
+        exact,
+        basis: `${basis} — ${p.remembered ? "remembered USDA pick" : "pinned fdcId"}`,
+      });
+    }
+
+    // A pinned or remembered id that 404s or carries no nutrition falls back to the normal
+    // search rather than failing the ingredient — a stale pin should degrade, not break the
+    // recipe. This path is rare, so it pays for its own selection call.
+    const searched = await searchFoods(p.food.query, 5);
+    const candidates = searched.filter((c) => isPlausibleMatch(p.food.query, c.description));
+    if (candidates.length === 0) return null;
+    p = { ...p, knownId: undefined, remembered: false, candidates };
+    idx = await pickBestFood(p.food.query, candidates, context).catch(() => null);
   }
+
+  if (p.candidates.length === 0) return null;
 
   // Try the chosen candidate first, then the rest in rank order, skipping any
   // record with no usable nutrition.
-  const order = [idx ?? 0, ...candidates.map((_, i) => i).filter((i) => i !== (idx ?? 0))];
+  const order = [idx ?? 0, ...p.candidates.map((_, i) => i).filter((i) => i !== (idx ?? 0))];
 
   for (const i of order) {
-    const detail = await getFood(candidates[i].fdcId);
+    const detail = await getFood(p.candidates[i].fdcId);
     if (isNutritionallyEmpty(detail.per100g)) continue;
 
-    const { grams, exact, basis } = gramsFor(qty, unit, detail.portions);
-    return {
-      input: (food.source ?? `${qty} ${unit} ${food.query}`).trim(),
-      matched: detail.description,
-      fdcId: detail.fdcId,
-      qty,
-      unit,
-      grams: Math.round(grams),
-      // Only "exact" if we both picked deliberately AND resolved a real portion.
-      exactPortion: exact && idx !== null && i === idx,
-      quantified,
-      basis: quantified ? basis : `${basis} — NO QUANTITY STATED, amount is a guess`,
-      macros: macrosForGrams(detail.per100g, grams),
-    };
+    const { grams, exact, basis } = gramsFor(p.qty, p.unit, detail.portions);
+    // Only "exact" if we both picked deliberately AND resolved a real portion.
+    const deliberate = idx !== null && i === idx;
+
+    // Remember it only when the model actually chose. A fallback to the top hit is the very
+    // thing the selection step exists to avoid, and memoising it would make one bad meal
+    // permanent for every meal after it.
+    if (deliberate && p.food.fdcId == null) {
+      void recordPick(p.food.query, detail.fdcId, detail.description);
+    }
+
+    return buildItem(p, detail, { grams, exact: exact && deliberate, basis });
   }
 
   return null; // every candidate was empty — better to report nothing than zeros
+}
+
+/**
+ * Resolve every food in a meal: memo lookup, then ONE selection call, then USDA detail.
+ *
+ * The selection used to run per food, which meant a plate of a dozen foods was a dozen round
+ * trips at a model server that ran them one at a time — and on a real meal log three of them
+ * hit the client timeout and silently fell back to USDA's top hit. Now the foods that still
+ * need choosing are decided together.
+ *
+ * If the batched call FAILS it falls back to per-food selection rather than to no selection.
+ * "The request died" and "none of these is the right food" are different answers, and a dead
+ * request must not be allowed to look like a confident null.
+ */
+async function estimateAll(
+  foods: ParsedFood[],
+  context?: string,
+): Promise<(EstimatedItem | null)[]> {
+  const cached = await lookupPicks(foods.filter((f) => f.fdcId == null).map((f) => f.query));
+
+  const prepared = await Promise.all(foods.map((f) => prepare(f, cached).catch(() => null)));
+
+  const needPick = prepared
+    .map((p, i) => ({ p, i }))
+    .filter((x): x is { p: Prepared; i: number } => !!x.p && x.p.candidates.length > 1);
+
+  let picks: (number | null)[] = [];
+  if (needPick.length > 0) {
+    const groups = needPick.map((x) => ({ wanted: x.p.food.query, candidates: x.p.candidates }));
+    try {
+      picks = await pickBestFoods(groups, context);
+    } catch {
+      picks = await Promise.all(
+        needPick.map((x) =>
+          pickBestFood(x.p.food.query, x.p.candidates, context).catch(() => null),
+        ),
+      );
+    }
+  }
+
+  const chosen = new Map<number, number | null>();
+  needPick.forEach((x, k) => chosen.set(x.i, picks[k] ?? null));
+
+  return Promise.all(
+    prepared.map((p, i) => {
+      if (!p) return null;
+      // A single plausible candidate needs no model call, and choosing it IS deliberate.
+      const idx = chosen.has(i) ? (chosen.get(i) ?? null) : p.candidates.length === 1 ? 0 : null;
+      return finalize(p, idx, context).catch(() => null);
+    }),
+  );
 }
 
 function assemble(items: EstimatedItem[], label: string, unmatched: string[] = []): MealEstimate {
@@ -225,7 +337,7 @@ export async function estimateFromText(
   mode: "meal" | "recipe" = "meal",
 ): Promise<MealEstimate> {
   const foods = await parseFoodText(text, mode);
-  const settled = await Promise.all(foods.map((f) => estimateOne(f, text).catch(() => null)));
+  const settled = await estimateAll(foods, text);
   const items = settled.filter((i): i is EstimatedItem => i !== null);
   // An ingredient that matched nothing used to vanish silently. Carry it through so the
   // estimate can say what is missing from its own total.
@@ -255,7 +367,7 @@ export async function estimateFromStructured(
 ): Promise<MealEstimate> {
   // No `context` argument: it exists to help the model disambiguate a USDA pick, and a structured
   // row either pins its record or carries a prep-qualified name that already does that job.
-  const settled = await Promise.all(foods.map((f) => estimateOne(f).catch(() => null)));
+  const settled = await estimateAll(foods);
   const items = settled.filter((i): i is EstimatedItem => i !== null);
   const unmatched = foods
     .filter((_, i) => settled[i] === null)
@@ -281,9 +393,7 @@ export async function estimateFromPhoto(
 
   // The description also disambiguates USDA selection — it's what stops "a bowl of
   // oatmeal" resolving to "Bread, oatmeal".
-  const settled = await Promise.all(
-    foods.map((f) => estimateOne(f, description).catch(() => null)),
-  );
+  const settled = await estimateAll(foods, description);
   const items = settled.filter((i): i is EstimatedItem => i !== null);
 
   const name =

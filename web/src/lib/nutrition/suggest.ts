@@ -170,7 +170,7 @@ async function proposeDishes(
       },
     ],
     PROPOSE_SCHEMA,
-    120_000,
+    { timeoutMs: 120_000 },
   );
 
   return (out.dishes ?? []).slice(0, count);

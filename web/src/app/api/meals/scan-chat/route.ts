@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         { role: "user", content: convo || "(no message)" },
       ],
       INTENT_SCHEMA,
-      90_000,
+      { timeoutMs: 90_000 },
     );
 
     // A question changes nothing.
