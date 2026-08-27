@@ -5,7 +5,7 @@ Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, hab
 **It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and it uses **no Anthropic API key**:
 
 - **Macros come from data, not from a model.** USDA FoodData Central supplies every gram and calorie; a small local model (Ollama) only identifies the food and reads the quantity. Measured: the model was ~2x off on portion weight (a large egg at 105g; real ~50g), so it is never asked to weigh anything.
-- **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing the same 35 tools — on your existing subscription, with no metered API.
+- **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing all 44 tools — on your existing subscription, with no metered API.
 - **Only share links are public.** The app itself is tailnet-only.
 
 ## Architecture
@@ -215,7 +215,7 @@ docker compose build && docker compose up -d
 
 ### Step 8b — Wire up the MCP server (this is the chat)
 
-There is no in-app chat. `web/mcp/server.ts` exposes the same 30 tools to Claude Code:
+There is no in-app chat. `web/mcp/server.ts` exposes all 44 tools to Claude Code:
 
 ```bash
 # secrets live OUTSIDE the repo — a service-role key in a tree you `git add -A`
@@ -230,7 +230,9 @@ bw get notes mr-bridge-env > ~/.mrb-secrets/env && chmod 600 ~/.mrb-secrets/env
 
 ### Step 9 — Connect Google Calendar + Gmail in Claude Code
 
-The CLI assistant uses the claude.ai hosted MCP for Calendar and Gmail (configured in `.mcp.json`).
+The CLI assistant reaches Calendar and Gmail through claude.ai's own hosted connectors. These are
+enabled on your claude.ai account, **not** in this repo — `.mcp.json` registers only `mr-bridge`
+and `playwright`.
 
 1. Open Claude Code in the project directory:
 ```bash
@@ -354,6 +356,12 @@ npm run smoke:a11y    # a11y sweep (still useful locally)
 
 ## File structure
 
+> The tool count, the migration summary and every path below are **checked in CI**
+> (`node scripts/check-docs.mjs`, `--fix` to rewrite the derivable numbers). This README claimed
+> four different tool counts before #700, and listed a route deleted four months earlier — the
+> check exists so the next drift is caught rather than re-filed. It is a guided tour, not an
+> inventory: not every file appears, but every file that appears must exist.
+
 ```
 mr-bridge-assistant/
 ├── CLAUDE.md                              # Session bootstrap (loads rules via @path)
@@ -361,57 +369,11 @@ mr-bridge-assistant/
 ├── README.md
 ├── .env.example                           # Root env var template (Python scripts)
 ├── .gitignore
-├── .mcp.json                              # MCP servers: Google Calendar + Gmail via claude.ai hosted MCP
+├── .mcp.json                              # MCP servers for this repo: mr-bridge + playwright
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
-│   └── migrations/
-│       ├── 20260410163801_initial_schema.sql
-│       ├── 20260410164609_add_unique_constraints.sql
-│       ├── 20260410170000_study_log_unique_constraint.sql
-│       ├── 20260411000000_add_journal_entries.sql
-│       ├── 20260411000001_recovery_metrics_extended.sql
-│       ├── 20260411100000_fitness_log_unique_date_source.sql
-│       ├── 20260412000000_add_nutrition_to_meal_log.sql
-│       ├── 20260413000000_add_user_id_multitenancy.sql
-│       ├── 20260413000001_profile_composite_unique.sql
-│       ├── 20260413000002_composite_unique_constraints.sql
-│       ├── 20260413000003_journal_entries_composite_unique.sql
-│       ├── 20260413000004_workout_sessions_unique_constraint.sql
-│       ├── 20260413000005_chat_messages_position.sql
-│       ├── 20260413000006_journal_entries_rls_and_constraint.sql
-│       ├── 20260413000007_notifications.sql
-│       ├── 20260413000008_tasks_parent_id.sql
-│       ├── 20260414000000_add_workout_plans.sql
-│       ├── 20260414000001_workout_plans_add_name.sql
-│       ├── 20260414000002_add_stocks_cache.sql
-│       ├── 20260415000000_chat_sessions_soft_delete.sql
-│       ├── 20260415000001_add_sports_cache.sql
-│       ├── 20260415000002_sports_cache_unique_per_league.sql
-│       ├── 20260415000003_habit_registry_icon_key.sql
-│       ├── 20260416000000_add_strength_sessions.sql
-│       ├── 20260416000001_profile_weight_unit.sql
-│       ├── 20260417000000_add_sugar_to_meal_log.sql
-│       ├── 20260417000001_fix_multitenant_unique_constraints.sql
-│       ├── 20260420000000_chat_messages_add_parts.sql
-│       ├── 20260420000001_add_user_integrations.sql
-│       ├── 20260421000000_add_user_equipment.sql
-│       ├── 20260421000001_add_workout_plan_status.sql
-│       ├── 20260421000002_add_exercise_prs.sql
-│       ├── 20260421000003_add_user_context_to_meal_log.sql
-│       ├── 20260423000000_add_packages.sql
-│       ├── 20260423000001_recovery_multi_source.sql
-│       ├── 20260423000002_cleanup_recovery_metadata.sql
-│       ├── 20260424000000_add_tenant_quotas.sql
-│       ├── 20260424000001_add_estimate_user_storage.sql
-│       ├── 20260424000002_update_estimate_user_storage.sql
-│       ├── 20260424000003_expand_estimate_user_storage.sql
-│       ├── 20260424000004_add_admin_audit_log.sql
-│       ├── 20260424000005_add_feature_flags.sql
-│       ├── 20260424000006_increase_default_token_limit.sql
-│       ├── 20260424000007_fix_missing_cascade_tenant_delete.sql
-│       ├── 20260426000000_db_generated_timestamps.sql
-│       └── 20260430000000_add_backlog.sql
+│   └── migrations/                        # 68 files, newest 20260826120000_inventory_draws.sql
 │
 ├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
@@ -438,11 +400,9 @@ mr-bridge-assistant/
 │   │   │   │   ├── backlog/[id]/BacklogDetailClient.tsx  # Item detail client component
 │   │   │   │   └── settings/page.tsx      # Profile key-values + nutrition/fitness goal calculator
 │   │   │   ├── api/
-│   │   │   │   ├── chat/route.ts          # Claude API tool use (26 tools)
 │   │   │   │   ├── sync/
 │   │   │   │   │   ├── oura/route.ts      # POST — sync last 3d Oura data → recovery_metrics
 │   │   │   │   │   ├── google-health/route.ts  # POST — sync last 7d body + workouts
-│   │   │   │   │   ├── googlefit/route.ts # POST — sync last 7d Google Fit body comp
 │   │   │   │   ├── backlog/
 │   │   │   │   │   ├── search/route.ts          # GET — proxy TMDB/IGDB/OpenLibrary metadata search
 │   │   │   │   │   ├── route.ts                 # GET list, POST create
@@ -477,7 +437,6 @@ mr-bridge-assistant/
 │   │   │   │   │   └── backfill/route.ts        # POST — compute personal records from historical strength_session_sets
 │   │   │   │   ├── export/
 │   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
-│   │   │   │   ├── quota/
 │   │   │   │   │   └── route.ts           # GET — daily token/tool-call/demo-turn usage vs caps; is_demo flag
 │   │   │   │   ├── usage/
 │   │   │   │   │   └── storage/route.ts   # GET — per-category row counts + estimated bytes via estimate_user_storage RPC
@@ -504,7 +463,6 @@ mr-bridge-assistant/
 │   │   │   ├── ui/
 │   │   │   │   ├── logo.tsx               # MB monogram SVG
 │   │   │   │   └── sheet.tsx              # Radix-Dialog-backed bottom sheet (focus trap, Escape, role=dialog)
-│   │   │   ├── chat/                      # Chat UI with markdown rendering + session history
 │   │   │   ├── tasks/                     # Task CRUD components
 │   │   │   ├── habits/                    # Habit toggle, add/archive UI, momentum line, streak rows, radial
 │   │   │   ├── fitness/                   # Body comp, workout freq, active cal, goal charts (Recharts)
@@ -517,7 +475,6 @@ mr-bridge-assistant/
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
-│   │   │       ├── sync-button.tsx        # Calls all 3 sync routes; spinner + router.refresh()
 │   │   │       ├── tasks-summary.tsx      # Active tasks card
 │   │   │       └── watchlist-widget.tsx   # Stock ticker rows: sparkline + price/change; refresh button
 │   │   └── lib/
@@ -531,17 +488,26 @@ mr-bridge-assistant/
 │   │       ├── export/
 │   │       │   ├── tables.ts              # Declarative registry of tables included in data export (#67)
 │   │       │   └── csv.ts                 # Deterministic CSV serializer (ordered columns, CRLF)
+│   │       ├── nutrition/                 # Macros, the kitchen, and the audits that keep them honest
+│   │       │   ├── fdc.ts                 # USDA FoodData Central client — every gram and calorie comes from here
+│   │       │   ├── recipe-macros.ts       # The USDA resolver; the ONLY place macros_computed_at is stamped
+│   │       │   ├── recipe-portions.ts     # The ingredient list is the BATCH, recipes.calories is ONE SERVING
+│   │       │   ├── recipe-structured.ts   # Ingredient parsing + the invariants the DB trigger mirrors
+│   │       │   ├── recipe-audit.ts        # Library drift detector — shared by the CLI and the weekly cron
+│   │       │   ├── cooks.ts               # createCook / eatFromCook / eatFromRecipe — prepared leftovers
+│   │       │   ├── inventory.ts           # Raw ingredients on hand: fridge, freezer, pantry
+│   │       │   ├── inventory-draw.ts      # Cook time: moves mass out of inventory_items into cooks (#649)
+│   │       │   ├── estimate.ts            # Free-text meal → USDA-resolved macros
+│   │       │   └── targets.ts             # Daily macro targets from the profile
 │   │       └── sync/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
 │   │           ├── google-health.ts       # syncGoogleHealth() — body comp + workouts + HR zones
-│   │           ├── googlefit.ts           # syncGoogleFit() — datasource discovery + aggregate API
 │   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
 │   └── package.json
 │
 ├── .claude/
 │   ├── rules/
-│   │   └── mr-bridge-rules.md             # Core behavioral rules + session protocol
 │   ├── agents/
 │   │   ├── nightly-postmortem.md          # 9pm habit check-in agent
 │   │   ├── morning-nudge.md               # 8am session nudge agent
@@ -565,7 +531,7 @@ mr-bridge-assistant/
 ├── .github/
 │   └── workflows/
 │       ├── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
-│       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck
+│       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck, docs check
 │       ├── smoke.yml                      # Playwright a11y + perf smokes
 │       └── python-tests.yml               # "Unit tests": python (tests/) + node (web/src/__tests__)
 │
@@ -576,6 +542,8 @@ mr-bridge-assistant/
 │   └── gmail-multi-account.md             # Auto-forwarding + Calendar sharing setup
 │
 ├── scripts/
+│   ├── check-docs.mjs                     # Asserts this README still describes the repo (#700) — CI + `--fix`
+│   ├── lint-tokens.sh                     # Design-token guards (no inline hover, no raw hex)
 │   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
 │   ├── requirements.txt                   # Pinned Python dependencies
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
@@ -590,16 +558,10 @@ mr-bridge-assistant/
 │   ├── weekly_plan.py                     # Weekly planner: context / validate / submit (structural rules live here)
 │   └── update-references.sh              # Pull latest best practices submodule
 │
-├── tests/                                 # Python unit tests (stdlib unittest, no deps)
-│   └── test_weekly_plan_supersets.py      # Superset-metadata validator
-│                                          # TS unit tests live in web/src/__tests__/ and
-│                                          # run in the same workflow (node --test, no deps)
-│
-└── voice/                                 # Jarvis mode (voice interface)
-    ├── bridge_voice.py                    # Wake word → STT → Claude API → TTS
-    ├── config.py
-    ├── requirements.txt
-    └── README.md
+└── tests/                                 # Python unit tests (stdlib unittest, no deps)
+    └── test_weekly_plan_supersets.py      # Superset-metadata validator
+                                           # TS unit tests live in web/src/__tests__/ and
+                                           # run in the same workflow (node --test, no deps)
 ```
 
 > All live data (habits, tasks, fitness, recovery, recipes, meals) is stored in **Supabase** — not local files.

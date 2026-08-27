@@ -179,6 +179,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **The README described a repository that no longer exists (#700), and now a CI job says so.**
+  It claimed **35**, **44**, **30** and **26** tools in four places — three of them calling it
+  "the same N tools" while disagreeing with each other. The migration list stopped four months
+  short at 46 entries against 68 real files. `.mcp.json` was described as holding the claude.ai
+  Calendar and Gmail connectors, which live on the account, not in this repo.
+
+  The file tree was worse than the issue knew. #700 spotted one deleted route
+  (`api/chat/route.ts`, gone since #476). Parsing all 234 entries and checking each against disk
+  found **thirteen**, including the entire `voice/` directory and
+  `dashboard/sync-button.tsx` — deleted in #296, in April. Nobody finds those by reading.
+
+  **The fix is a check, not another correction.** The tool count had already been found wrong once
+  before (#464, April) and hand-corrected; it drifted again. A number a human retypes is a number
+  that goes stale, so `scripts/check-docs.mjs` now derives three facts from the repository and CI
+  asserts them:
+
+  - every `N tools` claim equals `tool(` across `web/src/lib/tools/`
+  - the migration summary's count and newest filename match `supabase/migrations/`
+  - every path in the file tree exists
+
+  `--fix` rewrites the two derivable numbers; paths are left to a human, because only a human knows
+  whether an entry was deleted or moved. The job depends on nothing but `node` — no `npm ci` — so
+  it stays the cheapest in the workflow and cannot rot itself.
+
+  It deliberately does **not** require every file to appear in the tree. The tree is a guided tour,
+  not an inventory, and demanding exhaustiveness would fail CI on every new file until someone
+  disabled the check — which is the failure this whole exercise is about.
+
+  Also in this pass: the 46 hand-typed migration filenames collapsed to one derived summary line
+  (the directory is the source of truth), and `lib/nutrition/` — the largest module in the app and
+  absent from the tree entirely — documented, including `inventory-draw.ts` from #649 and the
+  `recipe-audit.ts` pin checks from #708.
+
 - **The calendar showed tomorrow every evening after 5 PM (#685).** The week and month grids are
   built entirely from local `Date` fields — `new Date(y, m, d)`, `setDate()`, `getDay()` — but each
   view then read the key back out with `toISOString().slice(0, 10)`, which re-reads those local
