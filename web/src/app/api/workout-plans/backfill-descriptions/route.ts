@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { chatJSON } from "@/lib/nutrition/parse";
+import { chatJSON, MODEL_NUM_CTX } from "@/lib/nutrition/parse";
 import { todayString, addDays } from "@/lib/timezone";
 import type { WorkoutExercise } from "@/lib/types";
 
@@ -79,7 +79,7 @@ export async function POST() {
       },
       required: ["exercises"],
     },
-    { timeoutMs: 180_000 },
+    { timeoutMs: 180_000, numCtx: MODEL_NUM_CTX },
   );
 
   // Build lookup map from the generated results

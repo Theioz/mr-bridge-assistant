@@ -9,6 +9,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A food is pinned only after you log it, not when the model guesses.** The memo added in #713
+  wrote a pin whenever the model picked confidently, on the reasoning that a deliberate pick is a
+  safe one. It is not: asked to match "oyster" the model chose _Mushrooms, oyster, raw_ — exactly
+  the "different food merely sharing a word" trap its own prompt warns about — and the pin then
+  SKIPS the model, so nothing could ever revisit it. Three of the first seven pins were wrong
+  (`oyster` -> mushrooms, `radish, sliced` -> radish sprouts, `soup` -> a branded canned soup).
+  The write now happens in `/api/meals/log`, against the items you accepted in the review step,
+  and is skipped for any card whose macros you hand-edited. The poisoned rows were deleted. (#716)
+
+- **The model was being reloaded in the middle of every scan.** The photo asked for an 8192
+  context and the USDA selections took the 4096 default, and Ollama sizes the runner from the
+  request — so the same 6 GB model was torn down and re-read from disk between the two halves of
+  one analysis (`n_ctx = 32768` then `n_ctx = 16384` a minute apart). Every call now asks for the
+  same context size. (#716)
+
 - **Photo identification moved back to qwen2.5vl:7b.** It briefly ran on the 3b for speed, on
   the reasoning that USDA supplies every number so a weaker identifier cannot move a macro.
   Measured on a real photo — an oyster topped with uni, ikura, caviar and a cured egg yolk —

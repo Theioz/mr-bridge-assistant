@@ -22,12 +22,20 @@ import {
   type Macros,
 } from "./fdc";
 import { parseFoodPhoto, parseFoodText, pickBestFood, type ParsedFood } from "./parse";
-import { lookupPicks, normalizeQuery, recordPick, type CachedPick } from "./pick-cache";
+import { lookupPicks, normalizeQuery, type CachedPick } from "./pick-cache";
 import { lexQuantity } from "./quantity";
 
 export type EstimatedItem = {
   /** What the user said / the model saw. */
   input: string;
+  /**
+   * The USDA-style food name this was searched under — the key the memo is written against.
+   *
+   * Carried out to the caller so that the memo can be written when the USER LOGS the meal
+   * rather than when the model picks. See recordPick's note on why the pick alone is not
+   * enough of a signal.
+   */
+  query: string;
   /** The USDA food we actually used. */
   matched: string;
   fdcId: number;
@@ -146,6 +154,7 @@ function buildItem(
 ): EstimatedItem {
   return {
     input: (p.food.source ?? `${p.qty} ${p.unit} ${p.food.query}`).trim(),
+    query: p.food.query,
     matched: detail.description,
     fdcId: detail.fdcId,
     qty: p.qty,
@@ -205,12 +214,16 @@ async function finalize(
     // Only "exact" if we both picked deliberately AND resolved a real portion.
     const deliberate = idx !== null && i === idx;
 
-    // Remember it only when the model actually chose. A fallback to the top hit is the very
-    // thing the selection step exists to avoid, and memoising it would make one bad meal
-    // permanent for every meal after it.
-    if (deliberate && p.food.fdcId == null) {
-      void recordPick(p.food.query, detail.fdcId, detail.description);
-    }
+    // NOTHING IS MEMOISED HERE. A confident pick is not a correct pick.
+    //
+    // This used to write the memo whenever the model chose deliberately, on the reasoning that
+    // a deliberate choice is a safe one. It is not: asked to match "oyster", the model picked
+    // *Mushrooms, oyster, raw* — confidently, and exactly the "different food sharing a word"
+    // trap its own prompt warns about. Memoising that pinned the mushroom permanently, and the
+    // pin then SKIPS the model, so nothing could ever revisit it.
+    //
+    // The memo is now written from the meal-log route, against what the user actually accepted
+    // after seeing it in the review step. `query` is carried on the item for that purpose.
 
     return buildItem(p, detail, { grams, exact: exact && deliberate, basis });
   }

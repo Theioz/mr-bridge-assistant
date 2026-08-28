@@ -89,7 +89,21 @@ export type ChatMessage = {
 };
 
 /**
- * Context window for the VISION calls.
+ * Context window for EVERY call to the model server, not just the vision ones.
+ *
+ * It must be one number. Ollama sizes the runner from the request, so two different values
+ * mean the SAME model is torn down and re-read from disk when the second one arrives — inside
+ * a single meal analysis, because the photo asked for 8192 and the USDA selections took the
+ * 4096 default:
+ *
+ *   21:04:48  load: n_ctx = 32768  (4 slots x 8192)   <- the photo
+ *   21:05:48  load: n_ctx = 16384  (4 slots x 4096)   <- the selections
+ *
+ * That is ~33 s of reading 6 GB off disk, twice per scan, on a node with no GPU and mmap
+ * disabled. The selections need nowhere near 8192; they just must not ASK for something
+ * different. Sizing every call the same keeps one runner alive for the whole pipeline.
+ *
+ * The size itself is set by the largest job, which is a photo:
  *
  * Ollama defaults to 4096 tokens, and a photo does not fit in that. qwen2.5vl is loaded with
  * image_max_pixels = 3211264 and spends one token per 28x28 patch, so any photo at or above
@@ -102,11 +116,11 @@ export type ChatMessage = {
  * 8192 leaves room for a full-resolution label (~4100 tokens) plus the prompt, with headroom to
  * spare. The KV cache for that is ~470 MB on a 28 GB node — cheap next to the 6 GB of weights.
  */
-const VISION_NUM_CTX = 8192;
+export const MODEL_NUM_CTX = 8192;
 
 export type ChatOpts = {
   timeoutMs?: number;
-  /** Override Ollama's 4096-token default. Required for images; see VISION_NUM_CTX. */
+  /** Context window. Should be MODEL_NUM_CTX on every call — see the note there. */
   numCtx?: number;
   /** Override the model for this call. Defaults to `model()`. */
   model?: string;
@@ -282,6 +296,7 @@ export async function parseFoodText(
       { role: "user", content: text },
     ],
     PARSE_SCHEMA,
+    { numCtx: MODEL_NUM_CTX },
   );
   return (out.items ?? []).filter((i) => i.query?.trim());
 }
@@ -365,7 +380,7 @@ export async function parseFoodPhoto(
       { role: "user", content: instruction, images: [base64Jpeg] },
     ],
     PARSE_SCHEMA,
-    { timeoutMs: 180_000, numCtx: VISION_NUM_CTX, model: visionModel() },
+    { timeoutMs: 180_000, numCtx: MODEL_NUM_CTX, model: visionModel() },
   );
   return (out.items ?? []).filter((i) => i.query?.trim());
 }
@@ -444,7 +459,7 @@ export async function readNutritionLabel(base64Jpeg: string): Promise<LabelReadi
       },
     ],
     LABEL_SCHEMA,
-    { timeoutMs: 180_000, numCtx: VISION_NUM_CTX },
+    { timeoutMs: 180_000, numCtx: MODEL_NUM_CTX },
   );
 }
 
@@ -499,7 +514,10 @@ export async function pickBestFood(
     // never means "too hard" — it means the request was queued behind a photo. Three of them
     // timed out on one meal log, and a timed-out selection falls back to USDA's top hit, which
     // is the wrong-food outcome this call exists to prevent. Cheaper to wait than to guess.
-    { timeoutMs: 90_000 },
+    //
+    // numCtx is MODEL_NUM_CTX despite ~190 tokens fitting in a fraction of it: asking for a
+    // different size than the photo did forces a full model reload. See MODEL_NUM_CTX.
+    { timeoutMs: 90_000, numCtx: MODEL_NUM_CTX },
   );
 
   const i = Math.trunc(out.index);
