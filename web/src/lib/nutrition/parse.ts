@@ -61,17 +61,24 @@ function model(): string {
 }
 
 /**
- * IDENTIFYING a plate is a smaller job than reading a label, so it gets a smaller model.
+ * Identification runs on the SAME model as everything else.
  *
- * The 7b spends ~50 s of CPU on a single meal photo here, and identification is all it is
- * being asked for — every gram and every calorie still comes from USDA, so a weaker model
- * cannot move a macro. The 3b halves that for the same job.
+ * It briefly ran on qwen2.5vl:3b, on the reasoning that identifying a plate is a smaller job
+ * than reading a label and that USDA supplies every number anyway, so a weaker identifier
+ * cannot move a macro. Measured on a real photo — an oyster topped with uni, ikura, caviar and
+ * a cured egg yolk — both models were wrong and the 3b was wronger: two of five components
+ * against the 7b's three.
  *
- * Label OCR deliberately stays on `model()`: transcribing small print is the one vision task
- * where being wrong is silently expensive, because nothing downstream re-derives the number.
+ * The decisive part was not accuracy. The USDA selection calls use `model()`, so a split meant
+ * BOTH models had to be resident, and on a node with no GPU and mmap disabled the second load
+ * costs ~33 s of reading 6 GB off disk. It showed up as three ~175-token selections all
+ * returning in 33.77 s, to the millisecond, because they were queued behind the same load. One
+ * model for the whole pipeline is more accurate AND, end to end, faster.
+ *
+ * The env override stays, so a model can be swapped without a rebuild.
  */
 function visionModel(): string {
-  return process.env.OLLAMA_VISION_MODEL || "qwen2.5vl:3b";
+  return process.env.OLLAMA_VISION_MODEL || model();
 }
 
 export type ChatMessage = {
@@ -437,7 +444,6 @@ export async function readNutritionLabel(base64Jpeg: string): Promise<LabelReadi
       },
     ],
     LABEL_SCHEMA,
-    // Label OCR stays on the larger model — see visionModel().
     { timeoutMs: 180_000, numCtx: VISION_NUM_CTX },
   );
 }
