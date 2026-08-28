@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Photo identification moved back to qwen2.5vl:7b.** It briefly ran on the 3b for speed, on
+  the reasoning that USDA supplies every number so a weaker identifier cannot move a macro.
+  Measured on a real photo — an oyster topped with uni, ikura, caviar and a cured egg yolk —
+  both models were wrong and the 3b was wronger (two of five components against three). The
+  decisive part was not accuracy: the USDA selections use the same `model()`, so a split forced
+  both models resident, and the second load costs ~33 s of reading 6 GB off disk on a node with
+  no GPU and mmap disabled. One model is more accurate and, end to end, faster. Pairs with
+  jl-homelab #681, which keeps it warm for an hour instead of five minutes — `/api/ps` showed
+  nothing resident between analyses, so every analysis was paying a cold load. (#715)
+
 - **The food photo analyzer returned 400 on every real photo.** `chatJSON` never set `num_ctx`,
   so requests ran at Ollama's 4096-token default — and qwen2.5vl charges one token per 28x28
   patch and clamps at 3.2 MP, so a phone photo is ~4100 image tokens on its own, more than the
