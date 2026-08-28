@@ -21,13 +21,7 @@ import {
   searchFoods,
   type Macros,
 } from "./fdc";
-import {
-  parseFoodPhoto,
-  parseFoodText,
-  pickBestFood,
-  pickBestFoods,
-  type ParsedFood,
-} from "./parse";
+import { parseFoodPhoto, parseFoodText, pickBestFood, type ParsedFood } from "./parse";
 import { lookupPicks, normalizeQuery, recordPick, type CachedPick } from "./pick-cache";
 import { lexQuantity } from "./quantity";
 
@@ -225,16 +219,23 @@ async function finalize(
 }
 
 /**
- * Resolve every food in a meal: memo lookup, then ONE selection call, then USDA detail.
+ * Resolve every food in a meal: memo lookup, then selection, then USDA detail.
  *
- * The selection used to run per food, which meant a plate of a dozen foods was a dozen round
- * trips at a model server that ran them one at a time — and on a real meal log three of them
- * hit the client timeout and silently fell back to USDA's top hit. Now the foods that still
- * need choosing are decided together.
+ * The selections run CONCURRENTLY, one call per food. That is measured, not assumed — the
+ * first version of this batched all of them into a single call on the theory that a dozen
+ * round trips were the cost. They are not. Fifteen selections, same server, same model:
  *
- * If the batched call FAILS it falls back to per-food selection rather than to no selection.
- * "The request died" and "none of these is the right food" are different answers, and a dead
- * request must not be allowed to look like a confident null.
+ *   one batched call ............ 48 s
+ *   15 concurrent calls ......... 19 s
+ *
+ * The bottleneck is token GENERATION, not round trips. Batching serializes every answer into
+ * one output stream, while separate calls decode across the server's four slots at once. So
+ * the fan-out is the fast shape here, and it is also the shape whose accuracy is already
+ * understood: one food, one list, one decision.
+ *
+ * The queueing that made this look slow was never in this file. It was a model server running
+ * a single slot (jl-homelab #680), where these calls piled up behind the vision call and three
+ * of them hit the client timeout.
  */
 async function estimateAll(
   foods: ParsedFood[],
@@ -248,19 +249,9 @@ async function estimateAll(
     .map((p, i) => ({ p, i }))
     .filter((x): x is { p: Prepared; i: number } => !!x.p && x.p.candidates.length > 1);
 
-  let picks: (number | null)[] = [];
-  if (needPick.length > 0) {
-    const groups = needPick.map((x) => ({ wanted: x.p.food.query, candidates: x.p.candidates }));
-    try {
-      picks = await pickBestFoods(groups, context);
-    } catch {
-      picks = await Promise.all(
-        needPick.map((x) =>
-          pickBestFood(x.p.food.query, x.p.candidates, context).catch(() => null),
-        ),
-      );
-    }
-  }
+  const picks = await Promise.all(
+    needPick.map((x) => pickBestFood(x.p.food.query, x.p.candidates, context).catch(() => null)),
+  );
 
   const chosen = new Map<number, number | null>();
   needPick.forEach((x, k) => chosen.set(x.i, picks[k] ?? null));

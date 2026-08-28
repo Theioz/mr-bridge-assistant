@@ -32,8 +32,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   timed-out selection falls back to USDA's top hit, which is how "chicken breast, cooked" becomes
   breaded microwaved tenders; this was losing accuracy, not only time. The photo path now uses its
   own ~150-token prompt instead of the ~750-token text one (whose every example is a typed
-  sentence), identification runs on qwen2.5vl:3b while label OCR keeps the 7b, the selections go
-  in one batched call with per-food fallback, and `usda_food_picks` remembers what a food resolved
+  sentence), identification runs on qwen2.5vl:3b while label OCR keeps the 7b, the selections run
+  concurrently rather than queueing, and `usda_food_picks` remembers what a food resolved
   to so a repeat food costs neither a search nor a selection. That memo also pins the answer:
   nothing did before, so the same food could resolve to a different USDA record on a different day
   and move a meal's macros without the meal changing. Pairs with jl-homelab #680, which raises the
