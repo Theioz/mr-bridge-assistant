@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { chatJSON } from "@/lib/nutrition/parse";
+import { chatJSON, MODEL_NUM_CTX } from "@/lib/nutrition/parse";
 import { estimateFromText } from "@/lib/nutrition/estimate";
 import { todayString } from "@/lib/timezone";
 
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         { role: "user", content: convo || "(no message)" },
       ],
       INTENT_SCHEMA,
-      { timeoutMs: 90_000 },
+      { timeoutMs: 90_000, numCtx: MODEL_NUM_CTX },
     );
 
     // A question changes nothing.

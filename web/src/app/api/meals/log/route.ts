@@ -1,3 +1,4 @@
+import { recordPick } from "@/lib/nutrition/pick-cache";
 import { createClient } from "@/lib/supabase/server";
 import { todayString } from "@/lib/timezone";
 
@@ -15,6 +16,37 @@ interface MealLogBody {
   sodium_mg?: number;
   source?: string;
   count?: number;
+  /**
+   * The USDA records this meal was actually priced from, as shown in the review step.
+   *
+   * This is the CONFIRMATION signal for the food-name memo. The estimator no longer memoises
+   * its own picks: asked to match "oyster" it chose *Mushrooms, oyster, raw* — confidently —
+   * and pinning that made the mushroom permanent for every later meal, with the pin then
+   * skipping the model so nothing could revisit it. Logging is the point where a human has
+   * seen the item and accepted it, so that is where a pin is earned.
+   */
+  picks?: { query: string; fdc_id: number; description?: string }[];
+}
+
+/** Cap on how many pins one log request may write. A meal is a plate, not a catalogue. */
+const MAX_PICKS = 30;
+
+/**
+ * Pin the foods the user just accepted. Fire-and-forget and fully guarded: a meal is logged
+ * whether or not the memo takes, and a malformed `picks` must never cost someone their meal.
+ */
+function rememberAcceptedPicks(picks: MealLogBody["picks"]) {
+  if (!Array.isArray(picks)) return;
+
+  const seen = new Set<string>();
+  for (const p of picks.slice(0, MAX_PICKS)) {
+    const query = typeof p?.query === "string" ? p.query.trim() : "";
+    const fdcId = Number(p?.fdc_id);
+    if (!query || !Number.isInteger(fdcId) || fdcId <= 0) continue;
+    if (seen.has(query)) continue;
+    seen.add(query);
+    void recordPick(query, fdcId, typeof p.description === "string" ? p.description : query);
+  }
 }
 
 export async function POST(req: Request) {
@@ -69,6 +101,9 @@ export async function POST(req: Request) {
       return Response.json({ error: error.message }, { status: 500 });
     }
 
+    // Only after the row actually landed — a failed log is not an accepted food.
+    rememberAcceptedPicks(body.picks);
+
     return Response.json(data, { status: 201 });
   }
 
@@ -79,6 +114,8 @@ export async function POST(req: Request) {
     console.error("[meals/log] Supabase error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  rememberAcceptedPicks(body.picks);
 
   return Response.json({ count: data?.length ?? count }, { status: 201 });
 }

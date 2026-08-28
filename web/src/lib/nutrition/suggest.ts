@@ -16,7 +16,7 @@
  * suggestion's macros are consistent with what you'd get if you actually logged it.
  */
 import { estimateFromText } from "./estimate";
-import { chatJSON } from "./parse";
+import { chatJSON, MODEL_NUM_CTX } from "./parse";
 
 export type SavedRecipe = {
   id: string;
@@ -170,7 +170,7 @@ async function proposeDishes(
       },
     ],
     PROPOSE_SCHEMA,
-    { timeoutMs: 120_000 },
+    { timeoutMs: 120_000, numCtx: MODEL_NUM_CTX },
   );
 
   return (out.dishes ?? []).slice(0, count);

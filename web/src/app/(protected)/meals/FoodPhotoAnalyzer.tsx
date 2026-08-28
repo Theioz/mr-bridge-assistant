@@ -34,6 +34,13 @@ export interface ScanItem {
   sugar_g: number | null;
   sodium_mg?: number;
   ingredients?: string;
+  /**
+   * The USDA records this card was priced from. Sent back when the meal is LOGGED, which is
+   * what earns a food its pin in the server-side memo — the estimator no longer pins its own
+   * picks, because a confident pick is not a correct one ("oyster" -> Mushrooms, oyster, raw).
+   * Dropped when the macros are hand-edited: the numbers are then yours, not that record's.
+   */
+  picks?: { query: string; fdc_id: number; description?: string }[];
   // Per-field manual-edit flags — re-estimate must not clobber user edits (#302).
   labelManuallyEdited?: boolean;
   caloriesManuallyEdited?: boolean;
@@ -421,6 +428,15 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
             ingredients: data.ingredients ?? undefined,
             user_context: trimmedContext || undefined,
             portionFraction: 1,
+            picks: Array.isArray(data.items)
+              ? data.items
+                  .filter((it: { query?: string; fdcId?: number }) => it?.query && it?.fdcId)
+                  .map((it: { query: string; fdcId: number; matched?: string }) => ({
+                    query: it.query,
+                    fdc_id: it.fdcId,
+                    description: it.matched,
+                  }))
+              : undefined,
           });
         }
         setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
@@ -637,6 +653,24 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
     setScanPhase("idle");
   }
 
+  /**
+   * The USDA records the user is actually accepting by logging.
+   *
+   * A card whose macros were hand-edited is excluded: the numbers on it are no longer that
+   * record\'s, so accepting the card says nothing about whether the record was the right food.
+   */
+  function acceptedPicks() {
+    return items
+      .filter(
+        (i) =>
+          !i.caloriesManuallyEdited &&
+          !i.proteinManuallyEdited &&
+          !i.carbsManuallyEdited &&
+          !i.fatManuallyEdited,
+      )
+      .flatMap((i) => i.picks ?? []);
+  }
+
   // ── Log as meal ───────────────────────────────────────────────────────────
   async function handleLogMeal() {
     const s = parseFloat(servings) || 1;
@@ -657,6 +691,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           fiber_g: combinedFiber === null ? null : Math.round(combinedFiber * s * 10) / 10,
           sugar_g: combinedSugar === null ? null : Math.round(combinedSugar * s * 10) / 10,
           source: "scanner",
+          picks: acceptedPicks(),
         }),
       });
       const data = await res.json();
@@ -695,6 +730,7 @@ export default function FoodPhotoAnalyzer({ onUnsavedItems }: FoodPhotoAnalyzerP
           ...perContainer,
           source: "scanner",
           count: n,
+          picks: acceptedPicks(),
         }),
       });
       const data = await res.json();
