@@ -7,7 +7,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **The food photo analyzer returned 400 on every real photo.** `chatJSON` never set `num_ctx`,
+  so requests ran at Ollama's 4096-token default — and qwen2.5vl charges one token per 28x28
+  patch and clamps at 3.2 MP, so a phone photo is ~4100 image tokens on its own, more than the
+  whole context before a word of the prompt. It fit small test images and could never fit a real
+  one. Vision calls now request 8192, food photos are downscaled to a 1200 px long edge
+  (`.rotate()` first, so an EXIF-sideways photo doesn't reach the model on its side), and a
+  non-2xx carries Ollama's own error text instead of a bare `local model failed (400)`. Labels
+  stay full-resolution — that path is OCR of small print. (#711)
+
+- **`sharp` could not load in the runtime image**, which the fix above would have turned into a
+  500 on every analyze-photo request. `output: "standalone"` traces `require` graphs, but sharp's
+  addon `dlopen`s libvips from a runtime-assembled path, so `@img/sharp-libvips-linuxmusl-x64`
+  shipped as a directory with no library. Silent until now because sharp only backed
+  `next/image`, and an unoptimised image still renders. (#712)
+
 ### Changed
+
+- **Meal photo analysis: ~2 min -> the cost of one photo.** A single meal log was 17 model calls,
+  all serialized — 2 vision calls at ~50 s and 15 USDA selections at 1.2 s each, the selections
+  queueing behind the photos rather than computing. Three of them hit the 60 s timeout, and a
+  timed-out selection falls back to USDA's top hit, which is how "chicken breast, cooked" becomes
+  breaded microwaved tenders; this was losing accuracy, not only time. The photo path now uses its
+  own ~150-token prompt instead of the ~750-token text one (whose every example is a typed
+  sentence), identification runs on qwen2.5vl:3b while label OCR keeps the 7b, the selections go
+  in one batched call with per-food fallback, and `usda_food_picks` remembers what a food resolved
+  to so a repeat food costs neither a search nor a selection. That memo also pins the answer:
+  nothing did before, so the same food could resolve to a different USDA record on a different day
+  and move a meal's macros without the meal changing. Pairs with jl-homelab #680, which raises the
+  model server from one slot to four. (#713)
 
 - **A recurring task is now one row, not a fortnight of rows.** The spawner materializes
   occurrences two weeks ahead (#468) and the list rendered every one of them, so five "Water the
@@ -31,7 +61,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Added
 
 - **The recipe audit now checks whether an `fdc_id` names the right food (#708).** Every existing
-  check verified a pin for *consistency* — that the arithmetic adds up, that a batch declared its
+  check verified a pin for _consistency_ — that the arithmetic adds up, that a batch declared its
   portions. None asked whether the pinned USDA record actually describes the ingredient on the line,
   which is the defect that keeps recurring and has never once been caught by tooling:
 
@@ -68,7 +98,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   prevent and the one that let #673's heat check sit unread while 29 recipes drifted past it. The
   escape hatch has the right incentive too — the way to silence it is to write down why.
 
-  `isPlausibleMatch` gained an `allowBranded` option for the one caller that is *checking* a pin
+  `isPlausibleMatch` gained an `allowBranded` option for the one caller that is _checking_ a pin
   rather than choosing one. Rejecting branded records is correct at search time and wrong here:
   `20260823120000` pins gochujang to FDC 2113732 (SUNCHANG) precisely because USDA has no generic
   record, and re-applying the search rule would report four correct pins every week.
@@ -161,19 +191,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   tripped nothing. Partial macros are rejected, complete macros without the stamp are rejected, and
   a stamp with nothing behind it is rejected. **All-null stays legal** — the `Eating out`
   placeholder deliberately carries no macros so a meal out still satisfies "every plan has a
-  recipe" (`20260721000001`); this rejects *partial* macros, not their absence. `fiber_g` is in the
+  recipe" (`20260721000001`); this rejects _partial_ macros, not their absence. `fiber_g` is in the
   required set: a null reads as 0 against the 30 g daily target, an understatement that looks like a
   real number. No backfill — 83 recipes, 82 complete, 1 intentional placeholder, 0 with `fiber_g`
   null.
 
 - **"Stop repeating" on a recurring row.** `deleteSeries` has existed since #468 but only as an MCP
-  tool — the UI could *create* a series and never end one. The only lever the app offered was
+  tool — the UI could _create_ a series and never end one. The only lever the app offered was
   archiving occurrences, which looks like stopping the chore and isn't: archive skips those dates,
   and the next spawn window repopulates. Two-step confirm; completed history is kept, future
   unfinished occurrences are removed.
 
 - `src/__tests__/collapse-series.test.ts` — 7 cases pinning the two things that fail
-  *plausibly*: showing the newest occurrence instead of the oldest (three days behind reads as up
+  _plausibly_: showing the newest occurrence instead of the oldest (three days behind reads as up
   to date) and counting future occurrences as missed (every series looks overdue). Both produce a
   believable list, which is why they need a test rather than a look.
 
@@ -218,7 +248,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   fields as UTC. West of Greenwich that shifts any evening instant forward a day, so:
 
   - the **"today" highlight** in the week and month views moved to tomorrow's column at 5 PM PDT,
-  - the **day view** fetched and rendered *tomorrow's* events for the rest of the evening, because
+  - the **day view** fetched and rendered _tomorrow's_ events for the rest of the evening, because
     its request window is `isoDate(current)` on a `new Date()`,
   - **"Add event"** pre-filled tomorrow's date — overriding the `todayString()` default that #686
     had already put in `EventModal`.
@@ -226,11 +256,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   The three views each carried their own copy of the same wrong `isoDate` helper. All three now use
   one **`localDateString(d)`** in `lib/timezone`, which reads the local fields it was given instead
   of routing them through UTC. This also fixes the grid east of Greenwich, where the error runs the
-  other way: a local-midnight cell read as UTC lands on *yesterday*, so **every cell** in the month
+  other way: a local-midnight cell read as UTC lands on _yesterday_, so **every cell** in the month
   grid was mislabelled — not just the evening hours. That matters for a trip to Japan, not only in
   theory.
 
-  Same class as #686, which fixed the two *writes* (`cooks.cooked_on`, `meal_log.date`) and left the
+  Same class as #686, which fixed the two _writes_ (`cooks.cooked_on`, `meal_log.date`) and left the
   read-side calendar keys as out of scope. This closes that remainder.
 
 - **Google Calendar answered in each calendar's own timezone, not the user's.** `events.list` was
@@ -367,7 +397,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
     double-create a chore. Both spawners lean on the index rather than on their own bookkeeping.
   - **Editing an occurrence asks which you meant** — this occurrence, or the whole series. Picking
     one silently is the classic recurring-task bug. "This occurrence" detaches the row so a later
-    rule change cannot overwrite it; "the whole series" regenerates future *unfinished* occurrences
+    rule change cannot overwrite it; "the whole series" regenerates future _unfinished_ occurrences
     and leaves completed ones with the title they were done under.
   - Deleting a series keeps completed occurrences as ordinary tasks (`on delete set null`) and
     removes only future unfinished ones.
@@ -382,8 +412,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   - Seven MCP tools: `get_task_series`, `create_task_series`, `update_task_series`,
     `extend_task_series`, `dismiss_series_expiry`, `delete_task_series`, `detach_task_occurrence`.
   - `tests/test_recurrence.py` pins the arithmetic that fails silently: month-end clamping (Jan 31
-    + 1 month is Feb 28, not Mar 3), biweekly phase across a resumed window, a weekly series not
-    emitting days earlier in its own first week than `starts_on`, and inclusive `ends_on`.
+    - 1 month is Feb 28, not Mar 3), biweekly phase across a resumed window, a weekly series not
+      emitting days earlier in its own first week than `starts_on`, and inclusive `ends_on`.
 
   **"Every 2–3 days" is stored as every 3 days.** A range is not a cadence, and a `flex_days`
   column is easy to add later but awkward to backfill meaning onto. Shipping rounded to see whether
