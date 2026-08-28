@@ -79,7 +79,7 @@ export async function POST() {
       },
       required: ["exercises"],
     },
-    180_000,
+    { timeoutMs: 180_000 },
   );
 
   // Build lookup map from the generated results

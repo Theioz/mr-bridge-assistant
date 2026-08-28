@@ -60,6 +60,20 @@ function model(): string {
   return process.env.OLLAMA_MODEL || "qwen2.5vl:7b";
 }
 
+/**
+ * IDENTIFYING a plate is a smaller job than reading a label, so it gets a smaller model.
+ *
+ * The 7b spends ~50 s of CPU on a single meal photo here, and identification is all it is
+ * being asked for — every gram and every calorie still comes from USDA, so a weaker model
+ * cannot move a macro. The 3b halves that for the same job.
+ *
+ * Label OCR deliberately stays on `model()`: transcribing small print is the one vision task
+ * where being wrong is silently expensive, because nothing downstream re-derives the number.
+ */
+function visionModel(): string {
+  return process.env.OLLAMA_VISION_MODEL || "qwen2.5vl:3b";
+}
+
 export type ChatMessage = {
   role: "system" | "user";
   content: string;
@@ -83,13 +97,20 @@ export type ChatMessage = {
  */
 const VISION_NUM_CTX = 8192;
 
+export type ChatOpts = {
+  timeoutMs?: number;
+  /** Override Ollama's 4096-token default. Required for images; see VISION_NUM_CTX. */
+  numCtx?: number;
+  /** Override the model for this call. Defaults to `model()`. */
+  model?: string;
+};
+
 export async function chatJSON<T>(
   messages: ChatMessage[],
   schema: Record<string, unknown>,
-  timeoutMs = 120_000,
-  /** Override Ollama's 4096-token default. Required for images; see VISION_NUM_CTX. */
-  numCtx?: number,
+  opts: ChatOpts = {},
 ): Promise<T> {
+  const { timeoutMs = 120_000, numCtx } = opts;
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
@@ -98,7 +119,7 @@ export async function chatJSON<T>(
       headers: { "Content-Type": "application/json" },
       signal: ctl.signal,
       body: JSON.stringify({
-        model: model(),
+        model: opts.model ?? model(),
         messages,
         stream: false,
         format: schema, // Ollama enforces the JSON schema on the output
@@ -259,6 +280,37 @@ export async function parseFoodText(
 }
 
 /**
+ * The photo path gets its OWN system prompt, and a much shorter one.
+ *
+ * It used to send PARSE_SYSTEM — ~750 tokens written for TEXT, whose every worked example is a
+ * typed sentence ("2 eggs and toast", "grilled chicken breast, about 6oz"). On a photo request
+ * that is not merely wasted: it is ~15 s of CPU prompt-eval per photo spent teaching the model
+ * to parse prose it was never given.
+ *
+ * `source` keeps its exact meaning — the fragment of the USER'S words this food came from,
+ * which is what quantity.ts lexes. The difference is that a photo usually has no such words, so
+ * the model is told to return "" rather than invent one. It previously filled the field with
+ * things like "meal description" and "anywhere", and an invented source is worse than an empty
+ * one: `estimateOne` lexes it, finds no number, and the item is honestly flagged unquantified
+ * either way — but a plausible-looking source suggests the user said something they did not.
+ */
+const PARSE_SYSTEM_PHOTO = [
+  "Identify the foods in a meal photo. One entry per distinct food.",
+  "",
+  "- query: a plain USDA-style ingredient name, e.g. 'chicken breast, roasted',",
+  "  'rice, white, cooked', 'green beans, cooked'. No brands. Keep only adjectives that",
+  "  change the food itself (raw/cooked/roasted); drop the rest. Use the name USDA files",
+  "  the INGREDIENT under, not the dish name — USDA has no porridge called 'oatmeal',",
+  "  it is 'oats, cooked'.",
+  "- qty + unit: the portion, in a natural unit — qty=1 unit='cup', qty=6 unit='oz'.",
+  "  Judge it against plate and utensil scale.",
+  "- source: if the user's description states an amount for this food, copy that fragment",
+  '  VERBATIM. If they did not, return "". Never invent one.',
+  "",
+  "Never output grams, calories or macros. A database supplies those.",
+].join("\n");
+
+/**
  * Parse a meal photo, optionally guided by what the user says it is.
  *
  * Portion estimation from pixels is the weakest thing a local VLM does — so the
@@ -302,12 +354,11 @@ export async function parseFoodPhoto(
 
   const out = await chatJSON<{ items: ParsedFood[] }>(
     [
-      { role: "system", content: PARSE_SYSTEM },
+      { role: "system", content: PARSE_SYSTEM_PHOTO },
       { role: "user", content: instruction, images: [base64Jpeg] },
     ],
     PARSE_SCHEMA,
-    180_000, // vision is slower than text
-    VISION_NUM_CTX,
+    { timeoutMs: 180_000, numCtx: VISION_NUM_CTX, model: visionModel() },
   );
   return (out.items ?? []).filter((i) => i.query?.trim());
 }
@@ -386,8 +437,8 @@ export async function readNutritionLabel(base64Jpeg: string): Promise<LabelReadi
       },
     ],
     LABEL_SCHEMA,
-    180_000,
-    VISION_NUM_CTX,
+    // Label OCR stays on the larger model — see visionModel().
+    { timeoutMs: 180_000, numCtx: VISION_NUM_CTX },
   );
 }
 
@@ -438,10 +489,124 @@ export async function pickBestFood(
       },
     ],
     PICK_SCHEMA,
-    60_000,
+    // 90s, not 60s. A selection is ~190 tokens and 1.2s on an idle server, so a timeout here
+    // never means "too hard" — it means the request was queued behind a photo. Three of them
+    // timed out on one meal log, and a timed-out selection falls back to USDA's top hit, which
+    // is the wrong-food outcome this call exists to prevent. Cheaper to wait than to guess.
+    { timeoutMs: 90_000 },
   );
 
   const i = Math.trunc(out.index);
   if (!out.confident || i < 0 || i >= candidates.length) return null;
   return i;
+}
+
+const PICK_BATCH_SCHEMA = {
+  type: "object",
+  properties: {
+    picks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          food: { type: "number" },
+          index: { type: "number" },
+          confident: { type: "boolean" },
+        },
+        required: ["food", "index", "confident"],
+      },
+    },
+  },
+  required: ["picks"],
+};
+
+export type PickGroup = {
+  /** The food we are trying to match, as USDA would name it. */
+  wanted: string;
+  candidates: { description: string }[];
+};
+
+/**
+ * Validate what the model said about a batch of selections.
+ *
+ * Split out and exported because this is the part that can silently corrupt a meal: an index
+ * that is off by one, or attributed to the wrong food, does not throw — it logs a different
+ * food's macros. Every field is checked against the group it claims to belong to, anything
+ * unusable becomes null (the caller's "no confident pick" path), and a duplicate answer for
+ * the same food keeps the FIRST rather than letting a later one overwrite it.
+ */
+export function validateBatchPicks(
+  raw: { food: number; index: number; confident: boolean }[] | undefined,
+  groups: PickGroup[],
+): (number | null)[] {
+  const out: (number | null)[] = groups.map(() => null);
+  const answered = new Set<number>();
+
+  for (const p of raw ?? []) {
+    const f = Math.trunc(Number(p?.food));
+    if (!Number.isInteger(f) || f < 0 || f >= groups.length) continue;
+    if (answered.has(f)) continue;
+    answered.add(f);
+
+    if (!p.confident) continue;
+    const i = Math.trunc(Number(p?.index));
+    if (!Number.isInteger(i) || i < 0 || i >= groups[f].candidates.length) continue;
+    out[f] = i;
+  }
+
+  return out;
+}
+
+/**
+ * Choose USDA entries for several foods in ONE model call.
+ *
+ * Same job as pickBestFood, once per meal instead of once per food. The selections were never
+ * individually slow (~190 tokens, ~1.2 s); the cost was that a plate of a dozen foods meant a
+ * dozen round trips at a model server that, until now, ran them strictly one at a time.
+ *
+ * Returns one entry per group, in order: the chosen index, or null where the model was not
+ * confident. THROWS if the call itself fails, so the caller can fall back to per-food
+ * selection — "the request died" and "none of these is the right food" are different answers
+ * and must not collapse into the same null.
+ */
+export async function pickBestFoods(
+  groups: PickGroup[],
+  context?: string,
+): Promise<(number | null)[]> {
+  if (groups.length === 0) return [];
+
+  const list = groups
+    .map(
+      (g, gi) =>
+        `Food ${gi}: "${g.wanted}"\n` +
+        g.candidates.map((c, i) => `  ${i}. ${c.description}`).join("\n"),
+    )
+    .join("\n\n");
+
+  const out = await chatJSON<{ picks: { food: number; index: number; confident: boolean }[] }>(
+    [
+      {
+        role: "system",
+        content: [
+          "Pick the USDA entry for each food the user actually ate.",
+          "",
+          "- Reject entries that are a DIFFERENT food merely sharing a word.",
+          "  'Bread, oatmeal' is bread, not oatmeal. 'Egg bread' is bread, not egg.",
+          "- Prefer plain, unprepared forms over breaded / fried / canned / deli /",
+          "  fat-free variants unless the user explicitly asked for them.",
+          "- Return one entry per food, echoing its food number. Set confident=false",
+          "  for a food where none of its candidates is a good match.",
+          "- The index is into THAT food's own candidate list.",
+        ].join("\n"),
+      },
+      {
+        role: "user",
+        content: (context ? `Full meal: "${context}"\n\n` : "") + list,
+      },
+    ],
+    PICK_BATCH_SCHEMA,
+    { timeoutMs: 90_000 },
+  );
+
+  return validateBatchPicks(out.picks, groups);
 }
