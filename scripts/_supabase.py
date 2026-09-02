@@ -26,7 +26,7 @@ def get_client():
 def get_owner_user_id() -> str:
     """Return the real owner's user UUID from OWNER_USER_ID env var.
     Raises if not set — sync scripts must never write rows without a user_id
-    to avoid touching demo data or writing orphaned rows.
+    to avoid writing orphaned rows.
     """
     uid = os.environ.get("OWNER_USER_ID", "")
     if not uid:

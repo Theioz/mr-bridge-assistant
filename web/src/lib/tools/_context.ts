@@ -7,15 +7,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * explicit `user_id` column filters — consistent with the pre-split
  * pattern in the route).
  *
- * `isDemo` gates tools that return stubbed data (calendar,
- * certain workout paths) vs real external calls.
- *
  * `sessionId` is only consumed by `get_session_history`, which walks
  * the current chat session's message history. Other tools ignore it.
  */
 export interface ToolContext {
   supabase: SupabaseClient;
   userId: string;
-  isDemo: boolean;
   sessionId?: string;
 }

@@ -10,10 +10,6 @@ export async function POST(req: NextRequest) {
   } = await serverClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (user.id === process.env.DEMO_USER_ID) {
-    return NextResponse.json({ eventId: `demo-${Date.now()}`, note: "Demo mode — not saved." });
-  }
-
   const body = (await req.json()) as {
     title: string;
     date: string;

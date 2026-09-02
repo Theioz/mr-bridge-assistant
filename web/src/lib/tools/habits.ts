@@ -102,8 +102,8 @@ export function buildHabitsTools({ supabase, userId }: ToolContext) {
             },
             // Migration 20260417000001 rekeyed the unique constraint from
             // (habit_id, date) to (user_id, habit_id, date). The other two
-            // call sites were updated (seed_demo.py, cron/reset-demo) — this
-            // one was missed, so every chat log_habit has been failing with
+            // call sites were updated — this one was missed, so every
+            // chat log_habit had been failing with
             // "no unique or exclusion constraint matching..." since that
             // migration landed.
             { onConflict: "user_id,habit_id,date" },

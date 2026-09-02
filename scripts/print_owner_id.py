@@ -7,7 +7,6 @@ Usage: python3 scripts/print_owner_id.py
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -26,15 +25,14 @@ def main():
     resp = client.auth.admin.list_users()
     users = resp if isinstance(resp, list) else getattr(resp, "users", [])
 
-    demo_email = os.environ.get("DEMO_EMAIL", "demo@mr-bridge.app")
-    real_users = [u for u in users if getattr(u, "email", "") != demo_email]
+    real_users = list(users)
 
     if not real_users:
-        print("[error] No non-demo users found in auth.users.")
+        print("[error] No users found in auth.users.")
         sys.exit(1)
 
     if len(real_users) > 1:
-        print("[warn] Multiple non-demo users found — using the first one (oldest).")
+        print("[warn] Multiple users found — using the first one (oldest).")
         real_users.sort(key=lambda u: getattr(u, "created_at", ""))
 
     u = real_users[0]

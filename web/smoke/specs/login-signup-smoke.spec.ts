@@ -14,7 +14,9 @@ test.describe("Login page — mode switching", () => {
     await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
     await expect(page.getByText("New here?")).toBeVisible();
     await expect(page.getByText("Forgot password?")).toBeVisible();
-    // Demo button visible in sign-in mode (conditionally rendered; skip if env not set)
+    // The demo account is gone (#718) — sign-in mode is where its button used
+    // to render, so this is the assertion that catches it coming back.
+    await expect(page.getByRole("button", { name: "Try the demo" })).toHaveCount(0);
     // password field visible
     await expect(page.locator("#password")).toBeVisible();
     // confirm-password field NOT present
@@ -26,8 +28,6 @@ test.describe("Login page — mode switching", () => {
     await expect(page.getByText("Create your account")).toBeVisible();
     await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
     await expect(page.locator("#confirm-password")).toBeVisible();
-    // Demo button hidden in signup mode
-    await expect(page.getByRole("button", { name: "Try the demo" })).not.toBeVisible();
     // Back link present
     await expect(page.getByText("Already have an account?")).toBeVisible();
   });
@@ -63,8 +63,6 @@ test.describe("Login page — mode switching", () => {
     await expect(page.getByRole("button", { name: "Send reset link" })).toBeVisible();
     // Password field hidden in forgot mode
     await expect(page.locator("#password")).not.toBeVisible();
-    // Demo button hidden
-    await expect(page.getByRole("button", { name: "Try the demo" })).not.toBeVisible();
     // Back link
     await expect(page.getByRole("button", { name: "Back to sign in" })).toBeVisible();
   });
