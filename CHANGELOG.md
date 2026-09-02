@@ -7,6 +7,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Library: bulk import an IMDb CSV export.** "Import" on `/library` takes a ratings,
+  watchlist, or list export and loads the whole file in one pass instead of one
+  search-and-click per title. Matching is by IMDb const (`tt0111161`) through TMDB's
+  `/find` endpoint, so no title is guessed — a real 340-row export resolved 338/338 with
+  posters. Rated titles arrive as `finished` carrying their rating and `Date Rated` as
+  `finished_at`; unrated ones join the queue. The export's own `Directors` and
+  `Runtime (mins)` fill the two fields `/find` does not return, so an imported movie is
+  better populated than a searched one; a list export's `Description` column becomes the
+  review. Nothing is written until you have seen the whole list: the preview counts
+  matched / already-present / not-found / skipped rows and every matched row can be
+  unticked. Re-importing the same file inserts nothing.
+
+  New `POST /api/backlog/import` replaces the per-item `POST /api/backlog` for batches —
+  that one does three round trips per row (~1500 queries for a 500-row export) and races
+  on priority when rows overlap. The bulk path is one duplicate `select` for the batch,
+  one `max(priority)` per media type, and a single `insert` with the block assigned in
+  memory. TMDB resolution is a separate read-only `POST /api/backlog/import/resolve`,
+  called in 25-row chunks so the preview fills in progressively and no request carries 500
+  lookups. Parsing is column-map driven (`web/src/lib/import/media-csv.ts`), so a second
+  source — Letterboxd, Goodreads, Steam — is a config entry rather than a second parser.
+  IMDb kinds map movie/TV movie -> movie and TV series/mini series -> show; episodes and
+  everything else are reported in the preview, never silently dropped. (#690)
+
 ### Fixed
 
 - **A food is pinned only after you log it, not when the model guesses.** The memo added in #713

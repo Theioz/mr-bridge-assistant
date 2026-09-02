@@ -125,3 +125,62 @@ export async function searchTmdb(
 
   return results.map((item) => normalize(item, type));
 }
+
+export interface ImdbMatch {
+  media_type: "movie" | "show";
+  result: MetadataSearchResult;
+}
+
+/**
+ * Resolve an IMDb const ("tt0111161") straight to TMDB. Exact by construction — the
+ * bulk import path uses this instead of `searchTmdb` so there is no title matching to
+ * get wrong. Returns null when TMDB has no record of the id.
+ */
+export async function findByImdbId(imdbId: string): Promise<ImdbMatch | null> {
+  const url = `${BASE}/find/${encodeURIComponent(imdbId)}?api_key=${apiKey()}&external_source=imdb_id`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`TMDB ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+
+  const movie = (data.movie_results ?? [])[0];
+  if (movie) return { media_type: "movie", result: normalize(movie, "movie") };
+
+  const tv = (data.tv_results ?? [])[0];
+  if (tv) {
+    const base = normalize(tv, "show");
+    // Same enrichment searchTmdb does, so an imported show carries the same fields as a
+    // searched one.
+    const detail = await fetchTvDetail(tv.id as number);
+    if (detail) {
+      (base.metadata as Record<string, unknown>).last_air_date = detail.last_air_date;
+      (base.metadata as Record<string, unknown>).in_production = detail.in_production;
+    }
+    return { media_type: "show", result: base };
+  }
+
+  return null;
+}
+
+/** Resolve many IMDb consts, capping in-flight requests so TMDB does not rate-limit us. */
+export async function findByImdbIds(
+  imdbIds: string[],
+  concurrency = 6,
+): Promise<Map<string, ImdbMatch | null>> {
+  const out = new Map<string, ImdbMatch | null>();
+  let cursor = 0;
+
+  const worker = async () => {
+    while (cursor < imdbIds.length) {
+      const id = imdbIds[cursor++];
+      try {
+        out.set(id, await findByImdbId(id));
+      } catch {
+        // A single lookup failure is an unmatched row, not a failed import.
+        out.set(id, null);
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, imdbIds.length) }, worker));
+  return out;
+}

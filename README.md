@@ -405,6 +405,8 @@ mr-bridge-assistant/
 │   │   │   │   │   ├── google-health/route.ts  # POST — sync last 7d body + workouts
 │   │   │   │   ├── backlog/
 │   │   │   │   │   ├── search/route.ts          # GET — proxy TMDB/IGDB/OpenLibrary metadata search
+│   │   │   │   │   ├── import/route.ts          # POST — bulk commit a CSV import (one dup select, one insert)
+│   │   │   │   │   ├── import/resolve/route.ts  # POST — resolve a 25-row chunk against TMDB; writes nothing
 │   │   │   │   │   ├── route.ts                 # GET list, POST create
 │   │   │   │   │   └── [id]/
 │   │   │   │   │       ├── route.ts             # GET detail, PATCH update, DELETE
@@ -482,12 +484,15 @@ mr-bridge-assistant/
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       ├── types.ts                   # TypeScript interfaces for all DB tables
 │   │       ├── backlog/
-│   │       │   ├── tmdb.ts                # TMDB movie + show search (TMDB_API_KEY)
+│   │       │   ├── tmdb.ts                # TMDB movie + show search, and find-by-IMDb-id for imports (TMDB_API_KEY)
 │   │       │   ├── igdb.ts                # IGDB game search (Twitch OAuth client_credentials)
 │   │       │   └── openlibrary.ts         # OpenLibrary book search + Google Books fallback
 │   │       ├── export/
 │   │       │   ├── tables.ts              # Declarative registry of tables included in data export (#67)
 │   │       │   └── csv.ts                 # Deterministic CSV serializer (ordered columns, CRLF)
+│   │       ├── import/
+│   │       │   ├── csv.ts                 # RFC 4180 CSV reader — the counterpart to export/csv.ts
+│   │       │   └── media-csv.ts           # Column-map library import; IMDb ships, other sources are config (#690)
 │   │       ├── nutrition/                 # Macros, the kitchen, and the audits that keep them honest
 │   │       │   ├── fdc.ts                 # USDA FoodData Central client — every gram and calorie comes from here
 │   │       │   ├── recipe-macros.ts       # The USDA resolver; the ONLY place macros_computed_at is stamped
