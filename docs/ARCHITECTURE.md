@@ -99,7 +99,6 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 
 | Table | Purpose |
 |-------|---------|
-| `tenant_quotas` | Per-user daily rate limits: token cap, tool-call cap, demo-turn cap; atomic check-and-increment via `check_and_increment_quota()` |
 | `feature_flags` | Per-user and global feature toggles; per-user row overrides a null-user-id global default |
 | `admin_audit_log` | Append-only log of every admin mutation: actor, action, before/after JSON |
 
@@ -123,7 +122,7 @@ This means a user's session JWT can only read or write their own rows — no cro
 
 **`createServiceClient()`** (`web/src/lib/supabase/service.ts`) — uses the service-role key, which bypasses all RLS policies. Used only in trusted server-side contexts where RLS would block a legitimate system operation:
 
-- Cron sync routes (`/api/cron/sync`, `/api/cron/reset-demo`) — write to any user's rows
+- The cron sync route (`/api/cron/sync`) — writes to any user's rows
 - OAuth callbacks — create/update `user_integrations` rows before the session is fully established
 - Admin pages (`/admin`) — read and mutate any tenant's data
 - Quota enforcement functions (`check_and_increment_quota`, `record_quota_tokens`) — atomic operations that must succeed regardless of session state
@@ -206,7 +205,6 @@ Every user-data table is scoped by `user_id = auth.uid()`. One user's data is in
 
 The current "multi-tenant" infrastructure shipped in 2026-04-24:
 
-- **`tenant_quotas`** — per-user daily rate limits (tokens, tool calls, demo turns), configurable per tenant via admin overrides
 - **`feature_flags`** — per-user toggles over a null-user-id global default; foundation for A/B testing and gradual rollouts
 - **`admin_audit_log`** — every admin mutation is logged with actor, action, and before/after JSON
 - **`/admin` route** — tenant CRUD, quota overrides, feature-flag toggles, audit log; gated by `is_admin: true` in `user_metadata`

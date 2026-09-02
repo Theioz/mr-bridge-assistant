@@ -56,7 +56,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
-export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
+export function buildWorkoutTools({ supabase, userId }: ToolContext) {
   return {
     get_workout_plan: tool({
       description:
@@ -67,7 +67,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       execute: async () => {
         if (!userId) return { error: "Not authenticated" };
-        if (isDemo) return { demo: true, note: "Demo mode — no real workout plans." };
         const todayStr = todayString();
         const dow = (new Date(`${todayStr}T12:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
         const monday = addDays(todayStr, -dow);
@@ -228,7 +227,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
         update_calendar = true,
       }) => {
         if (!userId) return err("Not authenticated");
-        if (isDemo) return ok({ demo: true, note: "Demo mode — plan not saved." });
 
         // Equipment validation (#346 truth-in-payload): reject before write if
         // proposed weights exceed the user's inventory max for that equipment type.
@@ -406,7 +404,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       strict: STRICT_TOOLS.update_workout_exercise,
       execute: async ({ date, phase, exercise_name, updates }) => {
         if (!userId) return err("Not authenticated");
-        if (isDemo) return ok({ demo: true, note: "Demo mode — not saved." });
 
         // Validate weight update against inventory before touching the DB
         if (updates.weight_lbs != null) {
@@ -541,7 +538,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       execute: async ({ date, reason }) => {
         if (!userId) return err("Not authenticated");
-        if (isDemo) return ok({ demo: true, note: "Demo mode — cancel not applied." });
         return cancelWorkout({ supabase, userId, date, reason });
       },
     }),
@@ -564,7 +560,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       execute: async ({ from_date, to_date, reason }) => {
         if (!userId) return err("Not authenticated");
-        if (isDemo) return ok({ demo: true, note: "Demo mode — reschedule not applied." });
         return rescheduleWorkout({ supabase, userId, from_date, to_date, reason });
       },
     }),
@@ -588,8 +583,6 @@ export function buildWorkoutTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       execute: async ({ exercise_name, days = 30 }) => {
         if (!userId) return { error: "Not authenticated" };
-        if (isDemo)
-          return { demo: true, note: "Demo mode — no real strength history.", sessions: [] };
 
         const sinceStr = daysAgoString(Math.max(1, Math.round(days)));
         const { data: sessions, error } = await supabase

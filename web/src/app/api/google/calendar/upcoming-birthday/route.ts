@@ -48,13 +48,6 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (user.id === process.env.DEMO_USER_ID) {
-    const future = new Date(Date.now() + 12 * 86_400_000);
-    const date = new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ }).format(future);
-    return NextResponse.json({
-      birthday: { name: "Priya", date, daysUntil: 12 } satisfies UpcomingBirthday,
-    });
-  }
 
   try {
     const auth = await getGoogleAuthClient({ db: serverClient, userId: user.id });

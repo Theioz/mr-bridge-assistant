@@ -6,9 +6,6 @@ import { Suspense, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import Logo from "@/components/ui/logo";
 
-const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL ?? "";
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
-
 type Mode = "signin" | "signup" | "forgot";
 type State = "idle" | "loading" | "error" | "pending";
 
@@ -125,13 +122,6 @@ function LoginForm() {
     } else {
       await signIn(email, password);
     }
-  }
-
-  async function handleDemoLogin() {
-    if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    await signIn(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
   const inputStyle: React.CSSProperties = {
@@ -426,79 +416,6 @@ function LoginForm() {
             )}
           </div>
         </form>
-
-        {mode === "signin" && DEMO_EMAIL && DEMO_PASSWORD && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-3)",
-            }}
-          >
-            <div
-              aria-hidden="true"
-              style={{
-                position: "relative",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: 1,
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  top: "50%",
-                  borderTop: "1px solid var(--rule-soft)",
-                }}
-              />
-              <span
-                style={{
-                  position: "relative",
-                  padding: "0 var(--space-3)",
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-faint)",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  background: "var(--color-bg)",
-                }}
-              >
-                or
-              </span>
-            </div>
-            <button
-              onClick={handleDemoLogin}
-              disabled={state === "loading"}
-              className="cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover-border-strong"
-              style={{
-                width: "100%",
-                minHeight: 44,
-                background: "transparent",
-                color: "var(--color-text)",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--r-1)",
-                fontSize: "var(--t-meta)",
-                fontWeight: 500,
-                letterSpacing: "0.02em",
-                transition:
-                  "border-color var(--motion-fast) var(--ease-out-quart), opacity var(--motion-fast) var(--ease-out-quart)",
-              }}
-            >
-              Try the demo
-            </button>
-            <p
-              style={{
-                fontSize: "var(--t-micro)",
-                color: "var(--color-text-faint)",
-                textAlign: "center",
-                margin: 0,
-              }}
-            >
-              Fictional persona · read-write · resets nightly
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

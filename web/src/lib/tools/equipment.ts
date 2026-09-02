@@ -9,7 +9,7 @@ interface EquipmentRow {
   notes: string | null;
 }
 
-export function buildEquipmentTools({ supabase, userId, isDemo }: ToolContext) {
+export function buildEquipmentTools({ supabase, userId }: ToolContext) {
   return {
     get_user_equipment: tool({
       description:
@@ -19,27 +19,6 @@ export function buildEquipmentTools({ supabase, userId, isDemo }: ToolContext) {
         properties: {},
       }),
       execute: async () => {
-        if (isDemo) {
-          return {
-            items: [
-              {
-                equipment_type: "dumbbell pair",
-                weight_lbs: 30,
-                resistance_level: null,
-                count: 1,
-                notes: null,
-              },
-              {
-                equipment_type: "resistance band",
-                weight_lbs: null,
-                resistance_level: "medium",
-                count: 3,
-                notes: null,
-              },
-            ],
-            maxes: { "dumbbell pair": 30 },
-          };
-        }
         if (!userId) return { error: "Not authenticated" };
 
         const { data, error } = await supabase

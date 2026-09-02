@@ -44,6 +44,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   IMDb kinds map movie/TV movie -> movie and TV series/mini series -> show; episodes and
   everything else are reported in the preview, never silently dropped. (#690)
 
+### Removed
+
+- **The demo account and all of its scaffolding (#718).** It was built for a public,
+  multi-tenant launch that is not happening — the app is tailnet-only and single-user, so
+  there are no visitors to demo it to. The auth user (`demo@mr-bridge.app`) had already
+  been deleted from Supabase, but everything built around it was still in the tree and
+  still deployed, so **"Try the demo" still rendered on the login page** and clicking it
+  attempted a sign-in as a user that no longer existed.
+
+  Gone: the login button and its credential auto-fill; both nav demo banners; the
+  `isDemo` field on `ToolContext` and the 11 branches it gated (`calendar`, `workouts`,
+  `equipment`); the `DEMO_USER_ID` short-circuits and hardcoded "Alex Chen" calendar
+  fixtures across five `api/google/calendar/**` routes; the nightly wipe-and-reseed route
+  `api/cron/reset-demo`; `scripts/seed_demo.py` and `scripts/reset_demo.py`; the
+  demo-turn quota fields; the demo-email filter in `print_owner_id.py`; and the five
+  `DEMO_*` env vars, the README "Demo Account" section, and the `docs/` references.
+
+  Every in-tool `isDemo` branch was already unreachable: `web/mcp/server.ts` has been the
+  only `ToolContext` construction site since the chat route was deleted in #476, and it
+  passes `false`. Applied migrations that mention the demo account are history and were
+  left alone, as were the dated audits and runbooks under `docs/`.
+
 ### Fixed
 
 - **A food is pinned only after you log it, not when the model guesses.** The memo added in #713

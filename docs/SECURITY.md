@@ -7,8 +7,6 @@ Every secret lives in **Vaultwarden** (Secure Note `mr-bridge-env`) and, at runt
 Public-by-design variables (the only ones that may omit the flag):
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_DEMO_EMAIL`
-- `NEXT_PUBLIC_DEMO_PASSWORD`
 - `APP_URL`
 - `USER_TIMEZONE`
 

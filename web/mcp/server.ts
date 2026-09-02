@@ -49,7 +49,6 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
 const context: ToolContext = {
   supabase,
   userId: OWNER_USER_ID,
-  isDemo: false, // this server is the owner's own tooling; never the demo account
 };
 
 const tools = buildChatTools(context);

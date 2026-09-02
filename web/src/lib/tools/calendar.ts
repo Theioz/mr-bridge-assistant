@@ -7,194 +7,7 @@ import { ok, err } from "./_contract";
 import { STRICT_TOOLS } from "./_strict";
 import type { ToolContext } from "./_context";
 
-function makeDemo() {
-  const t = todayString();
-  const d = (n: number) => addDays(t, n);
-  return [
-    // Today
-    {
-      title: "Morning run",
-      start: `${d(0)}T06:30:00`,
-      end: `${d(0)}T07:15:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: null,
-    },
-    {
-      title: "Team standup",
-      start: `${d(0)}T09:00:00`,
-      end: `${d(0)}T09:30:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Google Meet",
-    },
-    {
-      title: "Async standup",
-      start: `${d(0)}T09:00:00`,
-      end: `${d(0)}T09:15:00`,
-      allDay: false,
-      calendar: "Work",
-      calendarType: "other",
-      location: null,
-    },
-    {
-      title: "Lunch w/ Priya",
-      start: `${d(0)}T12:30:00`,
-      end: `${d(0)}T13:30:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Tartine Manufactory",
-    },
-    {
-      title: "Gym — push day",
-      start: `${d(0)}T18:00:00`,
-      end: `${d(0)}T19:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Equinox SoMa",
-    },
-    // Yesterday
-    {
-      title: "Doctor appointment",
-      start: `${d(-1)}T10:00:00`,
-      end: `${d(-1)}T10:45:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "UCSF Medical Center",
-    },
-    {
-      title: "Coffee w/ Marcus",
-      start: `${d(-1)}T15:00:00`,
-      end: `${d(-1)}T16:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Sightglass Coffee",
-    },
-    // Tomorrow
-    {
-      title: "Product review",
-      start: `${d(1)}T10:00:00`,
-      end: `${d(1)}T11:30:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Google Meet",
-    },
-    {
-      title: "1:1 with Sarah",
-      start: `${d(1)}T14:00:00`,
-      end: `${d(1)}T14:30:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: null,
-    },
-    // Day +2
-    {
-      title: "Design sync",
-      start: `${d(2)}T11:00:00`,
-      end: `${d(2)}T12:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Zoom",
-    },
-    {
-      title: "Evening yoga",
-      start: `${d(2)}T19:00:00`,
-      end: `${d(2)}T20:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "CorePower Yoga",
-    },
-    // All-day
-    {
-      title: "Team offsite",
-      start: d(3),
-      end: d(5),
-      allDay: true,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: null,
-    },
-    {
-      title: "Memorial Day",
-      start: d(6),
-      end: d(6),
-      allDay: true,
-      calendar: "US Holidays",
-      calendarType: "holiday",
-      location: null,
-    },
-    {
-      title: "Marcus's birthday",
-      start: d(4),
-      end: d(4),
-      allDay: true,
-      calendar: "Contacts",
-      calendarType: "birthday",
-      location: null,
-    },
-    // Next week
-    {
-      title: "Quarterly planning",
-      start: `${d(7)}T09:00:00`,
-      end: `${d(7)}T12:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Office — Mission St",
-    },
-    {
-      title: "Flight to NYC",
-      start: `${d(8)}T06:00:00`,
-      end: `${d(8)}T14:30:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "SFO → JFK",
-    },
-    {
-      title: "Conference day 1",
-      start: `${d(9)}T09:00:00`,
-      end: `${d(9)}T18:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Javits Center, NYC",
-    },
-    // Last week
-    {
-      title: "Sprint retro",
-      start: `${d(-5)}T14:00:00`,
-      end: `${d(-5)}T15:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: "Google Meet",
-    },
-    {
-      title: "Weekly review",
-      start: `${d(-7)}T10:00:00`,
-      end: `${d(-7)}T11:00:00`,
-      allDay: false,
-      calendar: "Alex Chen",
-      calendarType: "primary",
-      location: null,
-    },
-  ];
-}
-
-const DEMO_CALENDAR_EVENTS = makeDemo();
-
-export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
+export function buildCalendarTools({ supabase, userId }: ToolContext) {
   return {
     list_calendar_events: tool({
       description:
@@ -213,14 +26,6 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
         },
       }),
       execute: async ({ date, days = 1 }) => {
-        if (isDemo) {
-          const startDate = date ?? todayString();
-          const endDate = addDays(startDate, Math.max(1, days) - 1);
-          const filtered = DEMO_CALENDAR_EVENTS.filter(
-            (e) => e.start.slice(0, 10) >= startDate && e.start.slice(0, 10) <= endDate,
-          );
-          return { events: filtered, count: filtered.length };
-        }
         try {
           const startDate = date ?? todayString();
           const endDate = addDays(startDate, Math.max(1, days) - 1);
@@ -333,15 +138,6 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
         description,
         all_day = false,
       }) => {
-        if (isDemo) {
-          return ok({
-            id: `demo-${Date.now()}`,
-            title,
-            start: { date, dateTime: start_time ? `${date}T${start_time}:00` : date },
-            end: { date, dateTime: end_time ? `${date}T${end_time}:00` : date },
-            note: "Demo mode — event not saved to real calendar.",
-          });
-        }
         try {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             return err(`date must be YYYY-MM-DD, got: "${date}"`);
@@ -429,9 +225,6 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
         },
       }),
       execute: async ({ eventId }) => {
-        if (isDemo) {
-          return ok({ eventId, note: "Demo mode — event not deleted from real calendar." });
-        }
         try {
           const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });
@@ -497,9 +290,6 @@ export function buildCalendarTools({ supabase, userId, isDemo }: ToolContext) {
       }),
       strict: STRICT_TOOLS.update_calendar_event,
       execute: async ({ eventId, summary, start, end, location, description }) => {
-        if (isDemo) {
-          return ok({ eventId, note: "Demo mode — event not updated in real calendar." });
-        }
         try {
           const auth = await getGoogleAuthClient({ db: supabase, userId });
           const calendar = google.calendar({ version: "v3", auth });

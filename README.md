@@ -211,7 +211,7 @@ docker compose build && docker compose up -d
 | `supabase.<domain>` | **tailnet only** | The database gateway. It *must* be a real hostname — the browser talks to Supabase directly, so it cannot hide on the Docker network. |
 | `share.<domain>` | **public** | Only token-gated `/share/*`, behind a default-deny path allowlist. The dashboard, meals, journal, fitness, settings, admin and the entire API return **404** from the internet. |
 
-**Cron** — `web/vercel.json` is gone. The three jobs (`/api/cron/sync`, `/api/cron/reset-demo`) run from the node's crontab, authenticated with `CRON_SECRET` exactly as before. The weekly planner moved to a Claude Code command (see below).
+**Cron** — `web/vercel.json` is gone. `/api/cron/sync` runs from the node's crontab, authenticated with `CRON_SECRET` exactly as before. The weekly planner moved to a Claude Code command (see below).
 
 ### Step 8b — Wire up the MCP server (this is the chat)
 
@@ -414,8 +414,7 @@ mr-bridge-assistant/
 │   │   │   │   │       ├── share/route.ts       # POST generate token, DELETE revoke
 │   │   │   │   │       └── priority/route.ts    # PATCH priority (drag-to-reorder)
 │   │   │   │   ├── cron/
-│   │   │   │   │   ├── sync/route.ts      # GET — node crontab hits this; CRON_SECRET auth; daily 6am PST
-│   │   │   │   │   └── reset-demo/route.ts # GET — nightly demo data wipe + reseed (CRON_SECRET auth)
+│   │   │   │   │   └── sync/route.ts      # GET — node crontab hits this; CRON_SECRET auth; daily 6am PST
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
 │   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision: food macro estimation (mode=food) or exact label reading (mode=label)
@@ -439,7 +438,6 @@ mr-bridge-assistant/
 │   │   │   │   │   └── backfill/route.ts        # POST — compute personal records from historical strength_session_sets
 │   │   │   │   ├── export/
 │   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
-│   │   │   │   │   └── route.ts           # GET — daily token/tool-call/demo-turn usage vs caps; is_demo flag
 │   │   │   │   ├── usage/
 │   │   │   │   │   └── storage/route.ts   # GET — per-category row counts + estimated bytes via estimate_user_storage RPC
 │   │   │   │   ├── auth/
@@ -570,31 +568,6 @@ mr-bridge-assistant/
 ```
 
 > All live data (habits, tasks, fitness, recovery, recipes, meals) is stored in **Supabase** — not local files.
-
----
-
-## Demo Account
-
-A shared demo account lets visitors explore the app without touching real data. The demo user ("Demo User, software engineer, SF") has 30 days of realistic fitness, habit, recovery, meal, chat, and task data pre-loaded. Data resets nightly.
-
-### Using the demo
-
-On the login page, click **"Try the demo"** — it auto-fills credentials and signs you in. No registration required.
-
-Or sign in manually:
-- **Email:** `demo@mr-bridge.app`
-- **Password:** set in your deployment's `DEMO_PASSWORD` env var (see `.env.example`)
-
-The demo account is fully interactive: toggle habits, add tasks, log meals, browse fitness data. All changes are wiped and reseeded at 3 AM PT each night.
-
-**What's real vs mocked:**
-| Feature | Demo behaviour |
-|---------|----------------|
-| Habits, tasks, fitness, recovery | Real data from Supabase (seeded) |
-| Google Calendar | Hardcoded mock events |
-| Google Health / Oura sync | Not connected — seed data covers it |
-
----
 
 ## Self-Hosting
 

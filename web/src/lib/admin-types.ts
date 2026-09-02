@@ -36,8 +36,6 @@ export interface TenantQuotaRow {
   tool_calls_used_today: number;
   daily_chat_tokens_override: number | null;
   daily_tool_calls_override: number | null;
-  daily_demo_turns: number;
-  demo_turns_used_today: number;
   last_reset: string;
 }
 

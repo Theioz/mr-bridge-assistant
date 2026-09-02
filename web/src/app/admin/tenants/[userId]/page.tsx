@@ -258,8 +258,6 @@ const QUOTA_DEFAULTS: TenantQuotaRow = {
   tool_calls_used_today: 0,
   daily_chat_tokens_override: null,
   daily_tool_calls_override: null,
-  daily_demo_turns: 50,
-  demo_turns_used_today: 0,
   // todayString(), not toISOString() — the server clock is UTC, so a quota row
   // rendered on a Pacific evening would claim it had already reset tomorrow.
   last_reset: todayString(),

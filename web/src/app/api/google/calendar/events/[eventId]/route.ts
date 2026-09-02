@@ -13,10 +13,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   } = await serverClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (user.id === process.env.DEMO_USER_ID) {
-    return NextResponse.json({ eventId, note: "Demo mode — not deleted." });
-  }
-
   try {
     const auth = await getGoogleAuthClient({ db: serverClient, userId: user.id });
     const calendar = google.calendar({ version: "v3", auth });
@@ -38,10 +34,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     data: { user },
   } = await serverClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  if (user.id === process.env.DEMO_USER_ID) {
-    return NextResponse.json({ eventId, note: "Demo mode — not updated." });
-  }
 
   const body = (await req.json()) as {
     title?: string;

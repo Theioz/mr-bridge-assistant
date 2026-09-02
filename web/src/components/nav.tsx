@@ -56,7 +56,6 @@ const navTransition = `color var(--motion-fast) var(--ease-out-quart), backgroun
 export default function Nav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
-  const [isDemo, setIsDemo] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadError, setUnreadError] = useState(false);
@@ -64,8 +63,6 @@ export default function Nav() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
-      if (demoEmail) setIsDemo(user?.email === demoEmail);
       setIsAdmin(user?.user_metadata?.is_admin === true);
     });
   }, []);
@@ -211,25 +208,6 @@ export default function Nav() {
           })}
         </div>
 
-        {/* Demo banner — desktop */}
-        {isDemo && (
-          <div
-            className="overflow-hidden text-ellipsis whitespace-nowrap"
-            style={{
-              margin: "0 var(--space-3) var(--space-4)",
-              padding: "var(--space-2) var(--space-3)",
-              borderRadius: "var(--r-2)",
-              background: "var(--warning-subtle)",
-              color: "var(--accent)",
-              fontSize: "var(--t-micro)",
-              letterSpacing: "0.01em",
-            }}
-            title="Demo account — changes reset nightly"
-          >
-            Demo account — changes reset nightly
-          </div>
-        )}
-
         {/* Admin + sign-out — desktop, pinned to bottom */}
         <div style={{ marginTop: "auto" }}>
           {isAdmin && (
@@ -262,22 +240,6 @@ export default function Nav() {
           </div>
         </div>
       </nav>
-
-      {/* Demo banner — mobile (above tab bar). */}
-      {isDemo && (
-        <div
-          className="lg:hidden fixed left-0 right-0 z-40 text-center overflow-hidden text-ellipsis whitespace-nowrap print:hidden"
-          style={{
-            bottom: 56,
-            padding: "var(--space-1) var(--space-4)",
-            background: "var(--warning-subtle)",
-            color: "var(--accent)",
-            fontSize: "var(--t-micro)",
-          }}
-        >
-          Demo account — changes reset nightly
-        </div>
-      )}
 
       {/* ── Mobile bottom tab bar (< lg) ────────────────────────────── */}
       {/* Opaque — the bottom bar overlays scrolling content, so the canvas
