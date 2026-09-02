@@ -15,6 +15,7 @@ import {
   Copy,
   Check,
   Link as LinkIcon,
+  Upload,
 } from "lucide-react";
 import type {
   BacklogItem,
@@ -24,6 +25,7 @@ import type {
   AllCounts,
   StatusCounts,
 } from "@/lib/types";
+import ImportModal from "./ImportModal";
 
 interface ImportExtras {
   status: BacklogStatus;
@@ -1474,6 +1476,7 @@ export default function LibraryClient({
   );
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showTypePicker, setShowTypePicker] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [searchMediaType, setSearchMediaType] = useState<MediaType | null>(null);
   // Snapshot frozen when the search modal opens — prevents false-positive duplicate badges
   // when handleImport prepends the new item to displayedItems before navigating away.
@@ -1825,6 +1828,43 @@ export default function LibraryClient({
     router.push(`/library/${newItem.id}`);
   };
 
+  // A CSV import can land hundreds of rows across several media types, so patching the
+  // caches item by item is not worth it — drop them and refetch the tab in view.
+  const handleBulkImported = (inserted: BacklogItem[]) => {
+    if (inserted.length === 0) return;
+
+    setCounts((prev) => {
+      const next = structuredClone(prev) as AllCounts;
+      for (const item of inserted) {
+        const st = item.status;
+        next.all[st] += 1;
+        next.all.total += 1;
+        next[item.media_type][st] += 1;
+        next[item.media_type].total += 1;
+      }
+      return next;
+    });
+
+    const tab = activeTabRef.current;
+    tabCacheRef.current = {};
+    // Every stack just grew, so assume more to page in until a fetch says otherwise.
+    tabHasMoreRef.current = { all: true, game: true, show: true, movie: true, book: true };
+    setTabLoading(true);
+    fetch(buildApiUrl(tab, searchQuery || null, filterStatus, filterYear, 0))
+      .then((r) => r.json())
+      .then((data: { items: BacklogItem[] }) => {
+        tabCacheRef.current = { ...tabCacheRef.current, [tab]: data.items };
+        tabHasMoreRef.current = { ...tabHasMoreRef.current, [tab]: data.items.length >= 50 };
+        setDisplayedItems(data.items);
+        setDisplayedOffset(data.items.length);
+        setHasMore(data.items.length >= 50);
+      })
+      .catch(() => {})
+      .finally(() => setTabLoading(false));
+
+    router.refresh();
+  };
+
   // ── Drag reorder ────────────────────────────────────────────────────────────
   const handleDragStart = (id: string) => {
     dragId.current = id;
@@ -2173,6 +2213,26 @@ export default function LibraryClient({
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => setShowImport(true)}
+            title="Import an IMDb CSV export"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--color-bg-2)",
+              color: "var(--color-text)",
+              border: "1px solid var(--rule-soft)",
+              borderRadius: 8,
+              padding: "8px 14px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Upload size={15} /> Import
+          </button>
 
           <button
             onClick={() => {
@@ -2571,6 +2631,10 @@ export default function LibraryClient({
       )}
 
       {/* Type picker — shown when adding from the All tab */}
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onImported={handleBulkImported} />
+      )}
+
       {showTypePicker && (
         <TypePickerModal
           onSelect={(type) => {
