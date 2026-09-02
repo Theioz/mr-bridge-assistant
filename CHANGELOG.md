@@ -17,7 +17,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `finished_at`; unrated ones join the queue. The export's own `Directors` and
   `Runtime (mins)` fill the two fields `/find` does not return, so an imported movie is
   better populated than a searched one; a list export's `Description` column becomes the
-  review. Nothing is written until you have seen the whole list: the preview counts
+  review.
+
+  **The rating comes out of the note, not the rating column.** IMDb's `Your Rating` is a
+  whole number, so a list kept at one-decimal precision has the real score written at the
+  head of the note instead — `9.3 - One of the best`. When a note leads with one, it wins
+  over the rating column and is lifted out of the note text, so the rating lands in
+  `rating` and the note reads as prose. On a real export that recovered the precision on
+  283 of 340 rows (`9` → `9.3`). The decimal point is required to match: a bare integer
+  prefix is ambiguous with a note that simply opens on a number ("12 Angry Men is…"), and
+  the rating column already covers whole numbers. Configured per source
+  (`rating_leads_note`), because it is a property of the export, not of importing.
+
+  Nothing is written until you have seen the whole list: the preview counts
   matched / already-present / not-found / skipped rows and every matched row can be
   unticked. Re-importing the same file inserts nothing.
 

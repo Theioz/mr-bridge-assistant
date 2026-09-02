@@ -57,7 +57,24 @@ export interface ImportSource {
   };
   /** Fold a kind label to a library media_type, or say why it has none. */
   kind_to_media_type: (kind: string) => MediaType | RowProblem;
+  /**
+   * Some exports have nowhere to put a fractional personal rating — IMDb's "Your Rating"
+   * is a whole number — so the real one gets written at the head of the note instead
+   * ("9.3 - One of the best"). When set, a rating found there wins over the rating column
+   * and is lifted out of the note text.
+   */
+  rating_leads_note?: boolean;
 }
+
+/**
+ * A rating at the head of a note: "9.3 Great film", "8.0 - Great film".
+ *
+ * The decimal point is required. A bare integer prefix is ambiguous with a note that
+ * simply opens on a number ("12 Angry Men is…"), and the rating column already carries
+ * whole numbers — so there is nothing to gain by guessing at one and a real title to
+ * lose by getting it wrong.
+ */
+const NOTE_RATING = /^\s*(\d{1,2}\.\d)\s*[-–—:]?\s*/;
 
 /**
  * IMDb writes its kind labels two ways depending on the export — a ratings export says
@@ -95,6 +112,7 @@ export const IMPORT_SOURCES: Record<ImportSourceId, ImportSource> = {
       note: "Description",
     },
     kind_to_media_type: (kind) => IMDB_KINDS[foldKind(kind)] ?? "unsupported_type",
+    rating_leads_note: true,
   },
 };
 
@@ -170,6 +188,18 @@ export function parseMediaCsv(text: string, sourceId?: ImportSourceId): ParseRes
       else seen.add(external_ref);
     }
 
+    // The note may be carrying the rating the rating column could not hold.
+    let rating = toRating(get(row, cols.rating));
+    let note: string | null = get(row, cols.note) || null;
+    if (source.rating_leads_note && note) {
+      const m = NOTE_RATING.exec(note);
+      const led = m ? toRating(m[1]) : null;
+      if (m && led !== null) {
+        rating = led;
+        note = note.slice(m[0].length).trim() || null;
+      }
+    }
+
     return {
       line: i + 2, // +1 for the header, +1 to count from one
       external_ref,
@@ -177,11 +207,11 @@ export function parseMediaCsv(text: string, sourceId?: ImportSourceId): ParseRes
       year: toInt(get(row, cols.year)),
       media_type: isMediaType ? (mapped as MediaType) : null,
       kind,
-      rating: toRating(get(row, cols.rating)),
+      rating,
       rated_at: toIsoDate(get(row, cols.rated_at)),
       creator: get(row, cols.creator) || null,
       runtime_minutes: toInt(get(row, cols.runtime)),
-      note: get(row, cols.note) || null,
+      note,
       problem,
     };
   });
