@@ -9,6 +9,46 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Packaged foods: store the label off the box, and prefer it to USDA.** A new
+  `packaged_foods` table holds label-verified macros for branded goods — brand, product, UPC,
+  the printed serving, net weight, and macros normalised to per 100 g — plus
+  `lib/nutrition/packaged-foods.ts` to read and scale them.
+
+  **Why a branded food needs its own source.** Every macro in the app comes from USDA
+  FoodData Central, which is correct for whole foods: "chicken breast, raw" is the same food
+  in every kitchen. USDA's *Branded* dataset is different — it is manufacturer-submitted, so
+  it is incomplete and stale by construction, and it was wrong for both items this was built
+  against. There is no Barilla record for tri-color rotini at all; the record matching the
+  box to the decimal on all six macros (fdc 729736) belongs to Reggano, so pinning it would
+  file an Aldi product as a Barilla one. For Classico's Italian Sausage sauce the nearest
+  record (fdc 2615521, Riviana) reads 2.4 g protein and 400 mg sodium per 100 g against the
+  jar's actual 1.6 and 352 — a 50% overstatement on protein, close enough to look right in a
+  search result and wrong enough to matter across a four-portion batch.
+
+  **Stored per 100 g, not per serving.** That matches every other macro path here (USDA
+  records, `recipes.ingredients_json`, `metadata.macro_items`), so the label's division
+  happens exactly once on the way in rather than in each caller at a slightly different
+  rounding. `serving_size_g` is kept so the printed panel can be reconstructed and checked
+  against the photograph; a test pins that round trip through the ragged 56 g divisor.
+
+  **`prep_state` is NOT NULL on purpose.** A pasta or rice label is DRY weight, and the food
+  roughly triples in mass cooked, so reading one as cooked overstates a meal by ~2.5-3x. This
+  repo has already paid for that once, when the resolver rewrote "2 cups dry brown rice" to
+  the cooked record and produced a 3x carb error reported as high confidence. Making the
+  state explicit forces a caller to have an opinion about which weight the row holds.
+
+  **What it deliberately does not claim.** FDA rounding means values under 5 g are printed to
+  the nearest 0.5 g and calories above 50 to the nearest 10, so "200 calories, 1 g fat" per
+  56 g is really 195-204 kcal and 0.75-1.25 g — about +/- 2.5% on energy once scaled to a
+  box. Better than a wrong-brand USDA record, not a lab assay, and documented in the table
+  rather than in a comment at one call site. `fdc_proxy_id` exists for downstream code that
+  insists on an id, and is explicitly a proxy rather than an identity claim.
+
+  `containerWeightG()` prefers the front-of-pack net weight over reconstructing it from
+  servings, because "about 5 servings" is itself rounded: the Classico jar reconstructs to
+  625 g against a true 680 g, 8% light, which is most of a portion in a batch cook. It
+  returns which figure it used so a caller can say the number was inferred.
+
 - **Library: bulk import an IMDb CSV export.** "Import" on `/library` takes a ratings,
   watchlist, or list export and loads the whole file in one pass instead of one
   search-and-click per title. Matching is by IMDb const (`tt0111161`) through TMDB's
