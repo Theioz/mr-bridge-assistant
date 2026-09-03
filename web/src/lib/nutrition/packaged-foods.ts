@@ -43,11 +43,11 @@ export interface PackagedFoodRow {
   notes: string | null;
 }
 
-const SELECT =
-  "id, brand, product, upc, serving_size_g, serving_label, servings_per_container, " +
-  "net_weight_g, prep_state, calories_per_100g, protein_per_100g, carbs_per_100g, " +
-  "fat_per_100g, fiber_per_100g, sugar_per_100g, sodium_mg_per_100g, fdc_proxy_id, " +
-  "label_photographed_on, notes";
+// One string literal, deliberately not concatenated and deliberately not wrapped: supabase-js
+// parses the select at the TYPE level, and a runtime-built string degrades the result to
+// GenericStringError[] so the row cast stops compiling. Long line beats a broken return type.
+// prettier-ignore
+const SELECT = "id, brand, product, upc, serving_size_g, serving_label, servings_per_container, net_weight_g, prep_state, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, sugar_per_100g, sodium_mg_per_100g, fdc_proxy_id, label_photographed_on, notes";
 
 /** Macros for some amount of a food. Same shape the rest of the nutrition code passes around. */
 export interface Macros {
