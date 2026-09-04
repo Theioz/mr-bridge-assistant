@@ -24,6 +24,7 @@ import {
   normalizeFoodName,
   gramsForIngredient,
   gramsToUnit,
+  gramsPerUnitFor,
   planDraw,
 } from "../lib/nutrition/inventory-draw.ts";
 
@@ -96,6 +97,45 @@ test("gramsToUnit refuses count units rather than inventing a size", () => {
   assert.equal(Math.round(gramsToUnit(453.592, "lb") as number), 1);
 });
 
+test("a count unit converts ONLY from a pack weight someone wrote down", () => {
+  // 1 Barilla box = 336 g dry, read off the label. Half a box is an honest half.
+  assert.equal(gramsToUnit(336, "box", 336), 1);
+  assert.equal(gramsToUnit(168, "box", 336), 0.5);
+  // The declared figure never overrides a real weight unit.
+  assert.equal(gramsToUnit(250, "g", 336), 250);
+});
+
+test("a nonsense pack weight is refused, not used", () => {
+  // Every one of these would otherwise produce an infinite, zero or inverted draw.
+  for (const bad of [0, -336, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(gramsPerUnitFor("box", bad), null, `${bad} must not be usable`);
+    assert.equal(gramsToUnit(336, "box", bad), null);
+  }
+  assert.equal(gramsPerUnitFor("box", null), null);
+  assert.equal(gramsPerUnitFor("box", undefined), null);
+});
+
+// ── Cut and shape words ─────────────────────────────────────────────────────
+//
+// 2026-09-04: "zucchini, half-moons" did not draw down "Zucchini (Baloian Farms, 2 ct)" in the
+// pasta batch, while "red bell pepper, diced" drew fine — "diced" was a known state word and
+// "half-moons" was not. The row read 400 g when 150 g was true.
+
+test("a knife cut does not change which food it is", () => {
+  assert.ok(same("zucchini, half-moons", "Zucchini (Baloian Farms, 2 ct)"));
+  assert.ok(same("green beans, cut", "Cut green beans, frozen (Birds Eye)"));
+  assert.ok(same("carrot, matchsticks", "Carrots"));
+  assert.ok(same("broccoli florets", "Broccoli"));
+  assert.ok(same("chicken thigh, strips", "Chicken thighs"));
+});
+
+test("a cut word that names the FOOD is not stripped", () => {
+  // "round" is a cut of beef, not a shape, and crushed tomatoes are a different product from
+  // diced ones. Stripping either would draw down the wrong row.
+  assert.ok(!same("beef round, raw", "Ground beef, 93/7"));
+  assert.ok(!same("Crushed tomatoes (365)", "Diced tomatoes (365)"));
+});
+
 // ── planDraw ────────────────────────────────────────────────────────────────
 
 interface FakeRecipe {
@@ -112,6 +152,7 @@ interface FakeStock {
   location: string;
   expires_on: string | null;
   fdc_id: number | null;
+  metadata?: { grams_per_unit?: number | null } | null;
 }
 
 /** Minimal stand-in for the two reads planDraw performs. */
@@ -208,7 +249,9 @@ test("a count-unit row is skipped, never converted", async () => {
 
   const beans = plan.skips.find((s) => s.ingredient.startsWith("Black beans"));
   assert.equal(beans?.reason, "unconvertible-unit");
-  assert.match(beans?.detail ?? "", /no conversion from can/);
+  // The skip now names the fix rather than just stating the limit — the figure is missing,
+  // not unobtainable.
+  assert.match(beans?.detail ?? "", /pack weight \(grams per can\)/);
   // And the row is untouched in the plan.
   assert.ok(!plan.draws.some((d) => d.itemId === "stock-beans"));
 });
@@ -369,4 +412,47 @@ test("a recipe with no typical_portions is treated as a single serving", async (
   assert.equal(plan.typicalPortions, 1);
   assert.equal(plan.scale, 1);
   assert.equal(plan.draws[0].quantityApplied, 60);
+});
+
+test("a counted row WITH a declared pack weight draws in fractions of a pack", async () => {
+  // The real 2026-09-04 case: the pasta batch wants 250 g of a 425 g can it can now spend.
+  const beansWithLabel: FakeStock = { ...BEANS_STOCK, metadata: { grams_per_unit: 425 } };
+  const db = fakeDb(GOCHUJANG_RECIPE, [GOCHUJANG_STOCK, beansWithLabel, RICE_STAPLE]);
+  const plan = await planDraw(db, "u1", { recipeId: "r1", portionsCooked: 4 });
+
+  const beans = plan.draws.find((d) => d.itemId === "stock-beans");
+  assert.ok(beans, "a labelled can must now be drawable");
+  assert.equal(beans.gramsRequested, 250);
+  assert.equal(beans.quantityApplied, 0.59); // 250 / 425, in cans
+  assert.equal(beans.unit, "can");
+  assert.equal(beans.gramsApplied, 250.75); // rounded cans back to grams
+  assert.ok(!plan.skips.some((s) => s.ingredient.startsWith("Black beans")));
+});
+
+test("a declared pack weight is still clamped at what the shelf holds", async () => {
+  // Half a can left, a full can wanted: draw the half and SAY the shortfall.
+  const nearlyGone: FakeStock = {
+    ...BEANS_STOCK,
+    quantity: 0.25,
+    metadata: { grams_per_unit: 425 },
+  };
+  const db = fakeDb(GOCHUJANG_RECIPE, [GOCHUJANG_STOCK, nearlyGone, RICE_STAPLE]);
+  const plan = await planDraw(db, "u1", { recipeId: "r1", portionsCooked: 4 });
+
+  const beans = plan.draws.find((d) => d.itemId === "stock-beans");
+  assert.equal(beans?.quantityApplied, 0.25);
+  assert.equal(beans?.quantityAfter, 0);
+  assert.ok((beans?.shortfallGrams ?? 0) > 140, "the unmet remainder must be reported");
+});
+
+test("a counted row with a junk pack weight is skipped, not drawn", async () => {
+  const junk: FakeStock = { ...BEANS_STOCK, metadata: { grams_per_unit: 0 } };
+  const db = fakeDb(GOCHUJANG_RECIPE, [GOCHUJANG_STOCK, junk, RICE_STAPLE]);
+  const plan = await planDraw(db, "u1", { recipeId: "r1", portionsCooked: 4 });
+
+  assert.ok(!plan.draws.some((d) => d.itemId === "stock-beans"));
+  assert.equal(
+    plan.skips.find((s) => s.ingredient.startsWith("Black beans"))?.reason,
+    "unconvertible-unit",
+  );
 });

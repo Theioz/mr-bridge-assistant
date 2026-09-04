@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateFromText } from "./estimate";
+import { chooseCookToSpend } from "./leftover-choice";
+import type { SpendableCook } from "./leftover-choice";
 import { perPortion } from "./recipe-macros";
 import { todayString } from "@/lib/timezone";
 
@@ -272,7 +274,7 @@ export async function eatFromCook(
 }
 
 /**
- * Eat a recipe-backed planned meal: make the recipe, then eat a portion of it.
+ * Eat a recipe-backed planned meal: eat the tray you already made, or make one first.
  *
  * A recipe-backed plan means "cook this", so the honest record is a cook (the tray you made)
  * plus a meal_log (the serving you ate), with any surplus becoming leftovers the planner can
@@ -280,6 +282,21 @@ export async function eatFromCook(
  * together so one tap does both, which is what makes a recipe-backed plan loggable at all.
  * Before this, "Ate it" on such a plan flipped its status and logged NO macros, so a day of
  * eating to plan looked identical in the totals to a day of eating nothing.
+ *
+ * LEFTOVERS FIRST, AND THIS IS THE LOAD-BEARING PART. Cooking a batch and then tapping "Ate
+ * it" on that day's plan are two separate actions, and this function used to create a cook
+ * UNCONDITIONALLY — so the second action invented a whole second tray. Observed 2026-09-04:
+ * a 4-portion pasta batch logged through the Cook It dialog at 17:54:20 (with its inventory
+ * draws) was followed 2.1 s later by "Ate it" on the day's lunch plan, which created a SECOND
+ * 4-portion cook carrying no draws. The fridge then read 7 portions of a 4-portion batch, and
+ * the eaten serving came off the phantom tray while the real one stayed full.
+ *
+ * Phantom portions are the damaging direction: `getLeftovers` is what the planner reads to
+ * decide there is nothing to shop for, so an inflated count plans meals around food that does
+ * not exist — the same failure as an inventory row reading stocked while the shelf is empty.
+ *
+ * So: spend an existing cook of this recipe when one has portions left, oldest first, matching
+ * `getLeftovers` ordering. Only when the fridge genuinely holds none of it is a cook created.
  *
  * portionsCooked defaults to the recipe's typical_portions hint, or 1 when it has none — a
  * single-serving dish, or "no idea yet", where 1 is the honest floor (a real batch is still
@@ -309,16 +326,29 @@ export async function eatFromRecipe(
   if (!recipe) throw new Error("Recipe not found");
 
   const portionsCooked = input.portionsCooked ?? (recipe.typical_portions as number | null) ?? 1;
+  const portionsEaten = input.portionsEaten ?? 1;
 
-  const cook = await createCook(db, userId, {
-    recipeId: input.recipeId,
-    portions: portionsCooked,
-    cookedOn: input.date,
-  });
+  // Leftovers first. `chooseCookToSpend` owns which tray (and whether any tray qualifies).
+  const { data: candidates, error: candidatesErr } = await db
+    .from("cooks")
+    .select("id, portions_remaining, cooked_on")
+    .eq("user_id", userId)
+    .eq("recipe_id", input.recipeId)
+    .gt("portions_remaining", 0);
+  if (candidatesErr) throw new Error(`leftover lookup failed: ${candidatesErr.message}`);
+
+  const existing = chooseCookToSpend((candidates ?? []) as SpendableCook[], portionsEaten);
+  const cook =
+    existing ??
+    (await createCook(db, userId, {
+      recipeId: input.recipeId,
+      portions: portionsCooked,
+      cookedOn: input.date,
+    }));
 
   const eaten = await eatFromCook(db, userId, {
     cookId: cook.id,
-    portions: input.portionsEaten ?? 1,
+    portions: portionsEaten,
     mealType: input.mealType,
     date: input.date,
     mealPlanId: input.mealPlanId,

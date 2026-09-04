@@ -18,11 +18,17 @@ import type { InventoryLocation } from "./inventory";
  *
  * WHAT IS DELIBERATELY NEVER DRAWN:
  *   - staples (`quantity` null — "on hand, amount untracked": rice, oil, whey, eggs)
- *   - rows whose unit is not a weight (`4 can`, `1 bottle`) — a recipe asking for 250 g of
- *     black beans against "4 can" has no honest conversion, and inventing a can size is
- *     exactly the fabrication the nutrition pipeline forbids
+ *   - rows whose unit is not a weight AND carry no declared pack weight (see below)
  *   - ingredient lines with no weight to read
  *   - anything that does not match a stock row confidently
+ *
+ * COUNTED UNITS (`2 box`, `4 can`, `1 jar`). Inventing a can size is the fabrication the
+ * nutrition pipeline forbids, so a bare counted row is still skipped. But a pack weight READ
+ * OFF THE LABEL is not an invention — it is the same move `GRAMS_IN_LABEL` already makes for
+ * `avocado oil (14 g)`: reading back a figure a human wrote down. So a counted row may declare
+ * `metadata.grams_per_unit` (Barilla tri-color: 336 g/box) and is then drawable in fractions of
+ * a pack. The number must be entered by a person from the packaging; nothing here derives it,
+ * and a row without it is skipped with a message naming the fix rather than guessed at.
  */
 
 // ── Matching ────────────────────────────────────────────────────────────────
@@ -87,6 +93,31 @@ const STATE_WORDS = new Set([
   "only",
   "prepared",
   "packed",
+  // Cut and shape. A knife cut describes what was done to the food, never which food it is,
+  // so "zucchini, half-moons" and "Zucchini (Baloian Farms)" have to reduce to the same set.
+  // These are singular forms because `singularize` runs BEFORE this filter.
+  // "round" is deliberately absent — in "beef round" it names the cut of meat, not a shape.
+  // "crushed" is absent for the same reason: crushed tomatoes are a distinct product from
+  // diced or whole ones, and collapsing them would draw down the wrong can.
+  "half",
+  "halve",
+  "moon",
+  "floret",
+  "spear",
+  "wedge",
+  "strip",
+  "stick",
+  "chunk",
+  "piece",
+  "cube",
+  "matchstick",
+  "baton",
+  "julienne",
+  "julienned",
+  "ribbon",
+  "crumble",
+  "torn",
+  "cut",
 ]);
 
 /** Naive singular form. Applied to both sides, so it only has to be CONSISTENT, not correct. */
@@ -162,9 +193,28 @@ export function gramsForIngredient(line: RecipeIngredient): number | null {
   return null;
 }
 
-/** Grams expressed in an inventory row's own unit, or null when that unit is not a weight. */
-export function gramsToUnit(grams: number, unit: string | null): number | null {
+/**
+ * Grams in one of an inventory row's units.
+ *
+ * A weight unit answers from the table. Anything else (`box`, `can`, `jar`) answers only from a
+ * `grams_per_unit` a person transcribed off the packaging — never from a derivation. Zero,
+ * negatives and non-finite values are rejected rather than allowed to produce an infinite or
+ * inverted draw.
+ */
+export function gramsPerUnitFor(unit: string | null, declared?: number | null): number | null {
   const factor = GRAMS_PER[unit?.trim().toLowerCase() ?? ""];
+  if (factor != null) return factor;
+  if (declared != null && Number.isFinite(declared) && declared > 0) return declared;
+  return null;
+}
+
+/** Grams expressed in an inventory row's own unit, or null when there is no honest conversion. */
+export function gramsToUnit(
+  grams: number,
+  unit: string | null,
+  declared?: number | null,
+): number | null {
+  const factor = gramsPerUnitFor(unit, declared);
   if (factor == null) return null;
   return grams / factor;
 }
@@ -235,6 +285,13 @@ interface StockRow {
   location: InventoryLocation;
   expires_on: string | null;
   fdc_id: number | null;
+  /** `grams_per_unit` here is what makes a counted row (`2 box`) drawable. */
+  metadata: { grams_per_unit?: number | null } | null;
+}
+
+/** The pack weight a person recorded on a counted row, if any. */
+function declaredGramsPerUnit(row: { metadata?: { grams_per_unit?: number | null } | null }) {
+  return row.metadata?.grams_per_unit ?? null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -266,7 +323,7 @@ export async function planDraw(
 
   const { data: stockRows, error: stockErr } = await db
     .from("inventory_items")
-    .select("id, name, quantity, unit, location, expires_on, fdc_id")
+    .select("id, name, quantity, unit, location, expires_on, fdc_id, metadata")
     .eq("user_id", userId);
   if (stockErr) throw new Error(`inventory load failed: ${stockErr.message}`);
 
@@ -332,14 +389,18 @@ export async function planDraw(
       continue;
     }
 
-    const weighable = tracked.filter((c) => gramsToUnit(1, c.unit) != null);
+    const weighable = tracked.filter(
+      (c) => gramsPerUnitFor(c.unit, declaredGramsPerUnit(c)) != null,
+    );
     if (weighable.length === 0) {
       const t = tracked[0];
       skips.push({
         ingredient: label,
         grams: gramsRequested,
         reason: "unconvertible-unit",
-        detail: `${t.name} is stocked as "${t.quantity} ${t.unit ?? "—"}" — no conversion from ${t.unit ?? "that"} to grams`,
+        // Name the fix. This skip used to be terminal for every counted row, so it read as a
+        // limitation; it is now a missing figure, and saying which figure is what closes it.
+        detail: `${t.name} is stocked as "${t.quantity} ${t.unit ?? "—"}" — set its pack weight (grams per ${t.unit ?? "unit"}) from the label to draw it`,
       });
       continue;
     }
@@ -369,11 +430,10 @@ export async function planDraw(
 
     // Requested amount in the ROW's unit — the row is what gets written, so the clamp and the
     // ledger both have to happen in its unit rather than in grams.
-    const requestedInUnit = round2(gramsToUnit(gramsRequested, row.unit) as number);
+    const perUnit = gramsPerUnitFor(row.unit, declaredGramsPerUnit(row)) as number;
+    const requestedInUnit = round2(gramsRequested / perUnit);
     const quantityApplied = round2(Math.min(requestedInUnit, available));
-    const gramsApplied = round2(
-      quantityApplied * GRAMS_PER[row.unit?.trim().toLowerCase() as string],
-    );
+    const gramsApplied = round2(quantityApplied * perUnit);
 
     claimed.set(row.id, round2((claimed.get(row.id) ?? 0) + quantityApplied));
 
@@ -434,7 +494,7 @@ export async function applyDraw(
     try {
       const { data: row, error: readErr } = await db
         .from("inventory_items")
-        .select("id, quantity, unit")
+        .select("id, quantity, unit, metadata")
         .eq("id", draw.itemId)
         .eq("user_id", userId)
         .maybeSingle();
@@ -455,9 +515,9 @@ export async function applyDraw(
         .eq("user_id", userId);
       if (updErr) throw new Error(updErr.message);
 
-      const gramsApplied = round2(
-        quantityApplied * GRAMS_PER[row.unit?.trim().toLowerCase() as string],
-      );
+      const perUnit = gramsPerUnitFor(row.unit, declaredGramsPerUnit(row));
+      if (perUnit == null) throw new Error("item no longer has a usable pack weight");
+      const gramsApplied = round2(quantityApplied * perUnit);
 
       const { error: ledgerErr } = await db.from("inventory_draws").insert({
         user_id: userId,
