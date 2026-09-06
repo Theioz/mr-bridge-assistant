@@ -21,6 +21,7 @@ export const EXERCISE_PATTERN_MAP: Record<string, MovementPattern[]> = {
   "Bodyweight Squat": ["squat"],
   "Goblet Squat": ["squat"],
   "Bulgarian Split Squat": ["squat"],
+  "Single-Leg Squat": ["squat"],
   "Reverse Lunge": ["squat"],
 
   // Hinge
@@ -32,6 +33,7 @@ export const EXERCISE_PATTERN_MAP: Record<string, MovementPattern[]> = {
   "Romanian Deadlift": ["hinge"],
   "Single-Leg RDL": ["hinge"],
   "Glute Bridge": ["hinge"],
+  "Single-Leg Glute Bridge": ["hinge"],
   "Slider Hamstring Curl": ["hinge"],
 
   // Horizontal push
