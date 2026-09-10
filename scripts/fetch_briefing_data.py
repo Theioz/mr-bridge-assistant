@@ -340,7 +340,7 @@ def main():
 
     # Body Composition
     body_comp = results.get("fitness_log") or []
-    print("\n## BODY COMPOSITION (last Renpho entry)")
+    print("\n## BODY COMPOSITION (last scale reading — GE CS10H)")
     if body_comp:
         latest = body_comp[0]
         print(
@@ -348,6 +348,15 @@ def main():
             f"Muscle: {latest['muscle_mass_lb']} lb | BMI: {latest['bmi']} | "
             f"Visceral: {latest['visceral_fat']} — {latest['date']}"
         )
+        # Muscle mass and visceral fat cannot arrive through the Google Health sync: the v4 API
+        # has no lean-body-mass or visceral-fat data type. They are only ever populated by a
+        # manual Fit Profile xlsx export, so a null here means the export is overdue, NOT that
+        # the scale stopped measuring them. Say so rather than printing a bare "None".
+        if latest.get("muscle_mass_lb") is None or latest.get("visceral_fat") is None:
+            print(
+                "  (muscle mass / visceral fat unavailable for this date — they only arrive via a "
+                "manual Fit Profile export; the Google Health API carries neither)"
+            )
         if len(body_comp) > 1:
             prev = body_comp[1]
             dw = round(latest["weight_lb"] - prev["weight_lb"], 1) if latest["weight_lb"] and prev["weight_lb"] else None
@@ -360,7 +369,7 @@ def main():
                     delta_parts.append(f"Fat {'+' if dbf > 0 else ''}{dbf}%")
                 print(f"Delta vs prior: {' | '.join(delta_parts)}")
     else:
-        print("No Renpho data available.")
+        print("No scale data available.")
 
     # Workouts
     for label, key in [("YESTERDAY'S ACTIVITY", "workout_yesterday"), ("TODAY'S ACTIVITY", "workout_today")]:
