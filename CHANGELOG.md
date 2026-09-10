@@ -108,6 +108,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A meal plan cannot be marked "eaten" without evidence that it was.** On 2026-09-10 a lunch
+  logged in the app moved no macros: `meal_log` had zero rows for the day. The cause was a single
+  row written the previous afternoon — a planning write created *tomorrow's* lunch already at
+  `status='eaten'`. `KitchenPanel` only offers "Ate this" on a `planned` row, so by the time the
+  meal happened the plan was already in its terminal state, the button was gone, and nothing was
+  ever written to `meal_log`. The failure is silent by construction: the only symptom is a macro
+  total that stays flat.
+
+  `meal_plans.status` and `meal_log` are separate rows written by separate paths, so a plan
+  reading `eaten` was never evidence the meal was logged — the same sentence that
+  `20260825120000` was written for, arriving through a third door. An audit of all 64 rows that
+  have ever reached `eaten` found three with no log behind them (2026-07-16, 2026-07-23,
+  2026-09-10); **all three were INSERTed already eaten**, so a rule rejecting only future dates
+  would have missed one of them.
+
+  New trigger `meal_plans_check_eaten_evidence` (`20260910120000`) rejects, for every writer
+  including PostgREST: a future-dated `eaten`; an INSERT arriving as `eaten` with no `meal_log`
+  row for that user/date/meal_type; and a macro-backed plan flipped to `eaten` without a log row.
+  Backfilling stays legal — write the `meal_log` row first, then the plan. The macro-less
+  status-only path ("Eating out") is deliberately exempt and is covered by an orphan audit in the
+  skill's `context.sh` instead. The two July rows are unrecoverable and were left in place rather
+  than have macros invented to satisfy a constraint.
+
 - **A food is pinned only after you log it, not when the model guesses.** The memo added in #713
   wrote a pin whenever the model picked confidently, on the reasoning that a deliberate pick is a
   safe one. It is not: asked to match "oyster" the model chose _Mushrooms, oyster, raw_ — exactly

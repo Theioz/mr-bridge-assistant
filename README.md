@@ -373,7 +373,7 @@ mr-bridge-assistant/
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
-│   └── migrations/                        # 70 files, newest 20260903120000_packaged_foods.sql
+│   └── migrations/                        # 71 files, newest 20260910120000_meal_plan_eaten_requires_evidence.sql
 │
 ├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
