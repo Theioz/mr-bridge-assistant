@@ -32,12 +32,15 @@ function round(n: number | null): number | null {
   return n == null ? null : Math.round(n * 10) / 10;
 }
 
-function MacroLine({ m, label, portions }: { m: Macros; label: string; portions?: number }) {
-  const div = portions && portions > 1 ? portions : 1;
-  const cal = m.calories == null ? null : Math.round(m.calories / div);
-  const p = round(m.protein_g == null ? null : m.protein_g / div);
-  const c = round(m.carbs_g == null ? null : m.carbs_g / div);
-  const f = round(m.fat_g == null ? null : m.fat_g / div);
+// `scale` multiplies the stored figures, because recipes and cooks store opposite things:
+// recipes.* is ONE SERVING (the resolver divides by typical_portions on write, #669), so the
+// whole recipe is stored x typical_portions; cooks.* is the WHOLE COOK, so one portion is
+// stored / portions. Dividing a recipe by its portions reported a 503 kcal serving as 126.
+function MacroLine({ m, label, scale = 1 }: { m: Macros; label: string; scale?: number }) {
+  const cal = m.calories == null ? null : Math.round(m.calories * scale);
+  const p = round(m.protein_g == null ? null : m.protein_g * scale);
+  const c = round(m.carbs_g == null ? null : m.carbs_g * scale);
+  const f = round(m.fat_g == null ? null : m.fat_g * scale);
   if (cal == null && p == null) return null;
   return (
     <div style={macroRowStyle}>
@@ -94,8 +97,14 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
         )}
         {hasMacros ? (
           <>
-            {typ && typ > 1 && <MacroLine m={recipe} label="Per serving" portions={typ} />}
-            <MacroLine m={recipe} label={typ && typ > 1 ? `Whole recipe (${typ})` : "This meal"} />
+            {typ && typ > 1 ? (
+              <>
+                <MacroLine m={recipe} label="Per serving" />
+                <MacroLine m={recipe} label={`Whole recipe (${typ})`} scale={typ} />
+              </>
+            ) : (
+              <MacroLine m={recipe} label="This meal" />
+            )}
             {recipe.macros_confidence && recipe.macros_confidence !== "high" && (
               <p style={confidenceStyle}>
                 {recipe.macros_confidence} confidence — amounts are estimates, not measured.
@@ -121,7 +130,11 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
           {cook.name} · {cook.portions_remaining} of {cook.portions} portion
           {cook.portions === 1 ? "" : "s"} left
         </p>
-        <MacroLine m={cook} label="One portion" portions={cook.portions > 0 ? cook.portions : 1} />
+        <MacroLine
+          m={cook}
+          label="One portion"
+          scale={1 / (cook.portions > 0 ? cook.portions : 1)}
+        />
       </div>
     );
   }
