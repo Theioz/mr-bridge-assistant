@@ -20,7 +20,7 @@ import {
   type EquipmentItemInput,
 } from "@/components/settings/equipment-settings";
 import { createServiceClient } from "@/lib/supabase/service";
-import { loadIntegration, storeIntegration, deleteIntegration } from "@/lib/integrations/tokens";
+import { loadIntegration, deleteIntegration } from "@/lib/integrations/tokens";
 import { lastSyncStatus } from "@/lib/sync/log";
 import {
   loadMetricPreferences,
@@ -194,23 +194,6 @@ async function disconnectGoogle() {
   revalidatePath("/settings");
 }
 
-async function saveOuraToken(pat: string) {
-  "use server";
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-  const trimmed = pat.trim();
-  if (!trimmed) return;
-  const db = createServiceClient();
-  await storeIntegration(db, user.id, "oura", {
-    refreshToken: trimmed,
-    scopes: ["daily", "workout", "sleep"],
-  });
-  revalidatePath("/settings");
-}
-
 async function disconnectOura() {
   "use server";
   const supabase = await createClient();
@@ -291,7 +274,6 @@ async function SettingsContent({
         googleIntegration={googleIntegration}
         disconnectAction={disconnectGoogle}
         ouraIntegration={ouraIntegration}
-        saveOuraTokenAction={saveOuraToken}
         disconnectOuraAction={disconnectOura}
         ouraLastSync={ouraLastSync}
         googleHealthIntegration={googleHealthIntegration}

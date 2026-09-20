@@ -14,7 +14,6 @@ interface IntegrationsSettingsProps {
   googleIntegration: Integration | null;
   disconnectAction: () => Promise<void>;
   ouraIntegration: Integration | null;
-  saveOuraTokenAction: (pat: string) => Promise<void>;
   disconnectOuraAction: () => Promise<void>;
   ouraLastSync: SyncStatus | null;
   googleHealthIntegration: Integration | null;
@@ -41,7 +40,15 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Google did not issue a refresh token. Revoke the app's access in your Google Account and connect again.",
   google_health_store: "Connected to Google Health but failed to save the token. Please try again.",
   google_health_invalid: "Invalid Google Health OAuth response. Please try again.",
-  oura_store: "Failed to save your Oura token. Please try again.",
+  oura_denied: "Oura authorisation was cancelled.",
+  oura_csrf: "Security check failed. Please try again.",
+  oura_exchange: "Could not exchange the Oura authorisation code. Please try again.",
+  oura_no_refresh_token:
+    "Oura did not issue a refresh token. Disconnect the app at cloud.ouraring.com and connect again.",
+  oura_invalid: "Invalid Oura OAuth response. Please try again.",
+  oura_unconfigured:
+    "Oura OAuth is not configured on the server (OURA_CLIENT_ID / OURA_CLIENT_SECRET / OURA_OAUTH_REDIRECT_URI).",
+  oura_store: "Connected to Oura but failed to save the token. Please try again.",
 };
 
 function formatConnectedDate(iso: string): string {
@@ -213,7 +220,6 @@ export function IntegrationsSettings({
   googleIntegration,
   disconnectAction,
   ouraIntegration,
-  saveOuraTokenAction,
   disconnectOuraAction,
   ouraLastSync,
   googleHealthIntegration,
@@ -227,9 +233,6 @@ export function IntegrationsSettings({
   const [ouraPending, startOuraTransition] = useTransition();
   const [googleHealthPending, startGoogleHealthTransition] = useTransition();
   const [prefsPending, startPrefsTransition] = useTransition();
-  const [ouraExpanded, setOuraExpanded] = useState(false);
-  const [ouraToken, setOuraToken] = useState("");
-  const [ouraSaving, setOuraSaving] = useState(false);
   const [ouraSync, setOuraSync] = useState<SyncStatus | null>(ouraLastSync ?? null);
   const [googleHealthSync, setGoogleHealthSync] = useState<SyncStatus | null>(
     googleHealthLastSync ?? null,
@@ -249,20 +252,6 @@ export function IntegrationsSettings({
   }
 
   const errorMsg = errorParam ? ERROR_MESSAGES[errorParam] : null;
-
-  function handleSaveOura() {
-    if (!ouraToken.trim()) return;
-    setOuraSaving(true);
-    startOuraTransition(async () => {
-      try {
-        await saveOuraTokenAction(ouraToken.trim());
-        setOuraExpanded(false);
-        setOuraToken("");
-      } finally {
-        setOuraSaving(false);
-      }
-    });
-  }
 
   return (
     <section
@@ -390,79 +379,12 @@ export function IntegrationsSettings({
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={() => setOuraExpanded((v) => !v)}
-                style={connectLinkStyle()}
-              >
-                {ouraExpanded ? "Cancel" : "Connect Oura"}
-              </button>
+              <a href="/api/auth/oura/start" style={connectLinkStyle()}>
+                Connect Oura
+              </a>
             )}
           </div>
         </div>
-
-        {ouraExpanded && !ouraIntegration && (
-          <div
-            style={{
-              paddingBottom: "var(--space-4)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-            }}
-          >
-            <p style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-              Paste a Personal Access Token from{" "}
-              <a
-                href="https://cloud.ouraring.com/personal-access-tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--accent)", textDecoration: "none" }}
-              >
-                cloud.ouraring.com/personal-access-tokens
-              </a>
-            </p>
-            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-              <input
-                type="password"
-                value={ouraToken}
-                onChange={(e) => setOuraToken(e.target.value)}
-                placeholder="Oura Personal Access Token"
-                style={{
-                  fontFamily: "var(--font-body), system-ui, sans-serif",
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text)",
-                  background: "var(--surface-raised, var(--surface))",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--r-1)",
-                  padding: "0 var(--space-3)",
-                  minHeight: 36,
-                  flex: 1,
-                  outline: "none",
-                }}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSaveOura();
-                  if (e.key === "Escape") {
-                    setOuraExpanded(false);
-                    setOuraToken("");
-                  }
-                }}
-              />
-              <button
-                type="button"
-                disabled={ouraSaving || !ouraToken.trim()}
-                onClick={handleSaveOura}
-                style={{
-                  ...connectLinkStyle(),
-                  opacity: ouraSaving || !ouraToken.trim() ? 0.5 : 1,
-                  cursor: ouraSaving || !ouraToken.trim() ? "not-allowed" : "pointer",
-                }}
-              >
-                {ouraSaving ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Google Health ── */}

@@ -1,9 +1,76 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
 import { todayString, daysAgoString } from "@/lib/timezone";
-import { loadIntegration } from "@/lib/integrations/tokens";
+import { loadIntegration, persistRotatedToken } from "@/lib/integrations/tokens";
 
 const OURA_BASE = "https://api.ouraring.com/v2/usercollection";
+export const OURA_AUTHORIZE_URL = "https://cloud.ouraring.com/oauth/authorize";
+export const OURA_TOKEN_URL = "https://api.ouraring.com/oauth/token";
+
+// Scopes requested per connection. `daily` is the load-bearing one — it carries /sleep,
+// /daily_readiness, /daily_sleep, /daily_activity and /vo2_max, every endpoint this sync
+// treats as required. `spo2` covers /daily_spo2 alone.
+//
+// Oura's scope vocabulary is wider than its published docs page (the developer console also
+// offers Stress, Heart Health and Ring Configuration), and requesting a scope the console
+// does not recognise fails the whole authorize round-trip. OURA_SCOPES overrides this default
+// from the environment so a scope can be added without a rebuild — the optional endpoints
+// (spo2, stress, resilience, vo2_max) already degrade to null on 403 rather than failing.
+const DEFAULT_OURA_SCOPES = ["daily", "spo2"];
+
+export function ouraScopes(): string[] {
+  const raw = process.env.OURA_SCOPES?.trim();
+  if (!raw) return DEFAULT_OURA_SCOPES;
+  return raw.split(/[\s,]+/).filter(Boolean);
+}
+
+/**
+ * Exchanges the stored refresh token for a short-lived access token.
+ *
+ * Oura rotates the refresh token on each exchange, so a returned one MUST be persisted or the
+ * next unattended run authenticates with a spent credential. A failure to persist therefore
+ * throws rather than being swallowed: the rotation has already happened server-side, and
+ * reporting success here would leave the next cron run to fail with a misleading error.
+ */
+async function accessTokenFor(
+  db: SupabaseClient,
+  userId: string,
+  refreshToken: string,
+): Promise<string> {
+  const clientId = process.env.OURA_CLIENT_ID;
+  const clientSecret = process.env.OURA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("OURA_CLIENT_ID and OURA_CLIENT_SECRET must be set");
+  }
+
+  const res = await fetch(OURA_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    if (res.status === 400 || res.status === 401) {
+      throw new Error(`Oura refresh token rejected (${res.status}) — reconnect Oura in Settings`);
+    }
+    throw new Error(`Oura token refresh failed ${res.status}: ${await res.text()}`);
+  }
+
+  const tokens = (await res.json()) as { access_token?: string; refresh_token?: string };
+  if (!tokens.access_token) throw new Error("Oura token refresh returned no access_token");
+
+  if (tokens.refresh_token && tokens.refresh_token !== refreshToken) {
+    await persistRotatedToken(db, userId, "oura", tokens.refresh_token);
+  }
+
+  return tokens.access_token;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,6 +105,18 @@ async function ouraGet(
   });
   if (!res.ok) {
     if (!required && [400, 403, 404, 422].includes(res.status)) return null;
+    // 401 and 403 mean different repairs — a dead authorisation versus a scope that was never
+    // granted — and saying which saves re-deriving it from a bare status code.
+    if (res.status === 401) {
+      throw new Error(
+        `Oura ${endpoint} returned 401 — the Oura authorisation is no longer valid; reconnect in Settings`,
+      );
+    }
+    if (res.status === 403) {
+      throw new Error(
+        `Oura ${endpoint} returned 403 — granted scopes do not cover it (requested: ${ouraScopes().join(" ")})`,
+      );
+    }
     throw new Error(`Oura ${endpoint} returned ${res.status}`);
   }
   return res.json();
@@ -48,7 +127,10 @@ async function ouraGet(
 // ---------------------------------------------------------------------------
 
 export interface OuraSyncResult {
+  /** Rows upserted, including days Oura returned only an empty activity stub for. */
   updated: number;
+  /** Of those, the rows actually carrying sleep or readiness. This is the honest number. */
+  withData: number;
 }
 
 export async function syncOura(
@@ -57,8 +139,10 @@ export async function syncOura(
   days = 3,
 ): Promise<OuraSyncResult> {
   const integration = await loadIntegration(db, userId, "oura");
-  const token = integration?.refreshToken;
-  if (!token) throw new Error("Oura not connected — add a Personal Access Token in Settings");
+  if (!integration?.refreshToken) {
+    throw new Error("Oura not connected — connect Oura in Settings");
+  }
+  const token = await accessTokenFor(db, userId, integration.refreshToken);
 
   const startStr = daysAgoString(days);
   const endStr = todayString();
@@ -209,11 +293,20 @@ export async function syncOura(
     };
   });
 
+  // `rows.length` counts rows UPSERTED, which a total Oura outage satisfies exactly as well as
+  // a healthy sync: Oura keeps emitting daily_activity stubs (steps: 0) for days the ring never
+  // recorded, so an all-NULL row still counts one. That is what hid two dark days behind
+  // `status: ok, records_written: 3` on 2026-09-19/20. Log the rows that actually carry sleep or
+  // readiness, and mark the sync `partial` when none of them do — a signal a failure cannot fake.
+  const withData = rows.filter((r) => r.total_sleep_hrs != null || r.readiness != null).length;
+
   const { error } = await db
     .from("recovery_metrics")
     .upsert(rows, { onConflict: "user_id,date,source" });
   if (error) throw new Error(error.message);
 
-  await logSync(db, "oura", "ok", rows.length);
-  return { updated: rows.length };
+  // `partial` deliberately falls outside lastSyncAgeSecs()'s `status = 'ok'` filter, so a
+  // degraded window is retried on the next run instead of being skipped for 30 minutes.
+  await logSync(db, "oura", withData > 0 ? "ok" : "partial", withData);
+  return { updated: rows.length, withData };
 }
