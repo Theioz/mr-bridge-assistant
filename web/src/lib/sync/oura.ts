@@ -104,7 +104,18 @@ async function ouraGet(
     cache: "no-store",
   });
   if (!res.ok) {
-    if (!required && [400, 403, 404, 422].includes(res.status)) return null;
+    // An OPTIONAL endpoint is optional precisely because it may not be available on this
+    // account or under the granted scopes, and Oura signals that inconsistently: daily_spo2
+    // answers 403, daily_resilience answers 401. Degrade either one to null rather than
+    // letting a nice-to-have metric take sleep and readiness down with it.
+    //
+    // This cannot mask a genuinely dead authorisation: the required endpoints (sleep,
+    // daily_readiness, daily_sleep, daily_activity) would 401 too and still throw. Warn so a
+    // silently-missing metric is visible in the container log instead of just absent.
+    if (!required && [400, 401, 403, 404, 422].includes(res.status)) {
+      console.warn(`[oura] ${endpoint} unavailable (${res.status}) — skipped, not fatal`);
+      return null;
+    }
     // 401 and 403 mean different repairs — a dead authorisation versus a scope that was never
     // granted — and saying which saves re-deriving it from a bare status code.
     if (res.status === 401) {
