@@ -7,6 +7,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **The kitchen as three doors you open, not a list you read.** `/inventory` now defaults to a
+  **Kitchen** view — Fridge, Freezer and Pantry as openable sections, each item a tile with its
+  own illustration, dual-unit weight, expiry, and macros for the whole quantity on tap. The
+  **List** tab keeps every mutation (add, edit, move, remove, used-up disclosure); the visual
+  view is deliberately read-only so the edit paths are not duplicated and cannot drift.
+
+  **Art is inline SVG, not image files.** ~30 hand-drawn foods plus category fallbacks. Forty
+  tiles as files is forty requests and forty chances to render a broken-image box; inline it is
+  zero, and the plate behind each icon inherits the theme tokens. Storage was never the
+  constraint — request count and theming were.
+
+  **Which icon a row gets is a database decision.** New `inventory_items.image_key`, set
+  deliberately one row at a time, never matched from `name`. Names are freeform ("Chicken
+  thighs, boneless skinless (Just Bare)") and name matching is the trap `inventory-draw.ts`
+  already defends against by requiring _equal_ token sets — `{garlic}` is a subset of
+  `{garlic, powder}`, so a subset match draws fresh garlic out of the powder jar. No key falls
+  back to the category; no category falls back to a neutral plate. Nothing guesses.
+
+  **Macros come from a cache, with the provenance kept separate.** New `packaged_food_id`
+  (label) alongside `fdc_id` (USDA), plus `macros_per_100g` so the page is one query instead of
+  ~21 FDC round-trips. **A label beats USDA for a branded good** — the exact recipe pin for the
+  365 Greek yogurt was USDA 171312, which is _Chobani_. 32 of 37 in-stock rows now resolve.
+
+  **A count unit yields no macros, and says so.** `3 can` of black beans is not 3 g and this
+  refuses to invent the per-container weight; the recipes carry those conversions. Five rows
+  are honestly blank — two need a label photo, three have nothing worth pinning. "We don't
+  know" and "it has none" are different facts and a dash conflates them.
+
 ### Fixed
 
 - **Task rows still collapsed to one character per line when the task had a due date or a

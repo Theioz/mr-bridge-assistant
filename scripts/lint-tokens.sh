@@ -57,6 +57,10 @@ else
 fi
 
 # ── 4. No raw hex colors outside token definitions ───────────────────────
+# food-art.tsx is allowlisted for a reason that will not go away: it draws FOOD, and food
+# colour is not a theme concern. A chicken breast that flips to a dark-mode token is not a
+# chicken breast. Only the plate BEHIND each icon is themed, and that correctly uses
+# var(--rule-soft) / var(--color-text-faint). The literals are a fixed illustration palette.
 # Allowlist: globals.css (token defs), FoodPhotoAnalyzer (own cleanup issue),
 # chart-colors.ts (canvas/SVG needs raw hex), icon.svg (SVG markup),
 # logo.tsx (SVG markup — static fill can't reference CSS vars),
@@ -82,6 +86,7 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'chart-colors' \
   | grep -v 'icon\.svg' \
   | grep -v 'logo\.tsx' \
+  | grep -v 'food-art\.tsx' \
   | grep -v 'MealsClient' \
   | grep -v 'layout\.tsx' \
   | grep -v 'BacklogClient' \
