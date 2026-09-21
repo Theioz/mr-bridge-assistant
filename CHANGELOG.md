@@ -9,6 +9,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Task rows still collapsed to one character per line when the task had a due date or a
+  repeat.** The previous fix was incomplete. It gave the title `flex: 1` so it would win
+  against the chips _inside its own group_ — which it did, so tasks with no due date and no
+  series rendered correctly and the fix looked complete. The due-date and recurring-series
+  chips are **not** in that group: they are direct children of the row, and every chip and
+  button there is `flex-shrink-0`. The title group is the only flexible child, so it absorbs
+  the row's entire shortfall.
+
+  Measured on the reported row ("Dose the aquarium with fertilizer", overdue + "every Sunday"
+  - three buttons) at 390px: **title 0px wide, 24 lines tall, row 464px.** After: 225.5px,
+    2 lines, 80px. At 1280px the row is a single 44px line, unchanged.
+
+  The row is now `flex-wrap`, and the title group carries `min-width: min(60%, 14rem)`. The
+  floor is what makes the wrap fire — once the title refuses to shrink past it, the metadata
+  no longer fits beside it and drops to a second line instead of crushing it. On a wide screen
+  everything fits anyway and the floor never binds, so desktop is untouched.
+
+  `smoke/layout/measure-task-row.mjs` renders this row standalone and measures it, because the
+  first fix was verified by reading the code and reasoning about flexbox — reasoning that was
+  locally right and globally wrong. Flex shortfall is arithmetic over the whole row.
+
+  Still distinct from #688 (iOS force-zoom on sub-16px controls, sub-44px touch targets).
+
 - **Mobile: long notes buried the screen, and task titles broke one character per line.** Two
   separate defects on the phone, both reported 2026-09-21.
 
