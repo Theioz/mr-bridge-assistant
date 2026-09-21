@@ -550,8 +550,12 @@ export default function TaskItem({
               style={{
                 color: "var(--color-text)",
                 fontSize: "var(--t-body)",
+                // The title is the row's primary content and must win the fight for width.
+                // Without `flex: 1` it has no flex-basis of its own, so every pixel the row
+                // is short comes out of it — down to one character per line on a phone.
+                flex: "1 1 auto",
                 minWidth: 0,
-                wordBreak: "break-word",
+                overflowWrap: "break-word",
               }}
               onClick={() => setEditing(true)}
             >
@@ -560,8 +564,18 @@ export default function TaskItem({
           )}
           {taskList ? (
             <span
-              className="flex items-center flex-shrink-0"
-              style={{ gap: 4, fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+              className="flex items-center min-w-0"
+              style={{
+                gap: 4,
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-faint)",
+                // Metadata yields to the title: truncate rather than squeeze it out.
+                flexShrink: 1,
+                maxWidth: "40%",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
               <span
                 className="rounded-full block"
@@ -577,8 +591,17 @@ export default function TaskItem({
           ) : (
             task.category && (
               <span
-                className="flex-shrink-0"
-                style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}
+                className="min-w-0"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text-faint)",
+                  // Same rule as the list chip: the title outranks the category.
+                  flexShrink: 1,
+                  maxWidth: "40%",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
               >
                 {task.category}
               </span>

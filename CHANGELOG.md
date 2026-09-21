@@ -9,6 +9,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Mobile: long notes buried the screen, and task titles broke one character per line.** Two
+  separate defects on the phone, both reported 2026-09-21.
+
+  **Notes.** Plan, session and inventory notes are written long on purpose — they carry the
+  reasoning behind a decision so a later session reads it back instead of re-deriving it. But
+  rendered in full mid-workout, a 90-word rationale pushes the set logger off the viewport.
+  Notes now clamp to two lines with a "Show full note" toggle. **Nothing was shortened in the
+  database**, which is the half that has to stay whole.
+
+  **Task titles.** In `task-item.tsx` the title had `min-width: 0` but no `flex` basis, while
+  the category and list chips beside it were `flex-shrink-0` — so every pixel the row was
+  short came out of the title and none out of the metadata. At 390px it collapsed to a
+  ~30px column and wrapped mid-word on nearly every character. The title now claims
+  `flex: 1 1 auto` and the chips shrink and ellipsise instead, capped at 40% width.
+
+  Distinct from #688, which is iOS force-zoom on sub-16px form controls and sub-44px touch
+  targets in the same tree — that one is still open.
+
+- **Inventory: used-up items are hidden instead of listed.** #733 stopped spent rows (0
+  quantity) showing as "Use soon"; they were still listed under their location, so the fridge
+  read as 25 items when 10 were real. They are now filtered out, behind a quiet
+  "Show N used-up items" disclosure.
+
+  **They are hidden, not deleted, and the disclosure is load-bearing.** Those rows carry the
+  notes, `fdc_id` and unit for that food — restocking an existing row is what stops the same
+  item sprouting a second, parallel row. That is exactly how the kitchen ended up with two
+  MOWI salmon rows and two Just Bare thigh rows, one of them named "— frozen" while sitting
+  in the fridge. Making them completely unreachable would have rebuilt that problem.
+
 - **Inventory "Use soon" listed food that no longer exists.** The strip classified rows by
   `expires_on` alone and never looked at `quantity`, so a row at 0 g — kept for the notes on
   it after the food was eaten or thrown out — stayed "urgent" forever. The urgent test
