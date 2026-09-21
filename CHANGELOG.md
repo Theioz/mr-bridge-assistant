@@ -7,6 +7,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Inventory "Use soon" listed food that no longer exists.** The strip classified rows by
+  `expires_on` alone and never looked at `quantity`, so a row at 0 g — kept for the notes on
+  it after the food was eaten or thrown out — stayed "urgent" forever. The urgent test
+  (`days <= USE_SOON_DAYS`) has no lower bound, so such a row looked _more_ urgent as it
+  aged. Measured on Jason's kitchen 2026-09-21: **16 rows on the strip, 14 of them spent, 0
+  genuinely expired.** The same classifier drove the red `expired` label on every zeroed row
+  in the fridge list.
+
+  A triage list is a do-something-now list, and one that is 87% tombstones is worse than no
+  list at all, because the two real rows are invisible inside it. This is the recurring shape
+  here: a signal that cannot distinguish "nothing to do" from "act now".
+
+  Freshness now returns a `spent` kind first, and `useSoonItems()` can't surface it by
+  construction. **The trap on the fix is the NULL case** — a NULL `quantity` is an untracked
+  staple that is _assumed on hand_ (rice, oil, whey), not an empty row, so only an explicit 0
+  counts as spent. Treating NULL as zero would have hidden every staple: the opposite bug,
+  and a quieter one. Both cases are pinned by tests.
+
+  The logic moved out of `InventoryPanel.tsx` into `lib/nutrition/inventory-freshness.ts` so
+  it can be unit-tested at all — it was unreachable from the node test runner inside a
+  `.tsx` component. No data was changed: the expiry dates on those rows are true, and
+  nulling them to quiet a UI bug would have left a puzzle and regressed on the next restock.
+
 ### Added
 
 - **Packaged foods: store the label off the box, and prefer it to USDA.** A new
@@ -16,7 +41,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
   **Why a branded food needs its own source.** Every macro in the app comes from USDA
   FoodData Central, which is correct for whole foods: "chicken breast, raw" is the same food
-  in every kitchen. USDA's *Branded* dataset is different — it is manufacturer-submitted, so
+  in every kitchen. USDA's _Branded_ dataset is different — it is manufacturer-submitted, so
   it is incomplete and stale by construction, and it was wrong for both items this was built
   against. There is no Barilla record for tri-color rotini at all; the record matching the
   box to the decimal on all six macros (fdc 729736) belongs to Reggano, so pinning it would
@@ -110,7 +135,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **A meal plan cannot be marked "eaten" without evidence that it was.** On 2026-09-10 a lunch
   logged in the app moved no macros: `meal_log` had zero rows for the day. The cause was a single
-  row written the previous afternoon — a planning write created *tomorrow's* lunch already at
+  row written the previous afternoon — a planning write created _tomorrow's_ lunch already at
   `status='eaten'`. `KitchenPanel` only offers "Ate this" on a `planned` row, so by the time the
   meal happened the plan was already in its terminal state, the button was gone, and nothing was
   ever written to `meal_log`. The failure is silent by construction: the only symptom is a macro
@@ -195,7 +220,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `/tasks` and the dashboard now show the **oldest outstanding occurrence** per series; completing
   it hands the row to the next one. Purely a rendering change — occurrences, history, `ends_on` and
   the expiry warning (#689) are untouched.
-
   - **`+N missed`** badge when earlier occurrences went by undone, so being three waterings behind
     is visible without three near-identical rows competing for attention. Only occurrences that
     were actually **due** count; future ones would otherwise make every series look permanently
@@ -211,7 +235,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   check verified a pin for _consistency_ — that the arithmetic adds up, that a batch declared its
   portions. None asked whether the pinned USDA record actually describes the ingredient on the line,
   which is the defect that keeps recurring and has never once been caught by tooling:
-
   - **#672** — gochujang priced as **sriracha** (171188) and as **condensed black bean soup**
     (171141).
   - **#707** — `frozen blueberries` pinned to **171706, "Avocados, raw, California"**.
@@ -224,7 +247,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   fat.
 
   Three checks, in decreasing order of how much they cost to run:
-
   - **`pin-inconsistent`** — one food pinned two different ways across the library. Pure, no
     network, so it runs inside `audit()` and is always available. It is also the sharpest: the
     disagreement is the signal, and a library that prices one food two ways is wrong at least once
@@ -276,7 +298,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   every skipped line with the reason. Inventory has no second source of truth — a draw on the
   wrong row is wrong forever and looks exactly like a draw that is right — so the amounts are
   shown rather than reported after the fact.
-
   - **The ingredient list is the BATCH.** `ingredients_json` describes `typical_portions`
     servings while `recipes.calories` describes one, so the draw is the list scaled by
     `portionsCooked / typicalPortions`. Reading the list as per-serving would have drawn four
@@ -371,7 +392,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   before (#464, April) and hand-corrected; it drifted again. A number a human retypes is a number
   that goes stale, so `scripts/check-docs.mjs` now derives three facts from the repository and CI
   asserts them:
-
   - every `N tools` claim equals `tool(` across `web/src/lib/tools/`
   - the migration summary's count and newest filename match `supabase/migrations/`
   - every path in the file tree exists
@@ -393,7 +413,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   built entirely from local `Date` fields — `new Date(y, m, d)`, `setDate()`, `getDay()` — but each
   view then read the key back out with `toISOString().slice(0, 10)`, which re-reads those local
   fields as UTC. West of Greenwich that shifts any evening instant forward a day, so:
-
   - the **"today" highlight** in the week and month views moved to tomorrow's column at 5 PM PDT,
   - the **day view** fetched and rendered _tomorrow's_ events for the rest of the evening, because
     its request window is `isoDate(current)` on a `new Date()`,
@@ -449,7 +468,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   row-level error slot per row — not one per mutation. It also catches outright rejections (a
   dropped connection, an RSC transport error), which previously produced an unhandled rejection and
   the same silent grey-then-nothing.
-
   - Errors persist until dismissed or until the next successful mutation on that row. Not
     auto-cleared on a timer — that would make the failure invisible again, which is the bug.
   - A failed rename restores the previous title, so the row never displays a value the database
@@ -468,7 +486,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **Task due-date notifications have never once fired.** Two independent defects, either of which
   alone was enough:
-
   1. The tasks query used `.not_("due_date", "is", None)`. In supabase-py v2 `.not_` is a
      **property** returning a builder, not a callable, so every run raised
      `'SyncSelectRequestBuilder' object is not callable` before reading a single task. The correct
@@ -508,7 +525,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   `/api/google/gmail`, `lib/sync/packages.ts`, the Gmail MCP tools, the `packages` step in the
   cron sync, the `Package` type, `packages.json` from the export archive, and the `packages`
   table.
-
   - **The scope does not shrink retroactively.** Google keeps an existing grant intact, so a
     refresh token issued before this change still carries Gmail until the account re-consents.
     `include_granted_scopes: false` means a fresh authorization issues a correctly narrowed
@@ -538,7 +554,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   roll-forward-on-complete means finishing Sunday's chore on Wednesday moves every future
   occurrence, so "every Sunday" quietly stops being every Sunday. Occurrence dates here always
   derive from `starts_on`, never from the previous occurrence or its completion.
-
   - `tasks_series_occurrence_uniq` on `(series_id, occurrence_date)` is what makes spawning
     idempotent — a re-run, an overlapping window, or the cron racing a UI create cannot
     double-create a chore. Both spawners lean on the index rather than on their own bookkeeping.

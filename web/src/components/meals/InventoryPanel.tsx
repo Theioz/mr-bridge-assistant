@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  daysText,
+  freshnessOf,
+  useSoonItems,
+  type Freshness,
+} from "@/lib/nutrition/inventory-freshness";
 
 /**
  * The kitchen inventory: raw ingredients on hand, action-first.
@@ -36,35 +42,6 @@ const LOCATION_LABEL: Record<string, string> = {
   pantry: "Pantry",
   counter: "Counter",
 };
-
-// An item this close to (or past) its date is what the next cook should spend first.
-const USE_SOON_DAYS = 3;
-
-function daysUntil(dateStr: string): number {
-  const then = new Date(`${dateStr}T00:00:00`);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.round((then.getTime() - now.getTime()) / 86_400_000);
-}
-
-type Freshness = "urgent" | "fine" | "stable" | "frozen";
-
-// Frozen items don't expire on a fridge clock; a dated fridge/counter item is urgent inside the
-// window and fine outside it; an undated staple (rice, oil) is simply stable.
-function freshnessOf(item: InventoryItem): { kind: Freshness; days: number | null } {
-  if (item.location === "freezer") return { kind: "frozen", days: null };
-  if (item.expires_on) {
-    const d = daysUntil(item.expires_on);
-    return { kind: d <= USE_SOON_DAYS ? "urgent" : "fine", days: d };
-  }
-  return { kind: "stable", days: null };
-}
-
-function daysText(d: number): string {
-  if (d < 0) return "expired";
-  if (d === 0) return "today";
-  return `${d}d`;
-}
 
 // Weight units → grams, so any of them can be shown alongside the others. Recipes are written
 // in grams and shopping is done in lb/oz; showing both ends the "1.25 lb here, 200 g there"
@@ -110,7 +87,8 @@ function quantityLabel(item: InventoryItem): string {
 }
 
 // A single freshness marker: filled danger dot (urgent), hollow ring (fine), small square
-// (frozen), faint dot (undated staple). Colour comes from tokens so both themes stay legible.
+// (frozen), faint dot (undated staple), faintest hollow ring (spent). Colour comes from tokens
+// so both themes stay legible.
 function FreshnessDot({ kind }: { kind: Freshness }) {
   const base: React.CSSProperties = {
     display: "inline-block",
@@ -126,7 +104,9 @@ function FreshnessDot({ kind }: { kind: Freshness }) {
         ? { ...base, borderRadius: 2, background: "var(--color-text-faint)" }
         : kind === "fine"
           ? { ...base, borderRadius: "50%", border: "1.5px solid var(--color-text-faint)" }
-          : { ...base, borderRadius: "50%", background: "var(--rule-soft)" };
+          : kind === "spent"
+            ? { ...base, borderRadius: "50%", border: "1px solid var(--rule-soft)" }
+            : { ...base, borderRadius: "50%", background: "var(--rule-soft)" };
   return <span aria-hidden style={style} />;
 }
 
@@ -240,9 +220,7 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
     }
   }
 
-  const useSoon = items
-    .filter((i) => freshnessOf(i).kind === "urgent")
-    .sort((a, b) => daysUntil(a.expires_on as string) - daysUntil(b.expires_on as string));
+  const useSoon = useSoonItems(items);
 
   const byLocation = LOCATIONS.map((loc) => ({
     loc,
