@@ -498,8 +498,14 @@ export default function TaskItem({
         transition: "opacity var(--motion-fast) var(--ease-out-quart)",
       }}
     >
-      {/* Parent row — hairline-separated, flush left, 44px touch target drives height */}
-      <div className="flex items-center" style={{ gap: "var(--space-3)" }}>
+      {/* Parent row — hairline-separated, flush left, 44px touch target drives height.
+          flex-wrap is load-bearing: every chip and button below is flex-shrink-0, so on a
+          narrow screen the title group is the only thing that can give, and without a wrap it
+          gives everything. See the minWidth floor on the title group. */}
+      <div
+        className="flex items-center flex-wrap"
+        style={{ columnGap: "var(--space-3)", rowGap: "var(--space-1)" }}
+      >
         {/* Completion circle — 44px touch target, neutral hairline border */}
         <button
           onClick={handleComplete}
@@ -527,7 +533,19 @@ export default function TaskItem({
         />
 
         {/* Title + subtask progress */}
-        <div className="flex-1 min-w-0 flex items-center" style={{ gap: "var(--space-2)" }}>
+        <div
+          className="flex-1 min-w-0 flex items-center"
+          style={{
+            gap: "var(--space-2)",
+            // The floor that makes flex-wrap fire. Chips and buttons are all flex-shrink-0, so
+            // the row's entire shortfall lands here; with no floor this collapsed to ~30px and
+            // the title wrapped one character per line. At the floor the metadata no longer
+            // fits beside it and wraps to a second line instead, which is the readable outcome.
+            // On a wide screen everything fits on one line and the floor never binds, so
+            // desktop is unchanged.
+            minWidth: "min(60%, 14rem)",
+          }}
+        >
           {editing ? (
             <input
               ref={inputRef}
