@@ -2,7 +2,9 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { InventoryPanel, type InventoryItem } from "@/components/meals/InventoryPanel";
+import { InventoryTabs } from "@/components/inventory/InventoryTabs";
+import type { InventoryItem } from "@/components/meals/InventoryPanel";
+import type { FridgeItem } from "@/components/inventory/FridgeView";
 
 export const metadata: Metadata = {
   title: "Inventory",
@@ -22,7 +24,9 @@ export default async function InventoryPage() {
   const { data: inventoryData } = userId
     ? await supabase
         .from("inventory_items")
-        .select("id, name, quantity, unit, location, category, added_date, expires_on, notes")
+        .select(
+          "id, name, quantity, unit, location, category, added_date, expires_on, notes, image_key, macros_per_100g, macros_source",
+        )
         .eq("user_id", userId)
         .order("location", { ascending: true })
         .order("expires_on", { ascending: true, nullsFirst: false })
@@ -42,12 +46,12 @@ export default async function InventoryPage() {
           className="mt-1"
           style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
         >
-          Fridge, freezer &amp; pantry — soonest-to-expire first. Move to the freezer in one tap so
-          nothing turns.
+          Open a door to see what is in it. Soonest-to-expire first; switch to List to add, edit or
+          move anything.
         </p>
       </div>
 
-      <InventoryPanel items={(inventoryData ?? []) as unknown as InventoryItem[]} />
+      <InventoryTabs items={(inventoryData ?? []) as unknown as (InventoryItem & FridgeItem)[]} />
     </div>
   );
 }
