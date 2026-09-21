@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   daysText,
   freshnessOf,
+  isSpent,
   useSoonItems,
   type Freshness,
 } from "@/lib/nutrition/inventory-freshness";
@@ -220,11 +221,20 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
     }
   }
 
+  const [showSpent, setShowSpent] = useState(false);
+
   const useSoon = useSoonItems(items);
+
+  // Spent rows (0 quantity) are history, not food. They are hidden rather than deleted so the
+  // notes, fdc_id and unit on them survive — restocking an existing row is what keeps the same
+  // food from sprouting a second, parallel row, which is how the kitchen ended up with two
+  // salmon rows and two chicken-thigh rows. The disclosure below is the way back to them.
+  const spent = items.filter(isSpent);
+  const visible = showSpent ? items : items.filter((i) => !isSpent(i));
 
   const byLocation = LOCATIONS.map((loc) => ({
     loc,
-    rows: items.filter((i) => i.location === loc),
+    rows: visible.filter((i) => i.location === loc),
   })).filter((g) => g.rows.length > 0);
 
   return (
@@ -403,6 +413,28 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
           })}
         </div>
       ))}
+
+      {spent.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowSpent((v) => !v)}
+          aria-expanded={showSpent}
+          style={{
+            marginTop: "var(--space-3)",
+            padding: 0,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            textDecoration: "underline",
+          }}
+        >
+          {showSpent
+            ? `Hide ${spent.length} used-up item${spent.length === 1 ? "" : "s"}`
+            : `Show ${spent.length} used-up item${spent.length === 1 ? "" : "s"}`}
+        </button>
+      )}
 
       {items.length > 0 && (
         <div style={legendStyle}>

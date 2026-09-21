@@ -13,6 +13,7 @@ import { todayString, addDays } from "@/lib/timezone";
 import type { WeightUnit } from "@/lib/units";
 import { InlineSetLogger } from "./inline-set-logger";
 import { EndOfWorkoutRecap } from "./end-of-workout-recap";
+import { CollapsibleNote } from "@/components/ui/collapsible-note";
 
 interface Props {
   plans: WorkoutPlan[];
@@ -745,18 +746,7 @@ export function WeeklyWorkoutPlan({
                     unit={weightUnit}
                     prsByExercise={prsByExercise}
                   />
-                  {day.plan.notes && (
-                    <p
-                      style={{
-                        fontSize: "var(--t-micro)",
-                        color: "var(--color-text-muted)",
-                        marginTop: "var(--space-2)",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      {day.plan.notes}
-                    </p>
-                  )}
+                  {day.plan.notes && <CollapsibleNote text={day.plan.notes} label="plan note" />}
                   {day.isToday && (
                     <EndOfWorkoutRecap
                       sessionId={todaySession?.id ?? null}
