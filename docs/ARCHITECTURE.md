@@ -125,7 +125,6 @@ This means a user's session JWT can only read or write their own rows — no cro
 - The cron sync route (`/api/cron/sync`) — writes to any user's rows
 - OAuth callbacks — create/update `user_integrations` rows before the session is fully established
 - Admin pages (`/admin`) — read and mutate any tenant's data
-- Quota enforcement functions (`check_and_increment_quota`, `record_quota_tokens`) — atomic operations that must succeed regardless of session state
 
 **`SUPABASE_SERVICE_ROLE_KEY` is never exposed to the browser.** It lives only in server-side env vars.
 
@@ -207,7 +206,7 @@ The current "multi-tenant" infrastructure shipped in 2026-04-24:
 
 - **`feature_flags`** — per-user toggles over a null-user-id global default; foundation for A/B testing and gradual rollouts
 - **`admin_audit_log`** — every admin mutation is logged with actor, action, and before/after JSON
-- **`/admin` route** — tenant CRUD, quota overrides, feature-flag toggles, audit log; gated by `is_admin: true` in `user_metadata`
+- **`/admin` route** — tenant CRUD, feature-flag toggles, audit log; gated by `is_admin: true` in `user_metadata`
 
 ### Next: shared spaces (`tenant_id`)
 

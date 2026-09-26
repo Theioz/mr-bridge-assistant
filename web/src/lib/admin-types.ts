@@ -3,10 +3,6 @@ export interface AdminTenant {
   email: string;
   created_at: string;
   last_sign_in_at: string | null;
-  tokens_used_today: number;
-  token_cap: number;
-  tool_calls_used_today: number;
-  tool_calls_cap: number;
   integration_count: number;
 }
 
@@ -27,16 +23,6 @@ export interface FeatureFlagRow {
   enabled: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface TenantQuotaRow {
-  daily_chat_tokens: number;
-  daily_tool_calls: number;
-  tokens_used_today: number;
-  tool_calls_used_today: number;
-  daily_chat_tokens_override: number | null;
-  daily_tool_calls_override: number | null;
-  last_reset: string;
 }
 
 export interface TenantIntegration {
@@ -62,7 +48,6 @@ export interface TenantDetail {
   profile: TenantProfileEntry[];
   integrations: TenantIntegration[];
   sessions: TenantChatSession[];
-  quota: TenantQuotaRow | null;
   flags: FeatureFlagRow[];
   auditLog: AdminAuditLogRow[];
 }

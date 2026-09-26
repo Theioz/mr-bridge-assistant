@@ -207,6 +207,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
+- **The dead tenant-quota surface in `/admin` (#720).** `tenant_quotas` and its two functions
+  were dropped in #611 along with metered chat, but the admin pages still queried the table in
+  eight places, each discarding the error. Nothing crashed, so the failure was invisible: the
+  tenant list showed `0 / 500,000` tokens for every user, the drill-down rendered
+  `QUOTA_DEFAULTS` as if they were real caps, and the token-override, tool-call-override and
+  reset-usage actions upserted into the missing table (a silent no-op) and then wrote
+  `admin_audit_log` rows describing changes that never happened. The audit log is meant to
+  record what an admin did, so a log of fiction was worse than none. The quota card, its three
+  server actions, `UsageBar`, `QUOTA_DEFAULTS`, `TenantQuotaRow`, the token and tool-call
+  columns on the tenant list, and the stale doc references are gone. Nothing is recreated:
+  there is nothing left to meter.
+
 - **The demo account and all of its scaffolding (#718).** It was built for a public,
   multi-tenant launch that is not happening — the app is tailnet-only and single-user, so
   there are no visitors to demo it to. The auth user (`demo@mr-bridge.app`) had already

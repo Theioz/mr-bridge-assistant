@@ -11,118 +11,10 @@ import type {
   TenantDetail,
   TenantIntegration,
   TenantProfileEntry,
-  TenantQuotaRow,
 } from "@/lib/admin-types";
-import { USER_TZ, todayString } from "@/lib/timezone";
+import { USER_TZ } from "@/lib/timezone";
 
 // ─── server actions ────────────────────────────────────────────────────────
-
-async function updateTokenOverride(formData: FormData) {
-  "use server";
-  const supabase = await createClient();
-  const {
-    data: { user: admin },
-  } = await supabase.auth.getUser();
-  if (!admin || admin.user_metadata?.is_admin !== true) return;
-
-  const userId = formData.get("userId") as string;
-  const raw = (formData.get("tokenOverride") as string).trim();
-  const value = raw === "" ? null : parseInt(raw, 10);
-  if (raw !== "" && (isNaN(value!) || value! < 0)) return;
-
-  const svc = createServiceClient();
-  const { data: before } = await svc
-    .from("tenant_quotas")
-    .select("daily_chat_tokens_override")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  await svc
-    .from("tenant_quotas")
-    .upsert({ user_id: userId, daily_chat_tokens_override: value }, { onConflict: "user_id" });
-
-  await svc.from("admin_audit_log").insert({
-    admin_user_id: admin.id,
-    target_user_id: userId,
-    action: "update_token_override",
-    before_value: before ? { daily_chat_tokens_override: before.daily_chat_tokens_override } : null,
-    after_value: { daily_chat_tokens_override: value },
-  });
-
-  revalidatePath(`/admin/tenants/${userId}`);
-}
-
-async function updateToolCallOverride(formData: FormData) {
-  "use server";
-  const supabase = await createClient();
-  const {
-    data: { user: admin },
-  } = await supabase.auth.getUser();
-  if (!admin || admin.user_metadata?.is_admin !== true) return;
-
-  const userId = formData.get("userId") as string;
-  const raw = (formData.get("toolCallOverride") as string).trim();
-  const value = raw === "" ? null : parseInt(raw, 10);
-  if (raw !== "" && (isNaN(value!) || value! < 0)) return;
-
-  const svc = createServiceClient();
-  const { data: before } = await svc
-    .from("tenant_quotas")
-    .select("daily_tool_calls_override")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  await svc
-    .from("tenant_quotas")
-    .upsert({ user_id: userId, daily_tool_calls_override: value }, { onConflict: "user_id" });
-
-  await svc.from("admin_audit_log").insert({
-    admin_user_id: admin.id,
-    target_user_id: userId,
-    action: "update_tool_call_override",
-    before_value: before ? { daily_tool_calls_override: before.daily_tool_calls_override } : null,
-    after_value: { daily_tool_calls_override: value },
-  });
-
-  revalidatePath(`/admin/tenants/${userId}`);
-}
-
-async function resetQuotaToday(formData: FormData) {
-  "use server";
-  const supabase = await createClient();
-  const {
-    data: { user: admin },
-  } = await supabase.auth.getUser();
-  if (!admin || admin.user_metadata?.is_admin !== true) return;
-
-  const userId = formData.get("userId") as string;
-  const svc = createServiceClient();
-
-  const { data: before } = await svc
-    .from("tenant_quotas")
-    .select("tokens_used_today, tool_calls_used_today")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  await svc.from("tenant_quotas").upsert(
-    {
-      user_id: userId,
-      tokens_used_today: 0,
-      tool_calls_used_today: 0,
-    },
-    { onConflict: "user_id" },
-  );
-
-  await svc.from("admin_audit_log").insert({
-    admin_user_id: admin.id,
-    target_user_id: userId,
-    action: "reset_quota_today",
-    before_value: before ?? null,
-    after_value: { tokens_used_today: 0, tool_calls_used_today: 0 },
-  });
-
-  revalidatePath(`/admin/tenants/${userId}`);
-}
 
 async function setFeatureFlag(formData: FormData) {
   "use server";
@@ -251,55 +143,6 @@ async function deleteTenantFromDetail(formData: FormData) {
 
 // ─── helpers ──────────────────────────────────────────────────────────────
 
-const QUOTA_DEFAULTS: TenantQuotaRow = {
-  daily_chat_tokens: 500000,
-  daily_tool_calls: 500,
-  tokens_used_today: 0,
-  tool_calls_used_today: 0,
-  daily_chat_tokens_override: null,
-  daily_tool_calls_override: null,
-  // todayString(), not toISOString() — the server clock is UTC, so a quota row
-  // rendered on a Pacific evening would claim it had already reset tomorrow.
-  last_reset: todayString(),
-};
-
-function UsageBar({ used, cap }: { used: number; cap: number }) {
-  const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
-  const color =
-    pct > 80 ? "var(--color-danger)" : pct > 60 ? "var(--color-amber)" : "var(--color-primary)";
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-      <div
-        style={{
-          flex: 1,
-          height: 6,
-          borderRadius: "var(--r-1)",
-          background: "var(--rule-soft)",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${pct}%`,
-            height: "100%",
-            background: color,
-            borderRadius: "var(--r-1)",
-          }}
-        />
-      </div>
-      <span
-        style={{
-          fontSize: "var(--t-micro)",
-          color: "var(--color-text-muted)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {used.toLocaleString()} / {cap.toLocaleString()}
-      </span>
-    </div>
-  );
-}
-
 const inputStyle: React.CSSProperties = {
   border: "1px solid var(--color-border)",
   borderRadius: "var(--r-1)",
@@ -363,7 +206,6 @@ export default async function TenantDetailPage({
     { data: profileRows },
     { data: integrationRows },
     { data: sessionRows },
-    { data: quotaRow },
     { data: flagRows },
     { data: auditRows },
   ] = await Promise.all([
@@ -381,7 +223,6 @@ export default async function TenantDetailPage({
       .is("deleted_at", null)
       .order("last_active_at", { ascending: false })
       .limit(20),
-    svc.from("tenant_quotas").select("*").eq("user_id", userId).maybeSingle(),
     svc
       .from("feature_flags")
       .select("*")
@@ -409,14 +250,9 @@ export default async function TenantDetailPage({
     profile: (profileRows ?? []) as TenantProfileEntry[],
     integrations: (integrationRows ?? []) as TenantIntegration[],
     sessions: (sessionRows ?? []) as TenantChatSession[],
-    quota: (quotaRow as TenantQuotaRow | null) ?? null,
     flags: (flagRows ?? []) as FeatureFlagRow[],
     auditLog: (auditRows ?? []) as AdminAuditLogRow[],
   };
-
-  const q = detail.quota ?? QUOTA_DEFAULTS;
-  const tokenCap = q.daily_chat_tokens_override ?? q.daily_chat_tokens;
-  const toolCap = q.daily_tool_calls_override ?? q.daily_tool_calls;
 
   // Separate per-user flags from global flags
   const userFlags = detail.flags.filter((f) => f.user_id === userId);
@@ -606,140 +442,6 @@ export default async function TenantDetailPage({
 
         {/* RIGHT COLUMN */}
         <div>
-          {/* Rate-limit overrides — topmost, most important */}
-          <section style={panelStyle}>
-            <h2 className="db-section-label" style={panelHeadStyle}>
-              Rate-limit overrides
-            </h2>
-
-            {/* Token usage + override */}
-            <div style={{ paddingBottom: "var(--space-4)" }}>
-              <p
-                style={{
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-1)",
-                }}
-              >
-                Daily chat tokens
-              </p>
-              <UsageBar used={q.tokens_used_today} cap={tokenCap} />
-              <p
-                style={{
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-muted)",
-                  margin: "var(--space-1) 0 var(--space-3)",
-                }}
-              >
-                Base: {q.daily_chat_tokens.toLocaleString()} · Override:{" "}
-                {q.daily_chat_tokens_override != null
-                  ? q.daily_chat_tokens_override.toLocaleString()
-                  : "none (using base)"}
-              </p>
-              <form
-                action={updateTokenOverride}
-                style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}
-              >
-                <input type="hidden" name="userId" value={userId} />
-                <input
-                  name="tokenOverride"
-                  type="number"
-                  min={0}
-                  placeholder={
-                    q.daily_chat_tokens_override != null
-                      ? String(q.daily_chat_tokens_override)
-                      : "clear override"
-                  }
-                  style={inputStyle}
-                />
-                <button type="submit" style={btnStyle}>
-                  Set
-                </button>
-              </form>
-            </div>
-
-            {/* Tool call usage + override */}
-            <div
-              style={{
-                borderTop: "1px solid var(--color-border)",
-                paddingTop: "var(--space-4)",
-                paddingBottom: "var(--space-4)",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-1)",
-                }}
-              >
-                Daily tool calls
-              </p>
-              <UsageBar used={q.tool_calls_used_today} cap={toolCap} />
-              <p
-                style={{
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-muted)",
-                  margin: "var(--space-1) 0 var(--space-3)",
-                }}
-              >
-                Base: {q.daily_tool_calls} · Override:{" "}
-                {q.daily_tool_calls_override != null
-                  ? q.daily_tool_calls_override
-                  : "none (using base)"}
-              </p>
-              <form
-                action={updateToolCallOverride}
-                style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}
-              >
-                <input type="hidden" name="userId" value={userId} />
-                <input
-                  name="toolCallOverride"
-                  type="number"
-                  min={0}
-                  placeholder={
-                    q.daily_tool_calls_override != null
-                      ? String(q.daily_tool_calls_override)
-                      : "clear override"
-                  }
-                  style={inputStyle}
-                />
-                <button type="submit" style={btnStyle}>
-                  Set
-                </button>
-              </form>
-            </div>
-
-            {/* Reset today's usage */}
-            <div
-              style={{
-                padding: "var(--space-3) 0",
-                borderTop: "1px solid var(--color-border)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-                Reset today&apos;s usage counters to zero
-              </span>
-              <form action={resetQuotaToday}>
-                <input type="hidden" name="userId" value={userId} />
-                <button
-                  type="submit"
-                  style={{
-                    ...btnStyle,
-                    background: "var(--color-surface)",
-                    color: "var(--color-text)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  Reset
-                </button>
-              </form>
-            </div>
-          </section>
-
           {/* Feature flags */}
           <section style={panelStyle}>
             <h2 className="db-section-label" style={panelHeadStyle}>
