@@ -63,6 +63,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Re-resolving one recipe no longer means fencing the whole library.**
+  `POST /api/internal/resolve-recipe-macros` takes `?id=<uuid>` (repeatable), which resolves
+  exactly those recipes and nothing else. Naming a recipe implies force for that recipe, and an id
+  that matches nothing returns 404 instead of an empty success. Before this, the only per-recipe
+  route needed a browser session, so a scripted re-resolve had to clear the recipe's stamp. The
+  `macros_computed_at` trigger refuses that while macros are set, so its macros had to be blanked
+  too, and every other unstamped row (the `Eating out` placeholder) had to be fenced so the bulk
+  pass would not price it. The alternative, `?force=1`, re-resolves the whole library. The route
+  also skipped a recipe with structured `ingredients_json` but no ingredient text as "no ingredient
+  list", even though the resolver prices it. No live recipe is in that state today.
+
 - **Python scripts ran a day ahead every evening.** compute-core's clock is UTC, and eleven
   scripts took "today" from `date.today()`, which rolls over at 17:00 PDT. From then until
   midnight the session briefing labelled the coming day "today", printed that morning's
