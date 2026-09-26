@@ -9,6 +9,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Pin a recipe line to a label from the recipe editor (#722).** Each ingredient row gets a
+  second line with a picker, "Priced by USDA (no label)" or any catalog product, which sets
+  `packaged_food_id`. The resolver's two refusals are **warned as you type** using the same
+  functions: a line whose wording contradicts the label's prep state ("pasta" against a dry
+  label: say "dry"), and a unit the label cannot price. A pin whose product was removed shows as
+  "Missing product" instead of silently reading as unpinned. If the catalog fails to load, the
+  editor says so and existing pins are kept as they are.
+
 - **A Catalog tab for the label catalog (#722, capture path).** `/inventory` gains a third tab
   listing every `packaged_foods` product, with the per-serving panel it was entered from and two
   flags: a label photographed more than 365 days ago (formulations drift), and a missing net
