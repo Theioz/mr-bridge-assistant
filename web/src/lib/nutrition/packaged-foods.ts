@@ -194,3 +194,187 @@ export async function findPackagedFood(
   if (error) throw new Error(`packaged_foods lookup failed: ${error.message}`);
   return (data?.[0] as PackagedFoodRow | undefined) ?? null;
 }
+
+/**
+ * Every catalog row a recipe pins, in one query. Rows that do not exist (deleted, or another
+ * user's id) are simply absent from the map — the caller reports that pin as unresolved.
+ */
+export async function findPackagedFoodsByIds(
+  db: SupabaseClient,
+  userId: string,
+  ids: string[],
+): Promise<Map<string, PackagedFoodRow>> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return new Map();
+  const { data, error } = await db
+    .from("packaged_foods")
+    .select(SELECT)
+    .eq("user_id", userId)
+    .in("id", unique);
+  if (error) throw new Error(`packaged_foods lookup failed: ${error.message}`);
+  return new Map(((data ?? []) as PackagedFoodRow[]).map((r) => [r.id, r]));
+}
+
+// ── Pricing an ingredient off a label ─────────────────────────────────────────
+
+const GRAMS_PER: Record<string, number> = {
+  g: 1,
+  gram: 1,
+  grams: 1,
+  kg: 1000,
+  oz: 28.3495,
+  ounce: 28.3495,
+  ounces: 28.3495,
+  lb: 453.592,
+  lbs: 453.592,
+  pound: 453.592,
+  pounds: 453.592,
+};
+
+const SERVING_UNITS = new Set(["serving", "servings"]);
+
+/** Whole-container units. Priced off `containerWeightG`, never off a guessed can size. */
+const CONTAINER_UNITS = new Set([
+  "box",
+  "boxes",
+  "jar",
+  "jars",
+  "can",
+  "cans",
+  "bag",
+  "bags",
+  "package",
+  "packages",
+  "pack",
+  "packs",
+  "container",
+  "containers",
+  "bottle",
+  "bottles",
+  "carton",
+  "cartons",
+  "tub",
+  "tubs",
+]);
+
+/** One spelling per unit, so `tablespoons` on a recipe line meets `tbsp` on a label. */
+function canonicalUnit(unit: string): string {
+  const u = unit.trim().toLowerCase().replace(/\.$/, "");
+  if (/^(tsp|teaspoons?)$/.test(u)) return "tsp";
+  if (/^(tbsp|tbs|tablespoons?)$/.test(u)) return "tbsp";
+  if (/^cups?$/.test(u)) return "cup";
+  return u.length > 3 && u.endsWith("s") ? u.slice(0, -1) : u;
+}
+
+/**
+ * The household measure printed beside the serving weight: "1 tsp" -> {1, tsp}, "1/2 cup" ->
+ * {0.5, cup}, "3/4 cup frozen" -> {0.75, cup}, "1 fillet" -> {1, fillet}. Null when the label
+ * gives no leading amount, or when the measure is itself a weight ("2 oz") — mass units are
+ * converted exactly and need no label to do it.
+ */
+export function parseServingLabel(label: string | null): { qty: number; unit: string } | null {
+  if (!label) return null;
+  const m = label.trim().match(/^(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+))?\s+([a-zA-Z]+)/);
+  if (!m) return null;
+  const qty = m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+  const unit = canonicalUnit(m[3]);
+  if (unit in GRAMS_PER) return null;
+  return { qty, unit };
+}
+
+/**
+ * Grams for `qty unit` of a labelled food, or null when the label cannot price that unit.
+ *
+ * Only figures READ OFF THE PACKAGE are used: mass conversions, the printed serving weight,
+ * the printed household measure beside it, and the container weight. A unit none of those
+ * cover (`2 tbsp` of a food labelled per `2 oz`) is refused rather than converted through a
+ * density nobody measured.
+ *
+ * `exact` is false only for a container priced from servings x serving size, because
+ * "about 5 servings" is itself rounded — see `containerWeightG`.
+ */
+export function labelGramsFor(
+  row: PackagedFoodRow,
+  qty: number,
+  unit: string,
+): { grams: number; exact: boolean; basis: string } | null {
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+  const raw = unit.trim().toLowerCase();
+  const name = `${row.brand} ${row.product}`;
+
+  if (raw in GRAMS_PER) {
+    return { grams: qty * GRAMS_PER[raw], exact: true, basis: `label: ${name}, by weight` };
+  }
+  if (SERVING_UNITS.has(raw)) {
+    return {
+      grams: qty * row.serving_size_g,
+      exact: true,
+      basis: `label: 1 serving = ${row.serving_size_g} g`,
+    };
+  }
+  if (CONTAINER_UNITS.has(raw)) {
+    const c = containerWeightG(row);
+    if (!c) return null;
+    return c.source === "net_weight"
+      ? { grams: qty * c.grams, exact: true, basis: `label: net weight ${c.grams} g` }
+      : {
+          grams: qty * c.grams,
+          exact: false,
+          basis:
+            `label: container INFERRED as ${row.servings_per_container} x ` +
+            `${row.serving_size_g} g servings — net weight unread`,
+        };
+  }
+  const printed = parseServingLabel(row.serving_label);
+  if (printed && printed.unit === canonicalUnit(raw)) {
+    return {
+      grams: (qty / printed.qty) * row.serving_size_g,
+      exact: true,
+      basis: `label: ${row.serving_label} = ${row.serving_size_g} g`,
+    };
+  }
+  return null;
+}
+
+/** Words that state a preparation state, by the `prep_state` they assert. */
+const STATE_WORDS: Record<Exclude<PrepState, "as_sold">, RegExp> = {
+  dry: /\b(dry|dried|uncooked)\b/i,
+  cooked: /\b(cooked|boiled|plated)\b/i,
+  drained: /\b(drained)\b/i,
+  prepared: /\b(prepared)\b/i,
+};
+
+/**
+ * Why this ingredient cannot be priced off this label, or null when it can.
+ *
+ * Label macros describe ONE state of the food. Pasta weighs ~2.5-3x more cooked than dry, so
+ * pricing a plated weight off a dry label overstates the meal by that factor — the same class of
+ * error as the resolver rewriting "2 cups dry brown rice" to cooked rice and reporting it "high".
+ *
+ * For the states where weight changes (`dry`, `cooked`, `drained`, `prepared`) the ingredient must
+ * SAY the matching state: silence is refused, because an unqualified "300 g pasta" is exactly the
+ * ambiguity that produced those errors. An `as_sold` label only refuses a line that names another
+ * post-purchase state — "ground beef, 93/7" is as-sold without needing to say so.
+ */
+export function labelStateConflict(row: PackagedFoodRow, ingredientText: string): string | null {
+  const stated = (Object.keys(STATE_WORDS) as (keyof typeof STATE_WORDS)[]).filter((s) =>
+    STATE_WORDS[s].test(ingredientText),
+  );
+
+  if (row.prep_state === "as_sold") {
+    // "dry"/"dried" is not a conflict here: dried apricots are sold dried. Only a state that
+    // changes the weight after purchase is.
+    const changed = stated.filter((s) => s !== "dry");
+    return changed.length ? `label is as sold, but the ingredient says ${changed.join("/")}` : null;
+  }
+  if (!stated.includes(row.prep_state)) {
+    return stated.length
+      ? `label is ${row.prep_state} weight, but the ingredient says ${stated.join("/")}`
+      : `label is ${row.prep_state} weight — say "${row.prep_state}" on the ingredient to confirm the amount is ${row.prep_state}`;
+  }
+  const other = stated.filter((s) => s !== row.prep_state);
+  return other.length
+    ? `label is ${row.prep_state} weight, but the ingredient also says ${other.join("/")}`
+    : null;
+}

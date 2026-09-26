@@ -9,6 +9,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Recipe lines can be priced off the label on the box (#722, read path).** A structured
+  ingredient can now pin `packaged_food_id`, and the resolver prices that line from the
+  photographed `packaged_foods` panel instead of USDA: no search, no model pick. For branded goods
+  USDA is at best a proxy. It has no Barilla tri-color record at all (the numeric match is
+  Reggano's), and its nearest Classico sausage sauce is 50% high on protein.
+
+  **The pin is explicit and wins.** It is chosen, never matched from the item text: fuzzy
+  matching is the wrong-food class `isPlausibleMatch` exists to stop. When a line carries both
+  pins, the label wins. A label that cannot price its line is **refused and reported in
+  `macro_unmatched` with the reason**; it is never quietly re-routed to USDA, which would price a
+  different food and say nothing.
+
+  **Only figures read off the package are used:** grams/oz/lb, the printed serving weight, the
+  label's own household measure (`1 tsp`, `1/2 cup`, `1 fillet`), and the container weight. A
+  container rebuilt from "about 5 servings" is flagged inexact, because it runs ~8% light.
+  **A dry or cooked label requires the line to say so**, so an unqualified "300 g pasta" is
+  refused instead of priced 2.5-3x high off a dry panel. The label's `fdc_proxy_id` never leaves
+  the catalog: label-priced items carry `fdcId: null` and `source: "label"` in `macro_items`, and
+  the recipe audit counts a label pin as pinned.
+
+  No existing recipe changes until a line is pinned. Not in this change: the capture form or
+  photo prefill, the catalog browser, a picker in the recipe editor, and inventory draws matched
+  by catalog id (the `match_method` CHECK needs a migration).
+
 - **The kitchen as three doors you open, not a list you read.** `/inventory` now defaults to a
   **Kitchen** view — Fridge, Freezer and Pantry as openable sections, each item a tile with its
   own illustration, dual-unit weight, expiry, and macros for the whole quantity on tap. The

@@ -179,6 +179,13 @@ export interface RecipeIngredient {
    * choice to a search means the same recipe can resolve differently month to month.
    */
   fdc_id?: number | null;
+  /**
+   * A `packaged_foods` row — the label on the box, as photographed. When set it WINS over
+   * `fdc_id`: the label is the specific product in the kitchen, USDA is at best a proxy for it.
+   * The line is then priced only off the label, and is refused (not re-routed to USDA) if the
+   * label cannot price it. Chosen explicitly, never matched from `item` text (#722).
+   */
+  packaged_food_id?: string | null;
 }
 
 /** One step of the method. Display only — nothing in the macro path reads these. */

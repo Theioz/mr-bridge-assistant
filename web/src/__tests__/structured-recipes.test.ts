@@ -166,6 +166,28 @@ test("a valid fdc_id survives", () => {
   assert.equal(rows![0].fdc_id, 171477);
 });
 
+test("a packaged_food_id must be a uuid", () => {
+  assert.throws(
+    () =>
+      parseIngredientRows([
+        { item: "pasta, dry", quantity: 1, unit: "box", packaged_food_id: "barilla" },
+      ]),
+    RecipeShapeError,
+  );
+});
+
+test("a valid packaged_food_id survives, normalized to lower case", () => {
+  const rows = parseIngredientRows([
+    {
+      item: "Barilla tri-color pasta, dry",
+      quantity: 336,
+      unit: "g",
+      packaged_food_id: "ABECF357-98DE-4EC1-9616-594D571E22D6",
+    },
+  ]);
+  assert.equal(rows![0].packaged_food_id, "abecf357-98de-4ec1-9616-594d571e22d6");
+});
+
 test("null input means 'not provided', not 'empty list'", () => {
   // The PATCH route distinguishes these: absent leaves the column alone, [] clears it.
   assert.equal(parseIngredientRows(null), null);

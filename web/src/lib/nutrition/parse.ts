@@ -16,6 +16,7 @@
  * even when they are unreliable at recalling facts — so we search, then let it
  * choose.
  */
+import type { PackagedFoodRow } from "./packaged-foods";
 
 export type ParsedFood = {
   /** Plain USDA-style food name, e.g. "egg, whole, raw". */
@@ -47,6 +48,14 @@ export type ParsedFood = {
    * so leaving that choice to a search means the same recipe can drift month to month.
    */
   fdcId?: number | null;
+  /**
+   * A pinned `packaged_foods` row id. Present only on structured ingredients, and it WINS over
+   * `fdcId`: the line is priced off the label and never searched or picked. `label` is that row,
+   * loaded by the caller (the estimator has no database handle); a pin whose row did not load
+   * leaves `label` null and the line is reported unmatched rather than quietly sent to USDA.
+   */
+  packagedFoodId?: string | null;
+  label?: PackagedFoodRow | null;
 };
 
 function ollamaUrl(): string {

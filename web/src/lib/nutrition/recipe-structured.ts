@@ -16,6 +16,8 @@ import type { RecipeIngredient, RecipeStep } from "../types";
 
 export class RecipeShapeError extends Error {}
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function fail(path: string, why: string): never {
   throw new RecipeShapeError(`${path}: ${why}`);
 }
@@ -61,6 +63,13 @@ export function parseIngredientRow(raw: unknown, path: string): RecipeIngredient
     fdcId = r.fdc_id;
   }
 
+  let packagedFoodId: string | null = null;
+  if (r.packaged_food_id != null) {
+    if (typeof r.packaged_food_id !== "string" || !UUID.test(r.packaged_food_id))
+      fail(`${path}.packaged_food_id`, "must be a packaged_foods id (uuid)");
+    packagedFoodId = r.packaged_food_id.toLowerCase();
+  }
+
   if (r.optional != null && typeof r.optional !== "boolean")
     fail(`${path}.optional`, "must be a boolean");
 
@@ -73,6 +82,7 @@ export function parseIngredientRow(raw: unknown, path: string): RecipeIngredient
     optional: r.optional === true ? true : undefined,
     note: optionalString(r.note, `${path}.note`),
     fdc_id: fdcId,
+    packaged_food_id: packagedFoodId,
   };
 }
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { perPortion, storedMacrosFor } from "./recipe-portions";
 import type { RecipeMacroTotals } from "./recipe-portions";
 import { estimateFromStructured, estimateFromText } from "./estimate";
+import { findPackagedFoodsByIds, type PackagedFoodRow } from "./packaged-foods";
 import type { ParsedFood } from "./parse";
 import type { RecipeIngredient } from "../types";
 
@@ -32,8 +33,15 @@ function asIngredientRows(raw: unknown): RecipeIngredient[] {
  * `prep` is folded into the query because it changes which USDA record is correct — "cooked" vs
  * "raw" chicken is a ~40% difference in calories per 100 g, and a pinned fdc_id is the only other
  * way to express that.
+ *
+ * A `packaged_food_id` carries its loaded label row along. A pin whose row is absent from `labels`
+ * still carries the id with a null label, so the estimator reports it as unpriced instead of
+ * mistaking it for an unpinned line and searching USDA.
  */
-function toParsedFoods(rows: RecipeIngredient[]): ParsedFood[] {
+function toParsedFoods(
+  rows: RecipeIngredient[],
+  labels: Map<string, PackagedFoodRow>,
+): ParsedFood[] {
   return rows
     .filter((r) => typeof r.quantity === "number" && Number.isFinite(r.quantity) && r.quantity > 0)
     .map((r) => ({
@@ -44,6 +52,8 @@ function toParsedFoods(rows: RecipeIngredient[]): ParsedFood[] {
       source: `${r.quantity} ${r.unit ?? ""} ${r.item}`.replace(/\s+/g, " ").trim(),
       structured: true,
       fdcId: r.fdc_id ?? null,
+      packagedFoodId: r.packaged_food_id ?? null,
+      label: r.packaged_food_id ? (labels.get(r.packaged_food_id) ?? null) : null,
     }));
 }
 
@@ -72,7 +82,10 @@ export { perPortion, storedMacrosFor } from "./recipe-portions";
 export interface ResolvedIngredient {
   input: string;
   matched: string;
-  fdcId: number;
+  /** Null when the line was priced off a product label rather than a USDA record. */
+  fdcId: number | null;
+  source: "usda" | "label";
+  packagedFoodId: string | null;
   grams: number;
   /** false when the text stated no amount and one was guessed. */
   quantified: boolean;
@@ -132,8 +145,14 @@ export async function resolveRecipeMacros(
   // already holds those pairs, so none of that machinery runs: no Ollama, no lexer, no rounding.
   // With fdc_id pinned, USDA search and the model's record selection are skipped too, which is
   // what makes a re-resolve next month return the same numbers as today.
+  const labels = await findPackagedFoodsByIds(
+    db,
+    userId,
+    structured.map((r) => r.packaged_food_id).filter((id): id is string => !!id),
+  );
+
   const estimate = structured.length
-    ? await estimateFromStructured(toParsedFoods(structured), recipe.name as string)
+    ? await estimateFromStructured(toParsedFoods(structured, labels), recipe.name as string)
     : // The recipe NAME is passed as the label, not as food to parse — naming the dish helps
       // the identifier disambiguate ("Greek Salmon" -> salmon, not a generic fish), while the
       // ingredient list remains the only thing quantities are read from.
@@ -152,7 +171,7 @@ export async function resolveRecipeMacros(
     notes: estimate.notes,
   };
 
-  // A recipe that resolves to no calories at all means USDA matched nothing usable.
+  // A recipe that resolves to no calories at all means nothing matched usably.
   // Storing that would put an authoritative-looking zero on a real plate of food.
   if (total.calories <= 0) {
     throw new Error(
@@ -164,6 +183,8 @@ export async function resolveRecipeMacros(
     input: i.input,
     matched: i.matched,
     fdcId: i.fdcId,
+    source: i.source,
+    packagedFoodId: i.packagedFoodId,
     grams: i.grams,
     quantified: i.quantified,
     basis: i.basis,

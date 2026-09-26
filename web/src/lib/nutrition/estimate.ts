@@ -9,6 +9,10 @@
  * WHICH food and HOW MANY units. Every gram and every calorie comes from USDA
  * measured data. This replaces an Anthropic call that recalled nutrition facts
  * from memory — it is more accurate, not less.
+ *
+ * The one exception is a line pinned to a `packaged_foods` row: the photographed label on the
+ * product actually in the kitchen. It skips USDA entirely — no search, no pick, no model call —
+ * because for a branded good USDA is at best a proxy (#722).
  */
 import {
   addMacros,
@@ -21,6 +25,11 @@ import {
   searchFoods,
   type Macros,
 } from "./fdc";
+import {
+  labelGramsFor,
+  labelStateConflict,
+  macrosForGrams as labelMacrosForGrams,
+} from "./packaged-foods";
 import { parseFoodPhoto, parseFoodText, pickBestFood, type ParsedFood } from "./parse";
 import { lookupPicks, normalizeQuery, type CachedPick } from "./pick-cache";
 import { lexQuantity } from "./quantity";
@@ -36,9 +45,13 @@ export type EstimatedItem = {
    * enough of a signal.
    */
   query: string;
-  /** The USDA food we actually used. */
+  /** The USDA food — or, for a label-priced line, the product — we actually used. */
   matched: string;
-  fdcId: number;
+  /** Null for a label-priced line. A catalog row's `fdc_proxy_id` is NEVER reported here. */
+  fdcId: number | null;
+  /** Where the macros came from. "label" means a `packaged_foods` row, not USDA. */
+  source: "usda" | "label";
+  packagedFoodId: string | null;
   qty: number;
   unit: string;
   grams: number;
@@ -59,7 +72,10 @@ export type MealEstimate = {
   items: EstimatedItem[];
   totals: Macros;
   confidence: "high" | "medium" | "low";
-  /** Foods that matched no plausible USDA record and are ABSENT from `totals`. */
+  /**
+   * Foods that matched no plausible USDA record, or whose pinned label could not price them, and
+   * are ABSENT from `totals`. A refused label line carries its reason: "… (label is dry weight …)".
+   */
   unmatched: string[];
   notes: string;
 };
@@ -91,6 +107,56 @@ type Prepared = {
   candidates: { fdcId: number; description: string }[];
 };
 
+function quantityOf(food: ParsedFood): { qty: number; unit: string; quantified: boolean } {
+  const lexed = !food.structured && food.source ? lexQuantity(food.source) : null;
+  return {
+    qty: lexed ? lexed.qty : food.qty,
+    unit: lexed ? lexed.unit : food.unit,
+    quantified: lexed !== null || food.structured === true,
+  };
+}
+
+/**
+ * Price a label-pinned line. Returns the item, or the reason it was refused.
+ *
+ * A refusal is NOT re-routed to USDA, even when the line also carries an `fdcId`. The pin is an
+ * explicit statement of which product this is; silently falling back would price a different
+ * food and report it as if nothing happened — the failure this whole pipeline is built against.
+ */
+function priceFromLabel(food: ParsedFood): EstimatedItem | { refused: string } {
+  const row = food.label;
+  if (!row) return { refused: "pinned packaged food not found in the catalog" };
+
+  const conflict = labelStateConflict(row, food.query);
+  if (conflict) return { refused: conflict };
+
+  const { qty, unit, quantified } = quantityOf(food);
+  const g = labelGramsFor(row, qty, unit);
+  if (!g) {
+    return {
+      refused:
+        `the label cannot price "${unit}" — use g/oz, servings, a container, ` +
+        `or the label's own measure${row.serving_label ? ` (${row.serving_label})` : ""}`,
+    };
+  }
+
+  return {
+    input: (food.source ?? `${qty} ${unit} ${food.query}`).trim(),
+    query: food.query,
+    matched: `${row.brand} ${row.product} (label, ${row.prep_state})`,
+    fdcId: null,
+    source: "label",
+    packagedFoodId: row.id,
+    qty,
+    unit,
+    grams: Math.round(g.grams),
+    exactPortion: g.exact,
+    quantified,
+    basis: quantified ? g.basis : `${g.basis} — NO QUANTITY STATED, amount is a guess`,
+    macros: labelMacrosForGrams(row, g.grams),
+  };
+}
+
 /**
  * Everything that can be decided about one food WITHOUT asking the model to choose.
  *
@@ -115,12 +181,7 @@ async function prepare(food: ParsedFood, cached: Map<string, CachedPick>): Promi
   // A STRUCTURED ingredient never went through the model at all: its qty/unit were read
   // straight out of `recipes.ingredients_json`. There is no prose to lex and nothing to
   // second-guess, so it is quantified by construction.
-  const lexed = !food.structured && food.source ? lexQuantity(food.source) : null;
-  const qty = lexed ? lexed.qty : food.qty;
-  const unit = lexed ? lexed.unit : food.unit;
-  const quantified = lexed !== null || food.structured === true;
-
-  const base = { food, qty, unit, quantified };
+  const base = { food, ...quantityOf(food) };
 
   // Pinned record: skip the search AND the model's pick.
   if (food.fdcId != null) {
@@ -157,6 +218,8 @@ function buildItem(
     query: p.food.query,
     matched: detail.description,
     fdcId: detail.fdcId,
+    source: "usda",
+    packagedFoodId: null,
     qty: p.qty,
     unit: p.unit,
     grams: Math.round(opts.grams),
@@ -250,13 +313,20 @@ async function finalize(
  * a single slot (jl-homelab #680), where these calls piled up behind the vision call and three
  * of them hit the client timeout.
  */
-async function estimateAll(
-  foods: ParsedFood[],
-  context?: string,
-): Promise<(EstimatedItem | null)[]> {
-  const cached = await lookupPicks(foods.filter((f) => f.fdcId == null).map((f) => f.query));
+type Settled = { item: EstimatedItem | null; refused?: string };
 
-  const prepared = await Promise.all(foods.map((f) => prepare(f, cached).catch(() => null)));
+async function estimateAll(foods: ParsedFood[], context?: string): Promise<Settled[]> {
+  // Label-pinned lines are settled here, synchronously, and never reach search or selection.
+  const labelled = foods.map((f) => (f.packagedFoodId ? priceFromLabel(f) : null));
+  const viaUsda = (i: number) => labelled[i] === null;
+
+  const cached = await lookupPicks(
+    foods.filter((f, i) => viaUsda(i) && f.fdcId == null).map((f) => f.query),
+  );
+
+  const prepared = await Promise.all(
+    foods.map((f, i) => (viaUsda(i) ? prepare(f, cached).catch(() => null) : null)),
+  );
 
   const needPick = prepared
     .map((p, i) => ({ p, i }))
@@ -270,13 +340,28 @@ async function estimateAll(
   needPick.forEach((x, k) => chosen.set(x.i, picks[k] ?? null));
 
   return Promise.all(
-    prepared.map((p, i) => {
-      if (!p) return null;
+    prepared.map(async (p, i): Promise<Settled> => {
+      const l = labelled[i];
+      if (l) return "refused" in l ? { item: null, refused: l.refused } : { item: l };
+      if (!p) return { item: null };
       // A single plausible candidate needs no model call, and choosing it IS deliberate.
       const idx = chosen.has(i) ? (chosen.get(i) ?? null) : p.candidates.length === 1 ? 0 : null;
-      return finalize(p, idx, context).catch(() => null);
+      return { item: await finalize(p, idx, context).catch(() => null) };
     }),
   );
+}
+
+/** Split settled lines into the items that priced and the names (with reasons) that did not. */
+function split(foods: ParsedFood[], settled: Settled[]) {
+  const items = settled.map((s) => s.item).filter((i): i is EstimatedItem => i !== null);
+  // An ingredient that matched nothing used to vanish silently. Carry it through so the
+  // estimate can say what is missing from its own total.
+  const unmatched = foods.flatMap((f, i) => {
+    if (settled[i].item) return [];
+    const name = f.source?.trim() || f.query;
+    return [settled[i].refused ? `${name} (${settled[i].refused})` : name];
+  });
+  return { items, unmatched };
 }
 
 function assemble(items: EstimatedItem[], label: string, unmatched: string[] = []): MealEstimate {
@@ -315,14 +400,20 @@ function assemble(items: EstimatedItem[], label: string, unmatched: string[] = [
     // Name them. Some (salt, pepper) contribute nothing and their absence is harmless —
     // correct, even. Others are a real hole in the total. Only the user can tell which.
     parts.push(
-      `No USDA match for: ${unmatched.join(", ")} — these contribute NOTHING to the total. ` +
+      `Not priced: ${unmatched.join(", ")} — these contribute NOTHING to the total. ` +
         `Harmless for salt/pepper; a real gap for anything else.`,
     );
   }
   if (assumedPortion) {
     parts.push(`${assumedPortion} portion(s) used an assumed serving weight.`);
   }
-  if (!parts.length) parts.push("Every amount was taken from your text; USDA supplied the grams.");
+  if (!parts.length) {
+    parts.push(
+      items.some((i) => i.source === "label")
+        ? "Every amount was taken from your text; USDA and product labels supplied the grams."
+        : "Every amount was taken from your text; USDA supplied the grams.",
+    );
+  }
 
   return {
     food_name: label,
@@ -341,13 +432,7 @@ export async function estimateFromText(
   mode: "meal" | "recipe" = "meal",
 ): Promise<MealEstimate> {
   const foods = await parseFoodText(text, mode);
-  const settled = await estimateAll(foods, text);
-  const items = settled.filter((i): i is EstimatedItem => i !== null);
-  // An ingredient that matched nothing used to vanish silently. Carry it through so the
-  // estimate can say what is missing from its own total.
-  const unmatched = foods
-    .filter((_, i) => settled[i] === null)
-    .map((f) => f.source?.trim() || f.query);
+  const { items, unmatched } = split(foods, await estimateAll(foods, text));
   return assemble(items, label?.trim() || text.trim(), unmatched);
 }
 
@@ -371,11 +456,7 @@ export async function estimateFromStructured(
 ): Promise<MealEstimate> {
   // No `context` argument: it exists to help the model disambiguate a USDA pick, and a structured
   // row either pins its record or carries a prep-qualified name that already does that job.
-  const settled = await estimateAll(foods);
-  const items = settled.filter((i): i is EstimatedItem => i !== null);
-  const unmatched = foods
-    .filter((_, i) => settled[i] === null)
-    .map((f) => f.source?.trim() || f.query);
+  const { items, unmatched } = split(foods, await estimateAll(foods));
   return assemble(items, label.trim(), unmatched);
 }
 
@@ -397,8 +478,7 @@ export async function estimateFromPhoto(
 
   // The description also disambiguates USDA selection — it's what stops "a bowl of
   // oatmeal" resolving to "Bread, oatmeal".
-  const settled = await estimateAll(foods, description);
-  const items = settled.filter((i): i is EstimatedItem => i !== null);
+  const { items } = split(foods, await estimateAll(foods, description));
 
   const name =
     opts?.label?.trim() ||
