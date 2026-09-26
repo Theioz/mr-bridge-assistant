@@ -645,3 +645,64 @@ export async function deletePackagedFood(
   const { error } = await db.from("packaged_foods").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(`packaged_foods delete failed: ${error.message}`);
 }
+
+// ── Logging a meal off a label (#722) ─────────────────────────────────────────
+
+/** A meal_log row's macro columns, rounded the way the table stores them. */
+export interface LabelServingLog {
+  grams: number;
+  basis: string;
+  exact: boolean;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number | null;
+}
+
+/**
+ * Price an amount of a catalog product for the meal log, or say why not.
+ *
+ * A meal log carries no ingredient text for `labelStateConflict` to read, so a label that is not
+ * `as_sold` needs the eater to CONFIRM the amount is in the label's state: "170 g" of a dry pasta
+ * label means 170 g out of the box, which is ~2.5-3x the calories of 170 g on the plate. Without
+ * the confirmation a plated weight is refused rather than logged ~3x high.
+ */
+export function priceLabelServing(
+  row: PackagedFoodRow,
+  qty: number,
+  unit: string,
+  confirmedState: string | null,
+): LabelServingLog | { refused: string } {
+  if (row.prep_state !== "as_sold" && confirmedState !== row.prep_state) {
+    return {
+      refused: `this label is ${row.prep_state} weight — confirm the amount is ${row.prep_state}, not plated`,
+    };
+  }
+  const g = labelGramsFor(row, qty, unit);
+  if (!g) {
+    return {
+      refused:
+        `the label cannot price "${unit}" — use g/oz, servings, a container` +
+        (row.serving_label ? `, or ${row.serving_label}` : ""),
+    };
+  }
+  const m = macrosForGrams(row, g.grams);
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  return {
+    grams: Math.round(g.grams * 10) / 10,
+    basis: g.basis,
+    exact: g.exact,
+    // meal_log.calories is an integer column; the rest are numeric(6,1).
+    calories: Math.round(m.calories),
+    protein_g: r1(m.protein_g),
+    carbs_g: r1(m.carbs_g),
+    fat_g: r1(m.fat_g),
+    // Null, not 0, when the label did not print it: "not printed" and "none" are different facts.
+    fiber_g: row.fiber_per_100g == null ? null : r1(m.fiber_g),
+    sugar_g: row.sugar_per_100g == null ? null : r1(m.sugar_g),
+    sodium_mg: row.sodium_mg_per_100g == null ? null : Math.round(m.sodium_mg),
+  };
+}

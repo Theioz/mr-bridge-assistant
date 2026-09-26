@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Log a meal from a catalog label (#722).** Meals → Today → Quick log gains "From a label":
+  pick a product, enter an amount, and it logs priced off the photographed panel. New route
+  `POST /api/meals/log-label` takes the product, amount and unit, **never macros**. The server
+  re-prices from the stored label with `priceLabelServing` (the same function the preview uses),
+  writes `source = 'label'`, and keeps the working in `metadata` (product id, grams, basis, prep
+  state, label date) so the row can be re-derived. Units offered are only what the label can
+  price: g, oz, servings, the label's own measure (`3/4 cup`), and a whole container when its
+  weight is known. **A label that is not "as sold" must be confirmed**: meal_log has no ingredient
+  text to check, so "170 g" of a dry-pasta label is refused until the eater confirms it is 170 g
+  dry, not 170 g on the plate (a ~3x difference). Nutrients the label did not print are logged as
+  null, not 0. Deliberately **not** an MCP tool: the model still never records that food was eaten.
 - **Pin a recipe line to a label from the recipe editor (#722).** Each ingredient row gets a
   second line with a picker, "Priced by USDA (no label)" or any catalog product, which sets
   `packaged_food_id`. The resolver's two refusals are **warned as you type** using the same
