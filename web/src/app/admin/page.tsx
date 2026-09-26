@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { AdminTenant, TenantQuotaRow } from "@/lib/admin-types";
+import type { AdminTenant } from "@/lib/admin-types";
 import { USER_TZ } from "@/lib/timezone";
 
 async function createTenant(formData: FormData) {
@@ -79,37 +79,24 @@ export default async function AdminPage({
   const deleteError = params.deleteError ?? null;
   const svc = createServiceClient();
 
-  const [{ data: listResult }, { data: quotas }, { data: integrations }] = await Promise.all([
+  const [{ data: listResult }, { data: integrations }] = await Promise.all([
     svc.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    svc.from("tenant_quotas").select("*"),
     svc.from("user_integrations").select("user_id"),
   ]);
 
   const users = listResult?.users ?? [];
-  const quotaMap = new Map<string, TenantQuotaRow>(
-    (quotas ?? []).map((q) => [q.user_id, q as TenantQuotaRow]),
-  );
   const integrationCounts = new Map<string, number>();
   for (const row of integrations ?? []) {
     integrationCounts.set(row.user_id, (integrationCounts.get(row.user_id) ?? 0) + 1);
   }
 
-  const tenants: AdminTenant[] = users.map((u) => {
-    const q = quotaMap.get(u.id);
-    const tokenCap = q?.daily_chat_tokens_override ?? q?.daily_chat_tokens ?? 500000;
-    const toolCap = q?.daily_tool_calls_override ?? q?.daily_tool_calls ?? 500;
-    return {
-      id: u.id,
-      email: u.email ?? "(no email)",
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at ?? null,
-      tokens_used_today: q?.tokens_used_today ?? 0,
-      token_cap: tokenCap,
-      tool_calls_used_today: q?.tool_calls_used_today ?? 0,
-      tool_calls_cap: toolCap,
-      integration_count: integrationCounts.get(u.id) ?? 0,
-    };
-  });
+  const tenants: AdminTenant[] = users.map((u) => ({
+    id: u.id,
+    email: u.email ?? "(no email)",
+    created_at: u.created_at,
+    last_sign_in_at: u.last_sign_in_at ?? null,
+    integration_count: integrationCounts.get(u.id) ?? 0,
+  }));
 
   tenants.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -234,15 +221,7 @@ export default async function AdminPage({
           >
             <thead>
               <tr style={{ borderBottom: "1px solid var(--rule)" }}>
-                {[
-                  "Email",
-                  "Created",
-                  "Last sign-in",
-                  "Tokens today",
-                  "Tool calls today",
-                  "Integrations",
-                  "",
-                ].map((h) => (
+                {["Email", "Created", "Last sign-in", "Integrations", ""].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -290,28 +269,6 @@ export default async function AdminPage({
                           timeZone: USER_TZ,
                         })
                       : "—"}
-                  </td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap" }}>
-                    <span
-                      style={{
-                        color:
-                          t.tokens_used_today / t.token_cap > 0.8
-                            ? "var(--color-amber)"
-                            : "var(--color-text)",
-                        fontSize: "var(--t-micro)",
-                      }}
-                    >
-                      {t.tokens_used_today.toLocaleString()} / {t.token_cap.toLocaleString()}
-                    </span>
-                  </td>
-                  <td
-                    style={{
-                      padding: "var(--space-3) var(--space-4)",
-                      whiteSpace: "nowrap",
-                      fontSize: "var(--t-micro)",
-                    }}
-                  >
-                    {t.tool_calls_used_today} / {t.tool_calls_cap}
                   </td>
                   <td
                     style={{

@@ -382,7 +382,7 @@ mr-bridge-assistant/
 │   │   │   ├── admin/                     # Admin-only pages (404 for non-admins; set is_admin: true in Supabase user_metadata)
 │   │   │   │   ├── layout.tsx             # Admin gate — notFound() if !is_admin
 │   │   │   │   ├── page.tsx               # Tenant list + create/delete user
-│   │   │   │   └── tenants/[userId]/page.tsx  # Tenant drill-down: profile, integrations, chat, quota overrides, feature flags, audit log
+│   │   │   │   └── tenants/[userId]/page.tsx  # Tenant drill-down: profile, integrations, chat, feature flags, audit log
 │   │   │   ├── (protected)/               # Auth-gated pages
 │   │   │   │   ├── layout.tsx             # Protected layout with sidebar
 │   │   │   │   ├── page.tsx               # Daily briefing dashboard
@@ -471,7 +471,7 @@ mr-bridge-assistant/
 │   │   │   ├── settings/
 │   │   │   │   ├── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
 │   │   │   │   ├── data-settings.tsx      # Data export UI — format + range picker, POST /api/export, download zip
-│   │   │   │   └── usage-settings.tsx     # Usage tab — daily quota progress bars + per-category stored-data sizes
+│   │   │   │   └── usage-settings.tsx     # Usage tab — per-category stored-data sizes
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
