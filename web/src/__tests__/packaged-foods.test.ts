@@ -6,6 +6,9 @@ import {
   macrosForGrams,
   macrosForServings,
   containerWeightG,
+  labelGramsFor,
+  labelStateConflict,
+  parseServingLabel,
 } from "../lib/nutrition/packaged-foods.ts";
 import type { PackagedFoodRow, LabelPanel } from "../lib/nutrition/packaged-foods.ts";
 
@@ -156,5 +159,88 @@ describe("containerWeightG — net weight beats reconstructing it from servings"
 
   it("returns null when the container size is genuinely unknown", () => {
     assert.equal(containerWeightG(row(BARILLA_TRICOLOR)), null);
+  });
+});
+
+// ── #722: pricing a recipe line off a label ─────────────────────────────────
+
+const GOCHUJANG: LabelPanel = { servingSizeG: 6, calories: 10, proteinG: 0, carbsG: 2, fatG: 0 };
+
+describe("parseServingLabel — the household measure printed beside the weight", () => {
+  it("reads whole, fractional and trailing-word measures", () => {
+    assert.deepEqual(parseServingLabel("1 tsp"), { qty: 1, unit: "tsp" });
+    assert.deepEqual(parseServingLabel("1/2 cup"), { qty: 0.5, unit: "cup" });
+    assert.deepEqual(parseServingLabel("3/4 cup frozen"), { qty: 0.75, unit: "cup" });
+    assert.deepEqual(parseServingLabel("1 fillet"), { qty: 1, unit: "fillet" });
+  });
+
+  it("ignores a measure that is itself a weight, and labels with no amount", () => {
+    assert.equal(parseServingLabel("2 oz"), null);
+    assert.equal(parseServingLabel("about a cup"), null);
+    assert.equal(parseServingLabel(null), null);
+  });
+});
+
+describe("labelGramsFor — only figures read off the package", () => {
+  const barilla = row(BARILLA_TRICOLOR, {
+    prep_state: "dry",
+    serving_label: "2 oz",
+    servings_per_container: 6,
+  });
+
+  it("converts mass units exactly", () => {
+    assert.equal(labelGramsFor(barilla, 336, "g")?.grams, 336);
+    assert.ok(Math.abs(labelGramsFor(barilla, 12, "oz")!.grams - 340.19) < 0.01);
+  });
+
+  it("prices servings off the printed serving weight", () => {
+    assert.equal(labelGramsFor(barilla, 2, "servings")?.grams, 112);
+  });
+
+  it("prices a spoon only when the label prints that spoon", () => {
+    const goch = row(GOCHUJANG, { serving_label: "1 tsp" });
+    assert.equal(labelGramsFor(goch, 3, "teaspoons")?.grams, 18);
+    assert.equal(labelGramsFor(goch, 1, "tbsp"), null, "no tbsp on the label -> refused");
+    assert.equal(labelGramsFor(barilla, 1, "cup"), null);
+  });
+
+  it("marks a container inferred from servings as NOT exact, and a net weight as exact", () => {
+    const inferred = labelGramsFor(barilla, 1, "box")!;
+    assert.equal(inferred.grams, 336);
+    assert.equal(inferred.exact, false);
+    assert.match(inferred.basis, /INFERRED/);
+
+    const weighed = labelGramsFor(row(BARILLA_TRICOLOR, { net_weight_g: 340 }), 0.5, "box")!;
+    assert.equal(weighed.grams, 170);
+    assert.equal(weighed.exact, true);
+  });
+
+  it("refuses a container with no size, and nonsense quantities", () => {
+    assert.equal(labelGramsFor(row(BARILLA_TRICOLOR), 1, "jar"), null);
+    assert.equal(labelGramsFor(barilla, 0, "g"), null);
+    assert.equal(labelGramsFor(barilla, Number.NaN, "g"), null);
+  });
+});
+
+describe("labelStateConflict — a dry label never prices a plated weight", () => {
+  const dry = row(BARILLA_TRICOLOR, { prep_state: "dry" });
+  const asSold = row(CLASSICO_SAUSAGE);
+
+  it("accepts a line that states the label's own state", () => {
+    assert.equal(labelStateConflict(dry, "Barilla tri-color pasta, DRY (1 box)"), null);
+    assert.equal(labelStateConflict(dry, "rotini, uncooked"), null);
+  });
+
+  it("refuses a dry label when the line says cooked, or says nothing", () => {
+    assert.match(labelStateConflict(dry, "pasta, cooked")!, /says cooked/);
+    assert.match(labelStateConflict(dry, "tri-color pasta")!, /say "dry"/);
+    assert.match(labelStateConflict(dry, "pasta, dry then boiled")!, /also says cooked/);
+  });
+
+  it("lets an as-sold label through unqualified, but not when the line names a later state", () => {
+    assert.equal(labelStateConflict(asSold, "Classico sausage sauce (half jar)"), null);
+    assert.equal(labelStateConflict(asSold, "dried apricots"), null);
+    assert.match(labelStateConflict(asSold, "ground beef, cooked")!, /as sold/);
+    assert.match(labelStateConflict(asSold, "chickpeas, drained")!, /drained/);
   });
 });

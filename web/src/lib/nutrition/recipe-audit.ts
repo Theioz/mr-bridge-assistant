@@ -134,7 +134,8 @@ export function audit(rows: Row[]): Finding[] {
       });
     }
 
-    const unpinned = quantified.filter((i) => !i.fdc_id);
+    // A label pin is a pin: it resolves deterministically, off the product's own panel.
+    const unpinned = quantified.filter((i) => !i.fdc_id && !i.packaged_food_id);
     if (unpinned.length) {
       out.push({
         kind: "unpinned-fdc-id",
