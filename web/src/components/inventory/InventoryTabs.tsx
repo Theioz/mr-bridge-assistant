@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { FridgeView, type FridgeItem } from "./FridgeView";
 import { InventoryPanel, type InventoryItem } from "@/components/meals/InventoryPanel";
+import { CatalogPanel } from "./CatalogPanel";
+import type { PackagedFoodRow } from "@/lib/nutrition/packaged-foods";
 
 /**
  * Two ways to look at the same kitchen.
@@ -17,9 +19,19 @@ import { InventoryPanel, type InventoryItem } from "@/components/meals/Inventory
  * of the fridge. The toggle is not persisted — a per-viewer preference in localStorage can come
  * back empty in a private window and would need a fallback render anyway, and the default is
  * cheap to re-pick.
+ *
+ * "Catalog" is not a view of the kitchen but of the LABELS: the packaged products it buys, each
+ * with its photographed Nutrition Facts panel (#722). It lives here because that is where the
+ * boxes are, and it owns its own edits since no other view touches `packaged_foods`.
  */
-export function InventoryTabs({ items }: { items: (InventoryItem & FridgeItem)[] }) {
-  const [tab, setTab] = useState<"kitchen" | "list">("kitchen");
+export function InventoryTabs({
+  items,
+  foods,
+}: {
+  items: (InventoryItem & FridgeItem)[];
+  foods: PackagedFoodRow[] | { error: string };
+}) {
+  const [tab, setTab] = useState<"kitchen" | "list" | "catalog">("kitchen");
 
   return (
     <div>
@@ -32,6 +44,7 @@ export function InventoryTabs({ items }: { items: (InventoryItem & FridgeItem)[]
           [
             ["kitchen", "Kitchen"],
             ["list", "List"],
+            ["catalog", "Catalog"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -54,7 +67,16 @@ export function InventoryTabs({ items }: { items: (InventoryItem & FridgeItem)[]
         ))}
       </div>
 
-      {tab === "kitchen" ? <FridgeView items={items} /> : <InventoryPanel items={items} />}
+      {tab === "kitchen" && <FridgeView items={items} />}
+      {tab === "list" && <InventoryPanel items={items} />}
+      {tab === "catalog" &&
+        ("error" in foods ? (
+          <p role="alert" style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}>
+            The catalog failed to load: {foods.error}
+          </p>
+        ) : (
+          <CatalogPanel foods={foods} />
+        ))}
     </div>
   );
 }

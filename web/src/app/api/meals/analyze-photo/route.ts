@@ -161,7 +161,10 @@ export async function POST(req: Request) {
   try {
     if (mode === "label") {
       const label = await readNutritionLabel(base64);
-      return Response.json(label satisfies NutritionLabel);
+      // `mode` is what the scanner branches on. #608 dropped it from this response, so every
+      // label scan fell into the FOOD branch: named "Unknown food", and `readable: false` was
+      // never checked, so an unreadable label logged as a card instead of being refused.
+      return Response.json({ ...(label satisfies NutritionLabel), mode: "label" as const });
     }
 
     const est = await estimateFromPhoto(base64, { description: description || undefined });

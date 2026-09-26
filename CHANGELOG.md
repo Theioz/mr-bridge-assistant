@@ -9,6 +9,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **A Catalog tab for the label catalog (#722, capture path).** `/inventory` gains a third tab
+  listing every `packaged_foods` product, with the per-serving panel it was entered from and two
+  flags: a label photographed more than 365 days ago (formulations drift), and a missing net
+  weight, which says whether a whole container is merely inferred from servings or cannot be
+  priced at all. Products are added and edited **as the panel is printed, per serving**. The
+  server divides to per 100 g once, through `labelToPer100g`, so the form does no arithmetic.
+  New routes: `GET/POST /api/packaged-foods` and `PATCH/DELETE /api/packaged-foods/[id]`.
+
+  **A photo prefills the form; it does not fill the catalog.** "Read from a photo of the label"
+  reuses the scanner's label reader. Every transcribed number lands in an editable field with a
+  note to check it. The serving's gram weight is left **blank** when the printed line has none
+  (`1/2 cup`) rather than converted through a density nobody measured, and the prep state must
+  be set by hand.
+
+  **Guards:** input is rejected rather than coerced (bad numbers, unknown prep state, malformed
+  barcode or date). Duplicate brand+product or barcode comes back as a readable 400 instead of a
+  raw unique violation. **Removing a product is refused (409) while any recipe line pins it**,
+  naming those recipes, because a pin lives inside `ingredients_json` where no foreign key
+  reaches, and deleting under it would make every pinned line unpriceable. A catalog that fails
+  to load is shown as an error in its tab, not thrown (which would take down the kitchen view)
+  and not swallowed into an empty list (which would read as "no products").
+
 - **Recipe lines can be priced off the label on the box (#722, read path).** A structured
   ingredient can now pin `packaged_food_id`, and the resolver prices that line from the
   photographed `packaged_foods` panel instead of USDA: no search, no model pick. For branded goods
@@ -62,6 +84,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   know" and "it has none" are different facts and a dash conflates them.
 
 ### Fixed
+
+- **The meal scanner's label mode has been falling into the food path since #608.** The client
+  branches on `data.mode === "label"`, and the self-host rewrite dropped `mode` from the label
+  response. Every label scan therefore went down the food branch, named "Unknown food", and
+  **`readable: false` was never checked**, so an unreadable label became a loggable card instead
+  of being refused. The route returns `mode: "label"` again.
 
 - **Re-resolving one recipe no longer means fencing the whole library.**
   `POST /api/internal/resolve-recipe-macros` takes `?id=<uuid>` (repeatable), which resolves

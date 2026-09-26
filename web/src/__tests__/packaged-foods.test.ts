@@ -9,6 +9,12 @@ import {
   labelGramsFor,
   labelStateConflict,
   parseServingLabel,
+  parsePackagedFoodInput,
+  toPackagedFoodWrite,
+  panelFromRow,
+  splitServingText,
+  catalogFlags,
+  PackagedFoodInputError,
 } from "../lib/nutrition/packaged-foods.ts";
 import type { PackagedFoodRow, LabelPanel } from "../lib/nutrition/packaged-foods.ts";
 
@@ -242,5 +248,103 @@ describe("labelStateConflict — a dry label never prices a plated weight", () =
     assert.equal(labelStateConflict(asSold, "dried apricots"), null);
     assert.match(labelStateConflict(asSold, "ground beef, cooked")!, /as sold/);
     assert.match(labelStateConflict(asSold, "chickpeas, drained")!, /drained/);
+  });
+});
+
+// ── #722: catalog capture ────────────────────────────────────────────────────
+
+const barillaBody = {
+  brand: " Barilla ",
+  product: "Tri-Color Pasta",
+  prep_state: "dry",
+  serving_label: "2 oz",
+  servings_per_container: 6,
+  net_weight_g: "",
+  label_photographed_on: "2026-09-03",
+  panel: {
+    servingSizeG: 56,
+    calories: 200,
+    proteinG: 7,
+    carbsG: 42,
+    fatG: 1,
+    fiberG: 3,
+    sugarG: 2,
+    sodiumMg: 10,
+  },
+};
+
+describe("parsePackagedFoodInput — reject, don't coerce", () => {
+  it("accepts a real panel, trims text, and treats blanks as null", () => {
+    const i = parsePackagedFoodInput(barillaBody);
+    assert.equal(i.brand, "Barilla");
+    assert.equal(i.net_weight_g, null);
+    assert.equal(i.prep_state, "dry");
+    assert.equal(i.panel.calories, 200);
+  });
+
+  it("divides the panel exactly once, matching labelToPer100g", () => {
+    const w = toPackagedFoodWrite(parsePackagedFoodInput(barillaBody));
+    assert.equal(w.calories_per_100g, 357.14);
+    assert.equal(w.protein_per_100g, 12.5);
+    assert.equal("panel" in w, false);
+  });
+
+  it("refuses a missing serving weight, a missing macro, a bad state and negative numbers", () => {
+    const bad = (patch: Record<string, unknown>) =>
+      assert.throws(
+        () => parsePackagedFoodInput({ ...barillaBody, ...patch }),
+        PackagedFoodInputError,
+      );
+    bad({ panel: { ...barillaBody.panel, servingSizeG: 0 } });
+    bad({ panel: { ...barillaBody.panel, proteinG: null } });
+    bad({ panel: { ...barillaBody.panel, fatG: -1 } });
+    bad({ panel: { ...barillaBody.panel, calories: "two hundred" } });
+    bad({ prep_state: "boiled" });
+    bad({ brand: "  " });
+    bad({ upc: "12ab" });
+    bad({ label_photographed_on: "9/3/2026" });
+  });
+});
+
+describe("panelFromRow — the edit form reads like the label", () => {
+  it("reconstructs the printed Barilla panel from the stored per-100 g row", () => {
+    const w = toPackagedFoodWrite(parsePackagedFoodInput(barillaBody));
+    const p = panelFromRow({ ...row(BARILLA_TRICOLOR), ...w });
+    assert.deepEqual(
+      [p.calories, p.proteinG, p.carbsG, p.fatG, p.fiberG, p.sugarG, p.sodiumMg],
+      [200, 7, 42, 1, 3, 2, 10],
+    );
+  });
+});
+
+describe("splitServingText — grams only when the label prints them", () => {
+  it("splits the household measure from the gram figure", () => {
+    assert.deepEqual(splitServingText("2 oz (56g)"), { label: "2 oz", grams: 56 });
+    assert.deepEqual(splitServingText("1 tsp (6 g)"), { label: "1 tsp", grams: 6 });
+    assert.deepEqual(splitServingText("56g"), { label: null, grams: 56 });
+  });
+
+  it("returns null grams rather than converting a volume", () => {
+    assert.deepEqual(splitServingText("1/2 cup"), { label: "1/2 cup", grams: null });
+    assert.deepEqual(splitServingText(null), { label: null, grams: null });
+  });
+});
+
+describe("catalogFlags — what a row is missing or due for", () => {
+  it("flags an old label and a missing net weight, and says which container case applies", () => {
+    const r = row(BARILLA_TRICOLOR, {
+      label_photographed_on: "2025-01-01",
+      servings_per_container: 6,
+    });
+    const f = catalogFlags(r, "2026-09-26");
+    assert.equal(f.length, 2);
+    assert.match(f[0], /633 days ago/);
+    assert.match(f[1], /inferred from servings/);
+    assert.match(catalogFlags(row(BARILLA_TRICOLOR), "2026-09-26")[0], /cannot be priced/);
+  });
+
+  it("is quiet for a fresh label with a net weight", () => {
+    const r = row(BARILLA_TRICOLOR, { net_weight_g: 340, label_photographed_on: "2026-09-03" });
+    assert.deepEqual(catalogFlags(r, "2026-09-26"), []);
   });
 });
