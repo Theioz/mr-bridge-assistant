@@ -14,6 +14,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 from fetch_weather import fetch_weather, format_weather_line
 
@@ -29,9 +30,9 @@ def fmt_hrs(h) -> str:
 def main():
     client = get_client()
     uid = get_owner_user_id()
-    today = str(date.today())
-    yesterday = str(date.today() - timedelta(days=1))
-    seven_days_ago = str(date.today() - timedelta(days=7))
+    today = str(today_local())
+    yesterday = str(today_local() - timedelta(days=1))
+    seven_days_ago = str(today_local() - timedelta(days=7))
 
     # ── Query functions (closures) ─────────────────────────────────────────────
 
@@ -320,7 +321,7 @@ def main():
         name = habit_names.get(row["habit_id"], row["habit_id"])
         habit_by_name[name][row["date"]] = row["completed"]
 
-    dates_7 = [(date.today() - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
+    dates_7 = [(today_local() - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
     print("\n## HABITS — LAST 7 DAYS")
     print(f"{'Habit':<20} " + "  ".join(d[5:] for d in dates_7))
     for row in registry:
@@ -471,7 +472,7 @@ def main():
         for c in cooks:
             n = c.get("portions") or 1
             try:
-                age = f" ({(date.today() - date.fromisoformat(c['cooked_on'])).days}d ago)"
+                age = f" ({(today_local() - date.fromisoformat(c['cooked_on'])).days}d ago)"
             except (TypeError, ValueError):
                 age = ""
             print(

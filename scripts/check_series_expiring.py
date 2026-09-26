@@ -31,6 +31,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from _notifications import log_notification  # noqa: E402
 from _recurrence import describe_cadence  # noqa: E402
+from _dates import today_local  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
@@ -110,7 +111,7 @@ def main() -> None:
         print(f"[check_series_expiring] Supabase connection error: {e}", file=sys.stderr)
         return
 
-    today = date.today()
+    today = today_local()
 
     try:
         rows = (

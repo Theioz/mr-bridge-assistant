@@ -36,11 +36,12 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
@@ -115,7 +116,7 @@ def main() -> None:
         print(f"[check_task_due_alerts] Supabase connection error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    today_str = date.today().isoformat()
+    today_str = today_local().isoformat()
 
     # Query active tasks with a due date on or before today
     try:

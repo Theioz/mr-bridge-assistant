@@ -13,11 +13,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 from _notifications import log_notification
 
@@ -53,7 +53,7 @@ def main() -> None:
         print(f"[check_daily_alerts] Supabase connection error: {e}", file=sys.stderr)
         return
 
-    today_str = date.today().isoformat()
+    today_str = today_local().isoformat()
 
     # Once-per-day guard
     last_notified = get_profile_value(client, user_id, "task_alerts_last_notified")

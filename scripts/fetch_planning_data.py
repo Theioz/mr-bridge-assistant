@@ -15,6 +15,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 
 
@@ -36,7 +37,7 @@ def get_coming_monday(today: date) -> date:
 def main():
     client = get_client()
     uid = get_owner_user_id()
-    today = date.today()
+    today = today_local()
 
     next_monday = get_coming_monday(today)
     prior_monday = next_monday - timedelta(days=7)

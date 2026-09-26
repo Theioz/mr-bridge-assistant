@@ -13,11 +13,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 from _notifications import log_notification
 
@@ -55,7 +56,7 @@ def main() -> None:
         return
 
     # Once-per-day guard
-    today_str = date.today().isoformat()
+    today_str = today_local().isoformat()
     last_notified = get_profile_value(client, owner_user_id, "hrv_alert_last_notified")
     if last_notified == today_str:
         return
@@ -68,7 +69,7 @@ def main() -> None:
         threshold = DEFAULT_THRESHOLD
 
     # Fetch last 8 days of HRV (desc), filter out nulls
-    cutoff = (date.today() - timedelta(days=7)).isoformat()
+    cutoff = (today_local() - timedelta(days=7)).isoformat()
     rows = (
         client.table("recovery_metrics")
         .select("date, avg_hrv")
