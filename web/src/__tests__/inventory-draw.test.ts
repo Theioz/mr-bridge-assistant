@@ -153,6 +153,8 @@ interface FakeStock {
   expires_on: string | null;
   fdc_id: number | null;
   metadata?: { grams_per_unit?: number | null } | null;
+  packaged_food_id?: string | null;
+  packaged_food?: { net_weight_g: number | null } | null;
 }
 
 /** Minimal stand-in for the two reads planDraw performs. */
@@ -455,4 +457,94 @@ test("a counted row with a junk pack weight is skipped, not drawn", async () => 
     plan.skips.find((s) => s.ingredient.startsWith("Black beans"))?.reason,
     "unconvertible-unit",
   );
+});
+
+// ── #722: draws by catalog label ────────────────────────────────────────────
+
+const BARILLA_ID = "abecf357-98de-4ec1-9616-594d571e22d6";
+
+/** The real tri-color batch line, pinned to its label. */
+const PASTA_RECIPE: FakeRecipe = {
+  id: "r-pasta",
+  name: "Tri-Color Pasta + Beef + Tomato-Sausage Sauce",
+  typical_portions: 4,
+  ingredients_json: [
+    {
+      item: "Barilla tri-color pasta, DRY (1 box)",
+      quantity: 336,
+      unit: "g",
+      packaged_food_id: BARILLA_ID,
+    },
+  ],
+};
+
+const pastaBox = (extra: Partial<FakeStock> = {}): FakeStock => ({
+  id: "stock-pasta",
+  name: "Box of noodles", // no token overlap: only the label link can match it
+  quantity: 2,
+  unit: "box",
+  location: "pantry",
+  expires_on: null,
+  fdc_id: null,
+  packaged_food_id: BARILLA_ID,
+  packaged_food: { net_weight_g: 340 },
+  ...extra,
+});
+
+test("a label pin matches the stock row linked to the same product, before name", async () => {
+  const plan = await planDraw(fakeDb(PASTA_RECIPE, [pastaBox()]), "u1", {
+    recipeId: "r-pasta",
+    portionsCooked: 4,
+  });
+  assert.equal(plan.draws.length, 1);
+  assert.equal(plan.draws[0].matchMethod, "packaged_food_id");
+  assert.equal(plan.draws[0].itemId, "stock-pasta");
+});
+
+test("a counted box linked to a label draws by the label's NET weight", async () => {
+  const plan = await planDraw(fakeDb(PASTA_RECIPE, [pastaBox()]), "u1", {
+    recipeId: "r-pasta",
+    portionsCooked: 4,
+  });
+  // 336 g of a 340 g box = 0.99 box
+  assert.equal(plan.draws[0].quantityApplied, 0.99);
+});
+
+test("a label with no net weight does not make a box drawable — servings are ~8% light", async () => {
+  const plan = await planDraw(
+    fakeDb(PASTA_RECIPE, [pastaBox({ packaged_food: { net_weight_g: null } })]),
+    "u1",
+    { recipeId: "r-pasta", portionsCooked: 4 },
+  );
+  assert.equal(plan.draws.length, 0);
+  assert.equal(plan.skips[0].reason, "unconvertible-unit");
+});
+
+test("a hand-recorded pack weight wins over the label's net weight", async () => {
+  const plan = await planDraw(
+    fakeDb(PASTA_RECIPE, [pastaBox({ metadata: { grams_per_unit: 336 } })]),
+    "u1",
+    { recipeId: "r-pasta", portionsCooked: 4 },
+  );
+  assert.equal(plan.draws[0].quantityApplied, 1);
+});
+
+test("net weight never prices a non-container count (1 fillet of a 2-fillet pack)", async () => {
+  const plan = await planDraw(fakeDb(PASTA_RECIPE, [pastaBox({ unit: "fillet" })]), "u1", {
+    recipeId: "r-pasta",
+    portionsCooked: 4,
+  });
+  assert.equal(plan.draws.length, 0);
+  assert.equal(plan.skips[0].reason, "unconvertible-unit");
+});
+
+test("the embed may arrive as an array (supabase-js typing) and still prices the box", async () => {
+  const arrayEmbed = pastaBox({
+    packaged_food: [{ net_weight_g: 340 }] as unknown as { net_weight_g: number | null },
+  });
+  const plan = await planDraw(fakeDb(PASTA_RECIPE, [arrayEmbed]), "u1", {
+    recipeId: "r-pasta",
+    portionsCooked: 4,
+  });
+  assert.equal(plan.draws[0].quantityApplied, 0.99);
 });

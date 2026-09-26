@@ -58,8 +58,8 @@ function DrawRow({ draw }: { draw: PlannedDraw }) {
         <div style={{ color: "var(--color-text)" }}>{draw.itemName}</div>
         <div style={{ fontSize: "var(--t-caption)", color: "var(--color-text-faint)" }}>
           {draw.location}
-          {/* A name match is the weaker of the two strategies, so it says so. An exact
-              fdc_id match needs no annotation — it is the expected case. */}
+          {/* A name match is the weakest strategy, so it says so. A label or fdc_id match is
+              an identity match and needs no annotation — it is the expected case. */}
           {draw.matchMethod === "name" ? " · matched by name" : ""}
           {draw.shortfallGrams > 0 ? ` · ${draw.shortfallGrams} g short` : ""}
         </div>

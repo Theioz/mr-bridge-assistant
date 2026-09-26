@@ -33,11 +33,13 @@ import type { InventoryLocation } from "./inventory";
 
 // ── Matching ────────────────────────────────────────────────────────────────
 //
-// Two strategies, tried in this order:
+// Three strategies, tried in this order:
 //
-//   1. `fdc_id` — recipe lines already pin the USDA record their macros came from. When the
+//   1. `packaged_food_id` — a recipe line priced off a catalog label, and a stock row linked to
+//      the same catalog product, are the same box by construction (#722).
+//   2. `fdc_id` — recipe lines already pin the USDA record their macros came from. When the
 //      stock row carries the same id the match is an equality test, not a judgement.
-//   2. Normalized name — strip brand parentheticals, punctuation and state/prep words, reduce
+//   3. Normalized name — strip brand parentheticals, punctuation and state/prep words, reduce
 //      to a token set, and require the two sets to be EQUAL.
 //
 // Set EQUALITY rather than overlap or subset is the whole safety margin. Subset matching looks
@@ -228,7 +230,7 @@ export interface PlannedDraw {
   location: InventoryLocation;
   unit: string | null;
   /** How the row was identified. A bad draw is traceable to the strategy that produced it. */
-  matchMethod: "fdc_id" | "name";
+  matchMethod: "packaged_food_id" | "fdc_id" | "name";
   gramsRequested: number;
   gramsApplied: number;
   quantityBefore: number;
@@ -285,13 +287,75 @@ interface StockRow {
   location: InventoryLocation;
   expires_on: string | null;
   fdc_id: number | null;
+  packaged_food_id?: string | null;
   /** `grams_per_unit` here is what makes a counted row (`2 box`) drawable. */
   metadata: { grams_per_unit?: number | null } | null;
+  /** The linked catalog product's front-of-pack net weight, embedded by the select below. */
+  packaged_food?: EmbeddedLabel;
 }
 
-/** The pack weight a person recorded on a counted row, if any. */
-function declaredGramsPerUnit(row: { metadata?: { grams_per_unit?: number | null } | null }) {
-  return row.metadata?.grams_per_unit ?? null;
+/**
+ * PostgREST returns a many-to-one embed as a single object, but supabase-js types it as an array
+ * when there are no generated relation types. Accept both rather than trust either.
+ */
+type EmbeddedLabel = { net_weight_g: number | null } | { net_weight_g: number | null }[] | null;
+
+function netWeightOf(e: EmbeddedLabel | undefined): number | null {
+  const one = Array.isArray(e) ? e[0] : e;
+  return one?.net_weight_g ?? null;
+}
+
+const STOCK_SELECT =
+  "id, name, quantity, unit, location, expires_on, fdc_id, packaged_food_id, metadata, packaged_food:packaged_foods(net_weight_g)";
+
+/**
+ * Units that mean "one whole package". Mirrors `CONTAINER_UNITS` in packaged-foods.ts; kept local
+ * because this module is imported by the bundler-free test runner, which cannot resolve a runtime
+ * import of an extensionless sibling.
+ */
+const CONTAINER_UNITS = new Set([
+  "box",
+  "boxes",
+  "jar",
+  "jars",
+  "can",
+  "cans",
+  "bag",
+  "bags",
+  "package",
+  "packages",
+  "pack",
+  "packs",
+  "container",
+  "containers",
+  "bottle",
+  "bottles",
+  "carton",
+  "cartons",
+  "tub",
+  "tubs",
+]);
+
+/**
+ * The pack weight of a counted row: what a person recorded on it, else — for a WHOLE-PACKAGE unit
+ * only — the net weight printed on its linked catalog label.
+ *
+ * Both are figures read off the package, which is the line #723 drew: a pack weight from the label
+ * is data, a guessed can size is fabrication. Two things are deliberately NOT used. A container
+ * rebuilt from servings x serving size runs ~8% light, so a label with no net weight contributes
+ * nothing here. And a non-container count ("1 fillet" of a two-fillet pack) must never read as the
+ * whole package's weight.
+ */
+function declaredGramsPerUnit(row: {
+  unit?: string | null;
+  metadata?: { grams_per_unit?: number | null } | null;
+  packaged_food?: EmbeddedLabel;
+}) {
+  const declared = row.metadata?.grams_per_unit ?? null;
+  if (declared != null) return declared;
+  const net = netWeightOf(row.packaged_food);
+  const unit = row.unit?.trim().toLowerCase() ?? "";
+  return CONTAINER_UNITS.has(unit) && net != null && net > 0 ? Number(net) : null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -323,11 +387,11 @@ export async function planDraw(
 
   const { data: stockRows, error: stockErr } = await db
     .from("inventory_items")
-    .select("id, name, quantity, unit, location, expires_on, fdc_id, metadata")
+    .select(STOCK_SELECT)
     .eq("user_id", userId);
   if (stockErr) throw new Error(`inventory load failed: ${stockErr.message}`);
 
-  const stock = (stockRows ?? []) as StockRow[];
+  const stock = (stockRows ?? []) as unknown as StockRow[];
   const typicalPortions = (recipe.typical_portions as number | null) ?? 1;
   const scale = input.portionsCooked / typicalPortions;
   const lines = (recipe.ingredients_json as RecipeIngredient[] | null) ?? [];
@@ -356,11 +420,20 @@ export async function planDraw(
     const gramsRequested = round2(gramsPerBatch * scale);
     const nameTokens = normalizeFoodName(label);
 
-    // fdc_id first: an equality test beats any amount of string cleverness.
-    let candidates = line.fdc_id
-      ? stock.filter((s) => s.fdc_id != null && s.fdc_id === line.fdc_id)
+    // Identity first: an equality test beats any amount of string cleverness. The label pin is
+    // the most specific identity a line can carry, so it is tried before the USDA record.
+    let matchMethod: PlannedDraw["matchMethod"] = "packaged_food_id";
+    let candidates = line.packaged_food_id
+      ? stock.filter(
+          (s) => s.packaged_food_id != null && s.packaged_food_id === line.packaged_food_id,
+        )
       : [];
-    let matchMethod: "fdc_id" | "name" = "fdc_id";
+    if (candidates.length === 0) {
+      candidates = line.fdc_id
+        ? stock.filter((s) => s.fdc_id != null && s.fdc_id === line.fdc_id)
+        : [];
+      matchMethod = "fdc_id";
+    }
     if (candidates.length === 0) {
       candidates = stock.filter((s) => sameFood(nameTokens, normalizeFoodName(s.name)));
       matchMethod = "name";
@@ -371,7 +444,7 @@ export async function planDraw(
         ingredient: label,
         grams: gramsRequested,
         reason: "no-match",
-        detail: "nothing in the kitchen matches this by USDA id or name",
+        detail: "nothing in the kitchen matches this by label, USDA id or name",
       });
       continue;
     }
@@ -494,7 +567,7 @@ export async function applyDraw(
     try {
       const { data: row, error: readErr } = await db
         .from("inventory_items")
-        .select("id, quantity, unit, metadata")
+        .select("id, quantity, unit, metadata, packaged_food:packaged_foods(net_weight_g)")
         .eq("id", draw.itemId)
         .eq("user_id", userId)
         .maybeSingle();
@@ -504,6 +577,12 @@ export async function applyDraw(
       const current = Number(row.quantity);
       const quantityApplied = round2(Math.min(draw.quantityApplied, current));
       if (quantityApplied <= 0) throw new Error("nothing left to draw");
+
+      // Checked BEFORE the write. This used to run after the quantity update, so a row that had
+      // lost its pack weight between plan and apply was decremented with no ledger row — a draw
+      // no cook delete could ever reverse.
+      const perUnit = gramsPerUnitFor(row.unit, declaredGramsPerUnit(row));
+      if (perUnit == null) throw new Error("item no longer has a usable pack weight");
 
       const { error: updErr } = await db
         .from("inventory_items")
@@ -515,8 +594,6 @@ export async function applyDraw(
         .eq("user_id", userId);
       if (updErr) throw new Error(updErr.message);
 
-      const perUnit = gramsPerUnitFor(row.unit, declaredGramsPerUnit(row));
-      if (perUnit == null) throw new Error("item no longer has a usable pack weight");
       const gramsApplied = round2(quantityApplied * perUnit);
 
       const { error: ledgerErr } = await db.from("inventory_draws").insert({
