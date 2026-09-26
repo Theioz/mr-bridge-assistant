@@ -309,7 +309,7 @@ describe("parsePackagedFoodInput — reject, don't coerce", () => {
 describe("panelFromRow — the edit form reads like the label", () => {
   it("reconstructs the printed Barilla panel from the stored per-100 g row", () => {
     const w = toPackagedFoodWrite(parsePackagedFoodInput(barillaBody));
-    const p = panelFromRow({ ...row(BARILLA_TRICOLOR), ...w });
+    const p = panelFromRow({ ...row(BARILLA_TRICOLOR), ...w, label_photographed_on: "2026-09-03" });
     assert.deepEqual(
       [p.calories, p.proteinG, p.carbsG, p.fatG, p.fiberG, p.sugarG, p.sodiumMg],
       [200, 7, 42, 1, 3, 2, 10],
