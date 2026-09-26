@@ -15,6 +15,7 @@ import {
   splitServingText,
   catalogFlags,
   PackagedFoodInputError,
+  priceLabelServing,
 } from "../lib/nutrition/packaged-foods.ts";
 import type { PackagedFoodRow, LabelPanel } from "../lib/nutrition/packaged-foods.ts";
 
@@ -346,5 +347,54 @@ describe("catalogFlags — what a row is missing or due for", () => {
   it("is quiet for a fresh label with a net weight", () => {
     const r = row(BARILLA_TRICOLOR, { net_weight_g: 340, label_photographed_on: "2026-09-03" });
     assert.deepEqual(catalogFlags(r, "2026-09-26"), []);
+  });
+});
+
+// ── #722: logging a meal off a label ─────────────────────────────────────────
+
+describe("priceLabelServing — what the meal log writes", () => {
+  const yogurt = row(
+    { servingSizeG: 170, calories: 100, proteinG: 18, carbsG: 6, fatG: 0 },
+    { serving_label: "3/4 cup", net_weight_g: 907 },
+  );
+  const pasta = row(BARILLA_TRICOLOR, { prep_state: "dry", serving_label: "2 oz" });
+
+  it("prices an as-sold label by weight and rounds like meal_log stores it", () => {
+    const p = priceLabelServing(yogurt, 250, "g", null);
+    assert.ok(!("refused" in p));
+    assert.equal(p.calories, 147); // integer column
+    assert.equal(p.protein_g, 26.5);
+    assert.equal(p.grams, 250);
+  });
+
+  it("prices the label's own measure and servings", () => {
+    const cup = priceLabelServing(yogurt, 1.5, "cup", null);
+    assert.ok(!("refused" in cup));
+    assert.equal(cup.grams, 340); // 1.5 cup / (3/4 cup per 170 g)
+    const two = priceLabelServing(yogurt, 2, "serving", null);
+    assert.ok(!("refused" in two));
+    assert.equal(two.calories, 200);
+  });
+
+  it("keeps an unprinted nutrient null, not zero", () => {
+    const p = priceLabelServing(yogurt, 170, "g", null);
+    assert.ok(!("refused" in p));
+    assert.equal(p.fiber_g, null);
+    assert.equal(p.sodium_mg, null);
+  });
+
+  it("refuses a dry label until the amount is confirmed dry", () => {
+    const refused = priceLabelServing(pasta, 170, "g", null);
+    assert.ok("refused" in refused);
+    assert.match(refused.refused, /confirm the amount is dry/);
+    const ok = priceLabelServing(pasta, 84, "g", "dry");
+    assert.ok(!("refused" in ok));
+    assert.equal(ok.calories, 300);
+  });
+
+  it("refuses a unit the label cannot price", () => {
+    const p = priceLabelServing(yogurt, 1, "tbsp", null);
+    assert.ok("refused" in p);
+    assert.match(p.refused, /3\/4 cup/);
   });
 });

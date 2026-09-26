@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
 import { IngredientList } from "./IngredientList";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
+import { LabelLog } from "./LabelLog";
 
 const FoodPhotoAnalyzer = dynamic(() => import("@/app/(protected)/meals/FoodPhotoAnalyzer"), {
   ssr: false,
@@ -667,6 +668,7 @@ function TodayTab({
   const [logging, setLogging] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const [labelOpen, setLabelOpen] = useState(false);
   const [logIngredients, setLogIngredients] = useState("");
   const logSaveRef = useRef<HTMLButtonElement>(null);
   const quickLogRef = useRef<HTMLDivElement>(null);
@@ -990,7 +992,35 @@ function TodayTab({
             {reanalyzing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
             Estimate macros
           </button>
+          <button
+            onClick={() => setLabelOpen((v) => !v)}
+            className="flex items-center transition-opacity active:opacity-70"
+            style={{
+              gap: "var(--space-1)",
+              fontSize: "var(--t-micro)",
+              color: "var(--accent-text)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            {labelOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            From a label
+          </button>
         </div>
+
+        {labelOpen && (
+          <div
+            style={{
+              marginTop: "var(--space-3)",
+              paddingTop: "var(--space-3)",
+              borderTop: "1px solid var(--rule-soft)",
+            }}
+          >
+            <LabelLog mealType={logMealType} />
+          </div>
+        )}
 
         {ingredientsOpen && (
           <div
