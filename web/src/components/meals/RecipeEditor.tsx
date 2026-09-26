@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 import { splitIngredientLines } from "@/lib/units";
 import { lexQuantity } from "@/lib/nutrition/quantity";
+import {
+  labelGramsFor,
+  labelStateConflict,
+  type PackagedFoodRow,
+} from "@/lib/nutrition/packaged-foods";
 
 /**
  * Row-based editor for a recipe's ingredients and method.
@@ -30,6 +35,14 @@ import { lexQuantity } from "@/lib/nutrition/quantity";
  * No drag-and-drop dependency exists in this project and hand-rolled DnD is not keyboard
  * operable. Up/down controls reorder from the keyboard, work on touch without a long-press, and
  * cost nothing to maintain. Step numbers are renumbered on save so `step` always matches order.
+ *
+ * LABEL PINS
+ *
+ * Each row can be pinned to a catalog product (`packaged_food_id`, #722), and the resolver then
+ * prices it off that product's label instead of USDA. The pick is explicit, from a list, and
+ * never inferred from the item text. The two things the resolver will refuse — a line whose
+ * wording contradicts the label's prep state, and a unit the label cannot price — are warned
+ * here as you type, using the same functions, so a refusal is not first discovered in the macros.
  */
 export function RecipeEditor({
   recipe,
@@ -56,6 +69,23 @@ export function RecipeEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
+
+  const [catalog, setCatalog] = useState<PackagedFoodRow[] | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetch("/api/packaged-foods")
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "catalog failed to load");
+        if (live) setCatalog(json.foods as PackagedFoodRow[]);
+      })
+      .catch((e: Error) => live && setCatalogError(e.message));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const missingAmounts = rows.filter((r) => r.item.trim() && r.quantity == null).length;
 
@@ -115,68 +145,81 @@ export function RecipeEditor({
   return (
     <div style={boxStyle}>
       <p style={labelStyle}>Ingredients</p>
+      {catalogError && (
+        <p style={warnStyle}>Label catalog unavailable ({catalogError}) — pins are kept as-is.</p>
+      )}
       {rows.map((r, i) => (
-        <div key={i} style={rowStyle}>
-          <input
-            aria-label={`Amount for ingredient ${i + 1}`}
-            value={r.quantity ?? ""}
-            onChange={(e) =>
-              patchRow(i, {
-                quantity: e.target.value === "" ? null : Number(e.target.value),
-              })
-            }
-            inputMode="decimal"
-            type="number"
-            min="0"
-            step="any"
-            placeholder="qty"
-            style={{ ...inputStyle, width: "4.5rem" }}
-          />
-          <input
-            aria-label={`Unit for ingredient ${i + 1}`}
-            value={r.unit ?? ""}
-            onChange={(e) => patchRow(i, { unit: e.target.value || null })}
-            placeholder="g"
-            style={{ ...inputStyle, width: "3.5rem" }}
-          />
-          <input
-            aria-label={`Ingredient ${i + 1}`}
-            value={r.item}
-            onChange={(e) => patchRow(i, { item: e.target.value })}
-            placeholder="ground beef, 93/7"
-            style={{ ...inputStyle, flex: 1, minWidth: "7rem" }}
-          />
-          <input
-            aria-label={`Prep for ingredient ${i + 1}`}
-            value={r.prep ?? ""}
-            onChange={(e) => patchRow(i, { prep: e.target.value || null })}
-            placeholder="raw / cooked"
-            style={{ ...inputStyle, width: "6.5rem" }}
-          />
-          <input
-            aria-label={`USDA id for ingredient ${i + 1}`}
-            value={r.fdc_id ?? ""}
-            onChange={(e) =>
-              patchRow(i, { fdc_id: e.target.value === "" ? null : Number(e.target.value) })
-            }
-            type="number"
-            placeholder="fdc id"
-            title="Pin the USDA FoodData Central record so re-resolving can't drift"
-            style={{ ...inputStyle, width: "5.5rem" }}
-          />
-          <IconBtn label="Move up" onClick={() => setRows((rs) => move(rs, i, -1))}>
-            <ChevronUp size={13} />
-          </IconBtn>
-          <IconBtn label="Move down" onClick={() => setRows((rs) => move(rs, i, 1))}>
-            <ChevronDown size={13} />
-          </IconBtn>
-          <IconBtn
-            label={`Remove ingredient ${i + 1}`}
-            onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
-          >
-            <X size={13} />
-          </IconBtn>
-        </div>
+        <Fragment key={i}>
+          <div style={rowStyle}>
+            <input
+              aria-label={`Amount for ingredient ${i + 1}`}
+              value={r.quantity ?? ""}
+              onChange={(e) =>
+                patchRow(i, {
+                  quantity: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+              inputMode="decimal"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="qty"
+              style={{ ...inputStyle, width: "4.5rem" }}
+            />
+            <input
+              aria-label={`Unit for ingredient ${i + 1}`}
+              value={r.unit ?? ""}
+              onChange={(e) => patchRow(i, { unit: e.target.value || null })}
+              placeholder="g"
+              style={{ ...inputStyle, width: "3.5rem" }}
+            />
+            <input
+              aria-label={`Ingredient ${i + 1}`}
+              value={r.item}
+              onChange={(e) => patchRow(i, { item: e.target.value })}
+              placeholder="ground beef, 93/7"
+              style={{ ...inputStyle, flex: 1, minWidth: "7rem" }}
+            />
+            <input
+              aria-label={`Prep for ingredient ${i + 1}`}
+              value={r.prep ?? ""}
+              onChange={(e) => patchRow(i, { prep: e.target.value || null })}
+              placeholder="raw / cooked"
+              style={{ ...inputStyle, width: "6.5rem" }}
+            />
+            <input
+              aria-label={`USDA id for ingredient ${i + 1}`}
+              value={r.fdc_id ?? ""}
+              onChange={(e) =>
+                patchRow(i, { fdc_id: e.target.value === "" ? null : Number(e.target.value) })
+              }
+              type="number"
+              placeholder="fdc id"
+              title="Pin the USDA FoodData Central record so re-resolving can't drift"
+              style={{ ...inputStyle, width: "5.5rem" }}
+            />
+            <IconBtn label="Move up" onClick={() => setRows((rs) => move(rs, i, -1))}>
+              <ChevronUp size={13} />
+            </IconBtn>
+            <IconBtn label="Move down" onClick={() => setRows((rs) => move(rs, i, 1))}>
+              <ChevronDown size={13} />
+            </IconBtn>
+            <IconBtn
+              label={`Remove ingredient ${i + 1}`}
+              onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+            >
+              <X size={13} />
+            </IconBtn>
+          </div>
+          {catalog && (catalog.length > 0 || r.packaged_food_id) && (
+            <LabelPin
+              row={r}
+              catalog={catalog}
+              index={i}
+              onChange={(id) => patchRow(i, { packaged_food_id: id })}
+            />
+          )}
+        </Fragment>
       ))}
       <button
         type="button"
@@ -276,6 +319,69 @@ function seedSteps(text: string | null): RecipeStep[] {
     .filter(Boolean);
   return chunks.map((text, i) => ({ step: i + 1, text }));
 }
+
+/** The per-row catalog pin, plus the resolver's two refusals, warned before save. */
+function LabelPin({
+  row,
+  catalog,
+  index,
+  onChange,
+}: {
+  row: RecipeIngredient;
+  catalog: PackagedFoodRow[];
+  index: number;
+  onChange: (id: string | null) => void;
+}) {
+  const pinned = row.packaged_food_id
+    ? (catalog.find((c) => c.id === row.packaged_food_id) ?? null)
+    : null;
+  const text = row.prep ? `${row.item}, ${row.prep}` : row.item;
+
+  let problem: string | null = null;
+  if (row.packaged_food_id && !pinned) {
+    problem = "pinned product is no longer in the catalog — this line will not be priced";
+  } else if (pinned) {
+    problem = labelStateConflict(pinned, text);
+    if (!problem && row.quantity != null && row.quantity > 0) {
+      const unit = row.unit?.trim() || "g";
+      if (!labelGramsFor(pinned, row.quantity, unit)) {
+        problem = `the label cannot price "${unit}" — use g/oz, servings, a container${
+          pinned.serving_label ? `, or ${pinned.serving_label}` : ""
+        }`;
+      }
+    }
+  }
+
+  return (
+    <div style={pinRowStyle}>
+      <select
+        aria-label={`Label for ingredient ${index + 1}`}
+        value={row.packaged_food_id ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
+        style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+      >
+        <option value="">Priced by USDA (no label)</option>
+        {row.packaged_food_id && !pinned && (
+          <option value={row.packaged_food_id}>Missing product</option>
+        )}
+        {catalog.map((c) => (
+          <option key={c.id} value={c.id}>
+            Label: {c.brand} {c.product} ({c.prep_state.replace("_", " ")})
+          </option>
+        ))}
+      </select>
+      {problem && <span style={{ ...warnStyle, margin: 0 }}>{problem}</span>}
+    </div>
+  );
+}
+
+const pinRowStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "var(--space-2)",
+  margin: "0 0 var(--space-2) 4.5rem",
+};
 
 function IconBtn({
   label,
