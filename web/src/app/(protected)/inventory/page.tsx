@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InventoryTabs } from "@/components/inventory/InventoryTabs";
 import type { InventoryItem } from "@/components/meals/InventoryPanel";
 import type { FridgeItem } from "@/components/inventory/FridgeView";
+import { listPackagedFoods, type PackagedFoodRow } from "@/lib/nutrition/packaged-foods";
 
 export const metadata: Metadata = {
   title: "Inventory",
@@ -33,6 +34,19 @@ export default async function InventoryPage() {
         .order("name", { ascending: true })
     : { data: [] };
 
+  // The label catalog, for the Catalog tab. Same session client, so RLS scopes it to this user.
+  // A failure is carried to the tab and SHOWN there — not thrown, which would take the whole
+  // kitchen down with it, and not swallowed into an empty list, which would read as "no products".
+  let foods: PackagedFoodRow[] | { error: string } = [];
+  if (userId) {
+    try {
+      foods = await listPackagedFoods(supabase, userId);
+    } catch (e) {
+      console.error("[inventory page] catalog load failed", e);
+      foods = { error: (e as Error).message };
+    }
+  }
+
   return (
     <div className="max-w-2xl">
       <div style={{ marginBottom: "var(--space-5)" }}>
@@ -51,7 +65,10 @@ export default async function InventoryPage() {
         </p>
       </div>
 
-      <InventoryTabs items={(inventoryData ?? []) as unknown as (InventoryItem & FridgeItem)[]} />
+      <InventoryTabs
+        items={(inventoryData ?? []) as unknown as (InventoryItem & FridgeItem)[]}
+        foods={foods}
+      />
     </div>
   );
 }
