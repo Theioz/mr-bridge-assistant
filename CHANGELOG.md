@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **"Cooked it" draws a label-pinned line from the stock row linked to the same product (#722).**
+  Matching is now `packaged_food_id`, then `fdc_id`, then name. A recipe line pinned to a catalog
+  label and a stock row linked to that label are the same box by construction, so the pair
+  matches even when their names share no word. **A counted row (`1 box`, `2 can`) linked to a
+  label becomes drawable from the label's net weight** when no pack weight was recorded by hand.
+  That is a figure read off the package, the line #723 drew. Two things are deliberately not used:
+  a container rebuilt from servings (~8% light), and net weight for a non-container count
+  ("1 fillet" of a 2-fillet pack). A hand-recorded `grams_per_unit` still wins. Migration
+  `20260926120000_inventory_draws_match_label.sql` widens the `match_method` CHECK and **must be
+  applied before this code deploys**.
 - **Log a meal from a catalog label (#722).** Meals → Today → Quick log gains "From a label":
   pick a product, enter an amount, and it logs priced off the photographed panel. New route
   `POST /api/meals/log-label` takes the product, amount and unit, **never macros**. The server
@@ -104,6 +114,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **A draw could decrement stock with no ledger row.** `applyDraw` updated the quantity and only
+  then checked for a usable pack weight, so a row that lost its pack weight between plan and
+  apply was drawn down with nothing for a cook delete to reverse. The check now runs before the
+  write.
 - **The meal scanner's label mode has been falling into the food path since #608.** The client
   branches on `data.mode === "label"`, and the self-host rewrite dropped `mode` from the label
   response. Every label scan therefore went down the food branch, named "Unknown food", and
