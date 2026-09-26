@@ -39,6 +39,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Python scripts ran a day ahead every evening.** compute-core's clock is UTC, and eleven
+  scripts took "today" from `date.today()`, which rolls over at 17:00 PDT. From then until
+  midnight the session briefing labelled the coming day "today", printed that morning's
+  readiness as "last night", and hid the current day's meal plan rows because they fell
+  before the "today forward" cutoff. The cron alerts (daily tasks, HRV, weather, task-due,
+  series-expiring, birthdays), `spawn_task_occurrences`, `log_habit`'s default `--date` and
+  the week planners had the same shift. All now use `today_local()` from the new
+  `scripts/_dates.py`, which reads `USER_TIMEZONE` (default `America/Los_Angeles`), the same
+  rule `web/src/lib/timezone.ts` already follows. `coach_check.py` had a private copy of the
+  helper that fell back to `date.today()` on any error; it now shares the module. The
+  birthday check's calendar window was UTC midnight-to-midnight and is now the local day.
+  Pinned by `tests/test_dates.py` at the instant it was caught: 2026-09-26 03:40 UTC is
+  2026-09-25 in Pacific time.
+
 - **Task rows still collapsed to one character per line when the task had a due date or a
   repeat.** The previous fix was incomplete. It gave the title `flex: 1` so it would win
   against the chips _inside its own group_ — which it did, so tasks with no due date and no

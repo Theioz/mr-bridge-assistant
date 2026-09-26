@@ -13,7 +13,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import date, timezone, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,6 +24,7 @@ from googleapiclient.discovery import build
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 load_dotenv(ROOT / ".env")
+from _dates import today_local, user_tz  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
 from _notifications import log_notification  # noqa: E402
 from _integrations import load_integration  # noqa: E402
@@ -60,10 +61,11 @@ def person_name(title: str) -> str:
 
 
 def today_rfc3339_range() -> tuple[str, str]:
-    """Return (timeMin, timeMax) RFC3339 strings spanning today in UTC."""
-    today = date.today()
-    time_min = datetime(today.year, today.month, today.day, tzinfo=timezone.utc).isoformat()
-    time_max = (datetime(today.year, today.month, today.day, tzinfo=timezone.utc) + timedelta(days=1)).isoformat()
+    """Return (timeMin, timeMax) RFC3339 strings spanning today in USER_TIMEZONE."""
+    today = today_local()
+    start = datetime(today.year, today.month, today.day, tzinfo=user_tz())
+    time_min = start.isoformat()
+    time_max = (start + timedelta(days=1)).isoformat()
     return time_min, time_max
 
 

@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from _recurrence import occurrences_between  # noqa: E402
+from _dates import today_local  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
 
 # How far ahead to materialize. Two weeks is enough that the tasks page always shows what is
@@ -144,7 +145,7 @@ def main() -> None:
         print(f"[spawn] Supabase connection error: {e}", file=sys.stderr)
         return
 
-    today = date.today()
+    today = today_local()
 
     try:
         series_rows = (

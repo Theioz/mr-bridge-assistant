@@ -17,26 +17,17 @@ from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 sys.path.insert(0, os.path.dirname(__file__))
+from _dates import today_local  # noqa: E402
 # NOTE: `_supabase` (and its `dotenv` dep) is imported lazily in main(), NOT here — so this
 # module stays importable on a bare interpreter and the pure helpers below (consecutive_misses)
 # can be unit-tested without pip installs. Same reason weekly_plan.py keeps its top imports stdlib.
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-TZ = os.environ.get("USER_TIMEZONE", "America/Los_Angeles")
 GOAL_LB = 140.0
 SESSIONS_PER_WEEK = 3
 # Beyond this gap, two sessions are not comparable — the later one is a re-entry
 # deload, not a performance drop.
 REGRESSION_MAX_GAP_DAYS = 14
-
-
-def today_local():
-    try:
-        from zoneinfo import ZoneInfo
-        from datetime import datetime
-        return datetime.now(ZoneInfo(TZ)).date()
-    except Exception:
-        return date.today()
 
 
 def notify(title, message, click=None):

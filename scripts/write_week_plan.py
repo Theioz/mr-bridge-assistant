@@ -37,6 +37,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 from _notifications import log_notification
 
@@ -86,7 +87,7 @@ def main() -> None:
 
     client = get_client()
     uid = get_owner_user_id()
-    today = date.today()
+    today = today_local()
     next_monday = get_coming_monday(today)
     next_sunday = next_monday + timedelta(days=6)
 

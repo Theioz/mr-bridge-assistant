@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _dates import today_local
 from _supabase import get_client, get_owner_user_id
 from _sync_log import log_sync
 
@@ -33,7 +33,7 @@ HABIT_ALIASES = {
 def main():
     parser = argparse.ArgumentParser(description="Log habits to Supabase")
     parser.add_argument("--habits", nargs="+", required=True, help="Habit names (case-insensitive)")
-    parser.add_argument("--date", default=str(date.today()), help="Date (YYYY-MM-DD, default: today)")
+    parser.add_argument("--date", default=str(today_local()), help="Date (YYYY-MM-DD, default: today)")
     args = parser.parse_args()
 
     client = get_client()
