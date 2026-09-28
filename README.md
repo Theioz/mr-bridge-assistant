@@ -373,7 +373,7 @@ mr-bridge-assistant/
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
-│   └── migrations/                        # 73 files, newest 20260926120000_inventory_draws_match_label.sql
+│   └── migrations/                        # 75 files, newest 20260928181000_rls_on_by_default.sql
 │
 ├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
