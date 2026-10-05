@@ -6,15 +6,37 @@
  * INP is a field metric and cannot be measured in a lab. Lighthouse's
  * published proxy is TBT (Total Blocking Time) — we gate TBT < 200ms as the
  * INP surrogate. See https://web.dev/articles/inp for the correlation study.
+ * Real-user numbers, INP included, are in public.web_vitals (#445).
+ *
+ * LOCAL ONLY (#445). Since the July 2026 self-host cutover the app's database is
+ * tailnet-only, so GitHub Actions cannot sign in; the Smoke workflow's secrets
+ * still point at the deleted Supabase Cloud project. Run it here, against
+ * `next start`, with SMOKE_TEST_EMAIL / SMOKE_TEST_PASSWORD in web/.env.local.
+ *
+ *   PERF_TARGET   app origin to measure (default http://localhost:3000)
+ *   PERF_ROUTES   comma-separated subset, e.g. "/login" (no sign-in needed)
+ *
+ * WHY THERE IS A PROXY. Lighthouse 13.1 on Chromium 147 crashes the page
+ * (Inspector.targetCrashed -> FAILED_DOCUMENT_REQUEST) on any response carrying
+ * `Referrer-Policy: strict-origin-when-cross-origin`, which this app sends on
+ * every route. Bisected 2026-10-05 with a bare server, one header at a time. The
+ * header has no effect on load performance, so the script fronts the app with a
+ * local proxy that drops exactly that header and changes nothing else.
  */
 
 import { chromium, type Browser, type BrowserContext } from "@playwright/test";
 import lighthouse, { desktopConfig, generateReport } from "lighthouse";
 import type LHResult from "lighthouse/types/lhr/lhr";
 import fs from "node:fs";
+import http from "node:http";
+import https from "node:https";
 import path from "node:path";
 
-const BASE_URL = "http://localhost:3000";
+const TARGET_URL = new URL(process.env.PERF_TARGET ?? "http://localhost:3000");
+const PROXY_PORT = 3901;
+// Everything below talks to the proxy, never to the app directly. Cookies are scoped by host,
+// not port, so a session signed in here is the one Lighthouse's tab carries.
+const BASE_URL = `http://localhost:${PROXY_PORT}`;
 const DEBUG_PORT = 9222;
 const RUNS_PER_METRIC = 3;
 const REPORT_DIR = path.resolve("smoke/perf-report");
@@ -46,7 +68,7 @@ function loadBaselines(): Baselines {
 
 type Preset = "mobile" | "desktop";
 
-const ROUTES = [
+const ALL_ROUTES = [
   "/dashboard",
   "/fitness",
   "/habits",
@@ -58,6 +80,11 @@ const ROUTES = [
   "/settings",
   "/login",
 ] as const;
+
+const ROUTES: readonly string[] = process.env.PERF_ROUTES
+  ? ALL_ROUTES.filter((r) => process.env.PERF_ROUTES!.split(",").includes(r))
+  : ALL_ROUTES;
+const PUBLIC_ROUTES = new Set(["/login"]);
 
 type RouteMetrics = {
   cls: number;
@@ -99,6 +126,37 @@ function median(xs: number[]): number {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
+/** Forward to TARGET_URL, dropping only Referrer-Policy (see the header comment). */
+function startProxy(): Promise<http.Server> {
+  const lib = TARGET_URL.protocol === "https:" ? https : http;
+  const server = http.createServer((req, res) => {
+    const upstream = lib.request(
+      {
+        hostname: TARGET_URL.hostname,
+        port: TARGET_URL.port || (TARGET_URL.protocol === "https:" ? 443 : 80),
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: TARGET_URL.host },
+      },
+      (up) => {
+        const headers = { ...up.headers };
+        delete headers["referrer-policy"];
+        if (typeof headers.location === "string") {
+          headers.location = headers.location.replace(TARGET_URL.origin, BASE_URL);
+        }
+        res.writeHead(up.statusCode ?? 502, headers);
+        up.pipe(res);
+      },
+    );
+    upstream.on("error", (err) => {
+      res.writeHead(502);
+      res.end(String(err));
+    });
+    req.pipe(upstream);
+  });
+  return new Promise((resolve) => server.listen(PROXY_PORT, () => resolve(server)));
+}
+
 async function assertDevServer(): Promise<void> {
   try {
     const res = await fetch(`${BASE_URL}/login`);
@@ -106,7 +164,7 @@ async function assertDevServer(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `Dev server not reachable on ${BASE_URL} (${msg}). Run 'npm run dev' in another terminal and retry.`,
+      `App not reachable at ${TARGET_URL.origin} via the proxy on ${BASE_URL} (${msg}). Run 'npm run build && npm run start' in another terminal and retry.`,
     );
   }
 }
@@ -121,7 +179,7 @@ async function signIn(context: BrowserContext): Promise<void> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/(dashboard|chat)/, { timeout: 20_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
   await page.close();
 }
 
@@ -274,6 +332,7 @@ function renderTable(summary: { routes: RouteSummary[]; overallStatus: "pass" | 
 async function main(): Promise<void> {
   loadEnvFile(".env.local");
   loadEnvFile(".env");
+  const proxy = await startProxy();
   await assertDevServer();
 
   resetReportDir();
@@ -290,7 +349,8 @@ async function main(): Promise<void> {
   const browser: Browser | null = context.browser();
   const started = Date.now();
   try {
-    await signIn(context);
+    // Public-only runs (PERF_ROUTES=/login) need no test account.
+    if (ROUTES.some((r) => !PUBLIC_ROUTES.has(r))) await signIn(context);
     process.stderr.write("  warming routes…\n");
     await warmRoutes(context);
     const results: RouteSummary[] = [];
@@ -320,6 +380,7 @@ async function main(): Promise<void> {
   } finally {
     await context.close();
     if (browser) await browser.close().catch(() => {});
+    proxy.close();
   }
 }
 

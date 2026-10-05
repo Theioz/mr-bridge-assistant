@@ -1,14 +1,9 @@
 {
-  "_comment": "Per-route baselines for metrics above the hard thresholds \u2014 ratchet down as perf improves. See #384. Values = median-of-3 from prod build + ~60ms variance buffer. Ratcheted from commit 7b5e9462 after fix/mobile-perf-384 changes (code splits, waterfall collapse, Suspense streaming, CLS fix). /settings CLS baseline removed \u2014 now 0.000.",
+  "_comment": "Per-route baselines for metrics above the hard thresholds \u2014 ratchet down as perf improves. See #384. Values = median-of-3 from prod build + ~60ms variance buffer. Ratcheted from commit 7b5e9462 after fix/mobile-perf-384 changes (code splits, waterfall collapse, Suspense streaming, CLS fix). /settings CLS baseline removed \u2014 now 0.000. /chat removed 2026-10-05: the route was deleted in #476. Values predate the July 2026 self-host cutover and need re-measuring (#445).",
   "routes": {
     "/dashboard": {
       "mobile": {
         "lcp": 3620
-      }
-    },
-    "/chat": {
-      "mobile": {
-        "lcp": 4128
       }
     },
     "/fitness": {
