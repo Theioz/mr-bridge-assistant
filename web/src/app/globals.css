@@ -699,6 +699,27 @@ body {
   display: none;
 }
 
+/* tasks/page.tsx (.tasks-ui): touch-only sizing for the tasks tree (#688).
+   iOS force-zooms on focus when a control's font-size is under 16px, and the
+   tree sets --t-micro (13px) inline on every field — hence !important. Hit
+   areas floor at 44x44 (WCAG 2.5.5); min-* grows the box, never the icon.
+   Keyed on pointer, not width, so desktop at any window size is untouched and
+   iPad is covered. Never fix the zoom with maximum-scale — that kills pinch-zoom. */
+@media (pointer: coarse) {
+  .tasks-ui input:not([type="checkbox"]):not([type="radio"]),
+  .tasks-ui select,
+  .tasks-ui textarea {
+    font-size: 16px !important;
+  }
+  .tasks-ui button,
+  .tasks-ui input,
+  .tasks-ui select,
+  .tasks-ui textarea {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 /* watchlist-widget.tsx: hide sparklines on narrow viewports */
 @media (max-width: 480px) {
   .watchlist-spark {

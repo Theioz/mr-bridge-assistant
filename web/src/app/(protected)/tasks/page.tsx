@@ -560,7 +560,7 @@ export default async function TasksPage({
   const defaultListId = selected === "all" || selected === "none" ? "" : selected;
 
   return (
-    <div className="max-w-2xl">
+    <div className="tasks-ui max-w-2xl">
       {/* Header */}
       <div style={{ marginBottom: "var(--space-5)" }}>
         <h1
