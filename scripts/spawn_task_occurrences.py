@@ -17,6 +17,7 @@ Requires: supabase, python-dotenv
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -26,6 +27,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from _recurrence import occurrences_between  # noqa: E402
 from _dates import today_local  # noqa: E402
 from _retention import retention_floor  # noqa: E402
+from _series_health import is_silent  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
 
 # How far ahead to materialize. Two weeks is enough that the tasks page always shows what is
@@ -138,18 +140,64 @@ def spawn_for_series(client, series: dict, today: date, horizon: int, dry_run: b
     return created
 
 
-def main() -> None:
+def report_silent(client, owner_user_id: str, live: list[dict], today: date, horizon: int) -> list[str]:
+    """Titles of live series that should be on the list now and are not (#703). See _series_health."""
+    if not live:
+        return []
+    ids = [s["id"] for s in live]
+    rows = (
+        client.table("tasks")
+        .select("series_id, status, occurrence_date")
+        .eq("user_id", owner_user_id)
+        .in_("series_id", ids)
+        .in_("status", ["active", "completed"])
+        # Active at any date (an overdue one is still on the list), completed only from today on.
+        .or_(f"status.eq.active,occurrence_date.gte.{today.isoformat()}")
+        .execute()
+        .data
+        or []
+    )
+    by_series: dict[str, list[dict]] = {}
+    for r in rows:
+        by_series.setdefault(r["series_id"], []).append(r)
+
+    window_end = today + timedelta(days=horizon)
+    silent = []
+    for s in live:
+        ends_on = parse_date(s.get("ends_on"))
+        in_window = occurrences_between(
+            freq=s["freq"],
+            interval=s.get("interval") or 1,
+            byweekday=s.get("byweekday"),
+            starts_on=parse_date(s["starts_on"]),
+            ends_on=ends_on,
+            window_start=today,
+            window_end=window_end,
+        )
+        if is_silent([d.isoformat() for d in in_window], by_series.get(s["id"], [])):
+            until = f"until {ends_on.isoformat()}" if ends_on else "with no end date"
+            print(
+                f"[spawn] WARNING: {s['title']!r} is live {until} but nothing is on the list: "
+                f"every date in the next {horizon} days was skipped or never created."
+            )
+            silent.append(s["title"])
+    return silent
+
+
+def main() -> int:
     ap = argparse.ArgumentParser(description="Materialize task occurrences from recurring series.")
     ap.add_argument("--dry-run", action="store_true", help="Print what would be created, write nothing.")
     ap.add_argument("--horizon", type=int, default=HORIZON_DAYS, help=f"Days ahead (default {HORIZON_DAYS}).")
     args = ap.parse_args()
 
+    # Every error path exits non-zero (#703). These used to print to stderr and return 0, so the
+    # cron heartbeat reported a crash before the first query as a clean run.
     try:
         client = get_client()
         owner_user_id = get_owner_user_id()
     except Exception as e:
         print(f"[spawn] Supabase connection error: {e}", file=sys.stderr)
-        return
+        return 1
 
     today = today_local()
 
@@ -164,22 +212,46 @@ def main() -> None:
         )
     except Exception as e:
         print(f"[spawn] task_series query error: {e}", file=sys.stderr)
-        return
+        return 1
 
     # Drop series whose window has fully closed. Cheaper here than in the query, and it keeps the
     # "past ends_on stops spawning" rule in one obvious place.
     live = [s for s in series_rows if not s.get("ends_on") or parse_date(s["ends_on"]) >= today]
 
     total = 0
+    failed = 0
     for s in live:
         try:
             total += spawn_for_series(client, s, today, args.horizon, args.dry_run)
         except Exception as e:
+            failed += 1
             print(f"[spawn] series {s.get('id')} failed: {e}", file=sys.stderr)
 
     verb = "would create" if args.dry_run else "created"
     print(f"[spawn] {verb} {total} occurrence(s) across {len(live)} live series ({len(series_rows)} total).")
 
+    # "created 0" alone cannot tell "nothing to do" from "a chore has vanished from the list", so
+    # say which series are in the second state. Skipped on a dry run: the rows it would create do
+    # not exist yet, so every series it is about to fill would read as silent.
+    if not args.dry_run:
+        try:
+            silent = report_silent(client, owner_user_id, live, today, args.horizon)
+        except Exception as e:
+            print(f"[spawn] silent-series check failed: {e}", file=sys.stderr)
+            return 1
+        if silent:
+            # Surfaces in the heartbeat's push message (status stays up: a skipped chore is a
+            # state worth seeing, not a failure worth paging on).
+            msg_file = os.environ.get("HEARTBEAT_MSG_FILE")
+            if msg_file:
+                try:
+                    with open(msg_file, "w") as f:
+                        f.write(f"{len(silent)} series with nothing on the list: {', '.join(silent)}\n")
+                except OSError:
+                    pass
+
+    return 1 if failed else 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addMonths, validateSeries, type Freq, type SeriesDraft } from "./recurrence";
 import { retentionFloor } from "./retention";
+import { SPAWN_HORIZON_DAYS } from "./series-health";
 
 const SERIES_COLUMNS =
   "id, list_id, title, priority, freq, interval, byweekday, starts_on, ends_on, last_spawned, expiry_dismissed_at, created_at, updated_at";
@@ -116,7 +117,7 @@ export async function spawnOccurrences({
   supabase,
   userId,
   seriesId,
-  horizonDays = 14,
+  horizonDays = SPAWN_HORIZON_DAYS,
 }: {
   supabase: SupabaseClient;
   userId: string;

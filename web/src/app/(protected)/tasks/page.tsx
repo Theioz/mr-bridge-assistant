@@ -19,14 +19,17 @@ import {
   detachOccurrence,
   dismissSeriesExpiry,
   extendSeries,
+  occurrenceDates,
   updateSeries,
 } from "@/lib/tasks/series";
+import { isSilent, SPAWN_HORIZON_DAYS, type OccurrenceRow } from "@/lib/tasks/series-health";
+import SeriesSilentNotice, { type SilentSeries } from "@/components/tasks/series-silent-notice";
 import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
 import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
 import { restoreTask as restoreTaskOp } from "@/lib/tasks/restore";
 import { COMPLETED_RETENTION_DAYS, retentionCutoff } from "@/lib/tasks/retention";
 import SeriesExpiringBanner from "@/components/tasks/series-expiring-banner";
-import { todayString, USER_TZ } from "@/lib/timezone";
+import { addDays, todayString, USER_TZ } from "@/lib/timezone";
 import type { Task, TaskList, TaskSeries } from "@/lib/types";
 
 async function addTask(
@@ -499,6 +502,7 @@ export default async function TasksPage({
     completedResult,
     subtasksResult,
     seriesResult,
+    seriesRowsResult,
   ] = await Promise.all([
     supabase
       .from("task_lists")
@@ -519,6 +523,14 @@ export default async function TasksPage({
       .select(
         "id, list_id, title, priority, freq, interval, byweekday, starts_on, ends_on, last_spawned, expiry_dismissed_at, created_at, updated_at",
       ),
+    // Occurrences for the silent-series check (#703), across ALL lists: active at any date, and
+    // completed from today on. Not derivable from activeQuery, which is filtered to the open tab.
+    supabase
+      .from("tasks")
+      .select("series_id, status, occurrence_date")
+      .not("series_id", "is", null)
+      .in("status", ["active", "completed"])
+      .or(`status.eq.active,occurrence_date.gte.${todayString()}`),
   ]);
 
   if (activeResult.error) console.error("[tasks] active query error:", activeResult.error.message);
@@ -528,6 +540,8 @@ export default async function TasksPage({
     console.error("[tasks] subtasks query error:", subtasksResult.error.message);
   if (listsResult.error) console.error("[tasks] lists query error:", listsResult.error.message);
   if (seriesResult.error) console.error("[tasks] series query error:", seriesResult.error.message);
+  if (seriesRowsResult.error)
+    console.error("[tasks] series occurrence query error:", seriesRowsResult.error.message);
 
   const lists = (listsResult.data ?? []) as TaskList[];
 
@@ -547,6 +561,38 @@ export default async function TasksPage({
       todayStr,
     ),
   );
+
+  // #703: live series that should have something on the list right now and do not — every date in
+  // the spawn window skipped or never created. Without this the chore simply has no row, which is
+  // also what "you're on top of it" looks like. Scoped to the open tab like the list itself.
+  const rowsBySeries = new Map<string, OccurrenceRow[]>();
+  for (const r of (seriesRowsResult.data ?? []) as (OccurrenceRow & { series_id: string })[]) {
+    const list = rowsBySeries.get(r.series_id);
+    if (list) list.push(r);
+    else rowsBySeries.set(r.series_id, [r]);
+  }
+  const windowEnd = addDays(todayStr, SPAWN_HORIZON_DAYS);
+  const silent: SilentSeries[] = [];
+  for (const sr of series) {
+    if (sr.ends_on && sr.ends_on < todayStr) continue;
+    if (selected === "none" ? sr.list_id !== null : selected !== "all" && sr.list_id !== selected)
+      continue;
+    const rule = {
+      freq: sr.freq as Freq,
+      interval: sr.interval,
+      byweekday: sr.byweekday,
+      startsOn: sr.starts_on,
+    };
+    const end = (d: string) => (sr.ends_on && sr.ends_on < d ? sr.ends_on : d);
+    const inWindow = occurrenceDates({ ...rule, windowStart: todayStr, windowEnd: end(windowEnd) });
+    if (!isSilent(inWindow, rowsBySeries.get(sr.id) ?? [])) continue;
+    const next = occurrenceDates({
+      ...rule,
+      windowStart: addDays(windowEnd, 1),
+      windowEnd: end(addDays(windowEnd, 366)),
+    })[0];
+    silent.push({ id: sr.id, title: sr.title, next: next ?? null, endsOn: sr.ends_on });
+  }
 
   // Per-tab active counts. "none" = uncategorised; totals feed the "All" tab.
   const counts: Record<string, number> = { all: 0, none: 0 };
@@ -685,6 +731,8 @@ export default async function TasksPage({
           {selected === "all" ? "No tasks. Add one above." : "No tasks in this list yet."}
         </p>
       )}
+
+      {silent.length > 0 && <SeriesSilentNotice series={silent} horizonDays={SPAWN_HORIZON_DAYS} />}
 
       {/* Completed section — low-emphasis, faint, collapsed by default */}
       {completedTasks.length > 0 && (
