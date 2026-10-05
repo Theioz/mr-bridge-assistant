@@ -1,4 +1,5 @@
 import Nav from "@/components/nav";
+import WebVitalsReporter from "@/components/web-vitals-reporter";
 
 // Auth enforcement is handled by proxy.ts (Next.js 16 middleware), which
 // refreshes the session and redirects unauthenticated requests before this
@@ -21,6 +22,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       >
         Skip to main content
       </a>
+      <WebVitalsReporter />
       <Nav />
       {/* ml-0 on mobile (nav is bottom bar), ml-60 on desktop (240px sidebar) */}
       {/* pb-16 on mobile to clear the 56px bottom tab bar */}
