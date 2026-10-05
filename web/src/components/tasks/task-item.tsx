@@ -491,6 +491,55 @@ export default function TaskItem({
     setTimeout(() => addInputRef.current?.focus(), 50);
   }
 
+  // List (or legacy category) chip. Rendered beside the title on wide screens and on the
+  // metadata line on phones, so it is a function rather than inline JSX.
+  const metaChip = (maxWidth: string) =>
+    taskList ? (
+      <span
+        className="flex items-center min-w-0"
+        style={{
+          gap: 4,
+          fontSize: "var(--t-micro)",
+          color: "var(--color-text-faint)",
+          // Metadata yields to the title: truncate rather than squeeze it out.
+          flexShrink: 1,
+          maxWidth,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        <span
+          className="rounded-full block"
+          style={{
+            width: 6,
+            height: 6,
+            background: taskList.color ?? "var(--color-text-faint)",
+          }}
+          aria-hidden
+        />
+        {taskList.name}
+      </span>
+    ) : (
+      task.category && (
+        <span
+          className="min-w-0"
+          style={{
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+            // Same rule as the list chip: the title outranks the category.
+            flexShrink: 1,
+            maxWidth,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {task.category}
+        </span>
+      )
+    );
+
   return (
     <div
       style={{
@@ -580,51 +629,7 @@ export default function TaskItem({
               {task.title}
             </span>
           )}
-          {taskList ? (
-            <span
-              className="flex items-center min-w-0"
-              style={{
-                gap: 4,
-                fontSize: "var(--t-micro)",
-                color: "var(--color-text-faint)",
-                // Metadata yields to the title: truncate rather than squeeze it out.
-                flexShrink: 1,
-                maxWidth: "40%",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              <span
-                className="rounded-full block"
-                style={{
-                  width: 6,
-                  height: 6,
-                  background: taskList.color ?? "var(--color-text-faint)",
-                }}
-                aria-hidden
-              />
-              {taskList.name}
-            </span>
-          ) : (
-            task.category && (
-              <span
-                className="min-w-0"
-                style={{
-                  fontSize: "var(--t-micro)",
-                  color: "var(--color-text-faint)",
-                  // Same rule as the list chip: the title outranks the category.
-                  flexShrink: 1,
-                  maxWidth: "40%",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {task.category}
-              </span>
-            )
-          )}
+          <span className="hidden sm:contents">{metaChip("40%")}</span>
           {totalCount > 0 && (
             <span
               className="tnum flex-shrink-0"
@@ -638,138 +643,148 @@ export default function TaskItem({
           )}
         </div>
 
-        {/* Due date */}
-        {due && (
-          <span
-            className="flex-shrink-0 tnum"
-            style={{
-              fontSize: "var(--t-micro)",
-              color: due.urgent ? "var(--color-danger)" : "var(--color-text-faint)",
-            }}
-          >
-            {due.label}
-          </span>
-        )}
-
-        {/* Recurring-series chip */}
-        {task.series_id && series && (
-          <span
-            className="flex items-center flex-shrink-0"
-            style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
-            title={`Repeats ${cadenceLabel({ freq: series.freq as Freq, interval: series.interval, byweekday: series.byweekday })}${series.ends_on ? ` until ${series.ends_on}` : ""}`}
-          >
-            <Repeat size={11} />
-            {cadenceLabel({
-              freq: series.freq as Freq,
-              interval: series.interval,
-              byweekday: series.byweekday,
-            })}
-          </span>
-        )}
-
-        {missedCount > 0 && (
-          <span
-            className="flex-shrink-0 tnum"
-            style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}
-            title={`${missedCount} earlier occurrence${missedCount === 1 ? "" : "s"} of this series were due and not done`}
-          >
-            +{missedCount} missed
-          </span>
-        )}
-
-        {/* Scheduled block chip */}
-        {task.scheduled_start && (
-          <span
-            className="flex items-center flex-shrink-0 tnum"
-            style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--accent)" }}
-            title="On your calendar"
-          >
-            <CalendarClock size={11} />
-            {task.scheduled_all_day
-              ? `${formatDay(task.scheduled_start)} · all day`
-              : formatScheduled(task.scheduled_start)}
-          </span>
-        )}
-
-        {/* Expand/collapse chevron */}
-        {totalCount > 0 && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-            style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
-            title={expanded ? "Collapse" : "Expand"}
-          >
-            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          </button>
-        )}
-
-        {/* Schedule on calendar */}
-        <button
-          onClick={() => setShowSchedule((v) => !v)}
-          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{
-            width: 32,
-            height: 32,
-            color: task.scheduled_start ? "var(--accent)" : "var(--color-text-faint)",
-          }}
-          title={task.scheduled_start ? "Edit calendar block" : "Add to calendar"}
+        {/* Metadata + actions. On a phone this is its own line under the title (indented to
+            line up with it), chips left and actions right; from sm up it is display:contents,
+            so its children sit in the parent row exactly as before. */}
+        <div
+          className="flex w-full items-center flex-wrap sm:contents"
+          style={{ paddingLeft: 74, columnGap: "var(--space-3)", rowGap: "var(--space-1)" }}
         >
-          <CalendarClock size={13} />
-        </button>
+          <span className="contents sm:hidden">{metaChip("60%")}</span>
+          {/* Due date */}
+          {due && (
+            <span
+              className="flex-shrink-0 tnum"
+              style={{
+                fontSize: "var(--t-micro)",
+                color: due.urgent ? "var(--color-danger)" : "var(--color-text-faint)",
+              }}
+            >
+              {due.label}
+            </span>
+          )}
 
-        {/* Edit due date / priority */}
-        <button
-          onClick={() => setShowEditPanel((v) => !v)}
-          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
-          title="Edit due date / priority"
-        >
-          <Pencil size={13} />
-        </button>
+          {/* Recurring-series chip */}
+          {task.series_id && series && (
+            <span
+              className="flex items-center flex-shrink-0"
+              style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
+              title={`Repeats ${cadenceLabel({ freq: series.freq as Freq, interval: series.interval, byweekday: series.byweekday })}${series.ends_on ? ` until ${series.ends_on}` : ""}`}
+            >
+              <Repeat size={11} />
+              {cadenceLabel({
+                freq: series.freq as Freq,
+                interval: series.interval,
+                byweekday: series.byweekday,
+              })}
+            </span>
+          )}
 
-        {/* Archive */}
-        {task.series_id && series && stopSeriesAction && (
-          <button
-            onClick={() => {
-              if (!confirmStop) {
-                setConfirmStop(true);
-                return;
-              }
-              setConfirmStop(false);
-              startTransition(async () => {
-                await runAction(() => stopSeriesAction(series.id), setRowError);
-              });
-            }}
-            onBlur={() => setConfirmStop(false)}
-            disabled={isPending}
-            className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-            style={{
-              height: 32,
-              paddingLeft: confirmStop ? 8 : 0,
-              paddingRight: confirmStop ? 8 : 0,
-              width: confirmStop ? "auto" : 32,
-              fontSize: "var(--t-micro)",
-              color: confirmStop ? "var(--color-danger)" : "var(--color-text-faint)",
-            }}
-            title={
-              confirmStop
-                ? "Click again to stop this repeating task"
-                : "Stop repeating — keeps completed history, removes future occurrences"
-            }
-          >
-            {confirmStop ? "Stop repeating?" : <CircleSlash size={13} />}
-          </button>
-        )}
+          {missedCount > 0 && (
+            <span
+              className="flex-shrink-0 tnum"
+              style={{ fontSize: "var(--t-micro)", color: "var(--color-danger)" }}
+              title={`${missedCount} earlier occurrence${missedCount === 1 ? "" : "s"} of this series were due and not done`}
+            >
+              +{missedCount} missed
+            </span>
+          )}
 
-        <button
-          onClick={handleArchive}
-          disabled={isPending}
-          className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
-          title="Archive"
-        >
-          <Archive size={13} />
-        </button>
+          {/* Scheduled block chip */}
+          {task.scheduled_start && (
+            <span
+              className="flex items-center flex-shrink-0 tnum"
+              style={{ gap: 3, fontSize: "var(--t-micro)", color: "var(--accent)" }}
+              title="On your calendar"
+            >
+              <CalendarClock size={11} />
+              {task.scheduled_all_day
+                ? `${formatDay(task.scheduled_start)} · all day`
+                : formatScheduled(task.scheduled_start)}
+            </span>
+          )}
+          <div className="flex items-center ml-auto sm:contents">
+            {/* Expand/collapse chevron */}
+            {totalCount > 0 && (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+                style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
+                title={expanded ? "Collapse" : "Expand"}
+              >
+                {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              </button>
+            )}
+
+            {/* Schedule on calendar */}
+            <button
+              onClick={() => setShowSchedule((v) => !v)}
+              className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+              style={{
+                width: 32,
+                height: 32,
+                color: task.scheduled_start ? "var(--accent)" : "var(--color-text-faint)",
+              }}
+              title={task.scheduled_start ? "Edit calendar block" : "Add to calendar"}
+            >
+              <CalendarClock size={13} />
+            </button>
+
+            {/* Edit due date / priority */}
+            <button
+              onClick={() => setShowEditPanel((v) => !v)}
+              className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+              style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
+              title="Edit due date / priority"
+            >
+              <Pencil size={13} />
+            </button>
+
+            {/* Archive */}
+            {task.series_id && series && stopSeriesAction && (
+              <button
+                onClick={() => {
+                  if (!confirmStop) {
+                    setConfirmStop(true);
+                    return;
+                  }
+                  setConfirmStop(false);
+                  startTransition(async () => {
+                    await runAction(() => stopSeriesAction(series.id), setRowError);
+                  });
+                }}
+                onBlur={() => setConfirmStop(false)}
+                disabled={isPending}
+                className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+                style={{
+                  height: 32,
+                  paddingLeft: confirmStop ? 8 : 0,
+                  paddingRight: confirmStop ? 8 : 0,
+                  width: confirmStop ? "auto" : 32,
+                  fontSize: "var(--t-micro)",
+                  color: confirmStop ? "var(--color-danger)" : "var(--color-text-faint)",
+                }}
+                title={
+                  confirmStop
+                    ? "Click again to stop this repeating task"
+                    : "Stop repeating — keeps completed history, removes future occurrences"
+                }
+              >
+                {confirmStop ? "Stop repeating?" : <CircleSlash size={13} />}
+              </button>
+            )}
+
+            <button
+              onClick={handleArchive}
+              disabled={isPending}
+              className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
+              style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
+              title="Archive"
+            >
+              <Archive size={13} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Row-level mutation error (#687). Persists until the next successful mutation on this row

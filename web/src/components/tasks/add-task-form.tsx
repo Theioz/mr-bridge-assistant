@@ -135,14 +135,19 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
             }
           }}
           placeholder="Add a task…"
-          className="bg-transparent focus:outline-none"
+          // On a phone the input takes the whole first line (100% minus the + icon and gap), so
+          // the controls wrap below it together instead of one of them riding beside it.
+          className="bg-transparent focus:outline-none basis-40 max-sm:basis-[calc(100%-28px)]"
           style={{
             color: "var(--color-text)",
             fontSize: "var(--t-body)",
             caretColor: "var(--accent)",
             // flex-grow, but never shrink below a legible width — with min-w-0 the extra controls
             // in this row could squeeze the input to zero and it looked like it had vanished.
-            flex: "1 1 160px",
+            // flex-basis is a class (basis-40 = 160px) so the phone override above can win;
+            // an inline basis would beat any class.
+            flexGrow: 1,
+            flexShrink: 1,
             minWidth: 160,
           }}
         />
@@ -276,7 +281,9 @@ export default function AddTaskForm({ addAction, lists, defaultListId }: Props) 
         <button
           type="submit"
           disabled={!title.trim() || isPending}
-          className="flex-shrink-0 transition-opacity disabled:opacity-30 hover:opacity-80"
+          // ml-auto pins Add to the right end of whichever line it wraps onto. On one line the
+          // input has already taken the free space, so it moves nothing on desktop.
+          className="ml-auto flex-shrink-0 transition-opacity disabled:opacity-30 hover:opacity-80"
           style={{
             fontSize: "var(--t-micro)",
             fontWeight: 500,
