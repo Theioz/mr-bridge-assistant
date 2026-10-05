@@ -6,7 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { isBlocked, partitionBlocked } from "../lib/tasks/blockers.ts";
+import { isBlocked, nestBlocked, partitionBlocked } from "../lib/tasks/blockers.ts";
 
 const blocker = (status: string) => ({ id: "b", title: "Submit expense report", status });
 
@@ -40,5 +40,40 @@ describe("partitionBlocked", () => {
       blocked.map((t) => t.id),
       ["2", "4"],
     );
+  });
+});
+
+describe("nestBlocked", () => {
+  const ref = (id: string, status = "active") => ({ id, title: id, status });
+  it("hangs a blocked task under its blocker, and chains nest", () => {
+    const a = { id: "A", blocker: null };
+    const b = { id: "B", blocker: ref("A") };
+    const c = { id: "C", blocker: ref("B") };
+    const { childrenOf, orphans } = nestBlocked([a, b, c]);
+    assert.deepEqual(
+      childrenOf.get("A")?.map((t) => t.id),
+      ["B"],
+    );
+    assert.deepEqual(
+      childrenOf.get("B")?.map((t) => t.id),
+      ["C"],
+    );
+    assert.deepEqual(orphans, []);
+  });
+  it("a blocker outside the view leaves the task an orphan, not lost", () => {
+    const b = { id: "B", blocker: ref("elsewhere") };
+    const { childrenOf, orphans } = nestBlocked([b]);
+    assert.equal(childrenOf.size, 0);
+    assert.deepEqual(
+      orphans.map((t) => t.id),
+      ["B"],
+    );
+  });
+  it("a released task (blocker completed) is not nested", () => {
+    const a = { id: "A", blocker: null };
+    const b = { id: "B", blocker: ref("A", "completed") };
+    const { childrenOf, orphans } = nestBlocked([a, b]);
+    assert.equal(childrenOf.size, 0);
+    assert.deepEqual(orphans, []);
   });
 });

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import TaskItem from "@/components/tasks/task-item";
@@ -26,7 +27,7 @@ import { isSilent, SPAWN_HORIZON_DAYS, type OccurrenceRow } from "@/lib/tasks/se
 import SeriesSilentNotice, { type SilentSeries } from "@/components/tasks/series-silent-notice";
 import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
 import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
-import { BLOCKER_EMBED, partitionBlocked } from "@/lib/tasks/blockers";
+import { BLOCKER_EMBED, nestBlocked, partitionBlocked } from "@/lib/tasks/blockers";
 import BlockedTasks from "@/components/tasks/blocked-tasks";
 import { restoreTask as restoreTaskOp } from "@/lib/tasks/restore";
 import { COMPLETED_RETENTION_DAYS, retentionCutoff } from "@/lib/tasks/retention";
@@ -638,15 +639,20 @@ export default async function TasksPage({
   // #470: a task waiting on another active task is not actionable yet, so it leaves the priority
   // groups for a collapsed "Blocked" section. Completing (or archiving) its blocker brings it back.
   const { ready: tasks, blocked } = partitionBlocked(allActive);
+  // A blocked task shows UNDER the task it waits on, so it stays in context instead of vanishing
+  // into a section at the bottom. Only one whose blocker is not in this view (another list tab)
+  // falls back to the collapsed Blocked section, which names the blocker.
+  const { childrenOf, orphans } = nestBlocked(allActive);
   const completedTasks = (completedResult.data ?? []) as Task[];
 
   const high = tasks.filter((t) => t.priority === "high");
   const medium = tasks.filter((t) => t.priority === "medium");
   const low = tasks.filter((t) => t.priority === "low" || !t.priority);
 
-  const renderTask = (task: (typeof allActive)[number]) => (
+  const renderTask = (task: (typeof allActive)[number], nested = false) => (
     <TaskItem
       task={task}
+      nestedUnderBlocker={nested}
       lists={lists}
       blockerOptions={blockerOptions}
       completeAction={completeTask}
@@ -663,6 +669,25 @@ export default async function TasksPage({
       detachAction={detachOccurrenceAction}
       updateSeriesAction={updateSeriesAction}
     />
+  );
+
+  // A task, then the tasks waiting on it, indented under a hairline like subtasks. Chains recurse.
+  const renderTree = (task: (typeof allActive)[number], nested = false): ReactNode => (
+    <>
+      {renderTask(task, nested)}
+      {(childrenOf.get(task.id) ?? []).map((child) => (
+        <div
+          key={child.id}
+          style={{
+            marginLeft: 22,
+            paddingLeft: "var(--space-2)",
+            borderLeft: "1px solid var(--rule-soft)",
+          }}
+        >
+          {renderTree(child, true)}
+        </div>
+      ))}
+    </>
   );
 
   // New tasks default into the list you're viewing ("all"/"none" → uncategorised).
@@ -735,7 +760,7 @@ export default async function TasksPage({
                       key={task.id}
                       style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
                     >
-                      {renderTask(task)}
+                      {renderTree(task)}
                     </div>
                   ))}
                 </div>
@@ -745,11 +770,11 @@ export default async function TasksPage({
         </div>
       )}
 
-      {blocked.length > 0 && (
-        <BlockedTasks count={blocked.length}>
-          {blocked.map((task, i) => (
+      {orphans.length > 0 && (
+        <BlockedTasks count={orphans.length}>
+          {orphans.map((task, i) => (
             <div key={task.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
-              {renderTask(task)}
+              {renderTree(task)}
             </div>
           ))}
         </BlockedTasks>
