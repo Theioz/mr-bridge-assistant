@@ -171,6 +171,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Security: `authenticated` no longer holds TRUNCATE, TRIGGER, MAINTAIN or REFERENCES (#756).**
+  The default privileges of both table-creating roles granted signed-in users every table
+  privilege, and TRUNCATE, TRIGGER and MAINTAIN are not covered by row-level security. On
+  2026-10-05 a signed-in session could `TRUNCATE public.notifications`; verified in a rolled-back
+  transaction. It was not reachable through PostgREST or any RPC, but each new invoker RPC would
+  have inherited it. Migration `20261005160000_authenticated_table_privileges.sql` revokes them
+  on all 33 tables and from the default privileges of `postgres` and `supabase_admin`, then
+  asserts the end state. SELECT/INSERT/UPDATE/DELETE, which RLS governs, are unchanged. **Apply
+  as `supabase_admin`**, the only superuser, which owns two tables and its own defaults.
 - **Web vitals were recorded several times per page load (#445 follow-up).** The reporter passed
   `useReportWebVitals` an inline callback; the hook re-subscribes when the callback changes, so
   every re-render added a listener. The first live `/tasks` load from a Pixel wrote each metric 3
