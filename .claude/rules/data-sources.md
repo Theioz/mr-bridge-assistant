@@ -4,7 +4,7 @@ All live data is in **self-hosted Supabase** on `compute-core` (`supabase.jl-inf
 Migrated off Supabase Cloud 2026-07-13 — see ADR 0017 in the jl-homelab repo.
 
 There is **no in-app chat**. Conversation happens through the **MCP server**
-(`web/mcp/run.sh`), which exposes the same 35 tools to Claude Code. Where a row below
+(`web/mcp/run.sh`), which exposes the same 45 tools to Claude Code. Where a row below
 says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
@@ -17,7 +17,7 @@ says "MCP tool", that tool is available to you directly in this session.
 | `workout_plans` | Weekly planner | `/api/internal/plan` (AI-free) + `scripts/weekly_plan.py` |
 | `user_equipment` | Manual | `/settings` |
 | `habits` + `habit_registry` | Manual | `scripts/log_habit.py`, or the `log_habit` **MCP tool** |
-| `tasks` + `study_log` | Manual | `/tasks` page, or `add_task` / `complete_task` **MCP tools** |
+| `tasks` + `study_log` | Manual | `/tasks` page, or `add_task` / `complete_task` / `restore_task` **MCP tools**. Completed tasks are kept 90 days, then hard-deleted nightly by `scripts/purge_completed_tasks.py` (#684) |
 | `profile` | k/v store: name, macro targets, watchlists, `onboarding_completed` | `/settings`, or `update_profile` **MCP tool** |
 | `recipes` | Library of "cooked this, liked it, might cook again". Macros are for the **whole recipe as written**, USDA-derived | `/settings`, `POST /api/recipes/<id>/macros` to resolve, or `get_recipes` **MCP tool** |
 | `cooks` | **One time you actually made food.** Portions live here, not on the recipe (you eyeball the split). Batch prep = many portions draining over days; a one-off dinner = 1 portion; leftover-ingredient cooking = no recipe. Leftovers = `portions_remaining > 0` | `POST /api/cooks`, or `log_cook` **MCP tool** |

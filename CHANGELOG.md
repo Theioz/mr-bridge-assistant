@@ -9,6 +9,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Completed-task history, restore, and 90-day retention (#684).** The Completed section on
+  `/tasks` now shows every task completed in the last 90 days instead of the latest 10, grouped by
+  the day it was completed (in the user's timezone, so a late-evening completion files under the
+  right day), with a **Restore** button on each row. Restoring sets the task back to `active` and
+  clears `completed_at`, which the DB trigger never does on its own. It also re-activates the
+  subtasks that completing the parent swept up (completed_at at or after the parent's); subtasks
+  finished separately stay done, since the UI has no way to un-tick one. New MCP tool
+  `restore_task`; `get_tasks(status='completed')` now sorts by completion date. New nightly script
+  `scripts/purge_completed_tasks.py` hard-deletes top-level completed tasks older than 90 days
+  (subtasks go by cascade, and completed subtasks of still-active tasks are kept). It exits non-zero on any error and supports
+  `--dry-run`. Its crontab line lives in jl-homelab. **Both occurrence spawners now never
+  materialize a date older than the window.** Without that, the web spawner, which recomputes
+  from `starts_on` on every series create and extend, would have re-created every purged
+  occurrence as an overdue chore, since it treats "a row exists" as "already done". The purge only
+  takes an occurrence whose `occurrence_date` is also past the window, so the two halves meet.
+  The window is one constant in `web/src/lib/tasks/retention.ts` and `scripts/_retention.py`;
+  a test fails if they differ.
 - **"Cooked it" draws a label-pinned line from the stock row linked to the same product (#722).**
   Matching is now `packaged_food_id`, then `fdc_id`, then name. A recipe line pinned to a catalog
   label and a stock row linked to that label are the same box by construction, so the pair

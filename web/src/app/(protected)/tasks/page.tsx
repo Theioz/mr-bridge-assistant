@@ -23,8 +23,10 @@ import {
 } from "@/lib/tasks/series";
 import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
 import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
+import { restoreTask as restoreTaskOp } from "@/lib/tasks/restore";
+import { COMPLETED_RETENTION_DAYS, retentionCutoff } from "@/lib/tasks/retention";
 import SeriesExpiringBanner from "@/components/tasks/series-expiring-banner";
-import { todayString } from "@/lib/timezone";
+import { todayString, USER_TZ } from "@/lib/timezone";
 import type { Task, TaskList, TaskSeries } from "@/lib/types";
 
 async function addTask(
@@ -119,6 +121,24 @@ async function completeTask(taskId: string): Promise<{ error?: string }> {
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to complete task" };
+  }
+}
+
+async function restoreTask(taskId: string): Promise<{ error?: string }> {
+  "use server";
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Unauthorized" };
+    const res = await restoreTaskOp({ supabase, userId: user.id, taskId });
+    if (!res.ok) return { error: res.error ?? "Failed to restore task" };
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to restore task" };
   }
 }
 
@@ -459,8 +479,11 @@ export default async function TasksPage({
     .select("*")
     .is("parent_id", null)
     .eq("status", "completed")
+    // The whole retention window, not the latest 10 (#684). Older rows are purged nightly, so this
+    // is bounded by what the user completes in 90 days; the limit is a backstop, not a page size.
+    .gte("completed_at", retentionCutoff())
     .order("completed_at", { ascending: false })
-    .limit(10);
+    .limit(500);
   if (selected === "none") {
     activeQuery = activeQuery.is("list_id", null);
     completedQuery = completedQuery.is("list_id", null);
@@ -574,7 +597,9 @@ export default async function TasksPage({
           style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
         >
           {tasks.length} active
-          {completedTasks.length > 0 ? ` · ${completedTasks.length} recently completed` : ""}
+          {completedTasks.length > 0
+            ? ` · ${completedTasks.length} completed in ${COMPLETED_RETENTION_DAYS} days`
+            : ""}
         </p>
       </div>
 
@@ -664,7 +689,13 @@ export default async function TasksPage({
       {/* Completed section — low-emphasis, faint, collapsed by default */}
       {completedTasks.length > 0 && (
         <div style={{ marginTop: "var(--space-7)" }}>
-          <CompletedTasks tasks={completedTasks} />
+          <CompletedTasks
+            tasks={completedTasks}
+            restoreAction={restoreTask}
+            retentionDays={COMPLETED_RETENTION_DAYS}
+            timeZone={USER_TZ}
+            today={todayStr}
+          />
         </div>
       )}
     </div>
