@@ -11,13 +11,14 @@ import {
   updateSeries,
 } from "@/lib/tasks/series";
 import { cadenceLabelWithEnd, type Freq } from "@/lib/tasks/recurrence";
+import { BLOCKER_EMBED, isBlocked, type BlockerRef } from "@/lib/tasks/blockers";
 import { restoreTask } from "@/lib/tasks/restore";
 
 export function buildTasksTools({ supabase, userId }: ToolContext) {
   return {
     get_tasks: tool({
       description:
-        "Fetch tasks from the tasks table. Defaults to active tasks. status='completed' returns the completion history, newest first — completed tasks are kept 90 days, then deleted; restore one with restore_task.",
+        "Fetch tasks from the tasks table. Defaults to active tasks. Each task carries blocked_by, the embedded blocker {id, title, status}, and blocked=true while that blocker is still active (#470) — a blocked task is not actionable yet. status='completed' returns the completion history, newest first — completed tasks are kept 90 days, then deleted; restore one with restore_task.",
       inputSchema: jsonSchema<{ status?: "active" | "completed" | "archived" }>({
         type: "object",
         properties: {
@@ -32,14 +33,18 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         let q = supabase
           .from("tasks")
           .select(
-            "id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at, series_id, occurrence_date",
+            `id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at, series_id, occurrence_date, blocked_by, ${BLOCKER_EMBED}`,
           )
           .eq("status", status)
           .order(status === "completed" ? "completed_at" : "created_at", { ascending: false });
         if (userId) q = q.eq("user_id", userId);
         const { data, error } = await q;
         if (error) return { error: error.message };
-        return data ?? [];
+        // `blocked` is the derived state (#470): true only while the blocker is still active.
+        return ((data ?? []) as unknown as { blocker?: BlockerRef | null }[]).map((t) => ({
+          ...t,
+          blocked: isBlocked(t),
+        }));
       },
     }),
 
@@ -103,6 +108,7 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         list_id?: string;
         due_date?: string;
         parent_id?: string;
+        blocked_by?: string;
       }>({
         type: "object",
         required: ["title"],
@@ -131,9 +137,14 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             description:
               "Parent task UUID. Set this to add a subtask/checklist item under an existing task.",
           },
+          blocked_by: {
+            type: "string",
+            description:
+              "UUID of a task that must be finished first. The new task is hidden from the active list until that one is completed. Top-level tasks only; not for subtasks or repeating tasks.",
+          },
         },
       }),
-      execute: async ({ title, priority, category, list_id, due_date, parent_id }) => {
+      execute: async ({ title, priority, category, list_id, due_date, parent_id, blocked_by }) => {
         if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
           return err(`due_date must be YYYY-MM-DD format, got: "${due_date}"`);
         }
@@ -169,8 +180,12 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             due_date: parent_id ? null : (due_date ?? null),
             status: "active",
             parent_id: parent_id ?? null,
+            // The DB trigger rejects a subtask, a series occurrence, another user's task or a loop.
+            blocked_by: blocked_by ?? null,
           })
-          .select("id, title, priority, status, due_date, category, list_id, parent_id, created_at")
+          .select(
+            "id, title, priority, status, due_date, category, list_id, parent_id, blocked_by, created_at",
+          )
           .single();
         if (insertError) return err(insertError.message);
         if (!data) return err("Insert returned no row — task may not have been saved.");
@@ -446,6 +461,36 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         const res = await restoreTask({ supabase, userId, taskId: id });
         if (!res.ok) return err(res.error ?? "Failed to restore task.");
         return ok({ task: res.task, subtasks_restored: res.subtasksRestored ?? 0 });
+      },
+    }),
+
+    set_task_blocker: tool({
+      description:
+        "Set or clear the one task that must be finished before this one (#470). A blocked task is hidden from the active list on /tasks until its blocker is completed or archived. Omit blocked_by to clear it. Both tasks must be top-level and not repeating-task occurrences; a dependency loop is rejected.",
+      inputSchema: jsonSchema<{ id: string; blocked_by?: string }>({
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: { type: "string", description: "UUID of the task that waits." },
+          blocked_by: {
+            type: "string",
+            description: "UUID of the task that must be finished first. Omit to clear.",
+          },
+        },
+      }),
+      execute: async ({ id, blocked_by }) => {
+        if (!userId) return err("No user context.");
+        const { data, error: updateError } = await supabase
+          .from("tasks")
+          .update({ blocked_by: blocked_by || null })
+          .eq("id", id)
+          .eq("user_id", userId)
+          .select(`id, title, blocked_by, ${BLOCKER_EMBED}`)
+          .maybeSingle();
+        if (updateError) return err(updateError.message);
+        if (!data) return err(`No task found with id ${id} — nothing was changed.`);
+        const row = data as unknown as { blocker?: BlockerRef | null };
+        return ok({ task: data, blocked: isBlocked(row) });
       },
     }),
 

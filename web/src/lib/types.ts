@@ -44,6 +44,10 @@ export interface Task {
   /** The series-calendar date this row represents. Distinct from due_date, which the user may edit
    *  on a single occurrence without moving the series. */
   occurrence_date: string | null;
+  /** The one task that must be finished first (#470). Blocked while that task is active. */
+  blocked_by?: string | null;
+  /** Embedded blocking task, when the query selects BLOCKER_EMBED (lib/tasks/blockers.ts). */
+  blocker?: { id: string; title: string; status: string } | null;
 }
 
 /** A recurring task rule. Occurrences are `tasks` rows carrying its `series_id` (#468). */

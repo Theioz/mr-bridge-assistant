@@ -9,6 +9,7 @@ import {
   Pencil,
   Repeat,
   CircleSlash,
+  Lock,
   X,
 } from "lucide-react";
 import type { Task, Subtask, TaskList, TaskSeries } from "@/lib/types";
@@ -16,6 +17,7 @@ import { cadenceLabel, type Freq } from "@/lib/tasks/recurrence";
 import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 import { todayString } from "@/lib/timezone";
 import TimeSelect from "./time-select";
+import { isBlocked } from "@/lib/tasks/blockers";
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
   const today = todayString();
@@ -33,6 +35,8 @@ function relativeDue(dateStr: string): { label: string; urgent: boolean } {
 interface Props {
   task: Task;
   lists: TaskList[];
+  /** Tasks this one may be blocked by (#470): top-level, active, not series occurrences. */
+  blockerOptions?: { id: string; title: string }[];
   completeAction: (id: string) => Promise<{ error?: string }>;
   archiveAction: (id: string) => Promise<{ error?: string }>;
   updateAction: (
@@ -42,6 +46,7 @@ interface Props {
       due_date?: string | null;
       priority?: string | null;
       list_id?: string | null;
+      blocked_by?: string | null;
     },
   ) => Promise<{ error?: string }>;
   addSubtaskAction: (parentId: string, title: string) => Promise<{ error?: string }>;
@@ -287,6 +292,7 @@ function SubtaskRow({
 export default function TaskItem({
   task,
   lists,
+  blockerOptions = [],
   completeAction,
   archiveAction,
   updateAction,
@@ -324,6 +330,8 @@ export default function TaskItem({
     (task.priority as "high" | "medium" | "low") ?? "medium",
   );
   const [editListId, setEditListId] = useState(task.list_id ?? "");
+  const [editBlockedBy, setEditBlockedBy] = useState(task.blocked_by ?? "");
+  const blocked = isBlocked(task);
 
   const taskList = task.list_id ? lists.find((l) => l.id === task.list_id) : null;
 
@@ -703,6 +711,26 @@ export default function TaskItem({
                 : formatScheduled(task.scheduled_start)}
             </span>
           )}
+          {/* Blocked-by chip (#470) — only while the blocker is still active */}
+          {blocked && task.blocker && (
+            <span
+              // On one line (sm+) the row has no width to spare: a long blocker title would push
+              // the action buttons onto a stray line. Cap it there; the title attribute has it all.
+              className="flex items-center min-w-0 max-w-full sm:max-w-40"
+              style={{
+                gap: 3,
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={`Waiting on: ${task.blocker.title}`}
+            >
+              <Lock size={11} className="flex-shrink-0" aria-hidden />
+              <span className="truncate">Blocked by {task.blocker.title}</span>
+            </span>
+          )}
           <div className="flex items-center ml-auto sm:contents">
             {/* Expand/collapse chevron */}
             {totalCount > 0 && (
@@ -948,6 +976,38 @@ export default function TaskItem({
               ))}
             </select>
           )}
+          {/* A series occurrence cannot be blocked (DB trigger); detach it first. */}
+          {!task.series_id && (
+            <select
+              aria-label="Blocked by"
+              value={editBlockedBy}
+              onChange={(e) => setEditBlockedBy(e.target.value)}
+              className="focus:outline-none"
+              style={{
+                fontSize: "var(--t-micro)",
+                background: "transparent",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--r-1)",
+                padding: "4px 8px",
+                color: editBlockedBy ? "var(--color-text)" : "var(--color-text-faint)",
+                maxWidth: 200,
+              }}
+            >
+              <option value="">Not blocked</option>
+              {/* The current blocker stays selectable even once it is no longer active, so
+                  opening the panel never silently changes the value. */}
+              {task.blocker && !blockerOptions.some((o) => o.id === task.blocker!.id) && (
+                <option value={task.blocker.id}>Blocked by: {task.blocker.title}</option>
+              )}
+              {blockerOptions
+                .filter((o) => o.id !== task.id)
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    Blocked by: {o.title}
+                  </option>
+                ))}
+            </select>
+          )}
           <button
             onClick={() => {
               setShowEditPanel(false);
@@ -962,6 +1022,11 @@ export default function TaskItem({
                       due_date: editDueDate || null,
                       priority: editPriority || null,
                       list_id: editListId || null,
+                      // Only when changed: an untouched field should not re-run the DB's
+                      // dependency checks on every due-date edit.
+                      ...((editBlockedBy || null) !== (task.blocked_by ?? null)
+                        ? { blocked_by: editBlockedBy || null }
+                        : {}),
                     }),
                   setRowError,
                 );

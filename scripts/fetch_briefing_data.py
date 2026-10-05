@@ -10,11 +10,12 @@ from __future__ import annotations
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _dates import today_local
+from _dates import today_local, user_tz
+from _task_blockers import BLOCKER_EMBED, is_blocked, newly_unblocked
 from _supabase import get_client, get_owner_user_id
 from fetch_weather import fetch_weather, format_weather_line
 
@@ -42,7 +43,7 @@ def main():
     def q_tasks():
         return (
             client.table("tasks")
-            .select("title,priority,due_date,status")
+            .select(f"title,priority,due_date,status,{BLOCKER_EMBED}")
             .eq("user_id", uid)
             .eq("status", "active")
             .order("due_date", desc=False)
@@ -307,9 +308,22 @@ def main():
     if tasks:
         for t in tasks:
             due = f" | Due: {t['due_date']}" if t.get("due_date") else ""
-            print(f"- [{(t.get('priority') or '—').upper()}] {t['title']}{due}")
+            # #470: a blocked task is listed, but marked — it is not actionable yet.
+            waiting = f" | BLOCKED by: {t['blocker']['title']}" if is_blocked(t) else ""
+            print(f"- [{(t.get('priority') or '—').upper()}] {t['title']}{due}{waiting}")
     else:
         print("- None")
+
+    # Newly unblocked (#470): blocker completed since the start of yesterday, in the user's zone,
+    # so a blocker finished last night still surfaces this morning, and nothing older repeats.
+    since = datetime.combine(today_local() - timedelta(days=1), time.min, tzinfo=user_tz())
+    freed = newly_unblocked(tasks, since)
+    if freed:
+        print("\n## NEWLY UNBLOCKED (blocker completed since yesterday)")
+        for t in freed:
+            done = datetime.fromisoformat(t["blocker"]["completed_at"].replace("Z", "+00:00"))
+            done_local = done.astimezone(user_tz()).date().isoformat()
+            print(f"- {t['title']} — was waiting on \"{t['blocker']['title']}\" (done {done_local})")
 
     # Habits — last 7 days
     registry = results.get("habit_registry") or []
