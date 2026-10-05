@@ -159,6 +159,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Tasks: a blocked task now shows under the task it waits on (#470 follow-up).** Blocking a task
+  moved it into a collapsed "Blocked" section at the bottom of `/tasks`, which read as the task
+  disappearing, and lost the link to what it was waiting on. Blocked tasks now render indented
+  beneath their blocker, under a hairline like subtasks, marked "Waiting". Chains nest (A, then B,
+  then C). Only a task whose blocker is not in the current view (on another list tab) still falls
+  back to the collapsed section, which names the blocker. `nestBlocked` in
+  `lib/tasks/blockers.ts`, unit-tested.
 - **Task blockers: the blocker embed failed on PostgREST (#470 follow-up).** The query hinted the
   self-referencing join by FK name (`tasks!tasks_blocked_by_fkey`), which this PostgREST rejects
   with PGRST200; `tasks!blocked_by` resolves to the reverse side and returns an array. Both

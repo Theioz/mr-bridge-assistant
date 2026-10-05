@@ -37,6 +37,8 @@ interface Props {
   lists: TaskList[];
   /** Tasks this one may be blocked by (#470): top-level, active, not series occurrences. */
   blockerOptions?: { id: string; title: string }[];
+  /** Rendered indented under its blocker, so the chip need not repeat the blocker's name. */
+  nestedUnderBlocker?: boolean;
   completeAction: (id: string) => Promise<{ error?: string }>;
   archiveAction: (id: string) => Promise<{ error?: string }>;
   updateAction: (
@@ -293,6 +295,7 @@ export default function TaskItem({
   task,
   lists,
   blockerOptions = [],
+  nestedUnderBlocker = false,
   completeAction,
   archiveAction,
   updateAction,
@@ -728,7 +731,9 @@ export default function TaskItem({
               title={`Waiting on: ${task.blocker.title}`}
             >
               <Lock size={11} className="flex-shrink-0" aria-hidden />
-              <span className="truncate">Blocked by {task.blocker.title}</span>
+              <span className="truncate">
+                {nestedUnderBlocker ? "Waiting" : `Blocked by ${task.blocker.title}`}
+              </span>
             </span>
           )}
           <div className="flex items-center ml-auto sm:contents">

@@ -32,3 +32,33 @@ export function partitionBlocked<T extends { blocker?: BlockerRef | null }>(
   for (const t of tasks) (isBlocked(t) ? blocked : ready).push(t);
   return { ready, blocked };
 }
+
+/**
+ * Arrange blocked tasks under the task they wait on (#470), so a blocked task shows up in context
+ * instead of vanishing into a separate section.
+ *
+ * `visible` is every task the view can show, ready and blocked alike. A blocked task whose blocker
+ * is in `visible` becomes that blocker's child; chains nest (A ← B ← C). One whose blocker is NOT in
+ * view (it lives on another list tab) is an orphan: there is nothing to hang it under, so the caller
+ * shows it in a fallback section with the blocker's name. The DB trigger rules out cycles, so
+ * every attached task is reachable from exactly one root.
+ */
+export function nestBlocked<T extends { id: string; blocker?: BlockerRef | null }>(
+  visible: T[],
+): { childrenOf: Map<string, T[]>; orphans: T[] } {
+  const inView = new Set(visible.map((t) => t.id));
+  const childrenOf = new Map<string, T[]>();
+  const orphans: T[] = [];
+  for (const t of visible) {
+    if (!isBlocked(t)) continue;
+    const parent = t.blocker!.id;
+    if (inView.has(parent)) {
+      const list = childrenOf.get(parent);
+      if (list) list.push(t);
+      else childrenOf.set(parent, [t]);
+    } else {
+      orphans.push(t);
+    }
+  }
+  return { childrenOf, orphans };
+}
