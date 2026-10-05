@@ -56,7 +56,7 @@ After reading the briefing output, check the PROFILE section for a `name` key.
 [Unread emails matching filter, or "Inbox clear"]
 
 ### Pending Tasks
-[Active tasks from Supabase `tasks` table (status = 'active'), included in `fetch_briefing_data.py` output, or "None"]
+[Active tasks from Supabase `tasks` table (status = 'active'), included in `fetch_briefing_data.py` output, or "None". Mark tasks the output flags `BLOCKED by: X` as waiting, not actionable. If the output has a `NEWLY UNBLOCKED` section, lead with those: they became actionable since yesterday (#470).]
 
 ### Accountability — Last 7 Days
 [Habit summary from Supabase `habits` + `habit_registry` tables — hit/missed per habit with streak count, included in `fetch_briefing_data.py` output]

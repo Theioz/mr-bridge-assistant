@@ -26,6 +26,8 @@ import { isSilent, SPAWN_HORIZON_DAYS, type OccurrenceRow } from "@/lib/tasks/se
 import SeriesSilentNotice, { type SilentSeries } from "@/components/tasks/series-silent-notice";
 import { isExpiringSoon, type Freq, type SeriesDraft } from "@/lib/tasks/recurrence";
 import { collapseSeriesOccurrences } from "@/lib/tasks/collapse";
+import { BLOCKER_EMBED, partitionBlocked } from "@/lib/tasks/blockers";
+import BlockedTasks from "@/components/tasks/blocked-tasks";
 import { restoreTask as restoreTaskOp } from "@/lib/tasks/restore";
 import { COMPLETED_RETENTION_DAYS, retentionCutoff } from "@/lib/tasks/retention";
 import SeriesExpiringBanner from "@/components/tasks/series-expiring-banner";
@@ -166,6 +168,7 @@ async function updateTask(
     due_date?: string | null;
     priority?: string | null;
     list_id?: string | null;
+    blocked_by?: string | null;
   },
 ): Promise<{ error?: string }> {
   "use server";
@@ -473,7 +476,7 @@ export default async function TasksPage({
 
   let activeQuery = supabase
     .from("tasks")
-    .select("*")
+    .select(`*, ${BLOCKER_EMBED}`)
     .is("parent_id", null)
     .eq("status", "active")
     .order("created_at", { ascending: false });
@@ -503,6 +506,7 @@ export default async function TasksPage({
     subtasksResult,
     seriesResult,
     seriesRowsResult,
+    blockerOptionsResult,
   ] = await Promise.all([
     supabase
       .from("task_lists")
@@ -531,6 +535,15 @@ export default async function TasksPage({
       .not("series_id", "is", null)
       .in("status", ["active", "completed"])
       .or(`status.eq.active,occurrence_date.gte.${todayString()}`),
+    // Candidates for "Blocked by" (#470), across ALL lists: a task can wait on one in another list.
+    // Same eligibility the DB trigger enforces — top-level, active, not a series occurrence.
+    supabase
+      .from("tasks")
+      .select("id, title")
+      .is("parent_id", null)
+      .is("series_id", null)
+      .eq("status", "active")
+      .order("title", { ascending: true }),
   ]);
 
   if (activeResult.error) console.error("[tasks] active query error:", activeResult.error.message);
@@ -542,6 +555,9 @@ export default async function TasksPage({
   if (seriesResult.error) console.error("[tasks] series query error:", seriesResult.error.message);
   if (seriesRowsResult.error)
     console.error("[tasks] series occurrence query error:", seriesRowsResult.error.message);
+  if (blockerOptionsResult.error)
+    console.error("[tasks] blocker options query error:", blockerOptionsResult.error.message);
+  const blockerOptions = (blockerOptionsResult.data ?? []) as { id: string; title: string }[];
 
   const lists = (listsResult.data ?? []) as TaskList[];
 
@@ -613,17 +629,41 @@ export default async function TasksPage({
   // Collapse each recurring series to its oldest outstanding occurrence BEFORE sorting, so the
   // list shows one row per chore rather than one per generated date (#468 rendered all of them,
   // which read as N separate tasks and hid the recurrence itself).
-  const tasks = collapseSeriesOccurrences((activeResult.data ?? []) as Task[], todayStr)
+  const allActive = collapseSeriesOccurrences((activeResult.data ?? []) as Task[], todayStr)
     .map((t) => ({ ...t, subtasks: subtasksByParent.get(t.id) ?? [] }))
     .sort(
       (a, b) =>
         (priorityOrder[a.priority ?? "low"] ?? 2) - (priorityOrder[b.priority ?? "low"] ?? 2),
     );
+  // #470: a task waiting on another active task is not actionable yet, so it leaves the priority
+  // groups for a collapsed "Blocked" section. Completing (or archiving) its blocker brings it back.
+  const { ready: tasks, blocked } = partitionBlocked(allActive);
   const completedTasks = (completedResult.data ?? []) as Task[];
 
   const high = tasks.filter((t) => t.priority === "high");
   const medium = tasks.filter((t) => t.priority === "medium");
   const low = tasks.filter((t) => t.priority === "low" || !t.priority);
+
+  const renderTask = (task: (typeof allActive)[number]) => (
+    <TaskItem
+      task={task}
+      lists={lists}
+      blockerOptions={blockerOptions}
+      completeAction={completeTask}
+      archiveAction={archiveTask}
+      updateAction={updateTask}
+      addSubtaskAction={addSubtask}
+      completeSubtaskAction={completeSubtask}
+      deleteSubtaskAction={deleteSubtask}
+      scheduleAction={scheduleTaskAction}
+      unscheduleAction={unscheduleTaskAction}
+      series={task.series_id ? (seriesById.get(task.series_id) ?? null) : null}
+      missedCount={task.missedCount}
+      stopSeriesAction={stopSeriesAction}
+      detachAction={detachOccurrenceAction}
+      updateSeriesAction={updateSeriesAction}
+    />
+  );
 
   // New tasks default into the list you're viewing ("all"/"none" → uncategorised).
   const defaultListId = selected === "all" || selected === "none" ? "" : selected;
@@ -643,6 +683,7 @@ export default async function TasksPage({
           style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}
         >
           {tasks.length} active
+          {blocked.length > 0 ? ` · ${blocked.length} blocked` : ""}
           {completedTasks.length > 0
             ? ` · ${completedTasks.length} completed in ${COMPLETED_RETENTION_DAYS} days`
             : ""}
@@ -694,23 +735,7 @@ export default async function TasksPage({
                       key={task.id}
                       style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}
                     >
-                      <TaskItem
-                        task={task}
-                        lists={lists}
-                        completeAction={completeTask}
-                        archiveAction={archiveTask}
-                        updateAction={updateTask}
-                        addSubtaskAction={addSubtask}
-                        completeSubtaskAction={completeSubtask}
-                        deleteSubtaskAction={deleteSubtask}
-                        scheduleAction={scheduleTaskAction}
-                        unscheduleAction={unscheduleTaskAction}
-                        series={task.series_id ? (seriesById.get(task.series_id) ?? null) : null}
-                        missedCount={task.missedCount}
-                        stopSeriesAction={stopSeriesAction}
-                        detachAction={detachOccurrenceAction}
-                        updateSeriesAction={updateSeriesAction}
-                      />
+                      {renderTask(task)}
                     </div>
                   ))}
                 </div>
@@ -720,7 +745,17 @@ export default async function TasksPage({
         </div>
       )}
 
-      {tasks.length === 0 && completedTasks.length === 0 && (
+      {blocked.length > 0 && (
+        <BlockedTasks count={blocked.length}>
+          {blocked.map((task, i) => (
+            <div key={task.id} style={i > 0 ? { borderTop: "1px solid var(--rule-soft)" } : {}}>
+              {renderTask(task)}
+            </div>
+          ))}
+        </BlockedTasks>
+      )}
+
+      {tasks.length === 0 && blocked.length === 0 && completedTasks.length === 0 && (
         <p
           style={{
             fontSize: "var(--t-body)",

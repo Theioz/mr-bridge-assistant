@@ -9,6 +9,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Task dependencies: one blocking task per task (#470, Phase 4 of the tasks overhaul).** New
+  column `tasks.blocked_by`. A task is blocked while its blocker is **active**; completing or
+  archiving the blocker releases it (archive means dropped, and a task hidden behind a dropped task
+  would stay hidden with no explanation). On `/tasks` blocked tasks leave the priority groups for
+  a collapsed **Blocked** section, each with a "Blocked by X" chip, and the dashboard leaves them
+  out. Set or clear the blocker from the edit panel. Candidates come from every list. MCP:
+  `add_task` takes `blocked_by`, the new `set_task_blocker` sets or clears it, and `get_tasks`
+  returns the blocker plus a derived `blocked` flag. The briefing marks blocked tasks and adds
+  a `NEWLY UNBLOCKED` section for tasks whose blocker was completed since the start of yesterday.
+  **The rules live in the database** (migration `20261005120000_task_blockers.sql`), because
+  tasks are written from the page, MCP and Python: a trigger rejects dependency loops, a blocker
+  belonging to another user, and subtasks or repeating-task occurrences on either side. Detach an
+  occurrence to block it. A deleted blocker, including one removed by the 90-day purge, clears
+  the field. **Apply the migration before this code deploys**, then reload PostgREST's schema
+  cache: the `/tasks` query embeds the blocker, and without the column it fails.
 - **A repeating task that has silently dropped off the list is now reported (#703).** A live
   series is "silent" when its rule has a date in the next 14 days, it has no active occurrence at
   any date, and none of those dates was completed, i.e. every one in view was skipped (archived)
