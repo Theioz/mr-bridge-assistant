@@ -171,6 +171,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Web vitals were recorded several times per page load (#445 follow-up).** The reporter passed
+  `useReportWebVitals` an inline callback; the hook re-subscribes when the callback changes, so
+  every re-render added a listener. The first live `/tasks` load from a Pixel wrote each metric 3
+  times, and a test page with 5 re-renders wrote 6. The callback is now module-level, and metrics
+  are also deduplicated by their unique `id`. Verified in a browser: one row per metric.
 - **`npm run smoke:perf` runs again (#445).** Lighthouse 13.1 on Chromium 147 crashes the page
   (`TARGET_CRASHED` → `FAILED_DOCUMENT_REQUEST`) on any response carrying
   `Referrer-Policy: strict-origin-when-cross-origin`, which this app sends on every route. Bisected
