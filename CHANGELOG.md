@@ -9,6 +9,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **A repeating task that has silently dropped off the list is now reported (#703).** A live
+  series is "silent" when its rule has a date in the next 14 days, it has no active occurrence at
+  any date, and none of those dates was completed, i.e. every one in view was skipped (archived)
+  or never created. Before this the chore simply had no row on `/tasks`, which is also what "on
+  top of it" looks like, and the spawner printed `created 0`, its success line. Now `/tasks` shows
+  a low-emphasis line per silent series with the next date it reappears, and the nightly spawner
+  logs a `WARNING` per series and puts the titles in its heartbeat message. A monthly chore whose
+  next date is simply beyond the window is deliberately not flagged: nothing is due, so nothing
+  is missing. The rule lives in `web/src/lib/tasks/series-health.ts` and
+  `scripts/_series_health.py`, pinned by the same seven cases in both languages.
+  **The spawner's error paths now exit non-zero.** A connection error, a failed series query or a
+  failed series used to print to stderr and exit 0, so the heartbeat reported a crash as a clean
+  run.
 - **Completed-task history, restore, and 90-day retention (#684).** The Completed section on
   `/tasks` now shows every task completed in the last 90 days instead of the latest 10, grouped by
   the day it was completed (in the user's timezone, so a late-evening completion files under the
