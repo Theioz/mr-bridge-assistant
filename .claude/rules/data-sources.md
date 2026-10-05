@@ -26,6 +26,7 @@ says "MCP tool", that tool is available to you directly in this session.
 | `journal_entries` | Manual | `/journal` server action. **No tool writes journal entries** |
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools** |
 | `notifications` | ntfy push history | `/api/cron/sync` |
+| `web_vitals` | Real-user page-load metrics (LCP, FCP, CLS, INP, TTFB) per page load, per route, phone vs desktop (#445) | The signed-in app via `POST /api/vitals` (`components/web-vitals-reporter.tsx`). Summarize with `python3 scripts/web_vitals_report.py [--days 14]` |
 | `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/stocks/refresh`, `/api/sports/refresh` |
 | `user_metric_preferences` | Per-metric **source** preference — which integration to trust for each metric (e.g. HRV from Oura, body composition from Google Health). Rows are `(user_id, metric, preferred_source)`; `metric` ∈ sleep/hrv/steps/active_calories/readiness/body_composition. **Not units.** Empty in prod → falls back to `METRIC_DEFAULTS` (`web/src/lib/metric-preferences.ts`) | `/settings` (integrations panel writes it via the `saveMetricPreferences` server action; per-metric upsert) |
 | `chat_sessions`, `chat_messages` | **Orphaned.** Retained for history; nothing writes them since the chat was deleted (#476) | — |

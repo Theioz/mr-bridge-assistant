@@ -9,6 +9,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Real-user page-load metrics (#445).** The signed-in app now records LCP, FCP, CLS, INP and TTFB
+  for every page load into a new `web_vitals` table, through `POST /api/vitals` with
+  `navigator.sendBeacon` when the page is hidden (when CLS and INP are final). Each row carries the
+  landing route with ids collapsed (`/backlog/:id`), the viewport, DPR, connection type where
+  exposed, and phone vs desktop. `scripts/web_vitals_report.py` prints p50/p75 and "% good" per
+  route and metric, split by device. **Why:** #445 targets a 2500 ms mobile LCP in Lighthouse's
+  simulated slow-4G phone. Measured 2026-10-05, `/login` scores 2840 ms there but paints its LCP
+  element in ~195 ms unthrottled, and the simulation's gap is font and JS bytes replayed over
+  1.6 Mbps. Field data decides whether cutting either is worth it. Migration
+  `20261005140000_web_vitals.sql`: RLS, insert/select own rows only, and **`authenticated` limited
+  to SELECT + INSERT**. The default privileges grant it everything on a new table, TRUNCATE
+  included, which RLS does not cover. **Apply before this code deploys.**
 - **Task dependencies: one blocking task per task (#470, Phase 4 of the tasks overhaul).** New
   column `tasks.blocked_by`. A task is blocked while its blocker is **active**; completing or
   archiving the blocker releases it (archive means dropped, and a task hidden behind a dropped task
