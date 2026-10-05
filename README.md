@@ -5,7 +5,7 @@ Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, hab
 **It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and it uses **no Anthropic API key**:
 
 - **Macros come from data, not from a model.** USDA FoodData Central supplies every gram and calorie; a small local model (Ollama) only identifies the food and reads the quantity. Measured: the model was ~2x off on portion weight (a large egg at 105g; real ~50g), so it is never asked to weigh anything.
-- **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing all 44 tools — on your existing subscription, with no metered API.
+- **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing all 45 tools — on your existing subscription, with no metered API.
 - **Only share links are public.** The app itself is tailnet-only.
 
 ## Architecture
@@ -19,7 +19,7 @@ Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, hab
 ## What you get
 
 - **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **44 tools** (tasks, habits, fitness, meals, calendar, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
+- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **45 tools** (tasks, habits, fitness, meals, calendar, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
 - **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
 - **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, optional ntfy.sh push on completion, kill-switch in Settings → Fitness)
@@ -215,7 +215,7 @@ docker compose build && docker compose up -d
 
 ### Step 8b — Wire up the MCP server (this is the chat)
 
-There is no in-app chat. `web/mcp/server.ts` exposes all 44 tools to Claude Code:
+There is no in-app chat. `web/mcp/server.ts` exposes all 45 tools to Claude Code:
 
 ```bash
 # secrets live OUTSIDE the repo — a service-role key in a tree you `git add -A`
@@ -557,6 +557,7 @@ mr-bridge-assistant/
 │   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
 │   ├── check_weather_alert.py             # Severe weather push alerts
+│   ├── purge_completed_tasks.py           # Nightly: deletes completed tasks older than 90 days (#684)
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   ├── weekly_plan.py                     # Weekly planner: context / validate / submit (structural rules live here)
 │   └── update-references.sh              # Pull latest best practices submodule

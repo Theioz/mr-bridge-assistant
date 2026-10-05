@@ -11,11 +11,13 @@ import {
   updateSeries,
 } from "@/lib/tasks/series";
 import { cadenceLabelWithEnd, type Freq } from "@/lib/tasks/recurrence";
+import { restoreTask } from "@/lib/tasks/restore";
 
 export function buildTasksTools({ supabase, userId }: ToolContext) {
   return {
     get_tasks: tool({
-      description: "Fetch tasks from the tasks table. Defaults to active tasks.",
+      description:
+        "Fetch tasks from the tasks table. Defaults to active tasks. status='completed' returns the completion history, newest first — completed tasks are kept 90 days, then deleted; restore one with restore_task.",
       inputSchema: jsonSchema<{ status?: "active" | "completed" | "archived" }>({
         type: "object",
         properties: {
@@ -33,7 +35,7 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
             "id, title, priority, status, due_date, category, list_id, scheduled_start, scheduled_end, completed_at, created_at, series_id, occurrence_date",
           )
           .eq("status", status)
-          .order("created_at", { ascending: false });
+          .order(status === "completed" ? "completed_at" : "created_at", { ascending: false });
         if (userId) q = q.eq("user_id", userId);
         const { data, error } = await q;
         if (error) return { error: error.message };
@@ -426,6 +428,24 @@ export function buildTasksTools({ supabase, userId }: ToolContext) {
         if (!data)
           return err(`No active task found with id ${id} for this user — nothing was changed.`);
         return ok({ task: data });
+      },
+    }),
+
+    restore_task: tool({
+      description:
+        "Restore a completed task to active — status back to 'active' and completed_at cleared. Use for a task completed by mistake. Subtasks that were completed together with it are restored too; subtasks finished on their own stay done. Find the id with get_tasks(status='completed'). Completed tasks older than 90 days have been deleted and cannot be restored.",
+      inputSchema: jsonSchema<{ id: string }>({
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: { type: "string", description: "Task UUID of a completed task." },
+        },
+      }),
+      execute: async ({ id }) => {
+        if (!userId) return err("No user context.");
+        const res = await restoreTask({ supabase, userId, taskId: id });
+        if (!res.ok) return err(res.error ?? "Failed to restore task.");
+        return ok({ task: res.task, subtasks_restored: res.subtasksRestored ?? 0 });
       },
     }),
 

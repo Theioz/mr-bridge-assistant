@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addMonths, validateSeries, type Freq, type SeriesDraft } from "./recurrence";
+import { retentionFloor } from "./retention";
 
 const SERIES_COLUMNS =
   "id, list_id, title, priority, freq, interval, byweekday, starts_on, ends_on, last_spawned, expiry_dismissed_at, created_at, updated_at";
@@ -138,12 +139,18 @@ export async function spawnOccurrences({
   // Start from starts_on rather than last_spawned. The unique index absorbs the repeats, and
   // recomputing from the anchor means an extended series backfills anything the cron skipped while
   // its ends_on was in the past.
+  //
+  // But never before the retention floor (#684). The purge deletes completed occurrences past the
+  // window, and a date with no row is a date this function fills — an extend would otherwise put
+  // every purged week back on the list as an overdue chore. See lib/tasks/retention.ts.
+  const floor = retentionFloor(today);
+  const startsOn = series.starts_on as string;
   const dates = occurrenceDates({
     freq: series.freq as Freq,
     interval: series.interval as number,
     byweekday: (series.byweekday as number[] | null) ?? null,
-    startsOn: series.starts_on as string,
-    windowStart: series.starts_on as string,
+    startsOn,
+    windowStart: startsOn > floor ? startsOn : floor,
     windowEnd,
   });
   if (!dates.length) return 0;

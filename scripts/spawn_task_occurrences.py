@@ -25,6 +25,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from _recurrence import occurrences_between  # noqa: E402
 from _dates import today_local  # noqa: E402
+from _retention import retention_floor  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
 
 # How far ahead to materialize. Two weeks is enough that the tasks page always shows what is
@@ -55,6 +56,11 @@ def spawn_for_series(client, series: dict, today: date, horizon: int, dry_run: b
     # still produce the occurrences it owed. Those land in the past and show as overdue, which is
     # correct — the chore genuinely was due and genuinely was not done.
     window_start = last_spawned + timedelta(days=1) if last_spawned else starts_on
+    # Never before the retention floor (#684): purge_completed_tasks.py deletes completed
+    # occurrences older than the window, and a date with no row is a date this loop fills. Only
+    # reachable when last_spawned is unset, but that is exactly the case that would resurrect a
+    # season of chores at once.
+    window_start = max(window_start, retention_floor(today))
 
     dates = occurrences_between(
         freq=series["freq"],
