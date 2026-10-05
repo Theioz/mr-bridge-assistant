@@ -199,7 +199,7 @@ function SubtaskRow({
           paddingLeft: "var(--space-3)",
         }}
       >
-        {/* Checkbox — 32px touch target */}
+        {/* Checkbox — 32px; 44px on touch via .tasks-ui (globals.css) */}
         <button
           onClick={() =>
             !done &&

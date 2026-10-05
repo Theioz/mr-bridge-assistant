@@ -114,6 +114,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Tasks: iOS no longer zooms in when a field is tapped, and every control is a 44px target on
+  touch (#688).** iOS force-zooms on focus below 16px, and every input and select in the tasks
+  tree was `--t-micro` (13px). A `@media (pointer: coarse)` block in `globals.css`, scoped to the
+  new `.tasks-ui` root on `/tasks`, sets form controls to 16px and floors buttons and fields at
+  44x44 (WCAG 2.5.5) by growing the box, not the icon. It keys on pointer, not width, so desktop
+  at any window size renders exactly as before and iPad is covered too. `maximum-scale` was
+  deliberately not used: it would stop the zoom by breaking pinch-zoom (WCAG 1.4.4).
 - **A draw could decrement stock with no ledger row.** `applyDraw` updated the quantity and only
   then checked for a usable pack weight, so a row that lost its pack weight between plan and
   apply was drawn down with nothing for a cook delete to reverse. The check now runs before the
