@@ -10,8 +10,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-# PostgREST embed of the blocking task; the FK is named because tasks references itself twice.
-BLOCKER_EMBED = "blocker:tasks!tasks_blocked_by_fkey(title,status,completed_at)"
+# PostgREST embed of the blocking task, hinted by the COLUMN. The FK-name form
+# (tasks!tasks_blocked_by_fkey) fails with PGRST200 on this PostgREST, and tasks!blocked_by resolves
+# to the reverse side and returns an array. Mirrors BLOCKER_EMBED in web/src/lib/tasks/blockers.ts.
+BLOCKER_EMBED = "blocker:blocked_by(title,status,completed_at)"
 
 
 def is_blocked(task: dict) -> bool:

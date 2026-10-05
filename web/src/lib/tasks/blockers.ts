@@ -5,8 +5,13 @@
 // archived one: archive means dropped, and a task hidden behind a dropped task would stay hidden
 // with nothing on screen saying why.
 
-/** PostgREST embed of the blocking task. Name the FK: tasks has more than one self-reference. */
-export const BLOCKER_EMBED = "blocker:tasks!tasks_blocked_by_fkey(id, title, status)";
+/**
+ * PostgREST embed of the blocking task. Hinted by the COLUMN, not the FK name: tasks references
+ * itself twice (parent_id, blocked_by), and on PostgREST 14 `tasks!tasks_blocked_by_fkey` fails
+ * with PGRST200 while `tasks!blocked_by` resolves to the reverse, one-to-many side and returns an
+ * array. `blocked_by(...)` is the many-to-one: one object, or null. Verified live 2026-10-05.
+ */
+export const BLOCKER_EMBED = "blocker:blocked_by(id, title, status)";
 
 export interface BlockerRef {
   id: string;

@@ -159,6 +159,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Task blockers: the blocker embed failed on PostgREST (#470 follow-up).** The query hinted the
+  self-referencing join by FK name (`tasks!tasks_blocked_by_fkey`), which this PostgREST rejects
+  with PGRST200; `tasks!blocked_by` resolves to the reverse side and returns an array. Both
+  `BLOCKER_EMBED` copies now hint by column (`blocker:blocked_by(...)`), the many-to-one. Caught
+  before the container was rebuilt: the migration was applied and the embed tested live first.
 - **Tasks: the row lays out on two lines on a phone instead of wrapping its buttons to the left
   edge.** #746's 44px touch targets pushed the row past the screen width, so the edit and archive
   buttons fell onto a stray line under the checkbox, the list chip truncated to "Feature/Pr", and
