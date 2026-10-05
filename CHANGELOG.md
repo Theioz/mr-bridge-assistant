@@ -114,6 +114,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Tasks: the row lays out on two lines on a phone instead of wrapping its buttons to the left
+  edge.** #746's 44px touch targets pushed the row past the screen width, so the edit and archive
+  buttons fell onto a stray line under the checkbox, the list chip truncated to "Feature/Pr", and
+  the title squeezed to ~180px. Below `sm` (640px) the title now has the first line to itself and
+  a second line, aligned under it, carries the list chip, due date and series chips on the left
+  and the actions on the right. From `sm` up that wrapper is `display: contents`, so desktop is
+  unchanged: a 1280px screenshot diffs at 0 pixels. The add form puts the input on its own line
+  on a phone with Add pinned right. Text fields are exempt from the 44px floor again; the
+  always-visible "Add item…" field had gained a blank band under every task.
 - **Tasks: iOS no longer zooms in when a field is tapped, and every control is a 44px target on
   touch (#688).** iOS force-zooms on focus below 16px, and every input and select in the tasks
   tree was `--t-micro` (13px). A `@media (pointer: coarse)` block in `globals.css`, scoped to the

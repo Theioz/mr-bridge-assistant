@@ -703,6 +703,7 @@ body {
    iOS force-zooms on focus when a control's font-size is under 16px, and the
    tree sets --t-micro (13px) inline on every field — hence !important. Hit
    areas floor at 44x44 (WCAG 2.5.5); min-* grows the box, never the icon.
+   The row layout that makes room for them on a phone lives in task-item.tsx.
    Keyed on pointer, not width, so desktop at any window size is untouched and
    iPad is covered. Never fix the zoom with maximum-scale — that kills pinch-zoom. */
 @media (pointer: coarse) {
@@ -711,10 +712,14 @@ body {
   .tasks-ui textarea {
     font-size: 16px !important;
   }
+  /* Text fields are exempt: they span their row, so they are wide targets
+     already, and a 44px floor on the always-visible "Add item…" field added a
+     blank band under every task. */
   .tasks-ui button,
-  .tasks-ui input,
   .tasks-ui select,
-  .tasks-ui textarea {
+  .tasks-ui input[type="date"],
+  .tasks-ui input[type="number"],
+  .tasks-ui input[type="time"] {
     min-width: 44px;
     min-height: 44px;
   }
