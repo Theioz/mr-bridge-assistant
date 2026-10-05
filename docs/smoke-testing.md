@@ -112,6 +112,25 @@ npm run start          # in one terminal
 npm run smoke:perf     # in another
 ```
 
+Useful variants (#445):
+
+```
+PERF_ROUTES=/login npm run smoke:perf                              # public route only, no test account needed
+PERF_TARGET=https://mr-bridge.jl-infra-lab.com npm run smoke:perf  # measure the live deployment instead
+```
+
+**Local only since the July 2026 self-host cutover.** The database is tailnet-only, so CI cannot
+sign in, and the Smoke workflow's secrets still point at the deleted Supabase Cloud project; the
+CI description below is historical until that is rebuilt. Put `SMOKE_TEST_EMAIL` /
+`SMOKE_TEST_PASSWORD` for a test account on the self-hosted instance in `web/.env.local`.
+
+The script fronts the app with a local proxy that drops one response header,
+`Referrer-Policy`: Lighthouse 13.1 on Chromium 147 crashes the page on it (`TARGET_CRASHED` →
+`FAILED_DOCUMENT_REQUEST`), and the app sends it on every route. Nothing else is altered.
+
+Lab numbers are a simulated mid-range phone on slow 4G. For what the app is like on the device it
+is actually used from, see the real-user metrics: `python3 scripts/web_vitals_report.py`.
+
 `web/smoke/perf-report/<route>-<preset>.html` is the full Lighthouse
 UI; `web/smoke/perf-report/summary.json` is the structured breakdown.
 

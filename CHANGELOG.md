@@ -171,6 +171,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **`npm run smoke:perf` runs again (#445).** Lighthouse 13.1 on Chromium 147 crashes the page
+  (`TARGET_CRASHED` → `FAILED_DOCUMENT_REQUEST`) on any response carrying
+  `Referrer-Policy: strict-origin-when-cross-origin`, which this app sends on every route. Bisected
+  with a bare server, one header at a time. The script now fronts the app with a local proxy that
+  drops exactly that header. New `PERF_ROUTES` (e.g. `/login`, no test account needed) and
+  `PERF_TARGET` (measure the live deployment). `/chat` is gone from the routes' baselines (deleted
+  in #476). Documented as local-only: the database has been tailnet-only since the self-host
+  cutover, so CI cannot sign in. Production `/login` today: mobile LCP 3035 ms, desktop 638 ms,
+  CLS 0.
 - **Tasks: a blocked task now shows under the task it waits on (#470 follow-up).** Blocking a task
   moved it into a collapsed "Blocked" section at the bottom of `/tasks`, which read as the task
   disappearing, and lost the link to what it was waiting on. Blocked tasks now render indented
