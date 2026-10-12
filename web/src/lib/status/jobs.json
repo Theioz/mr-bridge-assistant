@@ -58,8 +58,8 @@
     {
       "source": "cron:series_expiring",
       "label": "Recurring-series expiry warnings",
-      "schedule": "Daily 15:30 UTC",
-      "maxAgeHours": 48
+      "schedule": "Weekly, Mon 16:00 UTC",
+      "maxAgeHours": 360
     },
     {
       "source": "recipe_audit",
@@ -71,7 +71,7 @@
       "source": "cron:stale_check",
       "label": "Stale-signal checker",
       "schedule": "Every 6 hours",
-      "maxAgeHours": 24
+      "maxAgeHours": 14
     }
   ]
 }
