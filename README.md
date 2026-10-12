@@ -154,8 +154,8 @@ Also set `APP_URL` in `.env` to your app's hostname (e.g. `https://mr-bridge.jl-
 All notifications are ntfy pushes that also land in the in-app Notifications page. One path sends
 them: `scripts/_push.py` (`scripts/notify.sh` wraps it). The schedule lives in the host crontab
 (for this deployment, jl-homelab `system/cron/compute-core-crontab`); host-side entries override
-`SUPABASE_URL` to `http://localhost:8000`, because `.env`'s `SUPABASE_URL` is the tailnet vhost,
-which compute-core cannot route to.
+`SUPABASE_URL` to `http://localhost:8000`, because `.env`'s `SUPABASE_URL` is
+`http://host.docker.internal:8000`, an address that only resolves inside a container.
 
 | Script | Schedule (UTC) | What it sends |
 |---|---|---|
