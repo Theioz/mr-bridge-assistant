@@ -36,13 +36,17 @@ def load_jobs() -> list[dict]:
 
 
 def evaluate(jobs: list[dict], last_ok: dict[str, datetime], now: datetime) -> list[dict]:
-    """Jobs whose last success is older than maxAgeHours, or that never succeeded."""
+    """Jobs that HAVE succeeded before but not within maxAgeHours.
+
+    A job with no success on record is not counted: right after a deploy every new heartbeat is
+    empty, and paging for all of them would be noise. "Never runs at all" is covered by that job's
+    own Kuma heartbeat; the Status page shows it as "Never ran"."""
     stale = []
     for j in jobs:
         if j["source"] == SELF:
             continue  # a checker cannot usefully report on itself
         seen = last_ok.get(j["source"])
-        if seen is None or now - seen > timedelta(hours=j["maxAgeHours"]):
+        if seen is not None and now - seen > timedelta(hours=j["maxAgeHours"]):
             stale.append({**j, "lastOk": seen})
     return stale
 

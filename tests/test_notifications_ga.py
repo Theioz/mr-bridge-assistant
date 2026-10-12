@@ -80,9 +80,11 @@ class StaleSignals(unittest.TestCase):
         {"source": "cron:stale_check", "label": "Stale checker", "maxAgeHours": 24},
     ]
 
-    def test_flags_old_and_never_run_but_not_itself(self):
+    def test_flags_a_job_that_worked_then_stopped_but_not_never_run_or_itself(self):
+        # Never-run jobs are excluded: after a deploy every new heartbeat is empty, and paging for
+        # them all would be noise. Kuma's per-job heartbeat covers "never runs".
         out = stale.evaluate(self.jobs, {"oura": self.now - timedelta(hours=50)}, self.now)
-        self.assertEqual({j["source"] for j in out}, {"oura", "cron:birthday"})
+        self.assertEqual({j["source"] for j in out}, {"oura"})
 
     def test_fresh_job_is_fine(self):
         last = {"oura": self.now - timedelta(hours=3), "cron:birthday": self.now - timedelta(hours=20)}
