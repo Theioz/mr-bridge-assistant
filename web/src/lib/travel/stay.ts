@@ -103,19 +103,48 @@ export function findCurrentStay(
 /**
  * Place names worth sending to a city geocoder, best first, from a free-text location.
  *
- * The geocoder the weather code uses (Open-Meteo) searches PLACE NAMES, not addresses — the full
- * "The Westin Melbourne, 205 Collins St, Melbourne VIC 3000, Australia" matches nothing, and the
- * existing "text before the first comma" fallback gives "The Westin Melbourne", which matches
- * nothing either. The city is almost always the segment just before the country, so segments are
- * tried from the end backwards with postcodes and state codes stripped:
+ * The geocoder the weather code uses (Open-Meteo) searches PLACE NAMES, not addresses, so the city
+ * has to be pulled out of the address. Segments are tried from the end backwards (the country, the
+ * last segment, is set aside: see addressCountry):
  *
- *   "…, 205 Collins St, Melbourne VIC 3000, Australia" → ["Melbourne", "The Westin Melbourne"]
- *   "Hilton, 500 E 4th St, Austin, TX 78701, USA"      → ["Austin", "Hilton"]
- *   "Kyoto"                                            → ["Kyoto"]
+ *   "…, 205 Collins St, Melbourne VIC 3000, Australia"      → ["Melbourne", "The Westin Melbourne"]
+ *   "205 Collins Street Melbourne, Victoria 3000 Australia" → ["Melbourne", "Victoria"]
+ *   "Hilton, 500 E 4th St, Austin, TX 78701, USA"           → ["Austin", "Hilton"]
  *
- * Street lines (a segment starting with a number) are skipped: "Collins St" would geocode to the
- * wrong place, which is worse than not geocoding at all.
+ * A segment that starts with a street number contributes only its LAST word, and only when that word
+ * is not a street suffix: "205 Collins Street Melbourne" → "Melbourne", "205 Collins St" → nothing.
+ * The second form is the one Google Calendar actually writes for hotel bookings. The first version of
+ * this function skipped number-led segments entirely, found no candidates for it, and travel mode
+ * quietly showed home weather (#761). Region words left in the last segment ("Victoria" before the
+ * country) come last, as a coarse fallback.
  */
+const STREET_SUFFIX =
+  /^(st|street|rd|road|ave|avenue|blvd|boulevard|ln|lane|dr|drive|way|pl|place|ct|court|hwy|highway|pde|parade|tce|terrace|cres|crescent|sq|square)\.?$/i;
+const MULTIWORD_COUNTRIES = [
+  "united states",
+  "united kingdom",
+  "new zealand",
+  "south korea",
+  "south africa",
+  "hong kong",
+  "united arab emirates",
+];
+
+/** The country named at the end of an address, or null. "…, Victoria 3000 Australia" → "Australia". */
+export function addressCountry(location: string | null | undefined): string | null {
+  const segments = (location ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (segments.length < 2) return null;
+  const words = segments[segments.length - 1].split(/\s+/).filter((w) => !/\d/.test(w));
+  if (!words.length) return null;
+  const tail = words.join(" ").toLowerCase();
+  const multi = MULTIWORD_COUNTRIES.find((c) => tail.endsWith(c));
+  if (multi) return words.slice(-multi.split(" ").length).join(" ");
+  return words[words.length - 1];
+}
+
 export function geocodeCandidates(location: string | null | undefined): string[] {
   const raw = (location ?? "").trim();
   if (!raw) return [];
@@ -124,27 +153,39 @@ export function geocodeCandidates(location: string | null | undefined): string[]
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const clean = (seg: string): string => {
-    const words = seg.split(/\s+/).filter((w) => !/\d/.test(w));
+  const words = (seg: string): string[] => {
+    const w = seg.split(/\s+/).filter((x) => x && !/\d/.test(x));
     // Drop trailing state/province codes ("VIC", "TX", "NSW") but never the last word standing.
-    while (words.length > 1 && /^[A-Z]{2,3}$/.test(words[words.length - 1])) words.pop();
-    return words.join(" ").trim();
+    while (w.length > 1 && /^[A-Z]{2,3}$/.test(w[w.length - 1])) w.pop();
+    return w;
   };
-  const usable = (seg: string, cleaned: string): boolean =>
-    !/^\d/.test(seg) && cleaned.length > 0 && !/^[A-Z]{2,3}$/.test(cleaned);
-
   const out: string[] = [];
-  const push = (seg: string) => {
-    const c = clean(seg);
-    if (usable(seg, c) && !out.includes(c)) out.push(c);
+  const push = (c: string) => {
+    if (c && !/^[A-Z]{2,3}$/.test(c) && !out.includes(c)) out.push(c);
+  };
+  const fromSegment = (seg: string) => {
+    const w = words(seg);
+    if (!w.length) return;
+    if (/^\d/.test(seg)) {
+      // A street line. Only a trailing city-like word is usable ("…Street Melbourne").
+      const last = w[w.length - 1];
+      if (w.length > 1 && !STREET_SUFFIX.test(last)) push(last);
+      return;
+    }
+    push(w.join(" "));
   };
 
   if (segments.length === 1) {
-    push(segments[0]);
+    fromSegment(segments[0]);
     return out;
   }
-  // Last segment is the country — searching for "Australia" gives a point in the outback.
-  for (let i = segments.length - 2; i >= 0; i--) push(segments[i]);
+  for (let i = segments.length - 2; i >= 0; i--) fromSegment(segments[i]);
+
+  // Whatever precedes the country in the last segment ("Victoria" in "Victoria 3000 Australia").
+  const country = addressCountry(raw);
+  const last = words(segments[segments.length - 1]);
+  const region = country ? last.slice(0, last.length - country.split(" ").length) : [];
+  if (region.length) push(region.join(" "));
   return out;
 }
 

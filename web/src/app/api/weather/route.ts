@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { geocode, geocodeFirst } from "@/lib/weather/geocode";
 import { getCurrentStay } from "@/lib/travel/current-stay";
-import { geocodeCandidates } from "@/lib/travel/stay";
+import { addressCountry, geocodeCandidates } from "@/lib/travel/stay";
 
 export interface WeatherData {
   temp: number | null;
@@ -77,7 +77,13 @@ export async function GET() {
     let travel: WeatherData["travel"] = null;
 
     const stay = await getCurrentStay(supabase, user.id);
-    const away = stay?.location ? await geocodeFirst(geocodeCandidates(stay.location)) : null;
+    const away = stay?.location
+      ? await geocodeFirst(geocodeCandidates(stay.location), addressCountry(stay.location))
+      : null;
+    if (stay && !away) {
+      // Never silent: travel mode with home weather underneath reads as correct and is not.
+      console.warn(`[weather] could not place stay "${stay.name}" (${stay.location}); using home`);
+    }
 
     if (stay && away) {
       lat = away.lat;

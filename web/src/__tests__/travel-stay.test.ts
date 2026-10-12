@@ -7,7 +7,12 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findCurrentStay, geocodeCandidates, stayCity } from "../lib/travel/stay.ts";
+import {
+  addressCountry,
+  findCurrentStay,
+  geocodeCandidates,
+  stayCity,
+} from "../lib/travel/stay.ts";
 
 const WESTIN = {
   summary: "Stay at The Westin Melbourne",
@@ -92,6 +97,18 @@ test("geocode candidates: city first, street lines and postcodes dropped", () =>
   assert.deepEqual(geocodeCandidates("Kyoto"), ["Kyoto"]);
   assert.deepEqual(geocodeCandidates("  "), []);
   assert.deepEqual(geocodeCandidates(null), []);
+});
+
+test("geocode candidates for the address Google Calendar actually writes (live, Oct 2026)", () => {
+  // Two segments, the city at the END of a street line. The first version produced no candidates
+  // for this, and travel mode silently showed home weather.
+  const live = "205 Collins Street Melbourne, Victoria 3000 Australia";
+  assert.deepEqual(geocodeCandidates(live), ["Melbourne", "Victoria"]);
+  assert.equal(addressCountry(live), "Australia");
+  // A street line ending in a suffix contributes nothing.
+  assert.deepEqual(geocodeCandidates("12 Main St, Springfield, United States"), ["Springfield"]);
+  assert.equal(addressCountry("12 Main St, Springfield, United States"), "United States");
+  assert.equal(addressCountry("Kyoto"), null);
 });
 
 test("stayCity falls back to the hotel name without a location", () => {

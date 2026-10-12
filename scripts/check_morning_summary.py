@@ -130,16 +130,35 @@ def find_stay_today(client, uid: str, today: date) -> dict | None:
         return None
 
 
-def geocode_stay(stay: dict) -> tuple[float, float, str] | None:
-    """(lat, lon, label) for the stay's location, trying each place-name candidate in turn."""
-    from fetch_weather import _geocode
-    from _travel import geocode_candidates
+COUNTRY_ALIASES = {"usa": "united states", "us": "united states", "uk": "united kingdom"}
 
+
+def geocode_stay(stay: dict) -> tuple[float, float, str] | None:
+    """(lat, lon, label) for the stay's location: the first place-name candidate that geocodes
+    INSIDE the address's country ("Melbourne" from an Australian address must not land in Florida).
+    Mirror of web/src/lib/weather/geocode.ts geocodeFirst with preferCountry."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    from _travel import address_country, geocode_candidates
+
+    country = (address_country(stay.get("location")) or "").lower()
+    want = COUNTRY_ALIASES.get(country, country)
     for cand in geocode_candidates(stay.get("location")):
+        url = ("https://geocoding-api.open-meteo.com/v1/search"
+               f"?name={urllib.parse.quote(cand)}&count=10&language=en&format=json")
         try:
-            return _geocode(cand)
+            req = urllib.request.Request(url, headers={"User-Agent": "mr-bridge/1.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                results = json.load(resp).get("results") or []
         except Exception:  # noqa: BLE001 — try the next candidate
             continue
+        for r in results:
+            if not want or (r.get("country") or "").lower() == want or (r.get("country_code") or "").lower() == want:
+                label = r.get("name", cand) + (f", {r['admin1']}" if r.get("admin1") else "")
+                return float(r["latitude"]), float(r["longitude"]), label
+    print(f"[morning_summary] could not place stay {stay.get('name')!r}; using home weather", file=sys.stderr)
     return None
 
 

@@ -89,6 +89,16 @@ class GeocodeCandidates(unittest.TestCase):
         self.assertEqual(travel.geocode_candidates("  "), [])
         self.assertEqual(travel.geocode_candidates(None), [])
 
+    def test_geocode_candidates_for_the_address_google_calendar_writes(self):
+        # Live, Oct 2026: two segments, the city at the end of a street line. The first version
+        # produced no candidates and travel mode silently used home weather.
+        live = "205 Collins Street Melbourne, Victoria 3000 Australia"
+        self.assertEqual(travel.geocode_candidates(live), ["Melbourne", "Victoria"])
+        self.assertEqual(travel.address_country(live), "Australia")
+        self.assertEqual(travel.geocode_candidates("12 Main St, Springfield, United States"), ["Springfield"])
+        self.assertEqual(travel.address_country("12 Main St, Springfield, United States"), "United States")
+        self.assertIsNone(travel.address_country("Kyoto"))
+
     def test_stay_city(self):
         self.assertEqual(travel.stay_city({"name": "The Westin Melbourne", "location": WESTIN["location"]}), "Melbourne")
         self.assertEqual(travel.stay_city({"name": "Ace Hotel", "location": None}), "Ace Hotel")
