@@ -1,24 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { SETTINGS_TABS, type SettingsTab } from "@/lib/settings-tabs";
 
-export const SETTINGS_TABS = [
-  { key: "profile", label: "Profile" },
-  { key: "fitness", label: "Fitness" },
-  { key: "integrations", label: "Integrations" },
-  { key: "watchlists", label: "Watchlists" },
-  { key: "appearance", label: "Appearance" },
-  { key: "data", label: "Data" },
-  { key: "status", label: "Status" },
-] as const;
-
-export type SettingsTab = (typeof SETTINGS_TABS)[number]["key"];
-
-const VALID_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.key));
-
-export function isSettingsTab(value: string | undefined): value is SettingsTab {
-  return typeof value === "string" && VALID_KEYS.has(value);
-}
+export type { SettingsTab } from "@/lib/settings-tabs";
 
 interface Props {
   activeTab: SettingsTab;
