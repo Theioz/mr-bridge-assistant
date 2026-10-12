@@ -297,6 +297,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Travel mode showed home weather in Melbourne (#761).** Google Calendar writes hotel stays as
+  "205 Collins Street Melbourne, Victoria 3000 Australia": two segments, with the city at the end of
+  a street line. `geocodeCandidates` skipped number-led segments, found nothing, and the weather fell
+  back to San Francisco under a correct "Traveling — Melbourne" note. A street line now contributes
+  its trailing non-suffix word. Geocoding prefers matches in the address's country, so "Melbourne"
+  can't resolve to Florida or "Victoria" to Canada. A stay that still can't be placed is logged, not
+  silent. Same fix in the morning summary's Python mirror (`scripts/_travel.py`).
 - **CI guard for the client/server boundary.** `scripts/check-client-boundary.py` (run in the lint
   workflow) fails when server code imports a function from a `"use client"` module, the class of
   bug below that no other check catches.

@@ -70,38 +70,76 @@ def find_current_stay(events: list[dict], today: date, tz: tzinfo) -> dict | Non
     return best
 
 
+STREET_SUFFIX = re.compile(
+    r"^(st|street|rd|road|ave|avenue|blvd|boulevard|ln|lane|dr|drive|way|pl|place|ct|court|hwy|"
+    r"highway|pde|parade|tce|terrace|cres|crescent|sq|square)\.?$",
+    re.I,
+)
+MULTIWORD_COUNTRIES = ["united states", "united kingdom", "new zealand", "south korea",
+                       "south africa", "hong kong", "united arab emirates"]
+
+
+def address_country(location: str | None) -> str | None:
+    """The country named at the end of an address. "…, Victoria 3000 Australia" -> "Australia"."""
+    segments = [s.strip() for s in (location or "").split(",") if s.strip()]
+    if len(segments) < 2:
+        return None
+    words = [w for w in segments[-1].split() if not re.search(r"\d", w)]
+    if not words:
+        return None
+    tail = " ".join(words).lower()
+    for c in MULTIWORD_COUNTRIES:
+        if tail.endswith(c):
+            return " ".join(words[-len(c.split()):])
+    return words[-1]
+
+
 def geocode_candidates(location: str | None) -> list[str]:
     """Place names worth sending to Open-Meteo's place-name geocoder, best first.
 
-    It matches PLACE NAMES, not addresses, so the city — usually the segment just before the
-    country — is tried first, with postcodes and state codes stripped; street lines are skipped:
-      "..., 205 Collins St, Melbourne VIC 3000, Australia" -> ["Melbourne", "The Westin Melbourne"]
+    Mirror of web/src/lib/travel/stay.ts geocodeCandidates — keep the two in step.
+      "…, 205 Collins St, Melbourne VIC 3000, Australia"      -> ["Melbourne", "The Westin Melbourne"]
+      "205 Collins Street Melbourne, Victoria 3000 Australia" -> ["Melbourne", "Victoria"]
+    A street line contributes only a trailing non-suffix word; the second form is what Google
+    Calendar writes, and the first version produced nothing for it (#761).
     """
     raw = (location or "").strip()
     if not raw:
         return []
     segments = [s.strip() for s in raw.split(",") if s.strip()]
 
-    def clean(seg: str) -> str:
-        words = [w for w in seg.split() if not re.search(r"\d", w)]
-        while len(words) > 1 and re.fullmatch(r"[A-Z]{2,3}", words[-1]):
-            words.pop()
-        return " ".join(words).strip()
+    def words(seg: str) -> list[str]:
+        w = [x for x in seg.split() if not re.search(r"\d", x)]
+        while len(w) > 1 and re.fullmatch(r"[A-Z]{2,3}", w[-1]):
+            w.pop()
+        return w
 
     out: list[str] = []
 
-    def push(seg: str) -> None:
-        c = clean(seg)
-        if re.match(r"\d", seg) or not c or re.fullmatch(r"[A-Z]{2,3}", c) or c in out:
+    def push(c: str) -> None:
+        if c and not re.fullmatch(r"[A-Z]{2,3}", c) and c not in out:
+            out.append(c)
+
+    def from_segment(seg: str) -> None:
+        w = words(seg)
+        if not w:
             return
-        out.append(c)
+        if re.match(r"\d", seg):
+            if len(w) > 1 and not STREET_SUFFIX.match(w[-1]):
+                push(w[-1])
+            return
+        push(" ".join(w))
 
     if len(segments) == 1:
-        push(segments[0])
+        from_segment(segments[0])
         return out
-    # The last segment is the country; searching "Australia" lands in the outback.
     for seg in reversed(segments[:-1]):
-        push(seg)
+        from_segment(seg)
+    country = address_country(raw)
+    last = words(segments[-1])
+    region = last[: len(last) - len(country.split())] if country else []
+    if region:
+        push(" ".join(region))
     return out
 
 
