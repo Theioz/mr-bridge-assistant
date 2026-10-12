@@ -146,33 +146,30 @@ For platform-specific setup (macOS banners, Android background delivery, Windows
 
 Also set `APP_URL` in `.env` to your app's hostname (e.g. `https://mr-bridge.jl-infra-lab.com`), and `SHARE_BASE_URL` to the public share host.
 
-#### Notification Setup (local cron)
+#### Notifications
 
-After filling in `.env`, run the installer once to schedule all five check scripts:
+All notifications are ntfy pushes that also land in the in-app Notifications page. One path sends
+them: `scripts/_push.py` (`scripts/notify.sh` wraps it). The schedule lives in the host crontab
+(for this deployment, jl-homelab `system/cron/compute-core-crontab`); host-side entries override
+`SUPABASE_URL` to `http://localhost:8000`, because `.env` holds the container-internal address.
 
-```bash
-bash scripts/install-notifications.sh
-```
-
-This writes idempotent cron entries for:
-
-| Script | Schedule | Alert type |
+| Script | Schedule (UTC) | What it sends |
 |---|---|---|
-| `check_weather_alert.py` | 07:00 daily | Severe weather |
-| `check_daily_alerts.py` | 07:30 daily | Task due-dates (once-per-day) |
-| `check_birthday_notif.py` | 08:00 daily | Google Calendar birthdays |
-| `check_hrv_alert.py` | 08:30 daily | HRV drop vs 7-day baseline |
-| `check_task_due_alerts.py` | 09:00 + 17:00 daily | Task due-dates (per-task 24h dedup) |
+| `check_morning_summary.py` | 14:30 daily | Weather (with storm, heat, freeze and wind flags), last night's recovery (with HRV-drop flag), today's workout, planned meals, due tasks |
+| `check_task_due_alerts.py` | 00:00 + 16:00 daily | Due-today and overdue tasks, per-task 24 h dedup |
+| `check_birthday_notif.py` | 15:00 daily | Birthdays on your Google Calendar |
+| `check_series_expiring.py` | 15:30 daily | Recurring task series about to run out |
+| `check_stale_signals.py` | every 6 h | Nothing directly: exits 10 with a reason when a job or data source is stale, and Uptime Kuma pages it |
+| `coach_check.py` | Sun/Tue/Thu 03:00, Mon 01:00 | Missed-session and weekly-planning nudges |
 
-Safe to re-run — duplicate entries are never added.
+Every scheduled job writes a heartbeat to `sync_log`. **Settings → Status** shows each one's last
+success. Alerting is Uptime Kuma's: every cron runs under the homelab `heartbeat` wrapper, and
+`check_stale_signals.py` adds what Kuma can't see (a data source going stale inside a green
+`/api/cron/sync` run) by failing its own heartbeat with the reason. The job list is
+`web/src/lib/status/jobs.json`: add a job there when you schedule it, or it is invisible.
 
-**Delivery log** — every notification attempt appends one line to `~/.mr-bridge/notify.log`:
-
-```
-[2026-04-20T08:00:01Z] title="Birthday Today" ntfy_topic=mr-bridge-xyz click_url="https://..." curl_exit=0
-```
-
-Tail it to debug silent failures:
+**Delivery log:** every send appends a line to `~/.mr-bridge/notify.log` (title, type, HTTP
+status; never the ntfy topic):
 
 ```bash
 tail -f ~/.mr-bridge/notify.log
@@ -393,8 +390,6 @@ mr-bridge-assistant/
 │   │   │   │   │   └── backfill/route.ts        # POST — compute personal records from historical strength_session_sets
 │   │   │   │   ├── export/
 │   │   │   │   │   └── route.ts           # POST — generate per-user JSON/CSV zip of all user-authored tables
-│   │   │   │   ├── usage/
-│   │   │   │   │   └── storage/route.ts   # GET — per-category row counts + estimated bytes via estimate_user_storage RPC
 │   │   │   │   ├── auth/
 │   │   │   │   │   ├── google/start/route.ts    # GET — initiate Google OAuth flow
 │   │   │   │   │   ├── google/callback/route.ts # GET — handle Google OAuth callback; store encrypted refresh token
@@ -426,7 +421,7 @@ mr-bridge-assistant/
 │   │   │   ├── settings/
 │   │   │   │   ├── watchlist-settings.tsx # Stock watchlist editor (add/remove tickers, server-proxy validation)
 │   │   │   │   ├── data-settings.tsx      # Data export UI — format + range picker, POST /api/export, download zip
-│   │   │   │   └── usage-settings.tsx     # Usage tab — per-category stored-data sizes
+│   │   │   │   └── status-settings.tsx    # Status tab — every scheduled job's last success; late jobs flagged (#761)
 │   │   │   └── dashboard/
 │   │   │       ├── empty-state.tsx        # Shared icon+text empty/error state for dashboard widgets
 │   │   │       ├── schedule-today.tsx     # Google Calendar card
@@ -468,8 +463,6 @@ mr-bridge-assistant/
 ├── .claude/
 │   ├── rules/
 │   ├── agents/
-│   │   ├── nightly-postmortem.md          # 9pm habit check-in agent
-│   │   ├── morning-nudge.md               # 8am session nudge agent
 │   │   ├── weekly-review.md               # Sunday 8pm weekly summary agent
 │   │   └── journal-reminder.md            # 7pm journal reminder (remote trigger)
 │   ├── commands/
@@ -509,9 +502,9 @@ mr-bridge-assistant/
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── run-syncs.py                       # Triggers /api/cron/sync, then the alert scripts
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
-│   ├── check_hrv_alert.py                 # HRV drop push alert (vs 7-day baseline)
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
-│   ├── check_weather_alert.py             # Severe weather push alerts
+│   ├── check_morning_summary.py           # Morning push: weather, recovery, workout, meals, tasks
+│   ├── check_stale_signals.py             # Push when a scheduled job stops succeeding
 │   ├── purge_completed_tasks.py           # Nightly: deletes completed tasks older than 90 days (#684)
 │   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
 │   ├── weekly_plan.py                     # Weekly planner: context / validate / submit (structural rules live here)

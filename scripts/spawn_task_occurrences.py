@@ -254,4 +254,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    from _joblog import job
+
+    with job("cron:spawn_tasks"):
+        sys.exit(main())

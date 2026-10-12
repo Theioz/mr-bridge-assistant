@@ -1,58 +1,30 @@
 #!/usr/bin/env python3
 """
-Check Google Calendar for birthdays today and fire a push notification for each.
-Called by the morning-nudge agent at 8 AM. Exits silently with no notification if
-no birthdays are found today. Errors are non-fatal — printed to stderr, exit 0.
+Push one notification per birthday on the owner's Google Calendar today.
 
-Requires: google-auth, google-auth-oauthlib, google-api-python-client, python-dotenv
-  pip3 install google-auth google-auth-oauthlib google-api-python-client python-dotenv
+Silence is the normal case (no birthdays) and exits 0. Every FAILURE exits non-zero and records
+an 'error' heartbeat — the previous version printed errors and returned 0, so "no birthdays" and
+"could not read the calendar" looked the same. It also imported google-api-python-client, which
+compute-core does not have; calendar access is now plain HTTPS via _google.py.
 """
 from __future__ import annotations
 
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-load_dotenv(ROOT / ".env")
 from _dates import today_local, user_tz  # noqa: E402
-from _supabase import get_client, get_owner_user_id  # noqa: E402
-from _notifications import log_notification  # noqa: E402
-from _integrations import load_integration  # noqa: E402
 
-NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CLICK_PATH = "/dashboard"
-
-
-def get_credentials() -> Credentials:
-    client = get_client()
-    user_id = get_owner_user_id()
-    integration = load_integration(client, user_id, "google")
-    if not integration:
-        raise RuntimeError("Google integration not connected — visit Settings to reconnect.")
-    creds = Credentials(
-        token=None,
-        refresh_token=integration["refresh_token"],
-        client_id=os.environ["GOOGLE_CLIENT_ID"],
-        client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
-        token_uri="https://oauth2.googleapis.com/token",
-    )
-    creds.refresh(Request())
-    return creds
+DRY_RUN = "--dry-run" in sys.argv  # print what would be sent; no push, no heartbeat
 
 
 def is_birthday_event(title: str, cal_name: str) -> bool:
-    return bool(re.search(r"'s birthday$", title, re.IGNORECASE)) or \
-        "birthday" in cal_name.lower()
+    return bool(re.search(r"'s birthday$", title, re.IGNORECASE)) or "birthday" in cal_name.lower()
 
 
 def person_name(title: str) -> str:
@@ -61,74 +33,49 @@ def person_name(title: str) -> str:
 
 
 def today_rfc3339_range() -> tuple[str, str]:
-    """Return (timeMin, timeMax) RFC3339 strings spanning today in USER_TIMEZONE."""
     today = today_local()
     start = datetime(today.year, today.month, today.day, tzinfo=user_tz())
-    time_min = start.isoformat()
-    time_max = (start + timedelta(days=1)).isoformat()
-    return time_min, time_max
+    return start.isoformat(), (start + timedelta(days=1)).isoformat()
 
 
-def main() -> None:
-    try:
-        creds = get_credentials()
-    except Exception as e:
-        print(f"[check_birthday_notif] credential error: {e}", file=sys.stderr)
-        return
+def main() -> int:
+    from _google import access_token, all_events
+    from _push import push
+    from _supabase import get_client, get_owner_user_id
 
-    try:
-        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
-        cal_list = service.calendarList().list(minAccessRole="reader").execute()
-        calendars = cal_list.get("items", [])
-    except Exception as e:
-        print(f"[check_birthday_notif] calendar list error: {e}", file=sys.stderr)
-        return
-
+    client = get_client()
+    user_id = get_owner_user_id()
+    token = access_token(client, user_id)
     time_min, time_max = today_rfc3339_range()
-    birthdays_today: list[str] = []
 
-    for cal in calendars:
-        cal_id = cal.get("id", "")
-        cal_name = cal.get("summaryOverride") or cal.get("summary") or cal_id
-        try:
-            events_result = service.events().list(
-                calendarId=cal_id,
-                timeMin=time_min,
-                timeMax=time_max,
-                singleEvents=True,
-                maxResults=20,
-            ).execute()
-        except Exception:
-            continue
-
-        for event in events_result.get("items", []):
-            if event.get("status") == "cancelled":
-                continue
-            title = event.get("summary", "")
-            if is_birthday_event(title, cal_name):
-                birthdays_today.append(person_name(title))
-
-    try:
-        sb_client = get_client()
-        user_id: str | None = get_owner_user_id()
-    except Exception:
-        sb_client = None
-        user_id = None
-
+    names = sorted(
+        {
+            person_name(e.get("summary", ""))
+            for cal_name, e in all_events(token, time_min, time_max)
+            if is_birthday_event(e.get("summary", ""), cal_name)
+        }
+    )
+    if DRY_RUN:
+        print(f"[dry-run] birthdays today: {names or 'none'}")
+        return 0
     app_url = os.environ.get("APP_URL", "").rstrip("/")
-    for name in birthdays_today:
-        title = "Birthday Today"
-        body = f"It's {name}'s birthday today."
-        cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", body]
-        if app_url:
-            cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
-        try:
-            subprocess.run(cmd, check=True)
-            if sb_client and user_id:
-                log_notification(sb_client, user_id, "birthday", title, body)
-        except Exception as e:
-            print(f"[check_birthday_notif] notify error for {name}: {e}", file=sys.stderr)
+    for name in names:
+        push(
+            "Birthday today",
+            f"It's {name}'s birthday today.",
+            type_="birthday",
+            click_url=f"{app_url}{CLICK_PATH}" if app_url else None,
+            client=client,
+            user_id=user_id,
+        )
+    print(f"[check_birthday_notif] {len(names)} birthday(s) today.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    if DRY_RUN:
+        sys.exit(main())
+    from _joblog import job
+
+    with job("cron:birthday"):
+        sys.exit(main())

@@ -48,11 +48,10 @@ load_dotenv(ROOT / ".env")
 # is bounded at 90 days, so this only needs to outlast the slowest legitimate request.
 TIMEOUT_SECS = 600
 
-# Alert scripts run after syncs — order matters (HRV needs fresh Oura data).
+# Alert scripts run after syncs. Weather and HRV alerts were folded into the morning summary
+# (scripts/check_morning_summary.py), which runs on its own schedule, not after every sync.
 ALERTS: list[list[str]] = [
-    ["scripts/check_hrv_alert.py"],
     ["scripts/check_task_due_alerts.py"],
-    ["scripts/check_weather_alert.py"],
 ]
 
 
@@ -165,8 +164,7 @@ def main() -> None:
         sys.exit("[run-syncs] --days must be between 1 and 90")
 
     rc = run_syncs(args.days, args.force)
-    # Alerts still run after a failed sync: check_task_due_alerts and check_weather_alert
-    # do not depend on sync data, and a stale HRV alert is better than none.
+    # Alerts still run after a failed sync: check_task_due_alerts does not depend on sync data.
     if not args.no_alerts:
         run_alerts()
     sys.exit(rc)

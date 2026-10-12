@@ -1,6 +1,6 @@
 ---
 name: send-notification
-description: Sends a macOS push notification via scripts/notify.sh. Accepts a title and message. Used by agents and commands to surface alerts to the user.
+description: Sends a push notification (ntfy, plus a row in the in-app Notifications page) via scripts/notify.sh. Accepts a title and message. Used by agents and commands to surface alerts to the user.
 allowed-tools:
   - Bash(bash *)
 user-invocable: false

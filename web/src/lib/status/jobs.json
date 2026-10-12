@@ -1,0 +1,77 @@
+{
+  "_comment": "Every scheduled job that should report into sync_log, and how stale it may get. Read by the Status page (web) and scripts/check_stale_signals.py (cron), so both judge staleness from one list. maxAgeHours is roughly 2x the schedule interval. Add a job here when you schedule it, or it is invisible.",
+  "jobs": [
+    {
+      "source": "oura",
+      "label": "Oura sync",
+      "schedule": "Daily 14:00 UTC (via /api/cron/sync)",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "google_health",
+      "label": "Google Health sync",
+      "schedule": "Daily 14:00 UTC (via /api/cron/sync)",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "plex",
+      "label": "Plex watch sync",
+      "schedule": "Daily 14:00 UTC (via /api/cron/sync)",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "cron:morning_summary",
+      "label": "Morning summary push",
+      "schedule": "Daily 14:30 UTC",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "cron:task_due",
+      "label": "Task due alerts",
+      "schedule": "Daily 00:00 + 16:00 UTC",
+      "maxAgeHours": 24
+    },
+    {
+      "source": "cron:birthday",
+      "label": "Birthday alerts",
+      "schedule": "Daily 15:00 UTC",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "cron:coach_check",
+      "label": "Coach check",
+      "schedule": "Sun/Tue/Thu 03:00 + Mon 01:00 UTC",
+      "maxAgeHours": 96
+    },
+    {
+      "source": "cron:spawn_tasks",
+      "label": "Recurring task spawner",
+      "schedule": "Daily 06:00 UTC",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "cron:purge_tasks",
+      "label": "Completed-task purge",
+      "schedule": "Daily 06:30 UTC",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "cron:series_expiring",
+      "label": "Recurring-series expiry warnings",
+      "schedule": "Daily 15:30 UTC",
+      "maxAgeHours": 48
+    },
+    {
+      "source": "recipe_audit",
+      "label": "Recipe audit",
+      "schedule": "Weekly, Mon 15:00 UTC",
+      "maxAgeHours": 336
+    },
+    {
+      "source": "cron:stale_check",
+      "label": "Stale-signal checker",
+      "schedule": "Every 6 hours",
+      "maxAgeHours": 24
+    }
+  ]
+}

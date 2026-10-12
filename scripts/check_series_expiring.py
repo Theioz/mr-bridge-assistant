@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -33,8 +32,9 @@ from _notifications import log_notification  # noqa: E402
 from _recurrence import describe_cadence  # noqa: E402
 from _dates import today_local  # noqa: E402
 from _supabase import get_client, get_owner_user_id  # noqa: E402
+from _push import send_ntfy  # noqa: E402
+from _joblog import job  # noqa: E402
 
-NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CACHE_KEY = "series_expiry_notif_cache"
 # One nudge per runway, not one per day. 7 days means a 14-day window yields ~2 pushes worst case
 # — enough that a missed one is not fatal, few enough to stay signal.
@@ -96,11 +96,10 @@ def needs_notification(series_id: str, cache: dict[str, str]) -> bool:
 
 
 def send_notify(title: str, message: str) -> None:
+    # Push only: the in-app history gets one row PER SERIES below (each with its own
+    # Extend / Let it end actions on /tasks), so the shared push() would add a redundant row.
     app_url = os.environ.get("APP_URL", "").rstrip("/")
-    cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
-    if app_url:
-        cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
-    subprocess.run(cmd, check=True)
+    send_ntfy(title, message, f"{app_url}{CLICK_PATH}" if app_url else None)
 
 
 def main() -> None:
@@ -167,7 +166,7 @@ def main() -> None:
         # If the push failed, do NOT stamp the cache — the whole point is that the user finds out,
         # so the next run should try again rather than treating a failed send as delivered.
         print(f"[check_series_expiring] notify error: {e}", file=sys.stderr)
-        return
+        raise
 
     # One in-app row per series so each gets its own Extend / Let it end actions on /tasks.
     for series_id, label, _ in expiring:
@@ -183,4 +182,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with job("cron:series_expiring"):
+        main()
