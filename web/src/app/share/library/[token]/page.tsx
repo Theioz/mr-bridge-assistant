@@ -99,18 +99,28 @@ export default async function ShareLibraryPage({ params }: Props) {
   const userId = profileRow.user_id as string;
 
   // Fetch all items + display name in parallel
-  const [{ data: items }, { data: nameRow }] = await Promise.all([
+  const [{ data: items }, { data: nameRows }] = await Promise.all([
     supabase
       .from("backlog_items")
       .select("*")
       .eq("user_id", userId)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false }),
-    supabase.from("profile").select("value").eq("user_id", userId).eq("key", "name").maybeSingle(),
+    // `name`, falling back to the legacy `Identity/Name` key (#761) — same order as the
+    // dashboard greeting and Settings → Profile.
+    supabase
+      .from("profile")
+      .select("key,value")
+      .eq("user_id", userId)
+      .in("key", ["name", "Identity/Name"]),
   ]);
 
   const allItems = (items ?? []) as BacklogItem[];
-  const displayName = (nameRow?.value as string | null) ?? null;
+  const profileNameRows = (nameRows ?? []) as { key: string; value: string }[];
+  const displayName =
+    profileNameRows.find((r) => r.key === "name")?.value ??
+    profileNameRows.find((r) => r.key === "Identity/Name")?.value ??
+    null;
 
   const byType: Record<string, BacklogItem[]> = { game: [], show: [], movie: [], book: [] };
   for (const item of allItems) {

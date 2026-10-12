@@ -16,12 +16,13 @@ const STATUS_LABELS: Record<string, string> = {
   dropped: "Dropped",
 };
 
+// Same status tokens as LibraryClient (#761): active owns the amber accent, paused is neutral.
 const STATUS_COLORS: Record<string, string> = {
-  backlog: "var(--color-text-muted)",
-  active: "var(--color-primary)",
-  paused: "#f59e0b",
-  finished: "#22c55e",
-  dropped: "#ef4444",
+  backlog: "var(--color-text-faint)",
+  active: "var(--accent)",
+  paused: "var(--color-text-muted)",
+  finished: "var(--color-positive)",
+  dropped: "var(--color-danger)",
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -188,14 +189,14 @@ function AddSessionForm({
         onChange={(e) => setNotes(e.target.value)}
         style={{ ...inputStyle, width: "100%" }}
       />
-      {error && <p style={{ color: "var(--color-danger, #ef4444)", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{error}</p>}
       <button
         disabled={saving}
         onClick={submit}
         style={{
           alignSelf: "flex-start",
           background: "var(--color-primary)",
-          color: "var(--color-text-on-primary, #fff)",
+          color: "var(--color-text-on-cta)",
           border: "none",
           borderRadius: 6,
           padding: "7px 16px",
@@ -331,12 +332,14 @@ export default function LibraryDetailClient({
     router.push("/library");
   };
 
+  // Mirrors .db-section-label (globals.css) — the house section label (#761).
   const sectionLabel = {
-    fontSize: 11,
+    fontFamily: "var(--font-display), system-ui, sans-serif",
+    fontSize: "var(--t-micro)",
     fontWeight: 600 as const,
     textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-    color: "var(--color-text-muted)",
+    letterSpacing: "0.14em",
+    color: "var(--color-text-faint)",
     marginBottom: 8,
   };
 
@@ -373,18 +376,19 @@ export default function LibraryDetailClient({
           />
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              color: "var(--color-text-muted)",
-            }}
-          >
+          <span className="db-section-label" style={{ display: "block", margin: 0 }}>
             {TYPE_LABEL[item.media_type] ?? item.media_type}
           </span>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: "4px 0 4px", lineHeight: 1.2 }}>
+          <h1
+            className="font-heading"
+            style={{
+              fontSize: "var(--t-h1)",
+              fontWeight: 600,
+              margin: "4px 0 4px",
+              lineHeight: 1.2,
+              color: "var(--color-text)",
+            }}
+          >
             {item.title}
           </h1>
           {item.creator && (
@@ -417,7 +421,7 @@ export default function LibraryDetailClient({
                 borderRadius: 6,
                 padding: "4px 10px",
                 cursor: deleting ? "not-allowed" : "pointer",
-                color: "var(--color-danger, #ef4444)",
+                color: "var(--color-danger)",
                 fontSize: 12,
                 display: "flex",
                 alignItems: "center",
@@ -436,7 +440,7 @@ export default function LibraryDetailClient({
           style={{
             fontSize: 14,
             lineHeight: 1.6,
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-muted)",
             marginBottom: 24,
           }}
         >
@@ -463,7 +467,7 @@ export default function LibraryDetailClient({
                   fontWeight: isActive ? 700 : 400,
                   cursor: saving ? "not-allowed" : "pointer",
                   background: isActive ? STATUS_COLORS[s] : "none",
-                  color: isActive ? "var(--color-text-on-primary, #fff)" : "var(--color-text)",
+                  color: isActive ? "var(--color-text-on-cta)" : "var(--color-text)",
                   textTransform: "capitalize",
                   transition: "all 0.15s",
                 }}
@@ -483,10 +487,11 @@ export default function LibraryDetailClient({
         <div style={{ marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
             <span
+              className="font-heading tnum"
               style={{
-                fontSize: 28,
-                fontWeight: 700,
-                color: parsedDraftRating ? "var(--color-primary)" : "var(--color-text-muted)",
+                fontSize: "var(--t-h1)",
+                fontWeight: 600,
+                color: parsedDraftRating ? "var(--accent-text)" : "var(--color-text-faint)",
                 minWidth: 48,
               }}
             >
@@ -647,7 +652,7 @@ export default function LibraryDetailClient({
             onClick={saveChanges}
             style={{
               background: "var(--color-primary)",
-              color: "var(--color-text-on-primary, #fff)",
+              color: "var(--color-text-on-cta)",
               border: "none",
               borderRadius: 6,
               padding: "8px 20px",
@@ -728,7 +733,7 @@ export default function LibraryDetailClient({
                 onClick={copyShare}
                 style={{
                   background: "var(--color-primary)",
-                  color: "var(--color-text-on-primary, #fff)",
+                  color: "var(--color-text-on-cta)",
                   border: "none",
                   borderRadius: 5,
                   padding: "4px 12px",
@@ -749,7 +754,7 @@ export default function LibraryDetailClient({
                 gap: 4,
                 background: "none",
                 border: "none",
-                color: "var(--color-danger, #ef4444)",
+                color: "var(--color-danger)",
                 fontSize: 13,
                 cursor: "pointer",
                 padding: 0,

@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Pencil,
+  Plus,
   Repeat,
   CircleSlash,
   Lock,
@@ -18,6 +19,7 @@ import type { ScheduleBlock } from "@/lib/tasks/schedule-task";
 import { todayString } from "@/lib/timezone";
 import TimeSelect from "./time-select";
 import { isBlocked } from "@/lib/tasks/blockers";
+import OverflowMenu, { type OverflowMenuItem } from "@/components/ui/overflow-menu";
 
 function relativeDue(dateStr: string): { label: string; urgent: boolean } {
   const today = todayString();
@@ -325,6 +327,9 @@ export default function TaskItem({
   const defaultExpanded = subtasks.length <= 3;
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [addInput, setAddInput] = useState("");
+  // Set when "Add item" is picked from the overflow menu, so the add row stays put even after
+  // the pointer leaves the row (#761). Touch has no hover, so this is its route to the field.
+  const [addOpen, setAddOpen] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
 
   const [showEditPanel, setShowEditPanel] = useState(false);
@@ -551,8 +556,48 @@ export default function TaskItem({
       )
     );
 
+  function openAddItem() {
+    setAddOpen(true);
+    setExpanded(true);
+    setTimeout(() => addInputRef.current?.focus(), 0);
+  }
+
+  const menuItems: OverflowMenuItem[] = [
+    {
+      key: "add-item",
+      label: "Add item",
+      icon: <Plus size={13} />,
+      onSelect: openAddItem,
+    },
+    {
+      key: "schedule",
+      label: task.scheduled_start ? "Edit calendar block" : "Add to calendar",
+      icon: <CalendarClock size={13} />,
+      onSelect: () => setShowSchedule((v) => !v),
+    },
+    ...(task.series_id && series && stopSeriesAction
+      ? [
+          {
+            key: "stop-series",
+            label: "Stop repeating…",
+            icon: <CircleSlash size={13} />,
+            hint: "Keeps completed history, removes future occurrences",
+            danger: true,
+            onSelect: () => setConfirmStop(true),
+          },
+        ]
+      : []),
+    {
+      key: "archive",
+      label: "Archive",
+      icon: <Archive size={13} />,
+      onSelect: handleArchive,
+    },
+  ];
+
   return (
     <div
+      className="task-row"
       style={{
         opacity: isPending ? 0.4 : 1,
         transition: "opacity var(--motion-fast) var(--ease-out-quart)",
@@ -744,78 +789,32 @@ export default function TaskItem({
                 className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
                 style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
                 title={expanded ? "Collapse" : "Expand"}
+                aria-label={expanded ? "Collapse items" : "Expand items"}
+                aria-expanded={expanded}
               >
                 {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </button>
             )}
 
-            {/* Schedule on calendar */}
-            <button
-              onClick={() => setShowSchedule((v) => !v)}
-              className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-              style={{
-                width: 32,
-                height: 32,
-                color: task.scheduled_start ? "var(--accent)" : "var(--color-text-faint)",
-              }}
-              title={task.scheduled_start ? "Edit calendar block" : "Add to calendar"}
-            >
-              <CalendarClock size={13} />
-            </button>
-
-            {/* Edit due date / priority */}
+            {/* Edit due date / priority — the one action kept visible; the rest live in the
+                overflow menu so a row carries two controls, not five (issue 761). */}
             <button
               onClick={() => setShowEditPanel((v) => !v)}
               className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
               style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
               title="Edit due date / priority"
+              aria-label={`Edit due date and priority for ${task.title}`}
+              aria-expanded={showEditPanel}
             >
               <Pencil size={13} />
             </button>
 
-            {/* Archive */}
-            {task.series_id && series && stopSeriesAction && (
-              <button
-                onClick={() => {
-                  if (!confirmStop) {
-                    setConfirmStop(true);
-                    return;
-                  }
-                  setConfirmStop(false);
-                  startTransition(async () => {
-                    await runAction(() => stopSeriesAction(series.id), setRowError);
-                  });
-                }}
-                onBlur={() => setConfirmStop(false)}
-                disabled={isPending}
-                className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-                style={{
-                  height: 32,
-                  paddingLeft: confirmStop ? 8 : 0,
-                  paddingRight: confirmStop ? 8 : 0,
-                  width: confirmStop ? "auto" : 32,
-                  fontSize: "var(--t-micro)",
-                  color: confirmStop ? "var(--color-danger)" : "var(--color-text-faint)",
-                }}
-                title={
-                  confirmStop
-                    ? "Click again to stop this repeating task"
-                    : "Stop repeating — keeps completed history, removes future occurrences"
-                }
-              >
-                {confirmStop ? "Stop repeating?" : <CircleSlash size={13} />}
-              </button>
-            )}
-
-            <button
-              onClick={handleArchive}
+            <OverflowMenu
+              label={`More actions for ${task.title}`}
               disabled={isPending}
-              className="flex-shrink-0 flex items-center justify-center transition-opacity hover:opacity-70"
-              style={{ width: 32, height: 32, color: "var(--color-text-faint)" }}
-              title="Archive"
-            >
-              <Archive size={13} />
-            </button>
+              iconSize={14}
+              items={menuItems}
+            />
           </div>
         </div>
       </div>
@@ -837,6 +836,52 @@ export default function TaskItem({
             style={{ color: "var(--color-text-faint)" }}
             title="Dismiss"
             aria-label="Dismiss error"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Stop repeating — still two steps (#468): the menu item only asks, this row commits. */}
+      {confirmStop && series && stopSeriesAction && (
+        <div
+          role="group"
+          aria-label="Stop repeating this task"
+          className="flex items-center flex-wrap"
+          style={{ gap: "var(--space-2)", paddingBottom: "var(--space-3)", paddingLeft: 56 }}
+        >
+          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
+            Stop repeating? Completed history is kept; future occurrences are removed.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmStop(false);
+              startTransition(async () => {
+                await runAction(() => stopSeriesAction(series.id), setRowError);
+              });
+            }}
+            disabled={isPending}
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: "var(--t-micro)",
+              fontWeight: 500,
+              background: "transparent",
+              border: "1px solid var(--color-danger)",
+              borderRadius: "var(--r-1)",
+              padding: "4px 10px",
+              color: "var(--color-danger)",
+            }}
+          >
+            Stop repeating
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmStop(false)}
+            className="flex-shrink-0 p-1 transition-opacity hover:opacity-70"
+            style={{ color: "var(--color-text-faint)" }}
+            title="Cancel"
+            aria-label="Cancel stop repeating"
           >
             <X size={12} />
           </button>
@@ -1138,89 +1183,68 @@ export default function TaskItem({
         </div>
       )}
 
-      {/* Subtask list + add input */}
-      {expanded && (
-        <div
-          style={{
-            paddingLeft: 56,
-            paddingBottom: "var(--space-2)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-          }}
-        >
-          {subtasks.map((sub) => (
-            <SubtaskRow
-              key={sub.id}
-              subtask={sub}
-              completeSubtaskAction={completeSubtaskAction}
-              deleteSubtaskAction={deleteSubtaskAction}
-              updateAction={updateAction}
-            />
-          ))}
-
+      {/* Subtask list + add input. A task with items shows them while expanded. A task with
+          none used to render an "Add item…" field under every row; now that field appears only
+          while the row is hovered or focused (.task-add-reveal, globals.css), or once the user
+          has asked for it from the overflow menu or started typing in it (issue 761). */}
+      {(totalCount > 0 ? expanded : true) && (
+        <div className={totalCount === 0 && !addOpen && !addInput ? "task-add-reveal" : undefined}>
           <div
-            className="flex items-center gap-2"
             style={{
-              borderLeft: "1px solid var(--rule-soft)",
-              marginLeft: 18,
-              paddingLeft: "var(--space-3)",
-              paddingTop: 2,
-              paddingBottom: 2,
+              paddingLeft: 56,
+              paddingBottom: "var(--space-2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
             }}
           >
-            <input
-              ref={addInputRef}
-              value={addInput}
-              onChange={(e) => setAddInput(e.target.value)}
-              onKeyDown={handleAddSubtask}
-              placeholder="Add item…"
-              className="flex-1 bg-transparent focus:outline-none"
-              style={{
-                fontSize: "var(--t-micro)",
-                color: "var(--color-text)",
-                caretColor: "var(--accent)",
-                paddingTop: 4,
-                paddingBottom: 4,
-              }}
-            />
-          </div>
-        </div>
-      )}
+            {subtasks.map((sub) => (
+              <SubtaskRow
+                key={sub.id}
+                subtask={sub}
+                completeSubtaskAction={completeSubtaskAction}
+                deleteSubtaskAction={deleteSubtaskAction}
+                updateAction={updateAction}
+              />
+            ))}
 
-      {/* Show add input even when collapsed with no subtasks */}
-      {!expanded && totalCount === 0 && (
-        <div
-          style={{
-            paddingLeft: 56,
-            paddingBottom: "var(--space-2)",
-          }}
-        >
-          <div
-            className="flex items-center gap-2"
-            style={{
-              borderLeft: "1px solid var(--rule-soft)",
-              marginLeft: 18,
-              paddingLeft: "var(--space-3)",
-              paddingTop: 2,
-              paddingBottom: 2,
-            }}
-          >
-            <input
-              ref={addInputRef}
-              value={addInput}
-              onChange={(e) => setAddInput(e.target.value)}
-              onKeyDown={handleAddSubtask}
-              placeholder="Add item…"
-              className="flex-1 bg-transparent focus:outline-none"
+            <div
+              className="flex items-center gap-2"
               style={{
-                fontSize: "var(--t-micro)",
-                color: "var(--color-text)",
-                caretColor: "var(--accent)",
-                paddingTop: 4,
-                paddingBottom: 4,
+                borderLeft: "1px solid var(--rule-soft)",
+                marginLeft: 18,
+                paddingLeft: "var(--space-3)",
+                paddingTop: 2,
+                paddingBottom: 2,
               }}
-            />
+            >
+              <input
+                ref={addInputRef}
+                value={addInput}
+                onChange={(e) => setAddInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && !addInput) {
+                    setAddOpen(false);
+                    (e.target as HTMLInputElement).blur();
+                    return;
+                  }
+                  handleAddSubtask(e);
+                }}
+                onBlur={() => {
+                  if (!addInput.trim()) setAddOpen(false);
+                }}
+                placeholder="Add item…"
+                aria-label={`Add item to ${task.title}`}
+                className="flex-1 bg-transparent focus:outline-none"
+                style={{
+                  fontSize: "var(--t-micro)",
+                  color: "var(--color-text)",
+                  caretColor: "var(--accent)",
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
