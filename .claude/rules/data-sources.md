@@ -4,7 +4,7 @@ All live data is in **self-hosted Supabase** on `compute-core` (`supabase.jl-inf
 Migrated off Supabase Cloud 2026-07-13 — see ADR 0017 in the jl-homelab repo.
 
 There is **no in-app chat**. Conversation happens through the **MCP server**
-(`web/mcp/run.sh`), which exposes the same 48 tools to Claude Code. Where a row below
+(`web/mcp/run.sh`), which exposes the same 49 tools to Claude Code. Where a row below
 says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
@@ -25,7 +25,7 @@ says "MCP tool", that tool is available to you directly in this session.
 | `meal_log` | What was actually eaten | `POST /api/meals/eat` (one-tap confirm of a cook — macros already known) or `/api/meals/log` (photo/text → USDA, for off-plan food), or `/api/meals/log-label` (an amount of a `packaged_foods` product, priced server-side off its label; `source = 'label'`). **There is still no `log_meal` tool** — the model never records that food went in a mouth |
 | `journal_entries` | Manual | `/journal` server action. **No tool writes journal entries** |
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata; Plex watch history (#691) | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools**. Movies/shows are also written by `/api/cron/sync` from Plex: status, sessions, `metadata.plex_progress`, and `rate_prompt_at` (a pending rate prompt, cleared by a DB trigger whenever a rating is written) |
-| `grocery_products` | Amazon Fresh product pins (#4): food identity (`fdc_id` or `packaged_food_id`, **never name**) → ASIN, pack grams, last price. One pin per food | `pin_grocery_product` **MCP tool**; read by `get_grocery_list` (planned recipes × portions − `inventory_items`, in whole packs; reports `unlisted` recipes with no structured ingredients) |
+| `grocery_products` | Amazon Fresh product pins (#4): food identity (`fdc_id` or `packaged_food_id`, **never name**) → ASIN, pack grams, last price. One pin per food | `pin_grocery_product` **MCP tool**; read by `get_grocery_list` (planned recipes × portions − `inventory_items`, in whole packs; reports `unlisted` recipes with no structured ingredients) and by `receive_grocery_order`, which turns a delivered order into `inventory_items` rows in grams carrying the pin's identity (idempotent per order) |
 | `notifications` | ntfy push history | `/api/cron/sync` |
 | `web_vitals` | Real-user page-load metrics (LCP, FCP, CLS, INP, TTFB) per page load, per route, phone vs desktop (#445) | The signed-in app via `POST /api/vitals` (`components/web-vitals-reporter.tsx`). Summarize with `python3 scripts/web_vitals_report.py [--days 14]` |
 | `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`), plus an on-demand refresh when `/dashboard` renders stale data; `sports_cache` also via the sports **MCP tool** |
