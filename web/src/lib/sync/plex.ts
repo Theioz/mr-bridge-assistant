@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { logSync } from "@/lib/sync/log";
-import { fetchTmdbById, fetchTvDetail } from "@/lib/backlog/tmdb";
+// Relative .ts imports so the bundler-free node test runner can load this module (#761).
+import { logSync } from "./log.ts";
+import { fetchTmdbById, fetchTvDetail } from "../backlog/tmdb.ts";
 
 // Plex watch sync (#691). Polls Plex watch history — webhooks need Plex Pass — and turns
 // it into library state:
@@ -68,10 +69,14 @@ interface Item {
 }
 
 class PlexClient {
-  constructor(
-    private baseUrl: string,
-    private token: string,
-  ) {}
+  // Plain fields, not parameter properties: node's type-stripping test runner rejects those.
+  private baseUrl: string;
+  private token: string;
+
+  constructor(baseUrl: string, token: string) {
+    this.baseUrl = baseUrl;
+    this.token = token;
+  }
 
   async get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
     const url = new URL(path, this.baseUrl);

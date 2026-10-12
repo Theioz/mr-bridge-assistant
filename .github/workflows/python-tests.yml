@@ -5,7 +5,9 @@ on:
     paths:
       - 'scripts/**'
       - 'tests/**'
-      - 'web/src/**'
+      # All of web/ — not just web/src — so the node job also runs for web/mcp/** (the
+      # MCP server wrapping lib/tools), package.json and tsconfig changes (#761).
+      - 'web/**'
       - '.github/workflows/python-tests.yml'
 
 jobs:

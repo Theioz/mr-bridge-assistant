@@ -28,6 +28,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   change (the same "8 findings" pushed four Mondays running) and records its runs. Removed: the
   macOS-only `morning-nudge` / `nightly-postmortem` agents, `install-notifications.sh` (the schedule
   lives in the host crontab), and the `/api/usage/storage` quota meter.
+- **Contract tests for critical paths, and a `next build` check in CI (#761).** The API
+  routes, MCP tools and the Plex sync had no tests at all. New node-runner tests (39 cases,
+  no database) run the real code against an in-memory fake of the supabase-js query builder
+  (`web/src/__tests__/helpers/fake-supabase.ts`):
+  - `plex-sync.test.ts` — `syncPlex` with Plex + TMDB stubbed: first run records a cursor
+    and imports nothing; a movie watch finishes the item, logs one session and sets
+    `rate_prompt_at` when unrated; no double-log within 3h; an episode moves a show to
+    `active` with `plex_progress`; a fully watched show finishes only when TMDB says
+    `in_production: false`; an unreachable Plex logs a `sync_log` error and throws.
+  - `meal-tools.test.ts` — `pin_grocery_product` (ASIN validation, food identity required,
+    oz/lb → g, re-pin replaces, other users untouched) and `plan_meals` validation.
+  - `cron-sync.test.ts` — `/api/cron/sync`: bearer auth, `?days`/`?force` parsing, Plex
+    skipped (not errored) without `PLEX_URL`/`PLEX_TOKEN`, and one failing source or user
+    never loses the others' results.
+
+  To make these loadable by the bundler-free runner, with behaviour unchanged: the cron
+  orchestration moved from the route into `web/src/lib/sync/cron.ts` (the route is now the
+  HTTP edge only); the `plan_meals` / `pin_grocery_product` bodies moved into
+  `web/src/lib/tools/meal-actions.ts`; `plex.ts` uses relative `.ts` imports and no
+  constructor parameter properties.
+
+  CI: new `build.yml` runs `next build` on PRs touching `web/**` (placeholder
+  `NEXT_PUBLIC_*` values only — the build needs no env). The node unit tests now run for
+  any `web/**` change, including `web/mcp/**`, not only `web/src/**`. `smoke.yml`'s a11y
+  job could never run (it required `pull_request`, a trigger the workflow did not have):
+  it now runs on `workflow_dispatch` and on a weekly schedule gated by the repo variable
+  `SMOKE_SCHEDULE_ENABLED` (off by default, since cloud runners cannot reach the
+  tailnet-only app). The a11y sweep now covers `/library`, `/calendar` and `/inventory`.
+
 - **`amazon-cart` skill: fill the Amazon Fresh cart from the grocery list (#4, Phase 2).**
   Runs in the user's own signed-in Chrome through Claude in Chrome. **It never checks out.**
   Checkout, "Clear cart", Repeat Items, Subscribe & Save and account settings are named as
