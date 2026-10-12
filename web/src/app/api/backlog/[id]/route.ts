@@ -52,6 +52,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     "started_at",
     "finished_at",
     "metadata",
+    // Dismissing a Plex rate prompt (#691). Saving a rating clears it via a DB trigger.
+    "rate_prompt_at",
   ];
   const patch: Record<string, unknown> = {};
   for (const key of allowed) {

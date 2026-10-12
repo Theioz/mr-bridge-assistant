@@ -373,7 +373,7 @@ mr-bridge-assistant/
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
-│   └── migrations/                        # 78 files, newest 20261005160000_authenticated_table_privileges.sql
+│   └── migrations/                        # 79 files, newest 20261012120000_backlog_rate_prompt.sql
 │
 ├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
@@ -505,6 +505,7 @@ mr-bridge-assistant/
 │   │       └── sync/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
 │   │           ├── google-health.ts       # syncGoogleHealth() — body comp + workouts + HR zones
+│   │           ├── plex.ts                # syncPlex() — Plex watch history → library status, sessions, rate prompts
 │   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
 │   └── package.json

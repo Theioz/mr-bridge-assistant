@@ -80,9 +80,13 @@ function normalize(item: any, type: "movie" | "show"): MetadataSearchResult {
   };
 }
 
-async function fetchTvDetail(
-  id: number,
-): Promise<{ last_air_date?: string; in_production?: boolean } | null> {
+export interface TvDetail {
+  last_air_date?: string;
+  in_production?: boolean;
+  number_of_episodes?: number;
+}
+
+export async function fetchTvDetail(id: number): Promise<TvDetail | null> {
   try {
     const url = `${BASE}/tv/${id}?api_key=${apiKey()}`;
     const res = await fetch(url, { next: { revalidate: 3600 } });
@@ -92,6 +96,7 @@ async function fetchTvDetail(
     return {
       last_air_date: d.last_air_date ?? undefined,
       in_production: d.in_production ?? undefined,
+      number_of_episodes: d.number_of_episodes ?? undefined,
     };
   } catch {
     return null;
@@ -183,4 +188,37 @@ export async function findByImdbIds(
 
   await Promise.all(Array.from({ length: Math.min(concurrency, imdbIds.length) }, worker));
   return out;
+}
+
+/**
+ * Fetch one movie or show by its TMDB id. Exact by construction, like `findByImdbId` —
+ * the Plex sync uses it to create a library row from the GUID Plex already holds.
+ * Returns null when TMDB has no record of the id; throws on any other failure so a
+ * transient outage is retried rather than recorded as "no match".
+ */
+export async function fetchTmdbById(
+  id: string,
+  type: "movie" | "show",
+): Promise<MetadataSearchResult | null> {
+  const path = type === "movie" ? "movie" : "tv";
+  const append = type === "movie" ? "&append_to_response=credits" : "";
+  const url = `${BASE}/${path}/${encodeURIComponent(id)}?api_key=${apiKey()}${append}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`TMDB ${res.status}: ${await res.text()}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d: any = await res.json();
+  // Detail endpoints return `genres: [{id, name}]`, not the `genre_ids` the search
+  // results carry, so map them back before normalizing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  d.genre_ids = (d.genres ?? []).map((g: any) => g.id);
+  if (type === "movie") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    d.director = (d.credits?.crew ?? []).find((c: any) => c.job === "Director")?.name;
+    return normalize(d, "movie");
+  }
+  const base = normalize(d, "show");
+  (base.metadata as Record<string, unknown>).last_air_date = d.last_air_date ?? undefined;
+  (base.metadata as Record<string, unknown>).in_production = d.in_production ?? undefined;
+  return base;
 }

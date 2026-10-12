@@ -9,6 +9,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Plex watch sync: auto-finish, then prompt to rate (#691).** `/api/cron/sync` now polls Plex
+  watch history (`lib/sync/plex.ts`) and writes it into the Library. A watched movie goes to
+  `finished` with a `backlog_sessions` row. A watched episode moves its show to `active` with
+  `metadata.plex_progress` (watched/total, Season 0 specials excluded). A show only goes to
+  `finished` once every episode is watched **and** TMDB says it is no longer in production with no
+  more episodes than Plex holds. Caught-up shows that are still airing are re-checked against
+  TMDB daily, so the prompt still fires when the show ends. Unrated items get a rate prompt,
+  answered from a banner on `/library` (0-10 slider plus optional review) or dismissed. A
+  title watched on Plex that is not in the Library is added from its TMDB GUID; Plex GUIDs make
+  this an exact match. Only watches from go-live onward count: the first run records a cursor
+  (`profile.plex_sync_cursor`) and imports no history. Only the server owner's watches are
+  read (`PLEX_ACCOUNT_ID`, default 1). Rewatches add a session and leave the original
+  `finished_at` alone. Two history entries for one viewing (Plex writes these, observed live)
+  collapse into one session. Plex unreachable: the sync logs an `error` row and the other
+  sources run as usual. Config: `PLEX_URL` (LAN address) and `PLEX_TOKEN`; unset means skipped.
+  Migration `20261012120000_backlog_rate_prompt.sql` adds `backlog_items.rate_prompt_at` and a
+  trigger that clears it whenever a rating is written, from any path (page, MCP tool, script).
+  **Apply before this code deploys.**
 - **Real-user page-load metrics (#445).** The signed-in app now records LCP, FCP, CLS, INP and TTFB
   for every page load into a new `web_vitals` table, through `POST /api/vitals` with
   `navigator.sendBeacon` when the page is hidden (when CLS and INP are final). Each row carries the
