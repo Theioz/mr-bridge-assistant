@@ -5,7 +5,7 @@ import type { FitnessLog, RecoveryMetrics } from "@/lib/types";
 
 const ChartSkeleton = ({ height = 200 }: { height?: number }) => (
   <div
-    style={{ height, borderRadius: "var(--r-1)", background: "var(--color-surface-2)" }}
+    style={{ height, borderRadius: "var(--r-1)", background: "var(--color-surface-raised)" }}
     aria-hidden
   />
 );

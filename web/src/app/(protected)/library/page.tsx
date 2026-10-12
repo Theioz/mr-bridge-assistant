@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { BacklogItem, MediaType, BacklogStatus, AllCounts, StatusCounts } from "@/lib/types";
+import { shareBaseUrl } from "@/lib/share-url";
 import LibraryClient from "./LibraryClient";
 import RatePrompts from "./RatePrompts";
 
@@ -84,6 +85,7 @@ export default async function LibraryPage() {
       initialItems={(items ?? []) as BacklogItem[]}
       initialCounts={initialCounts}
       initialShareToken={initialShareToken}
+      shareBase={shareBaseUrl()}
       ratePrompts={<RatePrompts initialItems={(prompts ?? []) as BacklogItem[]} />}
     />
   );

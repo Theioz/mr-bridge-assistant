@@ -3,9 +3,10 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { todayString, daysAgoString, getLast7Days } from "@/lib/timezone";
+import { todayString, getLast7Days, startOfDayRFC3339 } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
 import { getHabitIcon } from "@/lib/habit-icons";
+import { weeklyCompletion } from "@/lib/habits/weekly-completion";
 
 export const metadata: Metadata = {
   title: "Weekly",
@@ -142,7 +143,7 @@ async function WeeklyGrid({
       .select("id,title,priority,completed_at")
       .eq("status", "completed")
       .not("completed_at", "is", null)
-      .gte("completed_at", `${weekStart}T00:00:00`),
+      .gte("completed_at", startOfDayRFC3339(weekStart)),
     supabase.from("tasks").select("id,title,priority,status,due_date").eq("status", "active"),
     supabase
       .from("workout_sessions")
@@ -194,24 +195,25 @@ async function WeeklyGrid({
   const allCompleted = (allCompletedRes.data ?? []) as { habit_id: string; date: string }[];
   const habitStreaks = computeStreaks(allCompleted, today);
 
-  const habitCompletedDates = new Map<string, Set<string>>();
-  for (const { habit_id, date, completed } of weekHabits) {
-    if (!completed) continue;
-    if (!habitCompletedDates.has(habit_id)) habitCompletedDates.set(habit_id, new Set());
-    habitCompletedDates.get(habit_id)!.add(date);
-  }
+  // Shared with the /habits Weekly Completion ring — same window, same counting rule (#761).
+  const habitWeek = weeklyCompletion(
+    habitRegistry.map((h) => h.id),
+    weekHabits,
+    last7Days,
+  );
+  const habitCompletedDates = new Map(habitWeek.perHabit.map((h) => [h.habitId, h.dates]));
 
   const habitSummaries = habitRegistry
     .map((h) => ({
       habit: h,
-      hits: (habitCompletedDates.get(h.id) ?? new Set()).size,
+      hits: habitCompletedDates.get(h.id)?.size ?? 0,
       streak: habitStreaks[h.id]?.current ?? 0,
     }))
     .sort((a, b) => b.hits - a.hits || a.habit.name.localeCompare(b.habit.name));
 
-  const totalPossible = habitRegistry.length * 7;
-  const totalHits = habitSummaries.reduce((s, x) => s + x.hits, 0);
-  const habitPct = totalPossible > 0 ? Math.round((totalHits / totalPossible) * 100) : 0;
+  const totalPossible = habitWeek.possible;
+  const totalHits = habitWeek.completed;
+  const habitPct = habitWeek.pct;
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
@@ -884,8 +886,10 @@ async function WeeklyGrid({
 
 export default async function WeeklyPage() {
   const today = todayString();
-  const weekStart = daysAgoString(6);
+  // One list of user-timezone dates drives the label, every query and the habit maths, the
+  // same list /habits uses (#761).
   const last7Days = getLast7Days();
+  const weekStart = last7Days[0];
   const rangeLabel = `${fmtDate(weekStart)} – ${fmtDate(today)}`;
 
   return (

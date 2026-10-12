@@ -55,30 +55,26 @@ export function WeekPlan({
   const plannedCount = week.filter((p) => p.status !== "skipped").length;
   const unplannedDays = days.filter((d) => !(byDate.get(d) ?? []).length).length;
 
+  // A whole empty week is one fact, not seven. Seven "Nothing planned" rows pushed everything
+  // else on the page below the fold (#761); the per-day gaps only earn their rows once at
+  // least one day has something planned and the gaps are the decisions still owed.
+  if (week.length === 0) {
+    return (
+      <section style={{ marginBottom: "var(--space-6)" }}>
+        <h2 className="font-heading font-semibold" style={headingStyle}>
+          This week
+        </h2>
+        <p style={{ ...summaryStyle, marginBottom: 0 }}>Nothing planned this week</p>
+      </section>
+    );
+  }
+
   return (
     <section style={{ marginBottom: "var(--space-6)" }}>
-      <h2
-        className="font-heading font-semibold"
-        style={{
-          fontSize: "var(--t-h3)",
-          color: "var(--color-text)",
-          marginBottom: "var(--space-1)",
-        }}
-      >
+      <h2 className="font-heading font-semibold" style={headingStyle}>
         This week
       </h2>
-      <p
-        style={{
-          fontSize: "var(--t-micro)",
-          color: "var(--color-text-muted)",
-          marginBottom: "var(--space-4)",
-        }}
-      >
-        {plannedCount} meal{plannedCount === 1 ? "" : "s"} planned over the next {days.length} days
-        {unplannedDays > 0
-          ? ` · ${unplannedDays} day${unplannedDays === 1 ? "" : "s"} with nothing planned`
-          : ""}
-      </p>
+      <p style={summaryStyle}>{weekSummary(plannedCount, days.length, unplannedDays)}</p>
 
       {days.map((date) => {
         const { label, isToday } = dayLabel(date, today);
@@ -142,6 +138,28 @@ export function WeekPlan({
     </section>
   );
 }
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+/** "4 meals planned over the next 7 days · 3 days with nothing planned". */
+function weekSummary(planned: number, dayCount: number, unplanned: number): string {
+  const head = `${plural(planned, "meal")} planned over the next ${plural(dayCount, "day")}`;
+  return unplanned > 0 ? `${head} · ${plural(unplanned, "day")} with nothing planned` : head;
+}
+
+const headingStyle: React.CSSProperties = {
+  fontSize: "var(--t-h2)",
+  color: "var(--color-text)",
+  marginBottom: "var(--space-1)",
+};
+
+const summaryStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  marginBottom: "var(--space-4)",
+};
 
 const dayBlockStyle: React.CSSProperties = {
   paddingBottom: "var(--space-3)",

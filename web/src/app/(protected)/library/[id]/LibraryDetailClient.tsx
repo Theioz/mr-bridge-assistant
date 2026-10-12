@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Share2, X, Trash2 } from "lucide-react";
 import type { BacklogItem, BacklogSession, BacklogStatus } from "@/lib/types";
+import { itemShareUrl } from "@/lib/share-url";
 
 const STATUSES: BacklogStatus[] = ["backlog", "active", "paused", "finished", "dropped"];
 
@@ -215,11 +216,12 @@ function AddSessionForm({
 export default function LibraryDetailClient({
   item: initialItem,
   initialSessions,
-  appUrl,
+  shareBase,
 }: {
   item: BacklogItem;
   initialSessions: BacklogSession[];
-  appUrl: string;
+  /** Public share origin, resolved on the server by `shareBaseUrl()` (#761). */
+  shareBase: string;
 }) {
   const router = useRouter();
   const [item, setItem] = useState(initialItem);
@@ -237,7 +239,7 @@ export default function LibraryDetailClient({
     String((initialItem.metadata as Record<string, unknown>)?.played_on ?? ""),
   );
   const [shareUrl, setShareUrl] = useState(
-    item.share_token ? `${appUrl}/share/backlog/${item.share_token}` : "",
+    item.share_token ? itemShareUrl(item.share_token, shareBase) : "",
   );
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -299,9 +301,13 @@ export default function LibraryDetailClient({
   const generateShare = async () => {
     const res = await fetch(`/api/backlog/${item.id}/share`, { method: "POST" });
     if (res.ok) {
-      const { share_url } = await res.json();
+      // Built by the same itemShareUrl() on the server, so it matches the initial render.
+      const { share_url, share_token } = (await res.json()) as {
+        share_url: string;
+        share_token: string;
+      };
       setShareUrl(share_url);
-      setItem((prev) => ({ ...prev, share_token: share_url.split("/").pop() ?? null }));
+      setItem((prev) => ({ ...prev, share_token }));
     }
   };
 

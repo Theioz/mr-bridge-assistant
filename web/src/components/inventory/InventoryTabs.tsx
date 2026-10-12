@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FridgeView, type FridgeItem } from "./FridgeView";
 import { InventoryPanel, type InventoryItem } from "@/components/meals/InventoryPanel";
 import { CatalogPanel } from "./CatalogPanel";
+import { ExpiredStrip } from "./ExpiredStrip";
 import type { PackagedFoodRow } from "@/lib/nutrition/packaged-foods";
 
 /**
@@ -67,6 +68,9 @@ export function InventoryTabs({
         ))}
       </div>
 
+      {/* Past-date food is a toss-or-keep decision, not a "cook these first" one (#761). Shown
+          above both kitchen views; the Catalog tab is about labels, not food on hand. */}
+      {tab !== "catalog" && <ExpiredStrip items={items} />}
       {tab === "kitchen" && <FridgeView items={items} />}
       {tab === "list" && <InventoryPanel items={items} />}
       {tab === "catalog" &&

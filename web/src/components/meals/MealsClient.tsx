@@ -97,6 +97,12 @@ interface Suggestion {
 }
 
 interface Props {
+  /**
+   * Server-rendered content for the top of the Today tab — the kitchen and the week plan.
+   * It lives inside the tab panel, under the tab bar, so the tabs are the first thing on the
+   * page rather than sitting below a week of "Nothing planned" rows (#761).
+   */
+  todayLead?: React.ReactNode;
   todayMeals: MealRow[];
   pastMeals: MealRow[];
   recipes: RecipeRow[];
@@ -1847,6 +1853,7 @@ export default function MealsClient(props: Props) {
 }
 
 function MealsClientInner({
+  todayLead,
   todayMeals,
   pastMeals,
   recipes,
@@ -2070,6 +2077,7 @@ function MealsClientInner({
       )}
 
       {/* Tab panels */}
+      {tab === "today" && todayLead && <div>{todayLead}</div>}
       {tab === "today" && (
         <TodayTab
           todayMeals={visibleTodayMeals}

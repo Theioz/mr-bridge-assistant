@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { shareBaseUrl } from "@/lib/share-url";
+import { libraryShareUrl } from "@/lib/share-url";
 
 export async function POST() {
   const supabase = await createClient();
@@ -23,7 +23,7 @@ export async function POST() {
 
   return NextResponse.json({
     share_token: token,
-    share_url: `${shareBaseUrl()}/share/library/${token}`,
+    share_url: libraryShareUrl(token),
   });
 }
 

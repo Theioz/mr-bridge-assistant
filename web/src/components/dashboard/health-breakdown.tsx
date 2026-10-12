@@ -5,6 +5,7 @@ import type { RecoveryMetrics } from "@/lib/types";
 import { BarSeries, ChartFrame, StackedBars, TrendLine } from "@/components/charts/primitives";
 import { formatDate } from "@/lib/chart-utils";
 import { todayString } from "@/lib/timezone";
+import { readinessFlagged, readinessText } from "@/lib/readiness";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,15 +53,6 @@ function trailingAvg(values: (number | null)[]): number | null {
   const nums = values.filter((v): v is number => v != null);
   if (nums.length === 0) return null;
   return nums.reduce((a, b) => a + b, 0) / nums.length;
-}
-
-function scoreText(score: number | null): string {
-  if (score == null) return "—";
-  if (score >= 85) return "optimal · push hard today";
-  if (score >= 70) return "good · normal training";
-  if (score >= 55) return "moderate · moderate effort";
-  if (score >= 40) return "low · consider deload";
-  return "critical · rest day recommended";
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
@@ -259,7 +251,7 @@ function FitnessChartPanel({
     >
       {tab === "weight" &&
         (wValues.length === 0 ? (
-          <Empty />
+          <Empty what="Weight" why={`No weigh-ins in the last ${spanText(windowLabel)}`} />
         ) : (
           <TrendLine
             labels={wLabels}
@@ -285,7 +277,10 @@ function FitnessChartPanel({
         ))}
       {tab === "bodyfat" &&
         (bfValues.length === 0 ? (
-          <Empty />
+          <Empty
+            what="Body fat"
+            why={`No body-fat readings in the last ${spanText(windowLabel)}`}
+          />
         ) : (
           <TrendLine
             labels={bfLabels}
@@ -311,7 +306,7 @@ function FitnessChartPanel({
         ))}
       {tab === "steps" &&
         (stepsValues.every((v) => v == null) ? (
-          <Empty />
+          <Empty what="Steps" why={noRecoveryWhy(trends, "step counts", windowLabel)} />
         ) : (
           <BarSeries
             labels={stepsLabels}
@@ -336,7 +331,10 @@ function FitnessChartPanel({
         ))}
       {tab === "calories" &&
         (calValues.every((v) => v == null) ? (
-          <Empty />
+          <Empty
+            what="Active calories"
+            why={noRecoveryWhy(trends, "active-calorie data", windowLabel)}
+          />
         ) : (
           <TrendLine
             labels={calLabels}
@@ -453,7 +451,7 @@ function SleepChartPanel({
     >
       {tab === "stages" &&
         (deep.every((v) => v == null) ? (
-          <Empty />
+          <Empty what="Sleep stages" why={noRecoveryWhy(trends, "sleep-stage data", windowLabel)} />
         ) : (
           <StackedBars
             labels={labels}
@@ -471,7 +469,7 @@ function SleepChartPanel({
         ))}
       {tab === "hrv" &&
         (hrv.every((v) => v == null) ? (
-          <Empty />
+          <Empty what="HRV" why={noRecoveryWhy(trends, "HRV readings", windowLabel)} />
         ) : (
           <TrendLine
             labels={labels}
@@ -490,7 +488,10 @@ function SleepChartPanel({
         ))}
       {tab === "rhr" &&
         (rhr.every((v) => v == null) ? (
-          <Empty />
+          <Empty
+            what="Resting HR"
+            why={noRecoveryWhy(trends, "resting-HR readings", windowLabel)}
+          />
         ) : (
           <TrendLine
             labels={labels}
@@ -514,7 +515,7 @@ function SleepChartPanel({
         ))}
       {tab === "spo2" &&
         (spo2.every((v) => v == null) ? (
-          <Empty />
+          <Empty what="SpO₂" why={noRecoveryWhy(trends, "SpO₂ readings", windowLabel)} />
         ) : (
           <TrendLine
             labels={labels}
@@ -529,18 +530,50 @@ function SleepChartPanel({
   );
 }
 
-function Empty() {
+/** "7D" → "7 days", for sentences. Anything unexpected passes through unchanged. */
+function spanText(windowLabel: string): string {
+  const m = /^(\d+)D$/i.exec(windowLabel);
+  return m ? `${m[1]} days` : windowLabel;
+}
+
+/**
+ * Why a recovery-backed chart is empty, when we can tell: no Oura rows at all in the window
+ * means nothing synced; rows present but this field null means the ring didn't report it.
+ */
+function noRecoveryWhy(trends: RecoveryMetrics[], field: string, windowLabel: string): string {
+  return trends.length === 0
+    ? `No Oura data synced in the last ${spanText(windowLabel)}`
+    : `Oura reported no ${field} in the last ${spanText(windowLabel)}`;
+}
+
+/**
+ * Empty chart body. It names its chart itself rather than relying on the ChartFrame header:
+ * on a phone the header row wraps around the tab pills and scrolls under the sticky range
+ * bar first, which left a bare "No data for this period" box with nothing saying which chart
+ * it was (#761). It also says why, where the cause is knowable.
+ */
+function Empty({ what, why }: { what: string; why: string }) {
   return (
     <div
-      className="flex items-center"
+      role="status"
+      className="flex flex-col justify-center"
       style={{
         height: 120,
+        gap: "var(--space-1)",
         fontSize: "var(--t-micro)",
-        color: "var(--color-text-faint)",
-        fontStyle: "italic",
       }}
     >
-      No data for this period
+      <span
+        style={{
+          color: "var(--color-text-muted)",
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        }}
+      >
+        {what}
+      </span>
+      <span style={{ color: "var(--color-text-faint)" }}>{why}</span>
     </div>
   );
 }
@@ -579,14 +612,13 @@ export default function HealthBreakdown({
               <p
                 style={{
                   fontSize: "var(--t-micro)",
-                  color:
-                    recovery.readiness != null && recovery.readiness < 55
-                      ? "var(--accent)"
-                      : "var(--color-text-muted)",
+                  color: readinessFlagged(recovery.readiness)
+                    ? "var(--accent)"
+                    : "var(--color-text-muted)",
                   margin: 0,
                 }}
               >
-                {scoreText(recovery.readiness)}
+                {readinessText(recovery.readiness)}
               </p>
               <p
                 className="tnum"
@@ -597,7 +629,7 @@ export default function HealthBreakdown({
                   marginBottom: 0,
                 }}
               >
-                {recovery.source ?? "Oura"} · {recovery.date}
+                {recovery.source ?? "Oura"} · {formatDate(recovery.date)}
               </p>
             </div>
           </div>
@@ -714,7 +746,7 @@ function ScoreSlot({
   score: number | null;
   large?: boolean;
 }) {
-  const accent = score != null && score < 55;
+  const accent = readinessFlagged(score);
   const color =
     score == null ? "var(--color-text-faint)" : accent ? "var(--accent)" : "var(--color-text)";
   return (

@@ -239,6 +239,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **GA trust bugs from the 2026-10-12 walkthrough (#761).**
+  - **Dashboard showed two readiness scores.** The hero strip read today's `recovery_metrics`
+    row and Health Breakdown read the latest row capped to `date < today`, each with its own
+    copy of the band table. The page now reads one row (the most recent) and every readiness
+    label comes from `lib/readiness.ts`; the breakdown shows that row's date in the same
+    format.
+  - **Habits ring and Weekly Review disagreed about the same week.** Each page had its own
+    window and its own counting (rows on /habits, distinct habit-days on /weekly). Both now call
+    `lib/habits/weekly-completion.ts` with the same `getLast7Days()` list. Habit toggles also
+    revalidate `/weekly`, which the 300 s client router cache otherwise served stale. Weekly
+    "tasks completed" now starts at local midnight, not UTC midnight.
+  - **Meals:** the tab bar is first; kitchen and week plan moved into the Today tab, and an
+    empty week is one line ("Nothing planned this week") instead of seven rows.
+  - **Inventory:** expired items no longer lead "Cook these first". They get an "Expired — toss
+    or keep?" strip with **Tossed** (existing DELETE) and **Still good** (existing PATCH,
+    `expires_on` = today + 3). Kitchen tile names get two full lines.
+  - **Dashboard:** the mobile sticky range bar has a solid `--color-bg` background and a rule;
+    empty charts name themselves and say why ("No weigh-ins in the last 7 days").
+  - **Share links** in the Library header and item page came from `window.location.origin` /
+    `APP_URL` (the tailnet host). All share URLs are now built by `lib/share-url.ts` on
+    `SHARE_BASE_URL`.
 - **Security: `authenticated` no longer holds TRUNCATE, TRIGGER, MAINTAIN or REFERENCES (#756).**
   The default privileges of both table-creating roles granted signed-in users every table
   privilege, and TRUNCATE, TRIGGER and MAINTAIN are not covered by row-level security. On

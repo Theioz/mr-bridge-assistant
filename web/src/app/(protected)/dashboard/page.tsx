@@ -106,6 +106,8 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
       { onConflict: "habit_id,date" },
     );
   revalidatePath("/dashboard");
+  revalidatePath("/habits");
+  revalidatePath("/weekly");
 }
 
 export default async function DashboardPage() {
@@ -115,7 +117,6 @@ export default async function DashboardPage() {
   const [
     fitnessTrendRes,
     recoveryLatestRes,
-    todayRecoveryRes,
     recoveryTrendsRes,
     habitRegistryRes,
     todayHabitsRes,
@@ -132,21 +133,18 @@ export default async function DashboardPage() {
       .select("date,weight_lb,body_fat_pct")
       .gte("date", daysAgoString(days - 1))
       .order("date", { ascending: true }),
-    // Latest full recovery row — capped to before today so a partial same-day
-    // sync row does not replace yesterday's complete data in Health Breakdown
+    // The ONE recovery row the whole page reads: the most recent one, today included.
+    // This used to be two queries — the latest row capped to `date < today` for Health
+    // Breakdown, and today's row for the strip above it — so on any morning after the sync
+    // the page showed two readiness scores from two different days with two different
+    // recommendations (#761). Oura finalises readiness and sleep for a night when the ring
+    // syncs in the morning; only day-long counters (steps, calories) are still filling in,
+    // and the row's date is shown next to them.
     supabase
       .from("recovery_metrics")
       .select("*")
       .eq("source", "oura")
-      .lt("date", today)
       .order("date", { ascending: false })
-      .limit(1),
-    // Today's scores only (for the strip above Health Breakdown)
-    supabase
-      .from("recovery_metrics")
-      .select("date,readiness,sleep_score,source")
-      .eq("source", "oura")
-      .eq("date", today)
       .limit(1),
     // Windowed recovery trend (HRV, sleep stages, steps, calories, RHR, SpO2)
     supabase
@@ -185,12 +183,6 @@ export default async function DashboardPage() {
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
   const latestRecovery = ((recoveryLatestRes.data ?? [])[0] ?? null) as RecoveryMetrics | null;
-  const todayRecoveryRow = (todayRecoveryRes.data ?? [])[0] ?? null;
-  // Hide the strip when today's row IS the latest card (avoid duplicate display)
-  const todayScores =
-    todayRecoveryRow && todayRecoveryRow.date !== latestRecovery?.date
-      ? (todayRecoveryRow as Pick<RecoveryMetrics, "date" | "readiness" | "sleep_score" | "source">)
-      : null;
   const recoveryTrends = (recoveryTrendsRes.data ?? []) as RecoveryMetrics[];
 
   const fitnessData = (fitnessTrendRes.data ?? []) as {
@@ -281,19 +273,19 @@ export default async function DashboardPage() {
         <DashboardBriefing />
       </div>
 
-      {/* Mobile-only sticky time-range selector — transparent so the watercolor
-          canvas reads through; backdrop-filter keeps the pills legible when
-          long content scrolls behind. */}
+      {/* Mobile-only sticky time-range selector. Solid page background (#761): it used to be
+          transparent with an 8px backdrop blur so the watercolor canvas read through, but a
+          blur that light leaves text and charts plainly legible as they scroll underneath,
+          so the bar read as content overlapping content. --color-bg is the same paper the
+          page sits on, in both themes; the hairline marks where the bar ends. */}
       <div
         className="lg:hidden print:hidden"
         style={{
           position: "sticky",
           top: 0,
           zIndex: 10,
-          background: "transparent",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-          borderBottom: "1px solid var(--rule-soft)",
+          background: "var(--color-bg)",
+          borderBottom: "1px solid var(--rule)",
           marginLeft: "-20px",
           marginRight: "-20px",
           padding: "8px 20px",
@@ -307,10 +299,10 @@ export default async function DashboardPage() {
         <UpcomingBirthdayWidget />
       </div>
 
-      {/* ── Today's scores strip (readiness + sleep focal) ─────────── */}
-      {todayScores && (
+      {/* ── Readiness hero — the same row Health Breakdown reads ───── */}
+      {latestRecovery && (
         <div className="print:order-6" data-reveal data-stagger="2">
-          <TodayScoresStrip today={todayScores} />
+          <TodayScoresStrip recovery={latestRecovery} today={today} />
         </div>
       )}
 

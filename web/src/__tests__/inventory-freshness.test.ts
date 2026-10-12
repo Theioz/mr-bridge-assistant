@@ -21,6 +21,10 @@ import {
   isSpent,
   useSoonItems,
   daysText,
+  expiredItems,
+  isCookable,
+  stillGoodUntil,
+  STILL_GOOD_DAYS,
 } from "../lib/nutrition/inventory-freshness.ts";
 
 const TODAY = new Date("2026-09-21T09:00:00");
@@ -49,10 +53,42 @@ test("only an explicit zero counts as spent", () => {
   assert.equal(isSpent(row({ quantity: null })), false);
 });
 
-test("real food still goes urgent inside the window, and past it", () => {
+test("real food goes urgent inside the window, and expired once past it", () => {
   assert.equal(freshnessOf(row({ expires_on: "2026-09-23" }), TODAY).kind, "urgent");
-  assert.equal(freshnessOf(row({ expires_on: "2026-09-20" }), TODAY).kind, "urgent");
+  // Expiring today is still "cook it now", not "toss it".
+  assert.equal(freshnessOf(row({ expires_on: "2026-09-21" }), TODAY).kind, "urgent");
+  // #761: past its date is a toss-or-keep decision, not the head of "Cook these first".
+  assert.equal(freshnessOf(row({ expires_on: "2026-09-20" }), TODAY).kind, "expired");
   assert.equal(freshnessOf(row({ expires_on: "2026-09-30" }), TODAY).kind, "fine");
+});
+
+test("expired food never appears in the use-soon strip — the 2026-10-12 regression", () => {
+  const items = [
+    row({ expires_on: "2026-09-18" }), // spinach, expired
+    row({ expires_on: "2026-09-20" }), // pepper, expired
+    row({ expires_on: "2026-09-22" }), // real, use soon
+    row({ quantity: 0, expires_on: "2026-09-10" }), // spent — in neither list
+    row({ location: "freezer", expires_on: "2026-09-01" }), // frozen — in neither list
+  ];
+  assert.deepEqual(
+    useSoonItems(items, TODAY).map((i) => i.expires_on),
+    ["2026-09-22"],
+  );
+  assert.deepEqual(
+    expiredItems(items, TODAY).map((i) => i.expires_on),
+    ["2026-09-18", "2026-09-20"],
+  );
+  assert.equal(items.filter((i) => isCookable(i, TODAY)).length, 2);
+});
+
+test("'Still good' pushes the date to today + 3, not old date + 3", () => {
+  assert.equal(STILL_GOOD_DAYS, 3);
+  assert.equal(stillGoodUntil(TODAY), "2026-09-24");
+  // The new date is no longer expired, and is back in the use-soon window.
+  const kept = row({ expires_on: stillGoodUntil(TODAY) });
+  assert.equal(freshnessOf(kept, TODAY).kind, "urgent");
+  // Month rollover uses local calendar fields.
+  assert.equal(stillGoodUntil(new Date("2026-09-29T23:30:00"), 3), "2026-10-02");
 });
 
 test("frozen beats the fridge clock, but spent beats frozen", () => {

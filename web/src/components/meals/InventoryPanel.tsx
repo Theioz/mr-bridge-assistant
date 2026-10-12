@@ -101,13 +101,15 @@ function FreshnessDot({ kind }: { kind: Freshness }) {
   const style: React.CSSProperties =
     kind === "urgent"
       ? { ...base, borderRadius: "50%", background: "var(--color-danger)" }
-      : kind === "frozen"
-        ? { ...base, borderRadius: 2, background: "var(--color-text-faint)" }
-        : kind === "fine"
-          ? { ...base, borderRadius: "50%", border: "1.5px solid var(--color-text-faint)" }
-          : kind === "spent"
-            ? { ...base, borderRadius: "50%", border: "1px solid var(--rule-soft)" }
-            : { ...base, borderRadius: "50%", background: "var(--rule-soft)" };
+      : kind === "expired"
+        ? { ...base, borderRadius: "50%", border: "1.5px solid var(--color-danger)" }
+        : kind === "frozen"
+          ? { ...base, borderRadius: 2, background: "var(--color-text-faint)" }
+          : kind === "fine"
+            ? { ...base, borderRadius: "50%", border: "1.5px solid var(--color-text-faint)" }
+            : kind === "spent"
+              ? { ...base, borderRadius: "50%", border: "1px solid var(--rule-soft)" }
+              : { ...base, borderRadius: "50%", background: "var(--rule-soft)" };
   return <span aria-hidden style={style} />;
 }
 
@@ -367,7 +369,10 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
                       {f.days != null && (
                         <span
                           style={{
-                            color: f.kind === "urgent" ? "var(--color-danger)" : undefined,
+                            color:
+                              f.kind === "urgent" || f.kind === "expired"
+                                ? "var(--color-danger)"
+                                : undefined,
                           }}
                         >
                           {daysText(f.days)}
@@ -440,6 +445,9 @@ export function InventoryPanel({ items }: InventoryPanelProps) {
         <div style={legendStyle}>
           <span style={legendItemStyle}>
             <FreshnessDot kind="urgent" /> use soon
+          </span>
+          <span style={legendItemStyle}>
+            <FreshnessDot kind="expired" /> expired
           </span>
           <span style={legendItemStyle}>
             <FreshnessDot kind="fine" /> fine
