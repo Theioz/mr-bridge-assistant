@@ -2,6 +2,8 @@ import { tool, jsonSchema } from "ai";
 import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import type { ToolContext } from "./_context";
 import { createCook, getLeftovers } from "@/lib/nutrition/cooks";
+import { getGroceryList, freshUrl } from "@/lib/nutrition/grocery-list";
+import { gramsPerUnitFor } from "@/lib/nutrition/inventory-draw";
 
 /**
  * Meal tools.
@@ -287,6 +289,122 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
           .order("date", { ascending: false });
         if (error) return { error: error.message };
         return data ?? [];
+      },
+    }),
+
+    get_grocery_list: tool({
+      description:
+        "The grocery list for planned meals (#4): what the recipe-backed meal_plans in the " +
+        "window need, minus what inventory_items already holds, rounded up to whole packs of " +
+        "each food's PINNED Amazon Fresh product. Call this instead of adding up ingredients " +
+        "yourself. Lines with `needsPin: true` have no product yet: search Fresh, let the user " +
+        "choose, then pin_grocery_product. Products are matched by USDA id / label only, never " +
+        "by name — do not substitute a similarly named product for an unpinned line. " +
+        "`check-stock` means the kitchen has some in a unit with no weight: ask before buying.",
+      inputSchema: jsonSchema<{ start?: string; end?: string }>({
+        type: "object",
+        properties: {
+          start: { type: "string", description: "YYYY-MM-DD. Defaults to today." },
+          end: { type: "string", description: "YYYY-MM-DD, inclusive. Defaults to start + 6." },
+        },
+      }),
+      execute: async ({ start, end }) => {
+        if (!userId) return { error: "No user context" };
+        const from = start ?? todayString();
+        try {
+          return await getGroceryList(supabase, userId, {
+            start: from,
+            end: end ?? addDays(from, 6),
+          });
+        } catch (e) {
+          return { error: (e as Error).message };
+        }
+      },
+    }),
+
+    pin_grocery_product: tool({
+      description:
+        "Pin an Amazon Fresh product to a food, so future grocery lists buy exactly it. Identify " +
+        "the food by `fdc_id` (USDA id, from the grocery-list line) or `packaged_food_id`. " +
+        "Re-pinning a food REPLACES its product. Only pin a product the user chose or that was " +
+        'already ordered — never a guess. Pack size comes from the listing ("14 oz" -> ' +
+        'pack_quantity 14, pack_unit "oz"); omit it for count-sold produce like a head of ' +
+        "cabbage. Volume units (fl oz) are not weights: omit them and say so in `notes`.",
+      inputSchema: jsonSchema<{
+        asin: string;
+        title: string;
+        fdc_id?: number;
+        packaged_food_id?: string;
+        pack_quantity?: number;
+        pack_unit?: string;
+        price_usd?: number;
+        fresh?: boolean;
+        notes?: string;
+      }>({
+        type: "object",
+        properties: {
+          asin: { type: "string", description: "10-character Amazon ASIN." },
+          title: { type: "string", description: "Listing title, as shown." },
+          fdc_id: { type: "number" },
+          packaged_food_id: { type: "string" },
+          pack_quantity: { type: "number" },
+          pack_unit: { type: "string", description: "g, kg, oz or lb." },
+          price_usd: { type: "number", description: "Price seen on the listing." },
+          fresh: { type: "boolean", description: "Sold through Amazon Fresh. Defaults true." },
+          notes: { type: "string" },
+        },
+        required: ["asin", "title"],
+      }),
+      execute: async (input) => {
+        if (!userId) return { error: "No user context" };
+        const asin = input.asin.trim().toUpperCase();
+        if (!/^[A-Z0-9]{10}$/.test(asin)) return { error: `"${input.asin}" is not an ASIN` };
+        if (input.fdc_id == null && !input.packaged_food_id) {
+          return { error: "Pin to a food: pass fdc_id or packaged_food_id" };
+        }
+
+        let packGrams: number | null = null;
+        if (input.pack_quantity != null) {
+          const factor = gramsPerUnitFor(input.pack_unit ?? null);
+          if (factor == null) {
+            return { error: `"${input.pack_unit}" is not a weight unit (use g, kg, oz or lb)` };
+          }
+          packGrams = Math.round(input.pack_quantity * factor * 100) / 100;
+        }
+
+        // One pin per food: drop a different product already pinned to this identity first,
+        // so re-pinning replaces rather than tripping the unique index.
+        const identity = input.packaged_food_id
+          ? { col: "packaged_food_id", val: input.packaged_food_id }
+          : { col: "fdc_id", val: input.fdc_id };
+        const { data: replaced, error: delErr } = await supabase
+          .from("grocery_products")
+          .delete()
+          .eq("user_id", userId)
+          .eq(identity.col, identity.val)
+          .neq("asin", asin)
+          .select("asin, title");
+        if (delErr) return { error: delErr.message };
+
+        const row = {
+          user_id: userId,
+          asin,
+          title: input.title,
+          pack_grams: packGrams,
+          price_cents: input.price_usd != null ? Math.round(input.price_usd * 100) : null,
+          price_seen_at: input.price_usd != null ? new Date().toISOString() : null,
+          fresh: input.fresh ?? true,
+          fdc_id: input.fdc_id ?? null,
+          packaged_food_id: input.packaged_food_id ?? null,
+          notes: input.notes ?? null,
+        };
+        const { data, error } = await supabase
+          .from("grocery_products")
+          .upsert(row, { onConflict: "user_id,asin" })
+          .select("asin, title, pack_grams, price_cents, fdc_id, packaged_food_id")
+          .single();
+        if (error) return { error: error.message };
+        return { pinned: data, url: freshUrl(asin), replaced: replaced ?? [] };
       },
     }),
   };

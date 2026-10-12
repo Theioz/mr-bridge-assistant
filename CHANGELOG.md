@@ -9,6 +9,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Grocery list from the meal plan, with pinned Amazon Fresh products (#4, Phase 1).** New
+  `grocery_products` table: a food identity (`fdc_id` or `packaged_food_id`) mapped to one Fresh
+  product (ASIN, pack grams read off the listing, last price). **Products are never matched by
+  name**, by the same rule as the USDA pins: the 7/29 order's "House Napa Cabbage" was kimchi.
+  New MCP tools: `get_grocery_list` (planned recipes scaled by portions / `typical_portions`,
+  minus `inventory_items` matched the way the cook-time draw matches, rounded to whole packs
+  with a 3% slack so 454 g of beef does not buy a second pound) and `pin_grocery_product`
+  (re-pinning a food replaces its product). Lines report `buy`, `covered`, `staple`,
+  `check-stock` (the kitchen has some in a unit with no weight), `no-weight` or `optional`. A
+  `buy` with no product is `needsPin`. Planned recipes with no structured ingredients are
+  returned in `unlisted` instead of silently contributing nothing. A real-data run found 3 such
+  recipes in one week; 5 of 91 recipes are affected overall. `plan-week` now calls the tool
+  instead of adding ingredients up by hand. Seeded with 15 pins from the 2026-09-03 / 09-20
+  Fresh orders. Migration `20261012180000_grocery_products.sql`: RLS owner policy;
+  `authenticated` gets CRUD only. **Applied live 2026-10-12.**
 - **Plex watch sync: auto-finish, then prompt to rate (#691).** `/api/cron/sync` now polls Plex
   watch history (`lib/sync/plex.ts`) and writes it into the Library. A watched movie goes to
   `finished` with a `backlog_sessions` row. A watched episode moves its show to `active` with
