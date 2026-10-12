@@ -9,6 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **`amazon-cart` skill: fill the Amazon Fresh cart from the grocery list (#4, Phase 2).**
+  Runs in the user's own signed-in Chrome through Claude in Chrome. **It never checks out.**
+  Checkout, "Clear cart", Repeat Items, Subscribe & Save and account settings are named as
+  forbidden controls. Flow: preflight (extension connected, signed in, delivery address, Fresh
+  available, no CAPTCHA), each failing with a plain instruction to the user, never a
+  workaround. Then: baseline the cart (pre-existing items are the user's and are never removed),
+  one confirmation of the whole list, add pinned products, and search Fresh for unpinned or
+  unavailable ones. Searched products are offered as alternatives and never added unchosen.
+  Finally it **verifies against the Fresh cart page**, reports Added / Already in cart /
+  Searched-not-found with alternatives / Needs your decision, and invites changes. Four
+  read-only page scripts in `scripts/`. Mechanics were proven live on 2026-10-12 with one test
+  item, added, raised to qty 2 and removed. Two traps are encoded in the skill: element refs
+  on Amazon hit hidden duplicate buttons (the click silently does nothing), so it clicks visible
+  coordinates and re-reads the cart; and the Fresh cart lives at `/cart/localmarket`, separate
+  from the main cart. Pins updated the same day: Just Bare thighs are 1.25 lb, and 8 of 15
+  pins now carry a price.
 - **Grocery list from the meal plan, with pinned Amazon Fresh products (#4, Phase 1).** New
   `grocery_products` table: a food identity (`fdc_id` or `packaged_food_id`) mapped to one Fresh
   product (ASIN, pack grams read off the listing, last price). **Products are never matched by
