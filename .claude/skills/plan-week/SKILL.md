@@ -77,8 +77,15 @@ asserting a number.
 
 The plan is useless if the food doesn't get made. Emit, via `add_task`:
 
-- **A grocery list** — the union of ingredients for every recipe being cooked, minus what
-  leftovers already cover. One task, itemised.
+- **A grocery list** — call `get_grocery_list` for the planned window; do not add ingredients
+  up by hand. It scales each recipe by planned portions, subtracts `inventory_items`, and
+  rounds to whole packs of each food's pinned Amazon Fresh product. Read three things before
+  writing the task:
+  - `unlisted` — recipes with no structured ingredients contribute NOTHING. Name them and
+    shop for them by hand; a list with a non-empty `unlisted` is incomplete.
+  - `needsPin` lines — no product yet. Do not pick one silently: ask, then `pin_grocery_product`.
+  - `check-stock` lines — the kitchen has some but in a unit with no weight. Ask before buying.
+  One task, itemised.
 - **Prep tasks** — one per cook, naming the portion count and what it covers:
   "Cook turkey pasta — split 3 ways, covers Mon/Tue/Wed lunch."
 

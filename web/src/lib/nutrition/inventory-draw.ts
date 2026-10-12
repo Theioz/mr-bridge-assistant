@@ -151,7 +151,7 @@ export function normalizeFoodName(raw: string): Set<string> {
   return new Set(tokens);
 }
 
-function sameFood(a: Set<string>, b: Set<string>): boolean {
+export function sameFood(a: Set<string>, b: Set<string>): boolean {
   if (a.size === 0 || b.size === 0) return false;
   if (a.size !== b.size) return false;
   for (const t of a) if (!b.has(t)) return false;
@@ -279,7 +279,7 @@ const LOCATION_PRIORITY: Record<InventoryLocation, number> = {
   pantry: 3,
 };
 
-interface StockRow {
+export interface StockRow {
   id: string;
   name: string;
   quantity: number | null;
@@ -305,7 +305,7 @@ function netWeightOf(e: EmbeddedLabel | undefined): number | null {
   return one?.net_weight_g ?? null;
 }
 
-const STOCK_SELECT =
+export const STOCK_SELECT =
   "id, name, quantity, unit, location, expires_on, fdc_id, packaged_food_id, metadata, packaged_food:packaged_foods(net_weight_g)";
 
 /**
@@ -346,7 +346,7 @@ const CONTAINER_UNITS = new Set([
  * nothing here. And a non-container count ("1 fillet" of a two-fillet pack) must never read as the
  * whole package's weight.
  */
-function declaredGramsPerUnit(row: {
+export function declaredGramsPerUnit(row: {
   unit?: string | null;
   metadata?: { grams_per_unit?: number | null } | null;
   packaged_food?: EmbeddedLabel;
