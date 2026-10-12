@@ -3,6 +3,7 @@ import { estimateFromText } from "./estimate";
 import { chooseCookToSpend } from "./leftover-choice";
 import type { SpendableCook } from "./leftover-choice";
 import { perPortion } from "./recipe-macros";
+import { planDraw, applyDraw } from "./inventory-draw";
 import { todayString } from "@/lib/timezone";
 
 /**
@@ -315,7 +316,14 @@ export async function eatFromRecipe(
     mealPlanId?: string | null;
     notes?: string;
   },
-): Promise<{ mealLogId: string; portionsRemaining: number; macros: Totals; cookId: string }> {
+): Promise<{
+  mealLogId: string;
+  portionsRemaining: number;
+  macros: Totals;
+  cookId: string;
+  /** Set only when this call cooked (no leftover to spend): what left the kitchen. */
+  draw?: { applied: number; skipped: number; failed: number; error?: string };
+}> {
   const { data: recipe, error } = await db
     .from("recipes")
     .select("typical_portions")
@@ -346,6 +354,35 @@ export async function eatFromRecipe(
       cookedOn: input.date,
     }));
 
+  // COOKING IS A TRANSFER, ON EVERY PATH. When no leftover qualified, this call just cooked —
+  // so the raw ingredients leave inventory now, exactly as POST /api/cooks does with
+  // draw_inventory. Before #761 this path recorded the cook and drew NOTHING: the single-serving
+  // case (a yogurt bowl eaten straight from the plan) never took its yogurt or berries off the
+  // shelf, and the fridge read stocked while it emptied. A failed draw never fails the meal —
+  // the food was eaten either way — and is reported back.
+  let draw: { applied: number; skipped: number; failed: number; error?: string } | undefined;
+  if (!existing) {
+    try {
+      const plan = await planDraw(db, userId, {
+        recipeId: input.recipeId,
+        portionsCooked,
+      });
+      const result = await applyDraw(db, userId, cook.id, plan);
+      draw = {
+        applied: result.applied.length,
+        skipped: plan.skips.length,
+        failed: result.failed.length,
+      };
+    } catch (err) {
+      draw = {
+        applied: 0,
+        skipped: 0,
+        failed: 0,
+        error: err instanceof Error ? err.message : "inventory draw failed",
+      };
+    }
+  }
+
   const eaten = await eatFromCook(db, userId, {
     cookId: cook.id,
     portions: portionsEaten,
@@ -355,5 +392,5 @@ export async function eatFromRecipe(
     notes: input.notes,
   });
 
-  return { ...eaten, cookId: cook.id };
+  return { ...eaten, cookId: cook.id, ...(draw ? { draw } : {}) };
 }

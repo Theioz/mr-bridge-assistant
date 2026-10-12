@@ -74,6 +74,10 @@ export interface InventoryInput {
   added_date?: string | null;
   expires_on?: string | null;
   notes?: string | null;
+  /** Identity for cook-time draws: a USDA pin and/or a photographed-label product (#4). */
+  fdc_id?: number | null;
+  packaged_food_id?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 /** Add something to the kitchen. Name is the only hard requirement. */
@@ -95,6 +99,9 @@ export async function createItem(
     added_date: input.added_date || undefined, // fall back to the column default (today)
     expires_on: input.expires_on || null,
     notes: input.notes?.trim() || null,
+    fdc_id: input.fdc_id ?? null,
+    packaged_food_id: input.packaged_food_id ?? null,
+    ...(input.metadata ? { metadata: input.metadata } : {}),
   };
 
   const { data, error } = await db.from("inventory_items").insert(row).select(SELECT).single();

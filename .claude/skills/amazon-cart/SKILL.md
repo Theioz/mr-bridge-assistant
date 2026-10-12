@@ -145,6 +145,19 @@ When the user picks an alternative for a food with a USDA id, call `pin_grocery_
 next week buys it directly. A substitute picked for a pinned-but-unavailable product is a
 one-off unless the user says to switch.
 
-## 7. Clean up
+## 7. When the order is delivered
+
+After the user says the order arrived (never before, and never from the cart):
+
+1. Open **Your Orders**, then the Fresh order's **order details**, and read each product's ASIN and
+   quantity (read-only, same as cart reads).
+2. Call `receive_grocery_order` with the Amazon order number as `order_id` and one item per
+   product: `{asin, packs}`, plus `location` for anything going in the freezer and `expires_on` if
+   the user reads one off the pack.
+3. Report what went into the kitchen, and anything skipped: **not pinned** means pin it first
+   if the user wants it tracked; **already received** means this order was done before, and
+   nothing was added twice.
+
+## 8. Clean up
 
 Close the tab you opened. Leave the cart as the user saw it in the final report.

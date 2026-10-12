@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Delivered groceries go into the kitchen (#4, Phase 3) and every cook draws inventory (#761).**
+  New MCP tool `receive_grocery_order`: a delivered Amazon Fresh order (ASINs + packs, read from
+  the order details page) becomes `inventory_items` rows in **grams** (pack grams × packs, or a
+  count for per-item produce). Rows carry the pin's `fdc_id` / `packaged_food_id`, so the next
+  "Cooked it" draws them by identity. Unpinned products are reported, never guessed; location
+  follows where that food was last kept; and it is idempotent per Amazon order number, since a
+  second receipt would double the fridge. `amazon-cart` gains the receiving step. Separately, when
+  "Ate this" on a recipe-backed plan finds no leftover to spend, it cooks one portion and **now
+  draws its ingredients from inventory**, as `POST /api/cooks` does. Before, the single-serving case
+  (a yogurt bowl eaten straight from the plan) never took its ingredients off the shelf.
+  `createItem` accepts `fdc_id`, `packaged_food_id` and `metadata`.
 - **Settings → Status and an honest notification pipeline (#761).** Status (replacing the
   multi-tenant "Usage" quota tab) lists every scheduled job and data source with its last success,
   flagging late, failing and never-run ones. It reads `sync_log`, which every Python cron job now

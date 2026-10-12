@@ -4,6 +4,7 @@ import type { ToolContext } from "./_context";
 import { createCook, getLeftovers } from "@/lib/nutrition/cooks";
 import { getGroceryList } from "@/lib/nutrition/grocery-list";
 import { planMeals, pinGroceryProduct } from "./meal-actions.ts";
+import { receiveGroceryOrder } from "@/lib/nutrition/grocery-receive";
 
 /**
  * Meal tools.
@@ -281,6 +282,53 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
             start: from,
             end: end ?? addDays(from, 6),
           });
+        } catch (e) {
+          return { error: (e as Error).message };
+        }
+      },
+    }),
+
+    receive_grocery_order: tool({
+      description:
+        "Put a DELIVERED Amazon Fresh order into the kitchen (inventory_items), after the user " +
+        "says it arrived. Pass each product's ASIN and the number of packs received (read the " +
+        "order's details page; never the cart, which is not a delivery). Products are matched to " +
+        "their pins by ASIN only and stored in grams with the pin's USDA/label identity, so the " +
+        "next 'Cooked it' draws them. Unpinned products are reported, not added. Pass order_id " +
+        "(the Amazon order number) so receiving the same order twice adds nothing. location " +
+        "(fridge/freezer/pantry/counter) defaults to where that food was last kept, else fridge.",
+      inputSchema: jsonSchema<{
+        order_id?: string;
+        items: {
+          asin: string;
+          packs: number;
+          location?: "fridge" | "freezer" | "pantry" | "counter";
+          expires_on?: string;
+        }[];
+      }>({
+        type: "object",
+        properties: {
+          order_id: { type: "string", description: "Amazon order number, for idempotency." },
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                asin: { type: "string" },
+                packs: { type: "number", description: "Whole packs received." },
+                location: { type: "string", enum: ["fridge", "freezer", "pantry", "counter"] },
+                expires_on: { type: "string", description: "YYYY-MM-DD, if printed." },
+              },
+              required: ["asin", "packs"],
+            },
+          },
+        },
+        required: ["items"],
+      }),
+      execute: async ({ order_id, items }) => {
+        if (!userId) return { error: "No user context" };
+        try {
+          return await receiveGroceryOrder(supabase, userId, { items, orderId: order_id ?? null });
         } catch (e) {
           return { error: (e as Error).message };
         }
