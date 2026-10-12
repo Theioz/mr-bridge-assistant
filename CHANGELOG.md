@@ -239,6 +239,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Settings → Status was unreachable (#761).** The settings page kept its own copy of the
+  valid tab list, which still said "usage", so `?tab=status` fell back to Profile. The page now
+  uses `isSettingsTab` from `settings-tabs.tsx`, the single list.
 - **Status registry matched the real crontab (#761).** `series-expiring` runs weekly (Mon 16:00
   UTC), not daily, so its 48 h allowance would have marked it late, and paged, every week. It
   now allows 15 days, and the stale checker allows 14 h for its own 6-hourly run.

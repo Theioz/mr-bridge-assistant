@@ -30,20 +30,10 @@ import {
   type MetricPreferences,
 } from "@/lib/metric-preferences";
 import type { SportsFavorite } from "@/lib/sync/sports";
-import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
+import { SettingsTabs, isSettingsTab, type SettingsTab } from "@/components/settings/settings-tabs";
 import { DataSettings } from "@/components/settings/data-settings";
 import { StatusSettings } from "@/components/settings/status-settings";
 import { loadJobStatuses } from "@/lib/status/jobs";
-
-const VALID_TABS = new Set<string>([
-  "profile",
-  "fitness",
-  "integrations",
-  "watchlists",
-  "appearance",
-  "data",
-  "usage",
-]);
 
 async function updateProfile(key: string, value: string) {
   "use server";
@@ -369,9 +359,9 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const params = await searchParams;
-  const activeTab: SettingsTab = VALID_TABS.has(params.tab ?? "")
-    ? (params.tab as SettingsTab)
-    : "profile";
+  // One list of tabs: settings-tabs.tsx. A second copy here once kept "usage" after the Status
+  // tab replaced it, so /settings?tab=status silently fell back to Profile (#761).
+  const activeTab: SettingsTab = isSettingsTab(params.tab) ? params.tab : "profile";
 
   return (
     <div className="max-w-2xl">
