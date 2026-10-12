@@ -1,64 +1,65 @@
 # Smoke testing — Playwright + Playwright MCP
 
-Automated browser smoke for chat-route and tool changes. Replaces the manual
-"start dev, sign in, send a message, paste output back" loop for scenarios
+Automated browser smoke for UI and route changes. Replaces the manual
+"start dev, sign in, click through, paste output back" loop for scenarios
 covered by committed specs. Motivated by the PR #359 rollback (skipped manual
 smoke) and the multi-hour #323 pre-release verification.
 
 ## What's covered today
 
-- `smoke/specs/chat.spec.ts` — signs in → sends "what is 2+2" → waits for
-  the /api/chat stream to close → asserts the assistant bubble is visible with
-  a "4" or "four" → verifies `chat_messages` persisted user + assistant rows →
-  asserts zero console errors during the turn.
-- `smoke/specs/a11y.spec.ts` — runs axe-core across all 11 routes
-  (`/dashboard`, `/chat`, `/fitness`, `/habits`, `/tasks`, `/weekly`,
+- `smoke/specs/a11y.spec.ts` — runs axe-core across all 10 routes
+  (`/dashboard`, `/fitness`, `/habits`, `/tasks`, `/weekly`,
   `/journal`, `/meals`, `/notifications`, `/settings`, `/login`). Fails on
   any Critical or Serious violation; Moderate / Minor findings surface as
   Playwright annotations in the HTML report without blocking. The
   `color-contrast` rule is temporarily disabled pending the design-token
   sweep in #381. Whole run: ~21s on a warm dev server.
+- `smoke/specs/gate-b.spec.ts` — responsive overflow, theme persistence,
+  touch targets, print styles and nav smoke across the same routes.
+- Plus targeted specs: `calendar-smoke`, `dashboard-hydration`, `export`,
+  `login-signup-smoke`, `security-headers`, `tasks-mutation-errors`.
 - `smoke/perf/lighthouse.mts` — Lighthouse Core Web Vitals sweep across
-  the same 11 routes, mobile + desktop presets, median of 3 runs per
+  the same 10 routes, mobile + desktop presets, median of 3 runs per
   (route × preset). Thresholds from #323 Gate B: **CLS < 0.1**,
   **LCP < 2.5s**, **TBT < 200ms** as the INP proxy (INP is a field metric
   and can't be measured in a lab run — TBT is the published surrogate —
   see https://web.dev/articles/inp). Writes per-route HTML reports +
   `summary.json` under `web/smoke/perf-report/` (gitignored); exits
-  non-zero on any breach. Expensive (~7 min for 66 Lighthouse runs
+  non-zero on any breach. Expensive (~7 min for 60 Lighthouse runs
   against a prod build) — intended for nightly / manual dispatch, not
   per-PR.
 
 ## What's still manual
 
-- **iOS Safari on a real device** — deploy a preview URL and visit from the
-  phone.
+- **iOS Safari on a real device** — visit the deployed app from the phone over
+  the tailnet.
 - **VoiceOver / screen-reader pass** — macOS, one-off per release.
 - **Subjective design quality** — Impeccable `/critique`, `/polish`.
-- **Multi-turn, tool-call, and mutating-tool flows** — follow-up issues; the
-  manual chat-smoke rule still applies until those specs exist.
+- **MCP tool flows** — the MCP server (`web/mcp/`) is not driven by these
+  specs; exercise mutating tools by hand from a Claude Code session.
 
 ## Prerequisites
 
 ### 1. Test account
 
-**Never point smoke at your real account.** The test account writes to
-`chat_sessions` and `chat_messages`. Running smoke against the owner account
-would pollute real data.
+**Never point smoke at your real account.** Several specs mutate data (tasks,
+theme, sign-out). Running smoke against the owner account would pollute real
+data.
 
-One-time setup in the Supabase dashboard:
+One-time setup on the self-hosted Supabase (there is no Studio dashboard; create
+the user through GoTrue's admin API or `auth.users` as postgres):
 
-1. Supabase dashboard → Authentication → Users → **Add user**.
+1. Create a user.
 2. Email: `smoke+test@mr-bridge.test` (or any dedicated address).
 3. Password: generate a strong one; store in 1Password under
    `Mr. Bridge — Smoke test account`.
-4. Toggle "Auto Confirm User" so no email-verification step blocks sign-in.
+4. Mark it email-confirmed (`email_confirm: true`) so no verification step blocks sign-in.
 5. Start the dev server, sign in once as the test account, and set
    `display_name`, `timezone`, and `location` via Settings — this initialises
    the `profiles` row.
 
-**Do NOT connect OAuth integrations** (Calendar, Fitbit, Oura, Google
-Fit) on this account. Mutating-tool smokes are deferred to a follow-up issue
+**Do NOT connect OAuth integrations** (Calendar, Google Health, Oura) on
+this account. Mutating-tool smokes are deferred to a follow-up issue
 and will need a separate test Google Calendar.
 
 ### 2. Environment variables
@@ -71,7 +72,7 @@ Shell-exported values always win.
 SMOKE_TEST_EMAIL=smoke+test@mr-bridge.test
 SMOKE_TEST_PASSWORD=<from-1Password>
 SMOKE_SUPABASE_SERVICE_KEY=<same-value-as-SUPABASE_SERVICE_ROLE_KEY>
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.jl-infra-lab.com
 ```
 
 `SMOKE_SUPABASE_SERVICE_KEY` is the same value as `SUPABASE_SERVICE_ROLE_KEY`
@@ -95,9 +96,8 @@ The Playwright config auto-starts `npm run dev` on port 3000 (and reuses it if
 you already have one running). From `web/`:
 
 ```
-npm run smoke:chat     # just the chat smoke
-npm run smoke:a11y     # axe sweep across the 11 routes
-npm run smoke           # the full suite (chat + a11y)
+npm run smoke:a11y     # axe sweep across the 10 routes
+npm run smoke           # the full suite
 ```
 
 `smoke:perf` is the exception — Lighthouse runs expect a Next server on
@@ -181,13 +181,12 @@ The MCP and the committed `smoke/` suite are independent:
    });
    ```
 
-3. Prefer stable selectors in this order: `data-*` attributes (e.g.
-   `data-print-message="assistant"` on chat bubbles), accessible name /
+3. Prefer stable selectors in this order: `data-*` attributes, accessible name /
    label (`getByRole`, `getByLabel`), text content with a regex. Avoid
    class-based selectors.
 4. Wait on semantic markers, not fixed timeouts — `waitForResponse`,
    `toBeVisible`, `toHaveURL`.
-5. If the spec mutates shared state (chat sessions, DB rows), scope it per
+5. If the spec mutates shared state (DB rows), scope it per
    session where possible and document any residual data-accumulation.
 
 ## CI
@@ -196,11 +195,11 @@ The MCP and the committed `smoke/` suite are independent:
 jobs:
 
 - **`smoke-pr`** — on every PR that touches `web/**`, the smoke docs,
-  `.mcp.json`, or the workflow itself. Runs `smoke:chat` + `smoke:a11y`
+  `.mcp.json`, or the workflow itself. Runs `smoke:a11y`
   against Playwright-managed `next dev`. Cancels stale runs on new
   pushes to the same branch. Target < 3 min after warm cache.
 - **`smoke-release`** — nightly at 09:00 UTC plus `workflow_dispatch`
-  for manual triggers. Runs chat + a11y against dev, stops it, then
+  for manual triggers. Runs a11y against dev, stops it, then
   `next build` + `next start` and runs `smoke:perf` against the prod
   bundle. Target < 20 min.
 
@@ -224,10 +223,8 @@ Add these under repo Settings → Secrets and variables → Actions:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the Next middleware + auth flow
   use this on every request; without it the dev server crashes before
   Playwright ever signs in.
-- `ANTHROPIC_API_KEY` — chat smoke hits the real Anthropic API.
 
-**Never scope these to production.** Always point at the smoke test
-account's Supabase project.
+**Never scope these to the owner account.** Always use the smoke test account.
 
 ## Troubleshooting
 
@@ -235,12 +232,8 @@ account's Supabase project.
   reaching Playwright. Confirm it's in `web/.env.local` (which the config
   auto-loads) or exported in your shell. `grep ^SMOKE_ web/.env.local` is a
   quick sanity check.
-- **Sign-in fails** — confirm the test account is confirmed in the Supabase
-  dashboard and the password in 1Password matches. Temporarily run with
-  `--headed` to watch the browser: `npm run smoke:chat -- --headed`.
-- **`/api/chat` 500** — check `ANTHROPIC_API_KEY` in `.env.local`. Without a
-  key the chat route returns 500 and the smoke fails on stream completion.
-- **Stream doesn't complete in time** — bump `expect` timeout in
-  `playwright.config.ts`; streaming Sonnet can exceed 15s on cold starts.
+- **Sign-in fails** — confirm the test account is email-confirmed and the
+  password in 1Password matches. Temporarily run with `--headed` to watch the
+  browser: `npm run smoke:a11y -- --headed`.
 - **Dev server port conflict** — stop any existing `next dev` on port 3000 or
   set `reuseExistingServer: true` (already the default outside CI).

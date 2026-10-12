@@ -11,7 +11,7 @@ import { listConnectedUsers } from "@/lib/integrations/tokens";
 const SKIP_WINDOW_SECS = 30 * 60; // 30 minutes — same as run-syncs.py
 
 export async function GET(request: NextRequest) {
-  // Verify Vercel cron secret
+  // Bearer CRON_SECRET — called by compute-core's crontab and scripts/run-syncs.py
   const auth = request.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

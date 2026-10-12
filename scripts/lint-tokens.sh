@@ -11,14 +11,11 @@ WEB_SRC="web/src"
 FAIL=0
 
 # ── 1. No inline onMouseOver/onMouseOut hover handlers ──────────────────
-# Allowlist: heatmap.tsx (tooltip state), message-bubble.tsx (reaction
-# popover), slash-command-menu.tsx (highlight state). These use the handlers
-# for non-style state tracking, not inline-style toggling.
+# Allowlist: heatmap.tsx (tooltip state). It uses the handlers for non-style
+# state tracking, not inline-style toggling.
 HOVER_HITS=$(grep -rn 'onMouseOver\|onMouseOut' "$WEB_SRC" \
   --include='*.tsx' --include='*.ts' \
   | grep -v 'heatmap\.tsx' \
-  | grep -v 'message-bubble\.tsx' \
-  | grep -v 'slash-command-menu\.tsx' \
   || true)
 
 if [[ -n "$HOVER_HITS" ]]; then
@@ -62,12 +59,12 @@ fi
 # chicken breast. Only the plate BEHIND each icon is themed, and that correctly uses
 # var(--rule-soft) / var(--color-text-faint). The literals are a fixed illustration palette.
 # Allowlist: globals.css (token defs), FoodPhotoAnalyzer (own cleanup issue),
-# chart-colors.ts (canvas/SVG needs raw hex), icon.svg (SVG markup),
+# icon.svg (SVG markup),
 # logo.tsx (SVG markup — static fill can't reference CSS vars),
 # MealsClient.tsx (CSS var fallbacks — var(--token, #hex)),
 # layout.tsx (viewport.themeColor must be a static hex — can't reference CSS vars),
-# BacklogClient.tsx / LibraryClient.tsx (semantic status colors: paused/finished/dropped have no CSS var),
-# BacklogDetailClient.tsx / LibraryDetailClient.tsx (same status color set),
+# LibraryClient.tsx (semantic status colors: paused/finished/dropped have no CSS var),
+# LibraryDetailClient.tsx (same status color set),
 # share/backlog/[token]/page.tsx + share/library/[token]/page.tsx (standalone public pages — no app shell, CSS vars unavailable).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
 #
@@ -83,14 +80,11 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
   | grep -v 'globals\.css' \
   | grep -v 'FoodPhoto' \
-  | grep -v 'chart-colors' \
   | grep -v 'icon\.svg' \
   | grep -v 'logo\.tsx' \
   | grep -v 'food-art\.tsx' \
   | grep -v 'MealsClient' \
   | grep -v 'layout\.tsx' \
-  | grep -v 'BacklogClient' \
-  | grep -v 'BacklogDetailClient' \
   | grep -v 'LibraryClient' \
   | grep -v 'LibraryDetailClient' \
   | grep -v 'share/backlog' \

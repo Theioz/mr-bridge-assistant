@@ -6,7 +6,7 @@ const withAnalyze = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-// Content-Security-Policy is set per-request in src/middleware.ts (with a nonce).
+// Content-Security-Policy is set per-request in src/proxy.ts (with a nonce).
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -460,6 +460,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
+- **Multi-tenant admin, dead code and stale docs (#761).** Mr. Bridge is a single-user,
+  self-hosted app — multi-tenancy was abandoned for self-hosting (#201) — so the tenant
+  console had nothing to administer. Removed `/admin` (layout, tenant list, tenant
+  drill-down), `lib/admin-types.ts`, and the `is_admin` Admin link in the nav. New migration
+  `20261013090000_drop_admin_tables.sql` drops `feature_flags` and `admin_audit_log`, whose
+  only readers/writers were those pages (**not applied automatically** — apply by hand as
+  postgres). Deleted orphan code with zero importers: `backlog/BacklogClient.tsx`,
+  `backlog/[id]/BacklogDetailClient.tsx` (the `/backlog` pages remain as redirects to
+  `/library`), `ui/metric-card.tsx`, `meals/MacroSummaryCard.tsx`, `lib/use-keyboard-open.ts`,
+  `lib/chart-colors.ts`, `lib/fitness/recovery-rules.ts`, `lib/fitness/movement-patterns.ts`
+  (`scripts/weekly_plan.py` is now the sole copy of those rules). Deleted uncalled API routes:
+  `/api/cron/weekly-plan` (its GitHub workflow is gone and the crontab deliberately does not
+  schedule it), `/api/notifications/push`, `/api/meals/today-totals`, `/api/stocks/refresh`,
+  `/api/sports/refresh` (stocks/sports refresh via `/api/cron/sync` and the dashboard's server
+  actions). Retired the study timer, unused since before June: the `study-timer` agent,
+  `/stop-timer` command, `rules/study-timer.md`, and the timer steps of `weekly-review` (the
+  `study_log` table and its readers stay). Stale docs/config corrected for the product that
+  exists: `docs/ARCHITECTURE.md` (chat tables, residual-Anthropic claim, SaaS/multi-tenant
+  roadmap and admin gate removed; table count dropped), `data-sources.md` (dropped chat
+  tables), the MCP server header (48 tools, no Gmail), `next.config.ts` (`src/proxy.ts`), the
+  PR template's Vercel env lines, the cron-sync comment, the `/chat` cases in
+  `gate-b.spec.ts`, `ANTHROPIC_API_KEY` in `smoke.yml`, dead allowlist entries in
+  `lint-tokens.sh`, `docs/smoke-testing.md`, and the README (chat seeding step, `/admin`
+  step, cloud weekly-planner section replaced with `/weekly-plan`, file tree).
+
 - **The dead tenant-quota surface in `/admin` (#720).** `tenant_quotas` and its two functions
   were dropped in #611 along with metered chat, but the admin pages still queried the table in
   eight places, each discarding the error. Nothing crashed, so the failure was invisible: the

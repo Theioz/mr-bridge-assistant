@@ -1,6 +1,6 @@
 # Architecture
 
-This document captures Mr. Bridge's architectural intent: why decisions were made and where the system is heading. It is not a setup guide (see [README.md](../README.md)) or an API reference — it is the record of design choices that are not visible from code alone.
+Mr. Bridge is a **single-user, self-hosted** app: one owner, one Supabase instance, on a homelab node. Multi-tenancy was abandoned in favour of self-hosting (#201). This document captures its architectural intent: why decisions were made and where the system is heading. It is not a setup guide (see [README.md](../README.md)) or an API reference — it is the record of design choices that are not visible from code alone.
 
 ---
 
@@ -10,7 +10,7 @@ This document captures Mr. Bridge's architectural intent: why decisions were mad
 |-------|-----------|-------|
 | Frontend | Next.js 16 App Router | Self-hosted Docker on compute-core (web/Dockerfile, standalone output); SSR + RSC; `web/` subdirectory |
 | Database | Supabase Postgres | RLS enforced; pgcrypto for token encryption |
-| Nutrition | **USDA FoodData Central** (measured data) + a local Ollama model (`qwen2.5vl:7b`) that only identifies foods and reads qty+unit — it is never asked for grams or calories. One residual Anthropic call site remains: `api/meals/scan-chat`. |
+| Nutrition | **USDA FoodData Central** (measured data) + a local Ollama model (`qwen2.5vl:7b`) that only identifies foods and reads qty+unit — it is never asked for grams or calories. No Anthropic API call sites remain (#609–#611). |
 | Conversation | **MCP server** (`web/mcp/`) → Claude Code, on the existing subscription. No API key. The in-app chat was deleted (#476). |
 | Auth | Supabase Auth | JWT; SSR cookie-based via `@supabase/ssr` |
 | Hosting / Cron | Self-hosted on compute-core. Cron is the **node's crontab** — `web/vercel.json` is deleted. |
@@ -20,7 +20,7 @@ This document captures Mr. Bridge's architectural intent: why decisions were mad
 
 ## Schema — grouped by domain
 
-All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern](#rls-pattern) below). 30 live tables (31 created, `timer_state` dropped in 20260427000001) total are user-scoped; `sync_log` is the single exception.
+All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern](#rls-pattern) below); `sync_log` is the exception. The tables below are grouped by domain and are not exhaustive — [`supabase/migrations/`](../supabase/migrations/) is the authoritative schema, and `.claude/rules/data-sources.md` maps each table to what writes it.
 
 ### Identity & Profile
 
@@ -68,13 +68,6 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 |-------|---------|
 | `journal_entries` | Daily reflections: 5 guided prompts + free-write; auto-saved |
 
-### Chat & AI
-
-| Table | Purpose |
-|-------|---------|
-| `chat_sessions` | Chat session metadata: device, started_at, summary, soft-delete flag |
-| `chat_messages` | Individual messages: role, content, parts (tool calls/results), position for ordering |
-
 ### Notifications
 
 | Table | Purpose |
@@ -95,13 +88,6 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 | `stocks_cache` | Stock quote + sparkline data from Polygon.io; refreshed on-demand |
 | `sports_cache` | Sports scores/schedules from ESPN (TheSportsDB removed in #368); refreshed on-demand |
 
-### SaaS / Multi-tenant Infrastructure
-
-| Table | Purpose |
-|-------|---------|
-| `feature_flags` | Per-user and global feature toggles; per-user row overrides a null-user-id global default |
-| `admin_audit_log` | Append-only log of every admin mutation: actor, action, before/after JSON |
-
 ---
 
 ## RLS Pattern
@@ -114,7 +100,7 @@ CREATE POLICY "users can access own rows"
   USING (user_id = auth.uid());
 ```
 
-This means a user's session JWT can only read or write their own rows — no cross-user data leakage is possible via the API layer even if a query forgets a filter.
+This means a session JWT can only read or write its own rows — even with a single owner, a query that forgets a filter cannot reach rows it does not own, and the token-gated public `/share/*` surface cannot widen into the owner's data.
 
 ### Two Supabase clients
 
@@ -124,7 +110,6 @@ This means a user's session JWT can only read or write their own rows — no cro
 
 - The cron sync route (`/api/cron/sync`) — writes to any user's rows
 - OAuth callbacks — create/update `user_integrations` rows before the session is fully established
-- Admin pages (`/admin`) — read and mutate any tenant's data
 
 **`SUPABASE_SERVICE_ROLE_KEY` is never exposed to the browser.** It lives only in server-side env vars.
 
@@ -196,49 +181,6 @@ Tools that read state (no mutation) return their payload directly. The `{ ok }` 
 
 ---
 
-## Multi-Tenant Roadmap
-
-### Current state: per-user isolation
-
-Every user-data table is scoped by `user_id = auth.uid()`. One user's data is invisible to any other user. This is the correct foundation for a SaaS product — it maps cleanly to a billing customer, a data subject (GDPR), and an RLS policy.
-
-The current "multi-tenant" infrastructure shipped in 2026-04-24:
-
-- **`feature_flags`** — per-user toggles over a null-user-id global default; foundation for A/B testing and gradual rollouts
-- **`admin_audit_log`** — every admin mutation is logged with actor, action, and before/after JSON
-- **`/admin` route** — tenant CRUD, feature-flag toggles, audit log; gated by `is_admin: true` in `user_metadata`
-
-### Next: shared spaces (`tenant_id`)
-
-The planned evolution introduces a `tenants` table and a `tenant_id` foreign key on tables where multiple users share data (e.g. household grocery lists, shared workout programs):
-
-```
-auth.users (user_id)
-    └── tenant_members (user_id, tenant_id, role)
-            └── tenant (tenant_id)
-                    └── shared_tasks, shared_recipes, … (tenant_id)
-```
-
-Per-user tables (`fitness_log`, `habits`, `recovery_metrics`, etc.) stay user-scoped and do not gain `tenant_id` — body composition and sleep data are always private. Only explicitly collaborative tables will be tenant-scoped.
-
-RLS policies on shared tables will check membership:
-
-```sql
-USING (
-  tenant_id IN (
-    SELECT tenant_id FROM tenant_members WHERE user_id = auth.uid()
-  )
-)
-```
-
-**Not yet implemented.** No migrations exist for this layer. The `user_id`-only model is complete and production-ready for the single-user and independent-multi-user case.
-
-### Invitation / membership model
-
-Planned: email invitations, `tenant_members.role` (owner/member/viewer), per-role RLS variants for read-only members. No timeline committed.
-
----
-
 ## Cross-references
 
 | Resource | What it contains |
@@ -256,14 +198,15 @@ Runs on `compute-core`, a homelab node. **Three hostnames, three exposure levels
 |---|---|---|
 | `mr-bridge.jl-infra-lab.com` | tailnet only | The full app. Health data is never publicly routable. |
 | `supabase.jl-infra-lab.com` | tailnet only | The database gateway. It **must** be a real hostname — the browser talks to Supabase directly (anon-key client), so it cannot hide on the Docker network. |
-| `share.jl-infra-lab.com` | **public** | Only token-gated `/share/*`, behind a Caddy default-deny path allowlist. Dashboard, meals, journal, fitness, settings, admin and the whole API return 404 from the internet. |
+| `share.jl-infra-lab.com` | **public** | Only token-gated `/share/*`, behind a Caddy default-deny path allowlist. Dashboard, meals, journal, fitness, settings and the whole API return 404 from the internet. |
 
 **Supabase is three containers**, not the upstream ten: Postgres 17.6 + GoTrue + PostgREST,
 plus a small node-local Caddy gateway. Dropped as verified-unused: kong, realtime,
 storage-api, imgproxy, edge-runtime, analytics, supavisor, studio.
 
-**Realtime is not deployed.** Migration `20260502000000_chat_messages_realtime.sql` added
-`chat_messages` to the realtime publication; its only consumer was the chat, which is gone.
+**Realtime is not deployed.** Its only consumer was the in-app chat, deleted in #476; the
+chat tables and their realtime publication were dropped in
+`20260713000000_drop_chat_orphans.sql`.
 
 ### Why the browser and the server use different Supabase URLs
 
@@ -289,8 +232,8 @@ Consequences that follow from that split, each of which broke something:
 
 ## The MCP server
 
-`web/mcp/server.ts` exposes the same **30 tools** the chat had, to Claude Code / Claude
-Desktop, over the existing Claude subscription. It is a thin **adapter**, not a rewrite:
+`web/mcp/server.ts` exposes **48 tools** to Claude Code / Claude Desktop, over the existing
+Claude subscription. It is a thin **adapter**, not a rewrite:
 `lib/tools/*` already defines each tool as an AI SDK `tool()` with a plain JSON Schema and an
 async `execute()` — structurally already an MCP tool. So each tool keeps **one**
 implementation and the app and Claude Code cannot drift apart.

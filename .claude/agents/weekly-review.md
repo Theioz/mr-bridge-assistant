@@ -71,22 +71,7 @@ Compute a weekly summary of habits, study time, and tasks. Output to terminal an
    - Sum `duration_mins` per subject (Japanese, Coding, Reading)
    - Count distinct days per subject
 
-5. Query Supabase for active timer state:
-   ```bash
-   python3 - <<'EOF'
-   import sys
-   sys.path.insert(0, "scripts")
-   from _supabase import get_client
-   client = get_client()
-   row = client.table("profile").select("value").eq("key", "timer_state").execute().data
-   import json
-   print(row[0]["value"] if row else "{}")
-   EOF
-   ```
-   - Parse the JSON value; if `active: true`, calculate elapsed time from `started_at`
-   - If > 4 hours, include a warning in the summary
-
-6. Build and print the full summary:
+5. Build and print the full summary:
 ```
 ## Mr. Bridge — Weekly Review
 ### [Mon Date] – [Sun Date]
@@ -113,12 +98,7 @@ Compute a weekly summary of habits, study time, and tasks. Output to terminal an
 **Headline:** Habits X% | Workouts X/4 | Japanese Xmin
 ```
 
-7. If a timer has been running > 4 hours:
-   ```
-   ⚠ Timer still running: [subject] started at [time] — stop and adjust if needed
-   ```
-
-8. Send push notification (headline only):
+6. Send push notification (headline only):
 ```bash
 bash scripts/notify.sh \
   --title "Mr. Bridge — Weekly Review" \

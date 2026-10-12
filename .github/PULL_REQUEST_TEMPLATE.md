@@ -20,7 +20,7 @@ Closes #
 
 <!-- Complete this section for any PR that adds or modifies environment variables or secrets. -->
 
-- [ ] **No new secrets added as plaintext** — all secrets live in Vercel env vars, never in source code or committed files.
-- [ ] **New env vars added to Vercel with the Sensitive flag** — every non-public env var must have Sensitive checked in the Vercel dashboard before the PR merges.
+- [ ] **No new secrets added as plaintext** — secrets live in the host's untracked env file on compute-core (sourced from Vaultwarden), never in source code or committed files.
+- [ ] **New env vars documented** — added to the host env file before deploy and to the example templates below.
 - [ ] **Template files updated** — `.env.example` and `web/.env.local.example` use `<placeholder>` values, not real secrets.
 - [ ] **No accidental secret commits** — ran `git log -p -S "<key-prefix>"` or checked `git diff` for real-looking values before pushing.

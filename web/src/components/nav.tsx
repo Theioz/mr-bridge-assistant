@@ -56,16 +56,8 @@ const navTransition = `color var(--motion-fast) var(--ease-out-quart), backgroun
 export default function Nav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadError, setUnreadError] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsAdmin(user?.user_metadata?.is_admin === true);
-    });
-  }, []);
 
   useEffect(() => {
     const load = () => {
@@ -208,28 +200,8 @@ export default function Nav() {
           })}
         </div>
 
-        {/* Admin + sign-out — desktop, pinned to bottom */}
+        {/* Sign-out — desktop, pinned to bottom */}
         <div style={{ marginTop: "auto" }}>
-          {isAdmin && (
-            <div style={{ padding: "0 var(--space-3) var(--space-1)" }}>
-              <Link
-                href="/admin"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-3)",
-                  padding: "var(--space-2) var(--space-3)",
-                  borderRadius: "var(--r-2)",
-                  fontSize: "var(--t-meta)",
-                  color: "var(--color-text-muted)",
-                  textDecoration: "none",
-                  transition: navTransition,
-                }}
-              >
-                Admin
-              </Link>
-            </div>
-          )}
           <div
             style={{
               padding: "var(--space-3) var(--space-3) var(--space-4)",
@@ -420,27 +392,6 @@ export default function Nav() {
                 </Link>
               );
             })}
-
-            {/* Admin — mobile More sheet, owner only */}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setShowMore(false)}
-                className="flex items-center w-full hover-bg-subtle"
-                style={{
-                  gap: "var(--space-3)",
-                  padding: "var(--space-3) var(--space-5)",
-                  minHeight: 48,
-                  color: "var(--color-text-muted)",
-                  fontSize: "var(--t-meta)",
-                  borderTop: "1px solid var(--rule-soft)",
-                  textDecoration: "none",
-                  transition: navTransition,
-                }}
-              >
-                Admin
-              </Link>
-            )}
 
             {/* Sign out — mobile More sheet */}
             <button

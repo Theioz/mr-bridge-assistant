@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Weekly planning agent — local runner and GitHub Actions entrypoint.
+Weekly planning agent — local runner.
 
-Mirrors /api/cron/weekly-plan exactly: full planner prompt, two-pass
-structural validation (movement patterns + recovery + same-day redundancy),
-and correction pass before writing to Supabase.
+Two-pass structural validation (movement patterns + recovery + same-day
+redundancy) and correction pass before writing to Supabase. The
+/api/cron/weekly-plan route and its GitHub Actions workflow are gone (#761);
+planning is driven by the /weekly-plan Claude Code command.
 
 Usage:
   python3 scripts/run_weekly_plan.py --week-start 2026-05-04
@@ -62,7 +63,7 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# ── Movement pattern validation (mirrors movement-patterns.ts) ────────────────
+# ── Movement pattern validation (sole copy; the TS mirror was deleted, #761) ──
 
 EXERCISE_PATTERN_MAP: dict[str, list[str]] = {
     # Squat

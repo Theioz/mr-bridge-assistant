@@ -2,10 +2,10 @@
  * Gate B manual-verification automation for #272/#323.
  *
  * Covers everything in Step 2 that Playwright can drive:
- *   - Responsive overflow (all 11 routes × 5 viewports)
+ *   - Responsive overflow (all 10 routes × 5 viewports)
  *   - Theme persistence (Light → Dark → Auto; SSR match after reload)
  *   - Touch target minimum size (44×44px) for key interactive elements
- *   - Behavioral regressions #258, #259, #267, #264
+ *   - Behavioral regressions #258, #259, #264
  *   - Functional: nav, theme toggle in header, sign-out → sign-in
  *
  * NOT covered (requires human or hardware):
@@ -21,7 +21,6 @@ import type { Page } from "@playwright/test";
 
 const PROTECTED = [
   "/dashboard",
-  "/chat",
   "/journal",
   "/tasks",
   "/habits",
@@ -44,9 +43,7 @@ const VIEWPORTS = [
 
 /** Settled sentinel for each route — semantic, not networkidle. */
 async function waitSettled(page: Page, route: string) {
-  if (route === "/chat") {
-    await page.getByPlaceholder("Ask Mr. Bridge...").waitFor({ timeout: 20_000 });
-  } else if (route === "/login") {
+  if (route === "/login") {
     await page.getByLabel("Email").waitFor({ timeout: 10_000 });
   } else {
     await page.locator("h1").first().waitFor({ timeout: 20_000 });
@@ -64,7 +61,7 @@ async function hasNoHorizontalOverflow(page: Page): Promise<boolean> {
 
 test.describe("responsive — no horizontal overflow", () => {
   for (const vp of VIEWPORTS) {
-    test(`${vp.label}px — all 11 routes`, async ({ signedInPage, page }) => {
+    test(`${vp.label}px — all 10 routes`, async ({ signedInPage, page }) => {
       const failures: string[] = [];
 
       for (const route of ALL_ROUTES) {
@@ -233,30 +230,8 @@ test.describe("regression #259 — sports card vertical stacking", () => {
   });
 });
 
-test.describe("regression #267 — chat sidebar visible at ≥1024px", () => {
-  test("session sidebar renders at 1024px viewport", async ({ signedInPage: page }) => {
-    await page.setViewportSize({ width: 1024, height: 768 });
-    await page.goto("/chat");
-    await page.getByPlaceholder("Ask Mr. Bridge...").waitFor({ timeout: 20_000 });
-
-    // The sidebar div has class "hidden lg:block" — at 1024px lg breakpoint it should be visible
-    const sidebar = page.locator(".hidden.lg\\:block").first();
-    await expect(sidebar).toBeVisible();
-  });
-
-  test("session sidebar is hidden at 375px", async ({ signedInPage: page }) => {
-    await page.setViewportSize(MOBILE_VP);
-    await page.goto("/chat");
-    await page.getByPlaceholder("Ask Mr. Bridge...").waitFor({ timeout: 20_000 });
-
-    // Mobile: chat history button exists instead of inline sidebar
-    const historyBtn = page.getByRole("button", { name: "Chat history" });
-    await expect(historyBtn).toBeVisible();
-  });
-});
-
 test.describe("regression #264 — print styles", () => {
-  for (const route of ["/dashboard", "/journal", "/chat"]) {
+  for (const route of ["/dashboard", "/journal"]) {
     test(`${route} — print:hidden elements not visible in print media`, async ({
       signedInPage: page,
     }) => {
@@ -290,7 +265,6 @@ test.describe("functional smoke", () => {
   test("all nav items navigate without error", async ({ signedInPage: page }) => {
     const NAV_ROUTES: Array<{ label: string | RegExp; path: string }> = [
       { label: /dashboard/i, path: "/dashboard" },
-      { label: /chat/i, path: "/chat" },
       { label: /journal/i, path: "/journal" },
       { label: /tasks/i, path: "/tasks" },
       { label: /habits/i, path: "/habits" },
@@ -347,7 +321,7 @@ test.describe("functional smoke", () => {
     await page.getByLabel("Password", { exact: true }).fill(process.env.SMOKE_TEST_PASSWORD ?? "");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await page.waitForURL(/\/(dashboard|chat)/, { timeout: 20_000 });
-    await expect(page).toHaveURL(/\/(dashboard|chat)/);
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 });
