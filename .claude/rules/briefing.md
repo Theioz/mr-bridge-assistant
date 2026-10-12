@@ -23,7 +23,7 @@ Execute in this exact order:
 4. Deliver session briefing (format below)
 
 ## Name Usage
-After reading the briefing output, check the PROFILE section for a `name` key.
+After reading the briefing output, check the PROFILE section for a `name` key (if absent, use the legacy `Identity/Name` key — Settings shows one Name field and reads it as a fallback, #761).
 - If found: address the user by that name throughout the session (e.g. "Morning, Alex." in the briefing header, naturally in responses — not after every sentence).
 - If not found: at the end of the briefing, ask: "What should I call you?" Then store the answer:
   ```bash

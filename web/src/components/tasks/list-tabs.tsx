@@ -89,9 +89,11 @@ export default function ListTabs({
 
   return (
     <div style={{ marginBottom: "var(--space-3)", opacity: isPending ? 0.6 : 1 }}>
+      {/* Chips wrap onto a second line rather than scrolling sideways behind a hidden
+          scrollbar, where lists past the viewport edge were undiscoverable (issue 761). */}
       <div
-        className="flex items-center no-scrollbar"
-        style={{ gap: "var(--space-2)", overflowX: "auto", paddingBottom: 2 }}
+        className="flex items-center flex-wrap"
+        style={{ gap: "var(--space-2)", paddingBottom: 2 }}
       >
         {tabs.map(({ key, label }) => {
           const active = selected === key;

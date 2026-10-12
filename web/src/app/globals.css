@@ -699,6 +699,61 @@ body {
   display: none;
 }
 
+/* ui/overflow-menu.tsx: popover menu behind a "⋯" trigger (#761). */
+.overflow-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  z-index: 30;
+  min-width: 12rem;
+  padding: var(--space-1) 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-lg);
+}
+.overflow-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--t-micro);
+  color: var(--color-text);
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out-quart);
+}
+.overflow-menu-item[data-danger] {
+  color: var(--color-danger);
+}
+.overflow-menu-item:hover,
+.overflow-menu-item:focus-visible {
+  background: var(--hover-subtle);
+  outline: none;
+}
+.overflow-menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* task-item.tsx: the "Add item…" sub-row is hidden on a task with no items until the row is
+   hovered or holds focus (#761). Rows that already have items, or where the user asked to add
+   one from the overflow menu, render it unconditionally and never carry this class. */
+.task-add-reveal {
+  display: none;
+}
+.task-row:focus-within .task-add-reveal {
+  display: block;
+}
+@media (hover: hover) {
+  .task-row:hover .task-add-reveal {
+    display: block;
+  }
+}
+
 /* tasks/page.tsx (.tasks-ui): touch-only sizing for the tasks tree (#688).
    iOS force-zooms on focus when a control's font-size is under 16px, and the
    tree sets --t-micro (13px) inline on every field — hence !important. Hit

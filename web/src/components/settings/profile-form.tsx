@@ -9,6 +9,12 @@ interface Field {
   label: string;
   placeholder: string;
   hint?: string;
+  /**
+   * A legacy key read when `key` is unset (#761). The field shows the fallback's value, saving
+   * always writes `key`, and clearing the field removes both, so a cleared field cannot silently
+   * refill from the legacy row on the next load.
+   */
+  fallbackKey?: string;
 }
 
 interface Props {
@@ -19,10 +25,14 @@ interface Props {
 
 const EDITABLE_FIELDS: Field[] = [
   {
+    // One name setting (#761). `Identity/Name` used to be a second, separately editable field
+    // ("fallback if Display Name is not set"); it is now only read as a fallback here and in
+    // the dashboard greeting / public library share page, never written.
     key: "name",
-    label: "Display Name",
+    label: "Name",
     placeholder: "e.g. Jason",
     hint: "Used in greetings and briefings",
+    fallbackKey: "Identity/Name",
   },
   {
     key: "location_city",
@@ -35,12 +45,6 @@ const EDITABLE_FIELDS: Field[] = [
     label: "Home Location",
     placeholder: "e.g. Los Angeles, CA",
     hint: "Used as the default weather location",
-  },
-  {
-    key: "Identity/Name",
-    label: "Identity Name",
-    placeholder: "e.g. Jason",
-    hint: "Fallback name if Display Name is not set",
   },
 ];
 
@@ -464,6 +468,7 @@ function FieldRow({
       const trimmed = value.trim();
       if (trimmed === "") {
         await deleteAction(field.key);
+        if (field.fallbackKey) await deleteAction(field.fallbackKey);
       } else {
         await updateAction(field.key, trimmed);
       }
@@ -812,7 +817,9 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
           <FieldRow
             key={field.key}
             field={field}
-            initialValue={values[field.key] ?? ""}
+            initialValue={
+              values[field.key] ?? (field.fallbackKey ? values[field.fallbackKey] : undefined) ?? ""
+            }
             updateAction={updateAction}
             deleteAction={deleteAction}
             onDirtyChange={handleDirtyChange}

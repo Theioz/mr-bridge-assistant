@@ -66,12 +66,15 @@ const STATUS_LABELS: Record<string, string> = {
   dropped: "Dropped",
 };
 
+// Status colours on shared tokens (#761). Active owns the one amber accent; paused used to be
+// a second amber that collided with it (--color-primary aliases --accent), so it is now a muted
+// neutral. Finished / dropped are the semantic positive / danger tokens.
 const STATUS_COLORS: Record<string, string> = {
-  backlog: "var(--color-text-muted)",
-  active: "var(--color-primary)",
-  paused: "#f59e0b",
-  finished: "#22c55e",
-  dropped: "#ef4444",
+  backlog: "var(--color-text-faint)",
+  active: "var(--accent)",
+  paused: "var(--color-text-muted)",
+  finished: "var(--color-positive)",
+  dropped: "var(--color-danger)",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -116,17 +119,25 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 600,
-        color: "var(--color-text-on-primary, #fff)",
-        background: STATUS_COLORS[status] ?? "var(--color-text-muted)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "var(--space-1)",
+        fontSize: "var(--t-micro)",
+        color: "var(--color-text-muted)",
         whiteSpace: "nowrap",
         flexShrink: 0,
       }}
     >
+      <span
+        aria-hidden
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: STATUS_COLORS[status] ?? "var(--color-text-faint)",
+          flexShrink: 0,
+        }}
+      />
       {STATUS_LABELS[status] ?? status}
     </span>
   );
@@ -166,13 +177,6 @@ function CoverThumb({ url, title }: { url: string | null; title: string }) {
 
 // ── Summary strip ─────────────────────────────────────────────────────────────
 
-const TYPE_COLORS: Record<MediaType, string> = {
-  game: "#818cf8",
-  show: "#a855f7",
-  movie: "#f43f5e",
-  book: "#34d399",
-};
-
 const TYPE_LABELS: Record<MediaType, string> = {
   game: "Games",
   show: "Shows",
@@ -180,12 +184,11 @@ const TYPE_LABELS: Record<MediaType, string> = {
   book: "Books",
 };
 
-const QUEUED_COLOR = "rgba(148,163,184,0.4)";
+const QUEUED_COLOR = "var(--rule)";
 
 function StatusBar({ statusCounts, height = 6 }: { statusCounts: StatusCounts; height?: number }) {
   const n = statusCounts.total;
-  if (n === 0)
-    return <div style={{ height, borderRadius: 999, background: "var(--color-bg-2)" }} />;
+  if (n === 0) return <div style={{ height, borderRadius: 999, background: "var(--rule-soft)" }} />;
   const pct = (count: number) => `${((count / n) * 100).toFixed(1)}%`;
   return (
     <div
@@ -194,30 +197,34 @@ function StatusBar({ statusCounts, height = 6 }: { statusCounts: StatusCounts; h
         height,
         borderRadius: 999,
         overflow: "hidden",
-        background: "var(--color-bg-2)",
+        background: "var(--rule-soft)",
       }}
     >
       <div
         style={{
           width: pct(statusCounts.finished),
-          background: "#22c55e",
+          background: STATUS_COLORS.finished,
           transition: "width 0.3s",
         }}
       />
       <div
         style={{
           width: pct(statusCounts.active),
-          background: "var(--color-primary)",
+          background: STATUS_COLORS.active,
           transition: "width 0.3s",
         }}
       />
       <div
-        style={{ width: pct(statusCounts.paused), background: "#f59e0b", transition: "width 0.3s" }}
+        style={{
+          width: pct(statusCounts.paused),
+          background: STATUS_COLORS.paused,
+          transition: "width 0.3s",
+        }}
       />
       <div
         style={{
           width: pct(statusCounts.dropped),
-          background: "#ef4444",
+          background: STATUS_COLORS.dropped,
           transition: "width 0.3s",
         }}
       />
@@ -232,147 +239,156 @@ function StatusBar({ statusCounts, height = 6 }: { statusCounts: StatusCounts; h
   );
 }
 
+// House style (#761): a section label, flat figures on hairline rules, muted labels — the same
+// language as /habits and /weekly. No bordered cards and no per-type colours; the only colour
+// left is the status bar, whose segments are the semantic status tokens above.
 function SummaryStrip({ counts, activeTab }: { counts: AllCounts; activeTab: Tab }) {
   const tabCounts = counts[activeTab];
   const { total, active, finished, backlog: queued, paused, dropped } = tabCounts;
   if (total === 0) return null;
 
-  const cardBase = {
-    background: "var(--color-bg-1)",
-    border: "1px solid var(--rule-soft)",
-    borderRadius: 10,
-  };
+  const figure = {
+    fontFamily: "var(--font-display), system-ui, sans-serif",
+    fontSize: "var(--t-h1)",
+    fontWeight: 600,
+    lineHeight: 1.1,
+    color: "var(--color-text)",
+  } as const;
 
-  const statLabel = {
-    fontSize: 11 as const,
+  const figureLabel = {
+    fontSize: "var(--t-micro)",
     color: "var(--color-text-muted)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    marginTop: 2,
-  };
+    marginTop: "var(--space-1)",
+  } as const;
 
   return (
-    <div style={{ marginBottom: 24 }}>
+    <section style={{ marginBottom: "var(--space-6)" }}>
+      <h2 className="db-section-label">
+        Overview
+        <span className="meta">
+          · {finished} of {total} finished
+        </span>
+      </h2>
+
       {/* Media type breakdown — All tab only */}
       {activeTab === "all" && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 10,
-            marginBottom: 10,
+            gridTemplateColumns: "repeat(auto-fit, minmax(7rem, 1fr))",
+            columnGap: "var(--space-5)",
+            rowGap: "var(--space-4)",
+            paddingBottom: "var(--space-4)",
+            marginBottom: "var(--space-4)",
+            borderBottom: "1px solid var(--rule-soft)",
           }}
         >
           {(["game", "show", "movie", "book"] as MediaType[]).map((type) => {
             const typeCounts = counts[type];
             const count = typeCounts.total;
-            const color = TYPE_COLORS[type];
             return (
               <div
                 key={type}
                 style={{
-                  ...cardBase,
-                  borderTop: `3px solid ${count > 0 ? color : "var(--rule-soft)"}`,
-                  padding: "12px 14px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 10,
-                  opacity: count === 0 ? 0.5 : 1,
+                  gap: "var(--space-2)",
+                  minWidth: 0,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
+                <div>
+                  <div
+                    className="tnum"
                     style={{
-                      fontSize: 11,
-                      color: "var(--color-text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {TYPE_LABELS[type]}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: count > 0 ? color : "var(--color-text-muted)",
-                      lineHeight: 1,
+                      ...figure,
+                      color: count > 0 ? "var(--color-text)" : "var(--color-text-faint)",
                     }}
                   >
                     {count}
-                  </span>
+                  </div>
+                  <div style={figureLabel}>{TYPE_LABELS[type]}</div>
                 </div>
-                <StatusBar statusCounts={typeCounts} height={4} />
+                <StatusBar statusCounts={typeCounts} height={3} />
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Status stats + completion */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {/* Status figures */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          columnGap: "var(--space-6)",
+          rowGap: "var(--space-3)",
+          marginBottom: "var(--space-4)",
+        }}
+      >
         {[
-          { label: "Total", value: total, color: "var(--color-text)" },
-          { label: "Active", value: active, color: "var(--color-primary)" },
-          { label: "Finished", value: finished, color: "#22c55e" },
-          { label: "Queued", value: queued, color: "var(--color-text-muted)" },
-          ...(paused > 0 ? [{ label: "Paused", value: paused, color: "#f59e0b" }] : []),
-          ...(dropped > 0 ? [{ label: "Dropped", value: dropped, color: "#ef4444" }] : []),
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ ...cardBase, padding: "10px 14px", minWidth: 72 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
-            <div style={statLabel}>{label}</div>
+          { label: "Total", value: total },
+          { label: "Active", value: active },
+          { label: "Finished", value: finished },
+          { label: "Queued", value: queued },
+          ...(paused > 0 ? [{ label: "Paused", value: paused }] : []),
+          ...(dropped > 0 ? [{ label: "Dropped", value: dropped }] : []),
+        ].map(({ label, value }) => (
+          <div key={label}>
+            <div className="tnum" style={{ ...figure, fontSize: "var(--t-h2)" }}>
+              {value}
+            </div>
+            <div style={{ ...figureLabel, marginTop: 2 }}>{label}</div>
           </div>
         ))}
-
-        {/* Completion bar */}
-        <div style={{ ...cardBase, flex: 1, minWidth: 200, padding: "10px 14px" }}>
-          <div style={{ ...statLabel, marginTop: 0, marginBottom: 8 }}>Completion</div>
-          <StatusBar statusCounts={tabCounts} height={8} />
-          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-            {[
-              { label: "Finished", color: "#22c55e", n: finished },
-              { label: "Active", color: "var(--color-primary)", n: active },
-              { label: "Paused", color: "#f59e0b", n: paused },
-              { label: "Dropped", color: "#ef4444", n: dropped },
-              { label: "Queued", color: QUEUED_COLOR, n: queued },
-            ]
-              .filter(({ n }) => n > 0)
-              .map(({ label, color, n }) => (
-                <span
-                  key={label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 11,
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: color,
-                      flexShrink: 0,
-                      display: "inline-block",
-                    }}
-                  />
-                  {label} · {n}
-                </span>
-              ))}
-          </div>
-        </div>
       </div>
-    </div>
+
+      {/* Completion bar */}
+      <StatusBar statusCounts={tabCounts} height={4} />
+      <div
+        style={{
+          display: "flex",
+          columnGap: "var(--space-4)",
+          rowGap: "var(--space-1)",
+          marginTop: "var(--space-2)",
+          flexWrap: "wrap",
+        }}
+      >
+        {[
+          { label: "Finished", color: STATUS_COLORS.finished, n: finished },
+          { label: "Active", color: STATUS_COLORS.active, n: active },
+          { label: "Paused", color: STATUS_COLORS.paused, n: paused },
+          { label: "Dropped", color: STATUS_COLORS.dropped, n: dropped },
+          { label: "Queued", color: QUEUED_COLOR, n: queued },
+        ]
+          .filter(({ n }) => n > 0)
+          .map(({ label, color, n }) => (
+            <span
+              key={label}
+              className="tnum"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                fontSize: "var(--t-micro)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: color,
+                  flexShrink: 0,
+                  display: "inline-block",
+                }}
+              />
+              {label} · {n}
+            </span>
+          ))}
+      </div>
+    </section>
   );
 }
 
@@ -420,7 +436,7 @@ function TypePickerModal({
           width: "100%",
           maxWidth: 360,
           overflow: "hidden",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+          boxShadow: "var(--shadow-lg)",
         }}
       >
         <div
@@ -466,15 +482,7 @@ function TypePickerModal({
                 color: "var(--color-text)",
                 transition: "border-color 0.15s, background 0.15s",
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--color-primary-bg, rgba(99,102,241,0.08))";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--rule-soft)";
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-2)";
-              }}
+              className="hover-border-strong hover-bg-raised"
             >
               <span style={{ fontSize: 24 }}>{emoji}</span>
               {label}
@@ -496,13 +504,7 @@ const LIB_STATUS_LABELS: Record<string, string> = {
   finished: "Finished",
   dropped: "Dropped",
 };
-const LIB_STATUS_COLORS: Record<string, string> = {
-  backlog: "var(--color-text-muted)",
-  active: "var(--color-primary)",
-  paused: "#f59e0b",
-  finished: "#22c55e",
-  dropped: "#ef4444",
-};
+const LIB_STATUS_COLORS: Record<string, string> = STATUS_COLORS;
 
 function SearchModal({
   type,
@@ -656,7 +658,7 @@ function SearchModal({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+          boxShadow: "var(--shadow-lg)",
         }}
       >
         {step === 1 && (
@@ -713,9 +715,7 @@ function SearchModal({
                 </p>
               )}
               {!loading && error && (
-                <p style={{ padding: 20, color: "var(--color-danger, #ef4444)", fontSize: 14 }}>
-                  {error}
-                </p>
+                <p style={{ padding: 20, color: "var(--color-danger)", fontSize: 14 }}>{error}</p>
               )}
               {!loading && !error && results.length === 0 && query && (
                 <p
@@ -785,7 +785,9 @@ function SearchModal({
                         {r.release_date ? ` · ${r.release_date.slice(0, 4)}` : ""}
                       </p>
                       {isDup && (
-                        <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>
+                        <span
+                          style={{ fontSize: 11, color: "var(--accent-text)", fontWeight: 600 }}
+                        >
                           Already in library
                         </span>
                       )}
@@ -794,7 +796,7 @@ function SearchModal({
                       onClick={() => openPreAdd(r)}
                       style={{
                         background: "var(--color-primary)",
-                        color: "var(--color-text-on-primary, #fff)",
+                        color: "var(--color-text-on-cta)",
                         border: "none",
                         borderRadius: 6,
                         padding: "6px 14px",
@@ -923,8 +925,8 @@ function SearchModal({
               {selected.external_id && existingMap.has(selected.external_id) && (
                 <div
                   style={{
-                    background: "rgba(245,158,11,0.12)",
-                    border: "1px solid rgba(245,158,11,0.3)",
+                    background: "var(--warning-subtle-strong)",
+                    border: "1px solid var(--color-cta-subtle-strong)",
                     borderRadius: 6,
                     padding: "10px 12px",
                     fontSize: 13,
@@ -958,9 +960,7 @@ function SearchModal({
                           fontWeight: active ? 700 : 400,
                           cursor: "pointer",
                           background: active ? LIB_STATUS_COLORS[s] : "none",
-                          color: active
-                            ? "var(--color-text-on-primary, #fff)"
-                            : "var(--color-text)",
+                          color: active ? "var(--color-text-on-cta)" : "var(--color-text)",
                         }}
                       >
                         {LIB_STATUS_LABELS[s]}
@@ -1100,7 +1100,7 @@ function SearchModal({
                 style={{
                   width: "100%",
                   background: "var(--color-primary)",
-                  color: "var(--color-text-on-primary, #fff)",
+                  color: "var(--color-text-on-cta)",
                   border: "none",
                   borderRadius: 6,
                   padding: "10px",
@@ -1198,8 +1198,8 @@ function ItemRow({
           <p
             style={{
               margin: 0,
-              fontWeight: 600,
-              fontSize: 14,
+              fontWeight: 500,
+              fontSize: "var(--t-meta)",
               color: "var(--color-text)",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -1208,7 +1208,13 @@ function ItemRow({
           >
             {item.title}
           </p>
-          <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
+          <p
+            style={{
+              margin: "2px 0 0",
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+            }}
+          >
             {item.creator}
             {item.release_date
               ? ` · ${(() => {
@@ -1236,12 +1242,13 @@ function ItemRow({
                 <span
                   style={{
                     fontSize: 10,
-                    background: "var(--color-primary-bg, rgba(99,102,241,0.12))",
-                    color: "var(--color-primary)",
-                    border: "1px solid var(--color-primary-border, rgba(99,102,241,0.25))",
-                    borderRadius: 4,
+                    color: "var(--color-text-muted)",
+                    border: "1px solid var(--rule)",
+                    borderRadius: "var(--r-1)",
                     padding: "1px 6px",
                     fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
                   }}
                 >
                   {MEDIA_LABELS[item.media_type] ?? item.media_type}
@@ -1252,11 +1259,10 @@ function ItemRow({
                   key={g}
                   style={{
                     fontSize: 10,
-                    background: "var(--color-bg-2)",
                     border: "1px solid var(--rule-soft)",
-                    borderRadius: 4,
+                    borderRadius: "var(--r-1)",
                     padding: "1px 6px",
-                    color: "var(--color-text-muted)",
+                    color: "var(--color-text-faint)",
                   }}
                 >
                   {g}
@@ -1268,7 +1274,10 @@ function ItemRow({
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {item.rating != null && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-primary)" }}>
+          <span
+            className="tnum"
+            style={{ fontSize: "var(--t-micro)", fontWeight: 600, color: "var(--accent-text)" }}
+          >
             {Number(item.rating).toFixed(1)}
           </span>
         )}
@@ -1298,36 +1307,22 @@ function ItemRow({
 // ── Cover grid ────────────────────────────────────────────────────────────────
 
 function CoverCard({ item, showType }: { item: BacklogItem; showType?: boolean }) {
-  const statusDot: Record<string, string> = {
-    active: "var(--color-primary)",
-    finished: "#22c55e",
-    paused: "#f59e0b",
-    dropped: "#ef4444",
-    backlog: "var(--color-text-muted)",
-  };
-
   return (
     <Link
       href={`/library/${item.id}`}
       style={{ textDecoration: "none", color: "inherit", display: "block" }}
     >
       <div
+        className="card-lift"
         style={{
           position: "relative",
-          borderRadius: 8,
+          borderRadius: "var(--r-2)",
           overflow: "hidden",
           aspectRatio: "2/3",
-          background: "var(--color-bg-2)",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-          transition: "transform 0.15s, box-shadow 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.6)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
+          background: "var(--color-surface-raised)",
+          border: "1px solid var(--rule-soft)",
+          transition:
+            "transform var(--motion-fast) var(--ease-out-quart), box-shadow var(--motion-fast) var(--ease-out-quart)",
         }}
       >
         {item.cover_url ? (
@@ -1354,6 +1349,9 @@ function CoverCard({ item, showType }: { item: BacklogItem; showType?: boolean }
 
         {/* Status dot */}
         <span
+          role="img"
+          aria-label={STATUS_LABELS[item.status] ?? item.status}
+          title={STATUS_LABELS[item.status] ?? item.status}
           style={{
             position: "absolute",
             top: 6,
@@ -1361,7 +1359,7 @@ function CoverCard({ item, showType }: { item: BacklogItem; showType?: boolean }
             width: 9,
             height: 9,
             borderRadius: "50%",
-            background: statusDot[item.status] ?? "var(--color-text-muted)",
+            background: STATUS_COLORS[item.status] ?? "var(--color-text-faint)",
             boxShadow: "0 0 0 2px rgba(0,0,0,0.6)",
           }}
         />
@@ -1985,8 +1983,24 @@ export default function LibraryClient({
         }}
       >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Library</h1>
-          <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "4px 0 0" }}>
+          <h1
+            className="font-heading"
+            style={{
+              fontSize: "var(--t-h1)",
+              fontWeight: 600,
+              margin: 0,
+              color: "var(--color-text)",
+            }}
+          >
+            Library
+          </h1>
+          <p
+            style={{
+              fontSize: "var(--t-micro)",
+              color: "var(--color-text-muted)",
+              margin: "4px 0 0",
+            }}
+          >
             Your personal media collection
           </p>
         </div>
@@ -2041,9 +2055,7 @@ export default function LibraryClient({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                background: shareToken
-                  ? "var(--color-primary-bg, rgba(99,102,241,0.12))"
-                  : "transparent",
+                background: shareToken ? "var(--color-primary-dim)" : "transparent",
                 color: shareToken ? "var(--color-primary)" : "var(--color-text-muted)",
                 border: "1px solid var(--rule-soft)",
                 borderRadius: 8,
@@ -2067,7 +2079,7 @@ export default function LibraryClient({
                   border: "1px solid var(--rule-soft)",
                   borderRadius: 10,
                   padding: 16,
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+                  boxShadow: "var(--shadow-lg)",
                   zIndex: 9999,
                 }}
               >
@@ -2148,7 +2160,7 @@ export default function LibraryClient({
                           justifyContent: "center",
                           gap: 6,
                           background: "var(--color-primary)",
-                          color: "#fff",
+                          color: "var(--color-text-on-cta)",
                           border: "none",
                           borderRadius: 6,
                           padding: "8px 12px",
@@ -2196,7 +2208,7 @@ export default function LibraryClient({
                       justifyContent: "center",
                       gap: 6,
                       background: "var(--color-primary)",
-                      color: "#fff",
+                      color: "var(--color-text-on-cta)",
                       border: "none",
                       borderRadius: 6,
                       padding: "9px 14px",
@@ -2253,7 +2265,7 @@ export default function LibraryClient({
               alignItems: "center",
               gap: 6,
               background: "var(--color-primary)",
-              color: "var(--color-text-on-primary, #fff)",
+              color: "var(--color-text-on-cta)",
               border: "none",
               borderRadius: 8,
               padding: "8px 14px",
@@ -2293,10 +2305,10 @@ export default function LibraryClient({
                 border: "none",
                 cursor: "pointer",
                 padding: "8px 14px",
-                fontSize: 14,
-                fontWeight: isActive ? 700 : 400,
-                color: isActive ? "var(--color-primary)" : "var(--color-text-muted)",
-                borderBottom: isActive ? "2px solid var(--color-primary)" : "2px solid transparent",
+                fontSize: "var(--t-meta)",
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? "var(--color-text)" : "var(--color-text-muted)",
+                borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
                 marginBottom: -1,
                 transition: "color 0.15s, border-color 0.15s",
               }}
@@ -2304,16 +2316,12 @@ export default function LibraryClient({
               {tab.label}
               {count > 0 && (
                 <span
+                  className="tnum"
                   style={{
-                    marginLeft: 5,
-                    fontSize: 11,
-                    background: isActive ? "var(--color-primary)" : "var(--color-bg-2)",
-                    color: isActive
-                      ? "var(--color-text-on-primary, #fff)"
-                      : "var(--color-text-muted)",
-                    borderRadius: 999,
-                    padding: "1px 6px",
-                    fontWeight: 600,
+                    marginLeft: 6,
+                    fontSize: "var(--t-micro)",
+                    color: "var(--color-text-faint)",
+                    fontWeight: 400,
                   }}
                 >
                   {count}
@@ -2479,8 +2487,8 @@ export default function LibraryClient({
                 display: "flex",
                 alignItems: "center",
                 gap: 5,
-                background: "var(--color-primary-bg, rgba(99,102,241,0.12))",
-                border: "1px solid var(--color-primary-border, rgba(99,102,241,0.25))",
+                background: "var(--color-primary-dim)",
+                border: "1px solid var(--color-cta-subtle-strong)",
                 borderRadius: 999,
                 padding: "3px 10px",
                 fontSize: 12,

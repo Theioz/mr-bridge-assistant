@@ -63,8 +63,8 @@ fi
 # logo.tsx (SVG markup — static fill can't reference CSS vars),
 # MealsClient.tsx (CSS var fallbacks — var(--token, #hex)),
 # layout.tsx (viewport.themeColor must be a static hex — can't reference CSS vars),
-# LibraryClient.tsx (semantic status colors: paused/finished/dropped have no CSS var),
-# LibraryDetailClient.tsx (same status color set),
+# LibraryClient.tsx (cover-card title overlay: white over arbitrary artwork, not a theme concern —
+#   status colours moved onto tokens in #761, and LibraryDetailClient.tsx left the list then),
 # share/backlog/[token]/page.tsx + share/library/[token]/page.tsx (standalone public pages — no app shell, CSS vars unavailable).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
 #
@@ -86,7 +86,6 @@ HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   | grep -v 'MealsClient' \
   | grep -v 'layout\.tsx' \
   | grep -v 'LibraryClient' \
-  | grep -v 'LibraryDetailClient' \
   | grep -v 'share/backlog' \
   | grep -v 'share/library' \
   | awk '{ body = $0; sub(/^[^:]+:[0-9]+:/, "", body); if (body !~ /^[[:space:]]*(\{[[:space:]]*)?(\/\/|\/\*|\*)/) print }' \

@@ -670,6 +670,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- **UI polish: task row actions, one name setting, Library on shared tokens (#761).**
+  - *Tasks.* Each row now shows the complete circle, the edit (due date / priority) button and a
+    single `⋯` overflow menu (`aria-label="More actions for <title>"`) holding Add item, Add to
+    calendar / Edit calendar block, Stop repeating… and Archive. The menu is a new reusable
+    primitive, `components/ui/overflow-menu.tsx` (WAI-ARIA menu button: arrow keys, Home/End,
+    Escape returns focus, outside click / Tab close). Stop repeating keeps its two-step confirm as
+    an inline row. The "Add item…" field no longer sits under every task: on a task with no items
+    it appears on hover or keyboard focus of the row, or after choosing Add item from the menu
+    (the touch path). List filter chips wrap instead of scrolling behind a hidden scrollbar.
+  - *Settings → Profile.* "Display Name" and "Identity Name" collapse into one **Name** field
+    (`profile.name`). The legacy `Identity/Name` key is still read as a fallback by the field, the
+    dashboard greeting and the public library share page (which previously ignored it); clearing
+    the field removes both keys. No data is migrated.
+  - *Library.* The summary strip drops its coloured bordered stat cards and per-media-type colours
+    for the house style: a `db-section-label` "Overview" heading, flat tabular figures, muted
+    labels and hairline rules. Status colours move onto tokens (active = the amber accent;
+    paused, previously a second amber identical to active, is now neutral; finished / dropped =
+    positive / danger), as do undefined-variable fallbacks that rendered indigo and white-on-amber.
+    Cover cards use the shared `card-lift` hover instead of inline mouse handlers. The detail page
+    gets the same status tokens, section labels and heading scale, and leaves the
+    `lint-tokens.sh` raw-hex allowlist. Visual only — no logic changes.
+
 - **Meal photo analysis: ~2 min -> the cost of one photo.** A single meal log was 17 model calls,
   all serialized — 2 vision calls at ~50 s and 15 USDA selections at 1.2 s each, the selections
   queueing behind the photos rather than computing. Three of them hit the 60 s timeout, and a
