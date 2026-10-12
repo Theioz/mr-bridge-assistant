@@ -1,3 +1,5 @@
+> **Historical record (2026-04).** Describes the system as of 2026-04; parts no longer apply (e.g. the in-app chat page (#476), the dashboard email snippets (#693), and `components/layout/nav.tsx`, which no longer exists). Current state: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
 # Mr. Bridge — Impeccable-driven UI revamp
 
 > **HARD CONSTRAINT — STRICTLY UI.** No UX changes. No functionality removed,

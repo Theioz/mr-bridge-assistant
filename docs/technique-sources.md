@@ -101,8 +101,10 @@ sizzle on contact, and if it does not, the pan is not ready. Single layer, **4â€
 
 ## Enforcement
 
-`web/scripts/audit-recipes.ts` reports `timed-step-no-heat`: any step of 3 minutes or more with no
-heat cue. Burner levels, oven temperatures, `off the heat`, and unambiguous plain-English cues
+The recipe audit reports `timed-step-no-heat`: any step of 3 minutes or more with no heat cue. The
+check lives in `web/src/lib/nutrition/recipe-audit.ts` and runs from the CLI
+(`web/scripts/audit-recipes.ts`) and from the scheduled `/api/cron/audit-recipes` route, which
+posts the result as a notification. Burner levels, oven temperatures, `off the heat`, and unambiguous plain-English cues
 (`screaming hot pan`, `boiling water`) all count. **`simmer`, `boil` and `saute` do not** â€” they name
 a target state without saying what to set the burner to, which is exactly the gap that caused the
 burn.

@@ -1,3 +1,5 @@
+> **Historical record (2026-04-22).** Describes the system as of 2026-04-22; parts no longer apply (e.g. Vercel env vars (#514), ANTHROPIC_API_KEY and GROQ_API_KEY (#476, #609-#611), Fitbit credentials (#607), and the demo account (#718)). Current state: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 # Secret Rotation Runbook — April 2026
 
 **Incident:** Vercel April 2026 security incident.

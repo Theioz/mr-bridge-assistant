@@ -1,6 +1,13 @@
 # Gmail & Calendar — Multi-Account Setup
 
-Covers how a primary Gmail account and a secondary (e.g. professional) Gmail account are unified into a single Mr. Bridge session. The OAuth token stays on your primary account — no second credential set is required.
+Covers how a primary Gmail account and a secondary (e.g. professional) Gmail account are unified into a single Mr. Bridge session. Everything stays on your primary account — no second credential set is required.
+
+Who reads what:
+
+| Surface | Gmail | Calendar |
+|---|---|---|
+| **Claude Code session briefing** (`.claude/rules/briefing.md`) | claude.ai Gmail connector | claude.ai Calendar connector |
+| **Web app** | **none** — no Gmail scope since #693 | the app's own `google` OAuth token (Calendar scopes only) |
 
 Replace `<your-primary@gmail.com>` and `<your-secondary@gmail.com>` with your actual addresses throughout this guide.
 
@@ -14,9 +21,9 @@ Replace `<your-primary@gmail.com>` and `<your-secondary@gmail.com>` with your ac
 
 ## Gmail — auto-forwarding aggregation
 
-> **Migration note (April 2026):** Google is deprecating the "Check mail from other accounts (POP)" feature in 2026. New users lost access in Q1 2026; existing users lose access later in 2026. If you previously used POP3 aggregation, follow the steps below to switch to auto-forwarding. No Mr. Bridge code changes are needed — the `Professional` label detection works the same way regardless of how emails arrive.
+> **Migration note (April 2026):** Google is deprecating the "Check mail from other accounts (POP)" feature in 2026. If you previously used POP3 aggregation, follow the steps below to switch to auto-forwarding. The `Professional` label works the same way regardless of how emails arrive.
 
-Emails from the secondary account are forwarded into the primary inbox automatically. A Gmail filter on the primary account applies the `Professional` label to forwarded messages, which the dashboard uses to badge them as `work`.
+Emails from the secondary account are forwarded into the primary inbox automatically. A Gmail filter on the primary account applies the `Professional` label to forwarded messages, which the session briefing uses to note them as `work`.
 
 ### Step 1 — Enable auto-forwarding on your secondary account
 
@@ -76,7 +83,7 @@ label name must match exactly (case-insensitive).
 
 ## Google Calendar — Calendar sharing
 
-The secondary calendar is shared with your primary account. The existing OAuth token sees all calendars including shared ones. Calendar sharing is real-time — no sync delay.
+The secondary calendar is shared with your primary account. Both the web app's `google` token and the claude.ai Calendar connector see every calendar on the primary account, shared ones included. Calendar sharing is real-time — no sync delay.
 
 ### Step 1 — Share your secondary calendar with your primary account
 
@@ -111,7 +118,7 @@ Non-primary calendar events show the `calendarName` as a subtitle in the Schedul
 
 ## Session Briefing
 
-Steps 4 and 5 of the Session Start Protocol reflect multi-account coverage:
+Step 3 of the Session Start Protocol (`.claude/rules/briefing.md`) reflects multi-account coverage:
 
-- **Calendar**: `List Calendar Events` returns events from all connected calendars. Note the source for non-primary events.
-- **Gmail**: `Search Gmail Emails` (claude.ai connector — not the app's OAuth, which no longer has Gmail access) covers both accounts; secondary emails arrive via auto-forwarding with label `Professional`. Note "personal" or "work" when surfacing emails in the briefing.
+- **Calendar**: the claude.ai Calendar connector's event listing returns events from all connected calendars. Note the source for non-primary events.
+- **Gmail**: the claude.ai Gmail connector's search (not the app's OAuth, which no longer has Gmail access) covers both accounts; secondary emails arrive via auto-forwarding with label `Professional`. Note "personal" or "work" when surfacing emails in the briefing.
