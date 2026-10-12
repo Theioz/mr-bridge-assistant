@@ -85,7 +85,8 @@ The plan is useless if the food doesn't get made. Emit, via `add_task`:
     shop for them by hand; a list with a non-empty `unlisted` is incomplete.
   - `needsPin` lines — no product yet. Do not pick one silently: ask, then `pin_grocery_product`.
   - `check-stock` lines — the kitchen has some but in a unit with no weight. Ask before buying.
-  One task, itemised.
+  One task, itemised. Then offer to fill the Amazon Fresh cart with the `amazon-cart` skill
+  (it never checks out).
 - **Prep tasks** — one per cook, naming the portion count and what it covers:
   "Cook turkey pasta — split 3 ways, covers Mon/Tue/Wed lunch."
 
