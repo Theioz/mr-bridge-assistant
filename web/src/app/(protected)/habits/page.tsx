@@ -15,7 +15,7 @@ import HabitHistory from "@/components/habits/habit-history";
 import HabitTodaySection from "@/components/habits/habit-today-section";
 import { WindowSelector } from "@/components/ui/window-selector";
 import type { HabitRegistry, HabitLog } from "@/lib/types";
-import { todayString, getLastNDays, daysAgoString } from "@/lib/timezone";
+import { todayString, getLastNDays, getLast7Days, daysAgoString } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
 import { getWindow } from "@/lib/window";
 
@@ -45,6 +45,7 @@ async function toggleHabit(habitId: string, date: string, completed: boolean) {
   }
   revalidatePath("/habits");
   revalidatePath("/dashboard");
+  revalidatePath("/weekly");
 }
 
 async function addHabit(name: string, emoji: string, category: string, iconKey: string) {
@@ -102,6 +103,8 @@ export default async function HabitsPage() {
   const today = todayString();
   const [supabase, { key: windowKey, days }] = await Promise.all([createClient(), getWindow()]);
 
+  // The completion week — one list of user-timezone dates, shared with /weekly (#761).
+  const weekDays = getLast7Days();
   const historyDays = Math.min(days, 90);
   const historyDates = getLastNDays(historyDays);
 
@@ -124,7 +127,11 @@ export default async function HabitsPage() {
         .select("habit_id,date")
         .eq("completed", true)
         .order("date", { ascending: false }),
-      supabase.from("habits").select("*").gte("date", daysAgoString(6)).lte("date", today),
+      supabase
+        .from("habits")
+        .select("*")
+        .gte("date", weekDays[0])
+        .lte("date", weekDays[weekDays.length - 1]),
     ]);
 
   const habits = (registryResult.data ?? []) as HabitRegistry[];
@@ -191,7 +198,7 @@ export default async function HabitsPage() {
               borderBottom: "1px solid var(--rule-soft)",
             }}
           >
-            <RadialCompletion habits={habits} weekLogs={weekLogs} />
+            <RadialCompletion habits={habits} weekLogs={weekLogs} days={weekDays} />
             <LongestChainBadges habits={habits} streaks={streaks} />
           </section>
 

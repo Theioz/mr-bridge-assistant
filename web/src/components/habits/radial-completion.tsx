@@ -1,16 +1,19 @@
 "use client";
 
 import type { HabitRegistry, HabitLog } from "@/lib/types";
+import { weeklyCompletion } from "@/lib/habits/weekly-completion";
 
 interface Props {
   habits: HabitRegistry[];
   weekLogs: HabitLog[];
+  /** The window, YYYY-MM-DD in the user's timezone — the same list /weekly uses. */
+  days: string[];
 }
 
 const SIZE = 140;
 const STROKE = 4;
 
-export function RadialCompletion({ habits, weekLogs }: Props) {
+export function RadialCompletion({ habits, weekLogs, days }: Props) {
   if (habits.length === 0) {
     return (
       <section>
@@ -20,22 +23,21 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
     );
   }
 
-  const completedByHabit = new Map<string, number>();
-  for (const log of weekLogs) {
-    if (!log.completed) continue;
-    completedByHabit.set(log.habit_id, (completedByHabit.get(log.habit_id) ?? 0) + 1);
-  }
-
-  const perHabit = habits
-    .map((h) => ({
-      name: h.name,
-      days: completedByHabit.get(h.id) ?? 0,
-    }))
+  // Shared with /weekly so the two pages cannot disagree about the same seven days (#761).
+  const week = weeklyCompletion(
+    habits.map((h) => h.id),
+    weekLogs,
+    days,
+  );
+  const nameById = new Map(habits.map((h) => [h.id, h.name]));
+  const perHabit = week.perHabit
+    .map((h) => ({ id: h.habitId, name: nameById.get(h.habitId) ?? "", days: h.days }))
     .sort((a, b) => b.days - a.days);
 
-  const totalPossible = habits.length * 7;
-  const totalCompleted = perHabit.reduce((s, h) => s + h.days, 0);
-  const pct = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+  const totalPossible = week.possible;
+  const totalCompleted = week.completed;
+  const pct = week.pct;
+  const windowDays = days.length;
 
   const radius = (SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -46,7 +48,7 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
     <section>
       <h2 className="db-section-label">
         Weekly Completion
-        <span className="meta">· 7d</span>
+        <span className="meta">· {windowDays}d</span>
       </h2>
 
       <div
@@ -130,7 +132,7 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
         <ul style={{ listStyle: "none", margin: 0, padding: 0, width: "100%" }}>
           {perHabit.map((h) => (
             <li
-              key={h.name}
+              key={h.id}
               className="db-row tnum"
               style={{
                 gridTemplateColumns: "1fr auto",
@@ -152,11 +154,11 @@ export function RadialCompletion({ habits, weekLogs }: Props) {
               <span
                 style={{
                   fontSize: "var(--t-micro)",
-                  color: h.days === 7 ? "var(--color-text)" : "var(--color-text-muted)",
+                  color: h.days === windowDays ? "var(--color-text)" : "var(--color-text-muted)",
                 }}
               >
                 {h.days}
-                <span style={{ color: "var(--color-text-faint)" }}>/7</span>
+                <span style={{ color: "var(--color-text-faint)" }}>/{windowDays}</span>
               </span>
             </li>
           ))}

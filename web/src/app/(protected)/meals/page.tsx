@@ -210,14 +210,16 @@ export default async function MealsPage() {
         </p>
       </div>
 
-      <KitchenPanel
-        leftovers={(leftoversData ?? []) as unknown as KitchenCook[]}
-        plan={weekPlan.filter((p) => p.date === today)}
-      />
-
-      <WeekPlan week={weekPlan} days={getNextNDays(7)} today={today} />
-
       <MealsClient
+        todayLead={
+          <>
+            <KitchenPanel
+              leftovers={(leftoversData ?? []) as unknown as KitchenCook[]}
+              plan={weekPlan.filter((p) => p.date === today)}
+            />
+            <WeekPlan week={weekPlan} days={getNextNDays(7)} today={today} />
+          </>
+        }
         todayMeals={todayMeals}
         pastMeals={pastMeals}
         recipes={recipes}

@@ -1,21 +1,19 @@
 import type { RecoveryMetrics } from "@/lib/types";
 
-// ── Score helpers (scoped to this file) ─────────────────────────────────────
+import { readinessAdvice, readinessFlagged } from "@/lib/readiness";
 
+// Same colour rule as the Health Breakdown score slots: accent when flagged, otherwise text.
+// Before #761 this strip had its own red/amber/green cut-offs (60/80) that disagreed with
+// the breakdown's (55) about the very same number.
 function scoreColor(score: number | null): string {
   if (score == null) return "var(--color-text-muted)";
-  if (score >= 80) return "var(--color-positive)";
-  if (score >= 60) return "var(--color-warning)";
-  return "var(--color-danger)";
+  return readinessFlagged(score) ? "var(--accent)" : "var(--color-text)";
 }
 
 function statusText(score: number | null): string {
-  if (score == null) return "";
-  if (score >= 85) return "Recovery optimal — push hard today";
-  if (score >= 70) return "Recovery good — normal training";
-  if (score >= 55) return "Recovery moderate — moderate effort";
-  if (score >= 40) return "Readiness low — consider deload";
-  return "Readiness critical — rest day recommended";
+  const a = readinessAdvice(score);
+  if (!a) return "";
+  return `Readiness ${a.label} — ${a.advice}`;
 }
 
 function fmtDate(dateStr: string): string {
@@ -40,16 +38,18 @@ function fmtDate(dateStr: string): string {
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
-type TodayScores = Pick<RecoveryMetrics, "date" | "readiness" | "sleep_score" | "source">;
-
 interface Props {
-  today: TodayScores;
+  /** The most recent recovery row — the same one Health Breakdown renders. */
+  recovery: Pick<RecoveryMetrics, "date" | "readiness" | "sleep_score" | "source">;
+  /** Today in the user's timezone, to label the row "today" only when it is. */
+  today: string;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function TodayScoresStrip({ today }: Props) {
-  const status = statusText(today.readiness);
+export default function TodayScoresStrip({ recovery, today }: Props) {
+  const status = statusText(recovery.readiness);
+  const isToday = recovery.date === today;
 
   return (
     <section
@@ -69,11 +69,11 @@ export default function TodayScoresStrip({ today }: Props) {
           fontSize: "2.75rem",
           fontWeight: 400,
           letterSpacing: "-0.02em",
-          color: scoreColor(today.readiness),
+          color: scoreColor(recovery.readiness),
           lineHeight: 1,
         }}
       >
-        {today.readiness ?? "—"}
+        {recovery.readiness ?? "—"}
       </span>
       <span
         style={{
@@ -83,7 +83,7 @@ export default function TodayScoresStrip({ today }: Props) {
           color: "var(--color-text-faint)",
         }}
       >
-        Readiness · today
+        Readiness · {isToday ? "today" : "latest"}
       </span>
       <span
         className="tnum"
@@ -92,7 +92,7 @@ export default function TodayScoresStrip({ today }: Props) {
           color: "var(--color-text-muted)",
         }}
       >
-        sleep {today.sleep_score ?? "—"}
+        sleep {recovery.sleep_score ?? "—"}
       </span>
       {status && (
         <span
@@ -111,7 +111,7 @@ export default function TodayScoresStrip({ today }: Props) {
           color: "var(--color-text-faint)",
         }}
       >
-        {today.source ?? "Oura"} · {fmtDate(today.date)}
+        {recovery.source ?? "Oura"} · {fmtDate(recovery.date)}
       </span>
     </section>
   );

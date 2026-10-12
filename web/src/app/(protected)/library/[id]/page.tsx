@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BacklogItem, BacklogSession } from "@/lib/types";
+import { shareBaseUrl } from "@/lib/share-url";
 import LibraryDetailClient from "./LibraryDetailClient";
 
 type Props = { params: Promise<{ id: string }> };
@@ -35,7 +36,8 @@ export default async function LibraryDetailPage({ params }: Props) {
     <LibraryDetailClient
       item={item as BacklogItem}
       initialSessions={(sessions ?? []) as BacklogSession[]}
-      appUrl={process.env.APP_URL ?? ""}
+      // The PUBLIC share host, not APP_URL (the tailnet-only app host) — #761.
+      shareBase={shareBaseUrl()}
     />
   );
 }

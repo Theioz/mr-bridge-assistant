@@ -9,7 +9,7 @@ import {
   type Per100g,
   type ResolvedMacros,
 } from "@/lib/nutrition/inventory-macros";
-import { freshnessOf, daysText, isSpent } from "@/lib/nutrition/inventory-freshness";
+import { freshnessOf, daysText, isCookable } from "@/lib/nutrition/inventory-freshness";
 
 /**
  * The kitchen as three doors you open, rather than a list you read.
@@ -19,7 +19,9 @@ import { freshnessOf, daysText, isSpent } from "@/lib/nutrition/inventory-freshn
  * asked while standing in the kitchen deciding what to cook. Splitting it that way means this
  * screen can be dense and visual without re-implementing (and drifting from) the edit paths.
  *
- * Spent rows never appear here at all — same rule as the list.
+ * Spent rows never appear here at all — same rule as the list. Expired rows don't either: they
+ * are in the "Expired — toss or keep?" strip above (#761), because "Cook these first" is the
+ * wrong instruction for food that may already be off.
  */
 
 export interface FridgeItem {
@@ -257,13 +259,21 @@ function Door({ door, items }: { door: (typeof DOORS)[number]; items: FridgeItem
                     }}
                   >
                     <FoodArt imageKey={i.image_key} category={i.category} size={44} />
+                    {/* Up to two full lines, then clamp (#761 — "Green bell pepp…"). The label
+                        is stretched to the tile's width rather than left to shrink-to-fit as a
+                        centred flex item, and two lines' height is reserved, so a name wraps
+                        against the tile before the clamp ever applies. Full name on hover. */}
                     <span
+                      title={i.name}
                       style={{
+                        alignSelf: "stretch",
                         fontSize: "var(--t-micro)",
                         color: "var(--color-text)",
                         textAlign: "center",
                         lineHeight: 1.25,
-                        overflowWrap: "break-word",
+                        minHeight: "2.5em",
+                        whiteSpace: "normal",
+                        overflowWrap: "anywhere",
                         minWidth: 0,
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
@@ -302,8 +312,9 @@ function Door({ door, items }: { door: (typeof DOORS)[number]; items: FridgeItem
 }
 
 export function FridgeView({ items }: { items: FridgeItem[] }) {
-  // Same rule as the list: a spent row is history, not food.
-  const live = items.filter((i) => !isSpent(i));
+  // A spent row is history, not food; an expired row is a toss-or-keep decision, shown in the
+  // ExpiredStrip instead of leading "Cook these first".
+  const live = items.filter((i) => isCookable(i));
 
   return (
     <div>

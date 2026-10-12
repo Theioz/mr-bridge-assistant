@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { shareBaseUrl } from "@/lib/share-url";
+import { itemShareUrl } from "@/lib/share-url";
 
 type Params = Promise<{ id: string }>;
 
@@ -28,7 +28,7 @@ export async function POST(_req: NextRequest, { params }: { params: Params }) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
-  const shareUrl = `${shareBaseUrl()}/share/backlog/${data.share_token}`;
+  const shareUrl = itemShareUrl(data.share_token as string);
   return NextResponse.json({ share_token: data.share_token, share_url: shareUrl });
 }
 

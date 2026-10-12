@@ -25,6 +25,7 @@ import type {
   AllCounts,
   StatusCounts,
 } from "@/lib/types";
+import { libraryShareUrl } from "@/lib/share-url";
 import ImportModal from "./ImportModal";
 
 interface ImportExtras {
@@ -1460,11 +1461,14 @@ export default function LibraryClient({
   initialItems,
   initialCounts,
   initialShareToken,
+  shareBase,
   ratePrompts,
 }: {
   initialItems: BacklogItem[];
   initialCounts: AllCounts;
   initialShareToken: string | null;
+  /** Public share origin, resolved on the server by `shareBaseUrl()` (#761). */
+  shareBase: string;
   ratePrompts?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -1492,17 +1496,16 @@ export default function LibraryClient({
   const dragOverId = useRef<string | null>(null);
 
   // ── Share state ──────────────────────────────────────────────────────────────
-  const appUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : (process.env.NEXT_PUBLIC_APP_URL ?? "");
+  // The link is for someone OUTSIDE the tailnet, so it is built on the public share host the
+  // server resolved — never `window.location.origin`, which is whatever host the owner has open
+  // (the tailnet name) and which made the server and client renders disagree (#761).
   const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [sharePanelPos, setSharePanelPos] = useState<{ top: number; right: number } | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const shareBtnRef = useRef<HTMLButtonElement>(null);
-  const shareUrl = shareToken ? `${appUrl}/share/library/${shareToken}` : null;
+  const shareUrl = shareToken ? libraryShareUrl(shareToken, shareBase) : null;
 
   const generateShareLink = async () => {
     setShareLoading(true);
