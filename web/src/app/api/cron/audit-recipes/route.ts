@@ -9,6 +9,7 @@ import {
   type Row,
 } from "@/lib/nutrition/recipe-audit";
 import { getFood } from "@/lib/nutrition/fdc";
+import { logSync } from "@/lib/sync/log";
 
 /**
  * Findings that are a KNOWN, ACCEPTED backlog rather than something to act on this week.
@@ -44,6 +45,8 @@ const STANDING_BACKLOG = new Set(["unpinned-fdc-id"]);
  *
  * Read-only. It changes nothing about the recipes — it only reports and notifies.
  */
+const FINGERPRINT_KEY = "recipe_audit_fingerprint";
+
 export async function GET(request: NextRequest) {
   const auth = request.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -63,6 +66,7 @@ export async function GET(request: NextRequest) {
     .order("name");
 
   if (error) {
+    await logSync(db, "recipe_audit", "error", 0);
     return NextResponse.json({ error: `recipe fetch failed: ${error.message}` }, { status: 502 });
   }
 
@@ -94,8 +98,29 @@ export async function GET(request: NextRequest) {
   const backlog = findings.length - actionable.length;
 
   // Silence is the normal case and must stay silent. Only ACTIONABLE findings notify — see
-  // STANDING_BACKLOG above for why the unpinned-fdc-id pile is excluded.
-  if (actionable.length) {
+  // STANDING_BACKLOG above for why the unpinned-fdc-id pile is excluded — and only when they
+  // CHANGED since the last report. The same "8 findings" every Monday trains the reader to
+  // ignore the push (observed Sep 15 → Oct 5); the Status page and the JSON keep the detail.
+  const fingerprint = actionable
+    .map((f) => `${f.kind}:${f.recipe}`)
+    .sort()
+    .join("|");
+  const { data: lastFp } = await db
+    .from("profile")
+    .select("value")
+    .eq("user_id", ownerUserId)
+    .eq("key", FINGERPRINT_KEY)
+    .maybeSingle();
+  const changed = (lastFp?.value ?? "") !== fingerprint;
+  await db
+    .from("profile")
+    .upsert(
+      { user_id: ownerUserId, key: FINGERPRINT_KEY, value: fingerprint },
+      { onConflict: "user_id,key" },
+    )
+    .then(undefined, () => undefined);
+
+  if (actionable.length && changed) {
     const summary = Object.entries(byKind)
       .filter(([kind]) => !STANDING_BACKLOG.has(kind))
       .sort((a, b) => b[1] - a[1])
@@ -126,6 +151,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  await logSync(db, "recipe_audit", "ok", findings.length);
+
   return NextResponse.json({
     scanned: rows.length,
     pinsChecked: pinsResolved,
@@ -133,7 +160,7 @@ export async function GET(request: NextRequest) {
     count: findings.length,
     actionable: actionable.length,
     backlog,
-    notified: actionable.length > 0,
+    notified: actionable.length > 0 && changed,
     byKind,
     findings,
   });

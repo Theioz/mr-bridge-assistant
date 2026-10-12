@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,8 +42,9 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from _dates import today_local
 from _supabase import get_client, get_owner_user_id
+from _push import push
+from _joblog import job
 
-NOTIFY_SCRIPT = ROOT / "scripts" / "notify.sh"
 CACHE_KEY = "task_notif_cache"
 DEDUP_HOURS = 24
 CLICK_PATH = "/tasks"
@@ -100,12 +100,16 @@ def needs_notification(task_id: str, cache: dict[str, str]) -> bool:
         return True
 
 
-def send_notify(title: str, message: str) -> None:
+def send_notify(client, owner_user_id: str, title: str, message: str) -> None:
     app_url = os.environ.get("APP_URL", "").rstrip("/")
-    cmd = ["bash", str(NOTIFY_SCRIPT), "--title", title, "--message", message]
-    if app_url:
-        cmd += ["--click-url", f"{app_url}{CLICK_PATH}"]
-    subprocess.run(cmd, check=True)
+    push(
+        title,
+        message,
+        type_="task_due",
+        click_url=f"{app_url}{CLICK_PATH}" if app_url else None,
+        client=client,
+        user_id=owner_user_id,
+    )
 
 
 def main() -> None:
@@ -171,10 +175,13 @@ def main() -> None:
         return
 
     fired = 0
+    failed = 0
 
     if overdue_labels:
         try:
             send_notify(
+                client,
+                owner_user_id,
                 f"Overdue Tasks ({len(overdue_labels)})",
                 "\n".join(overdue_labels),
             )
@@ -182,11 +189,14 @@ def main() -> None:
                 cache[tid] = now_iso
             fired += 1
         except Exception as e:
+            failed += 1
             print(f"[check_task_due_alerts] notify error (overdue): {e}", file=sys.stderr)
 
     if due_today_labels:
         try:
             send_notify(
+                client,
+                owner_user_id,
                 f"Due Today ({len(due_today_labels)})",
                 "\n".join(due_today_labels),
             )
@@ -194,6 +204,7 @@ def main() -> None:
                 cache[tid] = now_iso
             fired += 1
         except Exception as e:
+            failed += 1
             print(f"[check_task_due_alerts] notify error (due today): {e}", file=sys.stderr)
 
     if fired:
@@ -202,7 +213,12 @@ def main() -> None:
             f"[check_task_due_alerts] Fired {fired} notification(s) "
             f"({len(overdue_labels)} overdue, {len(due_today_labels)} due today)."
         )
+    if failed:
+        # A push that did not go out must fail the run, or cron and the Status page read it as
+        # "nothing was due". The cache was not stamped for these, so the next run retries.
+        raise RuntimeError(f"{failed} task-due push(es) failed")
 
 
 if __name__ == "__main__":
-    main()
+    with job("cron:task_due"):
+        main()

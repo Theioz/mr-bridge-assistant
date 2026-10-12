@@ -14,7 +14,7 @@ To set a custom location:
   c.table('profile').upsert({'user_id':uid,'key':'location_city','value':'Seattle, WA'}, on_conflict='user_id,key').execute()
   "
 
-Reusable by both fetch_briefing_data.py and check_weather_alert.py.
+Reusable by both fetch_briefing_data.py and check_morning_summary.py.
 
 Usage: python3 scripts/fetch_weather.py
 """

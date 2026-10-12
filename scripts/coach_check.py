@@ -11,7 +11,6 @@ on the zero-Anthropic self-hosted box (ADR 0017).
 """
 import argparse
 import os
-import subprocess
 import sys
 from datetime import date, timedelta
 
@@ -31,12 +30,12 @@ REGRESSION_MAX_GAP_DAYS = 14
 
 
 def notify(title, message, click=None):
-    args = ["bash", os.path.join(REPO, "scripts", "notify.sh"),
-            "--title", title, "--message", message]
-    if click:
-        args += ["--click-url", click]
-    subprocess.run(args, cwd=REPO, check=False,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Raises PushError when ntfy refuses the message, so a nudge that never left fails the run
+    # instead of exiting 0 (the old subprocess call ran with check=False and DEVNULL).
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    from _push import push
+
+    push(title, message, type_="coach", click_url=click or None)
     print(f"[notify] {title} :: {message}")
 
 
@@ -274,4 +273,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from _joblog import job
+
+    with job("cron:coach_check"):
+        main()

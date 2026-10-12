@@ -127,4 +127,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    from _joblog import job
+
+    with job("cron:purge_tasks"):
+        sys.exit(main())

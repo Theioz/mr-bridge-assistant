@@ -31,7 +31,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -39,7 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _dates import today_local
 from _supabase import get_client, get_owner_user_id
-from _notifications import log_notification
+from _push import push
 
 SCRIPTS_DIR = Path(__file__).parent
 
@@ -51,16 +50,13 @@ def get_coming_monday(today: date) -> date:
     return today + timedelta(days=days)
 
 
-def send_notification(title: str, message: str) -> None:
-    notify_sh = SCRIPTS_DIR / "notify.sh"
+def send_notification(client, uid: str, type_: str, title: str, message: str) -> None:
+    # Push + in-app history in one call. Best-effort here: the plan is already written, and a
+    # failed push must not make the run look like the plan failed.
     try:
-        subprocess.run(
-            ["bash", str(notify_sh), "--title", title, "--message", message],
-            check=False,
-            capture_output=True,
-        )
+        push(title, message, type_=type_, client=client, user_id=uid)
     except Exception as e:
-        print(f"[write_week_plan] notify.sh error: {e}", file=sys.stderr)
+        print(f"[write_week_plan] notify error: {e}", file=sys.stderr)
 
 
 def main() -> None:
@@ -157,14 +153,12 @@ def main() -> None:
         for err in errors:
             print(f"[write_week_plan] Error: {err}", file=sys.stderr)
         msg = f"{len(errors)} error(s) writing plan for week of {next_monday}. Check logs."
-        send_notification("Weekly Plan — Partial Failure", msg)
-        log_notification(client, uid, "weekly_plan_error", "Weekly Plan — Partial Failure", msg)
+        send_notification(client, uid, "weekly_plan_error", "Weekly Plan — Partial Failure", msg)
         sys.exit(1)
 
     workout_count = len([d for d in workout_days if d.get("date")])
     msg = f"{workout_count} workout(s) + meal prep set for week of {next_monday}."
-    send_notification("Weekly Plan Ready", msg)
-    log_notification(client, uid, "weekly_plan_ready", "Weekly Plan Ready", msg)
+    send_notification(client, uid, "weekly_plan_ready", "Weekly Plan Ready", msg)
     print(f"[write_week_plan] Done. {msg}")
 
 

@@ -9,6 +9,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Settings → Status and an honest notification pipeline (#761).** Status (replacing the
+  multi-tenant "Usage" quota tab) lists every scheduled job and data source with its last success,
+  flagging late, failing and never-run ones. It reads `sync_log`, which every Python cron job now
+  writes through `scripts/_joblog.py`, against a registry shared with the checker
+  (`web/src/lib/status/jobs.json`). `scripts/check_stale_signals.py` covers what Uptime Kuma's cron
+  heartbeats cannot: a data source going stale inside a green `/api/cron/sync` run. It fails its own
+  heartbeat with the reason, so Kuma pages it. One delivery path, `scripts/_push.py`
+  (`notify.sh` now wraps it), sends every push to ntfy AND the in-app Notifications history.
+  Task-due and coach pushes had been firing for weeks without appearing there. It exits non-zero
+  when ntfy refuses, and no longer logs the ntfy topic. **New morning summary**
+  (`check_morning_summary.py`): weather (storm, heat, freeze and wind flags), last night's recovery
+  (HRV-drop flag), today's workout, planned meals and due tasks in one push. It replaces
+  `check_weather_alert.py`, `check_hrv_alert.py` and `check_daily_alerts.py`, which no host
+  scheduled. `check_birthday_notif.py` now reads Google Calendar over plain HTTPS
+  (`scripts/_google.py`): compute-core has no `googleapiclient`, so it could not even import there.
+  It now exits non-zero on failure instead of 0. The recipe audit notifies only when its findings
+  change (the same "8 findings" pushed four Mondays running) and records its runs. Removed: the
+  macOS-only `morning-nudge` / `nightly-postmortem` agents, `install-notifications.sh` (the schedule
+  lives in the host crontab), and the `/api/usage/storage` quota meter.
 - **`amazon-cart` skill: fill the Amazon Fresh cart from the grocery list (#4, Phase 2).**
   Runs in the user's own signed-in Chrome through Claude in Chrome. **It never checks out.**
   Checkout, "Clear cart", Repeat Items, Subscribe & Save and account settings are named as

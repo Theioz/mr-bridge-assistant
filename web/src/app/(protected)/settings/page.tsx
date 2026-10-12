@@ -32,7 +32,8 @@ import {
 import type { SportsFavorite } from "@/lib/sync/sports";
 import { SettingsTabs, type SettingsTab } from "@/components/settings/settings-tabs";
 import { DataSettings } from "@/components/settings/data-settings";
-import { UsageSettings } from "@/components/settings/usage-settings";
+import { StatusSettings } from "@/components/settings/status-settings";
+import { loadJobStatuses } from "@/lib/status/jobs";
 
 const VALID_TABS = new Set<string>([
   "profile",
@@ -233,8 +234,9 @@ async function SettingsContent({
     return <DataSettings />;
   }
 
-  if (activeTab === "usage") {
-    return <UsageSettings />;
+  if (activeTab === "status") {
+    const now = new Date();
+    return <StatusSettings jobs={await loadJobStatuses(createServiceClient(), now)} now={now} />;
   }
 
   const supabase = await createClient();
