@@ -26,7 +26,13 @@ export function StatusSettings({ jobs, now }: { jobs: JobStatus[]; now: Date }) 
   const sorted = [...jobs].sort(
     (a, b) => ORDER[a.state] - ORDER[b.state] || a.label.localeCompare(b.label),
   );
-  const problems = jobs.filter((j) => j.state !== "ok").length;
+  // "Never ran" is not a problem: a job registered today has simply not reported yet, and the
+  // stale checker ignores it too. Only late or failing jobs count as needing attention.
+  const problems = jobs.filter((j) => j.state === "stale" || j.state === "failing").length;
+  const pending = jobs.filter((j) => j.state === "never").length;
+  const pendingNote = pending
+    ? ` ${pending} ${pending === 1 ? "has" : "have"} not reported yet; each turns OK after its next scheduled run.`
+    : "";
 
   return (
     <section
@@ -45,8 +51,10 @@ export function StatusSettings({ jobs, now }: { jobs: JobStatus[]; now: Date }) 
         }}
       >
         {problems
-          ? `${problems} of ${jobs.length} jobs need attention. Uptime Kuma pages a late job once, and again only after it recovers and fails again.`
-          : `All ${jobs.length} jobs ran on schedule. If one stops, Uptime Kuma pages you.`}
+          ? `${problems} of ${jobs.length} jobs need attention. Uptime Kuma pages a late job once, and again only after it recovers and fails again.${pendingNote}`
+          : pending
+            ? `Nothing is late.${pendingNote}`
+            : `All ${jobs.length} jobs ran on schedule. If one stops, Uptime Kuma pages you.`}
       </p>
 
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
