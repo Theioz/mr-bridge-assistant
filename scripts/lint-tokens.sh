@@ -11,11 +11,8 @@ WEB_SRC="web/src"
 FAIL=0
 
 # ── 1. No inline onMouseOver/onMouseOut hover handlers ──────────────────
-# Allowlist: heatmap.tsx (tooltip state). It uses the handlers for non-style
-# state tracking, not inline-style toggling.
 HOVER_HITS=$(grep -rn 'onMouseOver\|onMouseOut' "$WEB_SRC" \
   --include='*.tsx' --include='*.ts' \
-  | grep -v 'heatmap\.tsx' \
   || true)
 
 if [[ -n "$HOVER_HITS" ]]; then

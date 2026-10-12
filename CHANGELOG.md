@@ -9,6 +9,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Scheduled journal reminder (#761).** `scripts/check_journal_reminder.py` pushes at 7 PM Pacific
+  only when today has no journal entry, and reports to Settings → Status. It replaces the
+  `journal-reminder` Claude agent, which described a 7 PM run that nothing scheduled and checked
+  the UTC date (so after 5 PM Pacific it looked at tomorrow) without filtering by user. The
+  Notifications page filters now match the types actually sent: Today, Tasks, Training, Journal,
+  Birthdays and System. HRV and Weather became lines in the morning summary, so no push could ever
+  match those filters. Also: a dead `heatmap.tsx` exemption removed from `lint-tokens.sh`, and the
+  `weekly_plan.py` usage corrected to its real subcommands.
 - **Dashboard re-layout, re-entry mode, travel mode (#761).** The dashboard is now ordered for a
   phone check-in: greeting and weather, then **Today's food** (the next planned meal not yet
   logged, with a one-tap "Ate this" through the existing `POST /api/meals/eat`, plus today's

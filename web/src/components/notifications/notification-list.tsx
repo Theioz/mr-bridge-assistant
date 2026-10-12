@@ -1,16 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Activity, CloudRain, CheckSquare, Cake, Bell, BellOff } from "lucide-react";
+import { Sun, CheckSquare, Dumbbell, NotebookPen, Cake, Bell, BellOff } from "lucide-react";
 import EmptyState from "@/components/dashboard/empty-state";
 import type { Notification } from "@/app/(protected)/notifications/page";
 
+// Filters group the notification TYPES the jobs actually send (scripts/_push.py callers and
+// /api/cron/audit-recipes). HRV and Weather were removed in #761: those alerts are now lines in
+// the morning summary, and a filter nothing can match reads as "notifications are broken".
 const TYPE_FILTERS = [
-  { key: "all", label: "All" },
-  { key: "hrv_alert", label: "HRV" },
-  { key: "weather", label: "Weather" },
-  { key: "task_due", label: "Tasks" },
-  { key: "birthday", label: "Birthday" },
+  { key: "all", label: "All", types: [] as string[] },
+  { key: "today", label: "Today", types: ["morning_summary"] },
+  { key: "tasks", label: "Tasks", types: ["task_due", "series_expiring"] },
+  {
+    key: "training",
+    label: "Training",
+    types: ["coach", "weekly_plan_ready", "weekly_plan_error"],
+  },
+  { key: "journal", label: "Journal", types: ["journal_reminder"] },
+  { key: "birthday", label: "Birthdays", types: ["birthday"] },
+  { key: "system", label: "System", types: ["recipe_audit", "general"] },
 ] as const;
 
 type FilterKey = (typeof TYPE_FILTERS)[number]["key"];
@@ -18,12 +27,17 @@ type FilterKey = (typeof TYPE_FILTERS)[number]["key"];
 function typeIcon(type: string) {
   const shared = { color: "var(--color-text-faint)", flexShrink: 0 } as const;
   switch (type) {
-    case "hrv_alert":
-      return <Activity size={14} style={shared} aria-hidden />;
-    case "weather":
-      return <CloudRain size={14} style={shared} aria-hidden />;
+    case "morning_summary":
+      return <Sun size={14} style={shared} aria-hidden />;
     case "task_due":
+    case "series_expiring":
       return <CheckSquare size={14} style={shared} aria-hidden />;
+    case "coach":
+    case "weekly_plan_ready":
+    case "weekly_plan_error":
+      return <Dumbbell size={14} style={shared} aria-hidden />;
+    case "journal_reminder":
+      return <NotebookPen size={14} style={shared} aria-hidden />;
     case "birthday":
       return <Cake size={14} style={shared} aria-hidden />;
     default:
@@ -62,7 +76,9 @@ export default function NotificationList({ notifications, markAllAsReadAction }:
   const [pending, startTransition] = useTransition();
   const [markError, setMarkError] = useState<string | null>(null);
 
-  const visible = filter === "all" ? notifications : notifications.filter((n) => n.type === filter);
+  const types: readonly string[] = TYPE_FILTERS.find((f) => f.key === filter)?.types ?? [];
+  const visible =
+    filter === "all" ? notifications : notifications.filter((n) => types.includes(n.type));
 
   const unreadVisible = visible.filter((n) => n.isUnread).length;
 
