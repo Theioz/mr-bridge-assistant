@@ -192,16 +192,20 @@ The MCP and the committed `smoke/` suite are independent:
 ## CI
 
 [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) runs two
-jobs:
+jobs. Neither runs on pull requests: the app and Supabase are tailnet-only, so a
+GitHub-hosted runner cannot reach them (see the workflow header).
 
-- **`smoke-pr`** — on every PR that touches `web/**`, the smoke docs,
-  `.mcp.json`, or the workflow itself. Runs `smoke:a11y`
-  against Playwright-managed `next dev`. Cancels stale runs on new
-  pushes to the same branch. Target < 3 min after warm cache.
-- **`smoke-release`** — nightly at 09:00 UTC plus `workflow_dispatch`
-  for manual triggers. Runs a11y against dev, stops it, then
-  `next build` + `next start` and runs `smoke:perf` against the prod
-  bundle. Target < 20 min.
+- **`smoke-a11y`** — `smoke:a11y` (axe sweep, critical + serious violations
+  fail) against Playwright-managed `next dev`. Runs on `workflow_dispatch`
+  with suite `a11y`, and weekly (Mondays 09:00 UTC) **only** when the repo
+  variable `SMOKE_SCHEDULE_ENABLED` is `true` — off by default, so the
+  schedule is skipped rather than failing until a reachable runner exists.
+- **`smoke-release`** — `workflow_dispatch` with suite `release`. Runs a11y
+  against dev, stops it, then `next build` + `next start` and runs
+  `smoke:perf` against the prod bundle. Target < 20 min.
+
+A plain `next build` (no app, no secrets) runs on every PR touching `web/**`
+via [`build.yml`](../.github/workflows/build.yml).
 
 Playwright browsers are cached with key
 `playwright-<runner>-<hash(package-lock.json)>`; the `--with-deps

@@ -1,0 +1,51 @@
+name: Build
+
+# `next build` on every PR that touches the app (#761). tsc + eslint do not catch what
+# only the bundler sees: a server-only module pulled into a client component, a route
+# segment config Next rejects, a page that throws during static prerender, an import
+# that resolves under tsc's paths but not under Turbopack.
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/build.yml'
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  next-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      # Placeholders, never real values. The build currently needs no env at all (verified
+      # with an empty environment); these mirror the Dockerfile's build args so that a
+      # NEXT_PUBLIC_* inlined at build time, or a module that reads one at import, builds
+      # here exactly as it does in the image.
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Dockerfile builder stage (node:24-alpine).
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Cache Next build cache
+        uses: actions/cache@v4
+        with:
+          path: web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-
+      - run: npx next build

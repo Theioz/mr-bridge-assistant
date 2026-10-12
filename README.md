@@ -302,7 +302,9 @@ Requires `web/.env.local` to be filled in (see Step 7). The app runs entirely ag
 **Parked (#476).** The Playwright suite cannot run on a GitHub-hosted runner any more,
 and no edit to the specs fixes that: the app and Supabase are **tailnet-only**, so a cloud
 runner has no route to either and every spec fails at login. `.github/workflows/smoke.yml`
-is `workflow_dispatch`-only so it never fails by accident.
+runs on `workflow_dispatch` (suite `a11y` or `release`), plus a weekly a11y run that is a
+no-op unless the repo variable `SMOKE_SCHEDULE_ENABLED` is `true` — so it never fails by
+accident.
 
 Re-enabling means either a self-hosted runner on the tailnet, or standing up a throwaway
 Supabase + app inside the job.
@@ -483,7 +485,8 @@ mr-bridge-assistant/
 │   └── workflows/
 │       ├── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
 │       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck, docs check
-│       ├── smoke.yml                      # Playwright a11y + perf smokes
+│       ├── build.yml                      # `next build` on PRs touching web/**
+│       ├── smoke.yml                      # Playwright a11y + perf smokes (manual; weekly when enabled)
 │       └── python-tests.yml               # "Unit tests": python (tests/) + node (web/src/__tests__)
 │
 ├── docs/

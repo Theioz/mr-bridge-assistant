@@ -18,6 +18,15 @@ const ROUTES: Route[] = [
   { path: "/weekly", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/journal", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/meals", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/inventory", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/library", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  // /calendar has no h1 (full-bleed view); its toolbar renders whether or not Google
+  // Calendar is connected.
+  {
+    path: "/calendar",
+    auth: "signed-in",
+    settled: (p) => p.getByRole("button", { name: "Previous" }),
+  },
   { path: "/notifications", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/settings", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/login", auth: "public", settled: (p) => p.getByLabel("Email") },
