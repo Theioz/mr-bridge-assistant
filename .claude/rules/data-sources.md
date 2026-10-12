@@ -4,7 +4,7 @@ All live data is in **self-hosted Supabase** on `compute-core` (`supabase.jl-inf
 Migrated off Supabase Cloud 2026-07-13 — see ADR 0017 in the jl-homelab repo.
 
 There is **no in-app chat**. Conversation happens through the **MCP server**
-(`web/mcp/run.sh`), which exposes the same 49 tools to Claude Code. Where a row below
+(`web/mcp/run.sh`), which exposes the same 50 tools to Claude Code. Where a row below
 says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |

@@ -9,6 +9,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Dashboard re-layout, re-entry mode, travel mode (#761).** The dashboard is now ordered for a
+  phone check-in: greeting and weather, then **Today's food** (the next planned meal not yet
+  logged, with a one-tap "Ate this" through the existing `POST /api/meals/eat`, plus today's
+  macros against targets), today's workout, habits, recovery/health, schedule, tasks, and
+  watchlist/sports last. The eat call (`lib/nutrition/eat-client.ts`), the eat-target rule
+  (`lib/nutrition/next-meal.ts`), the macro sums/targets (`lib/nutrition/daily-macros.ts`) and the
+  macro bars (`components/meals/MacroBars.tsx`) were extracted from the Meals page so both surfaces
+  share them; a plan with no macros to log gets no button on the dashboard, so it can never be
+  marked eaten without a `meal_log` row. **Re-entry:** after 3+ days with no hand-entered log
+  (`meal_log`, `habits`, `strength_sessions`, `journal_entries`; `lib/reentry.ts`), one calm card
+  says "Welcome back. Start from today." with two forward actions. It shows no missed-day counts,
+  no streaks and no backfill prompt, and can be dismissed for the day. The same signal is exposed to
+  Claude as the new **`get_logging_status`** MCP tool (49 tools). **Travel:** a "Stay at …" calendar
+  event covering today (`lib/travel/stay.ts`, mirrored in `scripts/_travel.py`) shows "Traveling —
+  <city> until <date>", moves the dashboard and morning-summary weather to the stay's location, and
+  replaces the empty-meal-plan prompt with "Meal plans are paused". The morning summary also leads
+  with "Traveling: <city>" and drops "Meals: nothing planned". Nothing is written to `profile`;
+  home weather returns when the event ends.
 - **Delivered groceries go into the kitchen (#4, Phase 3) and every cook draws inventory (#761).**
   New MCP tool `receive_grocery_order`: a delivered Amazon Fresh order (ASINs + packs, read from
   the order details page) becomes `inventory_items` rows in **grams** (pack grams × packs, or a
@@ -279,6 +297,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **CI guard for the client/server boundary.** `scripts/check-client-boundary.py` (run in the lint
+  workflow) fails when server code imports a function from a `"use client"` module, the class of
+  bug below that no other check catches.
 - **Every Settings tab crashed after #766.** The page called `isSettingsTab()`, which lived in a
   `"use client"` component; Next refuses a server call into a client module, and only at request
   time, so tsc, eslint and `next build` all passed. The tab list now lives in

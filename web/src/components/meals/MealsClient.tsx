@@ -21,6 +21,8 @@ import { todayString } from "@/lib/timezone";
 import { IngredientList } from "./IngredientList";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 import { LabelLog } from "./LabelLog";
+import { MacroBars, SugarTotalRow } from "./MacroBars";
+import { sumMacroTotals, type MacroGoals, type MacroTotals } from "@/lib/nutrition/daily-macros";
 
 const FoodPhotoAnalyzer = dynamic(() => import("@/app/(protected)/meals/FoodPhotoAnalyzer"), {
   ssr: false,
@@ -57,14 +59,6 @@ export interface RecipeRow {
   steps_json: RecipeStep[] | null;
 }
 
-export interface MacroGoals {
-  calories: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fat: number | null;
-  fiber: number | null;
-}
-
 export interface DailyMacroTotals {
   date: string;
   calories: number;
@@ -75,15 +69,8 @@ export interface DailyMacroTotals {
   sugar: number | null;
 }
 
-export interface MacroTotals {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  // null when no meal today reports fiber/sugar — renders as "—" not 0 (#304).
-  fiber: number | null;
-  sugar: number | null;
-}
+// Moved to lib/nutrition/daily-macros.ts so the dashboard shares them; re-exported for the page.
+export type { MacroGoals, MacroTotals };
 
 interface Suggestion {
   name: string;
@@ -167,112 +154,6 @@ const ghostStyle = {
   padding: "var(--space-2) var(--space-4)",
   cursor: "pointer",
 } as const;
-
-// ─── Macro progress bar ───────────────────────────────────────────────────────
-
-function progressColor(pct: number): string {
-  if (pct > 100) return "var(--color-danger)";
-  if (pct >= 85) return "var(--color-warning)";
-  return "var(--color-positive)";
-}
-
-interface MacroBarProps {
-  label: string;
-  unit: string;
-  consumed: number;
-  goal: number | null;
-}
-
-// Sugar has no goal — we show a running total for awareness (#304).
-function SugarTotalRow({ sugar }: { sugar: number | null }) {
-  return (
-    <div
-      className="flex items-baseline justify-between"
-      style={{
-        paddingTop: "var(--space-3)",
-        paddingBottom: "var(--space-3)",
-        borderTop: "1px solid var(--rule-soft)",
-      }}
-    >
-      <span style={{ fontSize: "var(--t-meta)", fontWeight: 500, color: "var(--color-text)" }}>
-        Sugar
-      </span>
-      <span className="tnum" style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
-        {sugar === null ? "—" : sugar}
-        <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>g</span>
-      </span>
-    </div>
-  );
-}
-
-function MacroBar({ label, unit, consumed, goal }: MacroBarProps) {
-  if (goal === null) return null;
-  const pct = goal > 0 ? (consumed / goal) * 100 : 0;
-  const color = progressColor(pct);
-  const remaining = goal - consumed;
-  const isOver = remaining < 0;
-  const clamped = Math.min(pct, 100);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-        paddingTop: "var(--space-3)",
-        paddingBottom: "var(--space-3)",
-        borderTop: "1px solid var(--rule-soft)",
-      }}
-    >
-      <div className="flex items-baseline justify-between">
-        <span style={{ fontSize: "var(--t-meta)", fontWeight: 500, color: "var(--color-text)" }}>
-          {label}
-        </span>
-        <div className="flex items-baseline tnum" style={{ gap: "var(--space-2)" }}>
-          <span style={{ fontSize: "var(--t-meta)", color: "var(--color-text)" }}>
-            {consumed}
-            <span style={{ color: "var(--color-text-muted)", fontSize: "var(--t-micro)" }}>
-              {unit}
-            </span>
-          </span>
-          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-faint)" }}>/</span>
-          <span style={{ fontSize: "var(--t-micro)", color: "var(--color-text-muted)" }}>
-            {goal}
-            {unit}
-          </span>
-          <span
-            style={{
-              fontSize: "var(--t-micro)",
-              fontWeight: 500,
-              color,
-              minWidth: 64,
-              textAlign: "right",
-            }}
-          >
-            {isOver ? `+${Math.abs(remaining)}${unit} over` : `${remaining}${unit} left`}
-          </span>
-        </div>
-      </div>
-      <div
-        className="rounded-full overflow-hidden"
-        style={{ height: 3, background: "var(--rule-soft)" }}
-      >
-        <div
-          className="h-full"
-          style={{
-            width: "100%",
-            transform: `scaleX(${clamped / 100})`,
-            transformOrigin: "left center",
-            background: color,
-            transition:
-              "transform var(--motion-slow) var(--ease-out-quart), background-color var(--motion-slow) var(--ease-out-quart)",
-            willChange: "transform",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
 
 // ─── Meal row (flat, hairline, tabular macros column) ────────────────────────
 
@@ -832,26 +713,7 @@ function TodayTab({
         <h2 className="db-section-label">Today&apos;s Macros</h2>
         {hasAnyGoal ? (
           <div>
-            <MacroBar
-              label="Calories"
-              unit=" kcal"
-              consumed={macroTotals.calories}
-              goal={macroGoals.calories}
-            />
-            <MacroBar
-              label="Protein"
-              unit="g"
-              consumed={macroTotals.protein}
-              goal={macroGoals.protein}
-            />
-            <MacroBar label="Carbs" unit="g" consumed={macroTotals.carbs} goal={macroGoals.carbs} />
-            <MacroBar label="Fat" unit="g" consumed={macroTotals.fat} goal={macroGoals.fat} />
-            <MacroBar
-              label="Fiber"
-              unit="g"
-              consumed={macroTotals.fiber ?? 0}
-              goal={macroGoals.fiber}
-            />
+            <MacroBars totals={macroTotals} goals={macroGoals} />
             <SugarTotalRow sugar={macroTotals.sugar} />
           </div>
         ) : (
@@ -1805,43 +1667,6 @@ function TrendsTab({
   );
 }
 
-// ─── Macro totals derivation ──────────────────────────────────────────────────
-
-// Mirrors the SSR computation in app/(protected)/meals/page.tsx so the displayed
-// totals stay in sync as rows are optimistically removed from the client.
-function computeMacroTotals(meals: MealRow[]): MacroTotals {
-  let calories = 0,
-    protein = 0,
-    carbs = 0,
-    fat = 0;
-  let fiberSum = 0,
-    sugarSum = 0,
-    fiberAny = false,
-    sugarAny = false;
-  for (const m of meals) {
-    calories += m.calories ?? 0;
-    protein += m.protein_g ?? 0;
-    carbs += m.carbs_g ?? 0;
-    fat += m.fat_g ?? 0;
-    if (m.fiber_g != null) {
-      fiberSum += m.fiber_g;
-      fiberAny = true;
-    }
-    if (m.sugar_g != null) {
-      sugarSum += m.sugar_g;
-      sugarAny = true;
-    }
-  }
-  return {
-    calories,
-    protein: Math.round(protein),
-    carbs: Math.round(carbs),
-    fat: Math.round(fat),
-    fiber: fiberAny ? Math.round(fiberSum * 10) / 10 : null,
-    sugar: sugarAny ? Math.round(sugarSum * 10) / 10 : null,
-  };
-}
-
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export default function MealsClient(props: Props) {
@@ -1884,7 +1709,7 @@ function MealsClientInner({
   // SSR-computed `macroTotals` is the initial paint; once any row is pending
   // delete, recompute from the visible set so the UI updates immediately.
   const displayedMacroTotals = useMemo<MacroTotals>(
-    () => (pendingDeletes.size === 0 ? macroTotals : computeMacroTotals(visibleTodayMeals)),
+    () => (pendingDeletes.size === 0 ? macroTotals : sumMacroTotals(visibleTodayMeals)),
     [pendingDeletes.size, macroTotals, visibleTodayMeals],
   );
 

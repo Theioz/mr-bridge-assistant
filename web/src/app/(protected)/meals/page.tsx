@@ -16,6 +16,8 @@ import MealsClient, {
   type MacroTotals,
   type DailyMacroTotals,
 } from "@/components/meals/MealsClient";
+import { macroGoalsFromProfile, sumMacroTotals } from "@/lib/nutrition/daily-macros";
+import { MEAL_PLAN_SELECT } from "@/lib/nutrition/next-meal";
 
 export const metadata: Metadata = {
   title: "Meals",
@@ -79,13 +81,7 @@ export default async function MealsPage() {
     userId
       ? supabase
           .from("meal_plans")
-          .select(
-            "id, date, meal_type, portions, status, name, " +
-              "recipes(id, name, ingredients, instructions, ingredients_json, steps_json, " +
-              "calories, protein_g, carbs_g, fat_g, fiber_g, " +
-              "typical_portions, macros_confidence, macros_computed_at), " +
-              "cooks(id, name, portions, portions_remaining, calories, protein_g, carbs_g, fat_g, fiber_g)",
-          )
+          .select(MEAL_PLAN_SELECT)
           .eq("user_id", userId)
           .gte("date", todayString())
           .lte("date", daysAheadString(6))
@@ -102,41 +98,16 @@ export default async function MealsPage() {
   for (const row of profileData ?? []) {
     profileMap[row.key] = row.value;
   }
-  const macroGoals: MacroGoals = {
-    calories: profileMap["calorie_goal"] ? parseInt(profileMap["calorie_goal"], 10) : null,
-    protein: profileMap["protein_goal"] ? parseInt(profileMap["protein_goal"], 10) : null,
-    carbs: profileMap["carbs_goal"] ? parseInt(profileMap["carbs_goal"], 10) : null,
-    fat: profileMap["fat_goal"] ? parseInt(profileMap["fat_goal"], 10) : null,
-    // Fiber defaults to 30g when unset — common public-health target.
-    fiber: profileMap["fiber_goal"] ? parseInt(profileMap["fiber_goal"], 10) : 30,
-  };
+  const macroGoals: MacroGoals = macroGoalsFromProfile(profileMap);
 
   // Split meals into today vs past
   const today = todayString();
   const todayMeals = meals.filter((m) => m.date === today);
   const pastMeals = meals.filter((m) => m.date !== today);
 
-  // Compute today's macro totals (entries with at least some macro data).
+  // Today's macro totals — same derivation the dashboard uses (lib/nutrition/daily-macros.ts).
   // fiber/sugar stay null when no meal today reports them — they render as em-dash, not 0.
-  const macroSums = todayMeals.reduce<MacroTotals>(
-    (acc, m) => ({
-      calories: acc.calories + (m.calories ?? 0),
-      protein: acc.protein + (m.protein_g ?? 0),
-      carbs: acc.carbs + (m.carbs_g ?? 0),
-      fat: acc.fat + (m.fat_g ?? 0),
-      fiber: m.fiber_g != null ? (acc.fiber ?? 0) + m.fiber_g : acc.fiber,
-      sugar: m.sugar_g != null ? (acc.sugar ?? 0) + m.sugar_g : acc.sugar,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: null, sugar: null },
-  );
-  const macroTotals: MacroTotals = {
-    calories: macroSums.calories,
-    protein: Math.round(macroSums.protein),
-    carbs: Math.round(macroSums.carbs),
-    fat: Math.round(macroSums.fat),
-    fiber: macroSums.fiber != null ? Math.round(macroSums.fiber * 10) / 10 : null,
-    sugar: macroSums.sugar != null ? Math.round(macroSums.sugar * 10) / 10 : null,
-  };
+  const macroTotals: MacroTotals = sumMacroTotals(todayMeals);
 
   // Aggregate meal_log rows into daily macro totals for the Trends tab.
   // Fiber/sugar stay null when no meal that day reported them — "not tracked" != 0.

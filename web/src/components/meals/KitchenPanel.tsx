@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { PlannedMealDetail } from "./PlannedMealDetail";
 import CookItDialog from "./CookItDialog";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
+import { postEat } from "@/lib/nutrition/eat-client";
+import { eatTargetFor, MEAL_ORDER, type EatTarget } from "@/lib/nutrition/next-meal";
 
 /**
  * The kitchen: what's planned today, and what's already in the fridge.
@@ -73,8 +75,6 @@ interface KitchenPanelProps {
   plan: KitchenPlannedMeal[];
 }
 
-const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
-
 function perPortion(total: number | null, portions: number): number | null {
   if (total == null || portions < 1) return null;
   return Math.round(total / portions);
@@ -112,60 +112,32 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
   // Data comes from the server component, so "Ate this" just needs to invalidate it:
   // router.refresh() re-runs the page query, which updates the fridge AND the macro
   // totals card above us in one pass. No local cache to keep in sync.
-  async function eat(cookId: string, opts: { mealType?: string; mealPlanId?: string }) {
-    setBusyId(opts.mealPlanId ?? cookId);
+  //
+  // Two targets, one endpoint (POST /api/meals/eat, via postEat — the same call the dashboard's
+  // Today's food section makes):
+  //   cook   — log the known macros AND decrement the fridge.
+  //   recipe — cook the recipe and eat a portion in one tap. Unlike `mark` below, this DOES log
+  //            macros — the recipe's are known — so a planned meal you actually made stops being
+  //            invisible in the day's totals.
+  async function eatTarget(target: EatTarget, opts: { mealType?: string; mealPlanId?: string }) {
+    setBusyId(opts.mealPlanId ?? (target.kind === "cook" ? target.cookId : target.recipeId));
     setError(null);
     try {
-      const res = await fetch("/api/meals/eat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cook_id: cookId,
-          portions: 1,
-          meal_type: opts.mealType,
-          meal_plan_id: opts.mealPlanId,
-        }),
-      });
-      if (!res.ok) {
-        setError((await res.json()).error ?? "Couldn't log that");
+      const result = await postEat(target, opts);
+      if (!result.ok) {
+        setError(result.error);
         return;
       }
       router.refresh();
-    } catch {
-      setError("Couldn't log that");
     } finally {
       setBusyId(null);
     }
   }
 
-  // Eat a recipe-backed plan: cook the recipe and eat a portion in one tap. Unlike `mark`
-  // below, this DOES log macros — the recipe's are known — so a planned meal you actually made
-  // stops being invisible in the day's totals. Same endpoint as `eat`, keyed on recipe_id.
-  async function eatRecipe(recipeId: string, opts: { mealType?: string; mealPlanId: string }) {
-    setBusyId(opts.mealPlanId);
-    setError(null);
-    try {
-      const res = await fetch("/api/meals/eat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipe_id: recipeId,
-          portions: 1,
-          meal_type: opts.mealType,
-          meal_plan_id: opts.mealPlanId,
-        }),
-      });
-      if (!res.ok) {
-        setError((await res.json()).error ?? "Couldn't log that");
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError("Couldn't log that");
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const eat = (cookId: string, opts: { mealType?: string; mealPlanId?: string }) =>
+    eatTarget({ kind: "cook", cookId }, opts);
+  const eatRecipe = (recipeId: string, opts: { mealType?: string; mealPlanId: string }) =>
+    eatTarget({ kind: "recipe", recipeId }, opts);
 
   // Outcome without macros. The two `eat*` handlers above log known numbers into meal_log; this
   // is the fallback for a plan that has none to log — freeform text ("dinner out"), or a recipe
@@ -194,7 +166,11 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
 
   const todaysPlan = plan
     .filter((p) => p.status === "planned")
-    .sort((a, b) => MEAL_ORDER.indexOf(a.meal_type) - MEAL_ORDER.indexOf(b.meal_type));
+    .sort(
+      (a, b) =>
+        (MEAL_ORDER as readonly string[]).indexOf(a.meal_type) -
+        (MEAL_ORDER as readonly string[]).indexOf(b.meal_type),
+    );
 
   // Nothing planned and nothing in the fridge — say nothing rather than show an empty box.
   if (!todaysPlan.length && !leftovers.length) return null;
@@ -255,11 +231,13 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
           {todaysPlan.map((p) => {
             const cook = p.cooks;
             const label = cook?.name ?? p.recipes?.name ?? p.name ?? "Meal";
-            const canEat = !!cook && cook.portions_remaining > 0;
-            // A recipe with resolved macros can be cooked-and-logged in one tap. A name-only
+            // eatTargetFor is the shared rule (lib/nutrition/next-meal.ts): a cook with a portion
+            // left, or a recipe with resolved macros, can be logged in one tap. A name-only
             // stub (macros_computed_at null) can't — it falls through to the status-only path.
+            const target = eatTargetFor(p);
+            const canEat = target?.kind === "cook" && !!cook;
             const recipe = p.recipes;
-            const canEatRecipe = !cook && !!recipe && !!recipe.macros_computed_at;
+            const canEatRecipe = target?.kind === "recipe" && !!recipe;
             const expanded = expandedId === p.id;
             return (
               <div key={p.id}>

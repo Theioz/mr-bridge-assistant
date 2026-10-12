@@ -7,9 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Daily briefing — weather, schedule, health, tasks, habits, markets, and email.",
+  description: "Daily check-in — food, workout, habits, health, schedule, tasks, markets.",
 };
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { todayString, daysAgoString, USER_TZ } from "@/lib/timezone";
 import { computeStreaks } from "@/lib/streaks";
 import { getWindow } from "@/lib/window";
@@ -28,6 +29,21 @@ import TasksSummary from "@/components/dashboard/tasks-summary";
 import { WatchlistWidget } from "@/components/dashboard/watchlist-widget";
 import { SportsCard } from "@/components/dashboard/sports-card";
 import { WindowSelector } from "@/components/ui/window-selector";
+import ReentryCard, { REENTRY_DISMISS_COOKIE } from "@/components/dashboard/reentry-card";
+import TravelNote from "@/components/dashboard/travel-note";
+import TodayFood from "@/components/dashboard/today-food";
+import TodayWorkout, { type TodayWorkoutPlan } from "@/components/dashboard/today-workout";
+import type { KitchenPlannedMeal } from "@/components/meals/KitchenPanel";
+import {
+  MACRO_GOAL_KEYS,
+  macroGoalsFromProfile,
+  sumMacroTotals,
+  type MacroRow,
+} from "@/lib/nutrition/daily-macros";
+import { MEAL_PLAN_SELECT, pickNextPlannedMeal } from "@/lib/nutrition/next-meal";
+import { getHandLoggingSignal } from "@/lib/reentry-query";
+import { getCurrentStay } from "@/lib/travel/current-stay";
+import { stayCity } from "@/lib/travel/stay";
 import { syncStocks } from "@/lib/sync/stocks";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import type {
@@ -126,6 +142,12 @@ export default async function DashboardPage() {
     stocksRes,
     sportsRes,
     sportsFavoritesRes,
+    todayPlansRes,
+    todayMealLogRes,
+    todayWorkoutRes,
+    handLogging,
+    stay,
+    cookieStore,
   ] = await Promise.all([
     // Windowed weight + body fat trend
     supabase
@@ -169,6 +191,7 @@ export default async function DashboardPage() {
         "weight_goal_lbs",
         "body_fat_goal_pct",
         "weekly_active_cal_goal",
+        ...MACRO_GOAL_KEYS,
       ]),
     supabase
       .from("tasks")
@@ -179,6 +202,22 @@ export default async function DashboardPage() {
     supabase.from("stocks_cache").select("*").order("ticker", { ascending: true }),
     supabase.from("sports_cache").select("*"),
     supabase.from("profile").select("value").eq("key", "sports_favorites").maybeSingle(),
+    // ── Today's food: today's plan rows (same shape KitchenPanel reads) and what's been logged.
+    supabase.from("meal_plans").select(MEAL_PLAN_SELECT).eq("date", today),
+    supabase
+      .from("meal_log")
+      .select("meal_type, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g")
+      .eq("date", today),
+    supabase.from("workout_plans").select("name, status, workout").eq("date", today).maybeSingle(),
+    // ── Re-entry: newest hand-entered log across meals, habits, strength, journal.
+    getHandLoggingSignal(supabase, today),
+    // ── Travel: a "Stay at …" calendar event covering today. Null on any failure or after
+    // 2.5 s, so a slow Google never holds the page.
+    supabase.auth
+      .getUser()
+      .then(({ data }) => (data.user ? getCurrentStay(supabase, data.user.id) : null))
+      .catch(() => null),
+    cookies(),
   ]);
 
   // ── Wrangling ──────────────────────────────────────────────────────────────
@@ -231,6 +270,27 @@ export default async function DashboardPage() {
   const bodyFatGoal = goalNum("body_fat_goal_pct");
   const weeklyActiveCalGoal = goalNum("weekly_active_cal_goal");
 
+  // ── Today's food ────────────────────────────────────────────────────────────
+  const macroGoals = macroGoalsFromProfile(
+    Object.fromEntries(nameRows.map((r) => [r.key, r.value])),
+  );
+  const todayMealLog = (todayMealLogRes.data ?? []) as (MacroRow & {
+    meal_type: string | null;
+  })[];
+  const macroTotals = sumMacroTotals(todayMealLog);
+  const nextMeal = pickNextPlannedMeal(
+    (todayPlansRes.data ?? []) as unknown as KitchenPlannedMeal[],
+    todayMealLog.map((m) => m.meal_type),
+  );
+  const todayWorkout = (todayWorkoutRes.data ?? null) as TodayWorkoutPlan | null;
+
+  // ── Travel + re-entry ──────────────────────────────────────────────────────
+  const traveling = stay !== null;
+  // Travel explains a quiet stretch on its own, and "plan the next 2 days" is the wrong ask from
+  // a hotel — so the re-entry card waits until the trip is over.
+  const showReentry =
+    handLogging.reentry && !traveling && cookieStore.get(REENTRY_DISMISS_COOKIE)?.value !== today;
+
   const hour = parseInt(
     new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: USER_TZ }),
   );
@@ -268,12 +328,49 @@ export default async function DashboardPage() {
         <DashboardGreeting greeting={greeting} />
       </div>
 
-      {/* ── Briefing copy (weather + body trend narrative) ──────────── */}
-      <div data-reveal data-stagger="1">
+      {/* ── Re-entry: one calm, forward-only card after a quiet stretch (lib/reentry.ts) ── */}
+      {showReentry && (
+        <div className="print:hidden" data-reveal data-stagger="1">
+          <ReentryCard today={today} logHref={nextMeal ? "#todays-food" : "/meals"} />
+        </div>
+      )}
+
+      {/* ── Travel note + weather (the forecast follows the stay while traveling) ── */}
+      <div className="flex flex-col" style={{ gap: "var(--space-2)" }} data-reveal data-stagger="1">
+        {stay && <TravelNote city={stayCity(stay)} until={stay.end} />}
         <DashboardBriefing />
       </div>
 
-      {/* Mobile-only sticky time-range selector. Solid page background (#761): it used to be
+      {/* ── Today's food: next planned meal (one-tap "Ate this") + macros vs targets ──
+          Meals are the most-used feature and were absent from the dashboard (issue 761). */}
+      <div className="print:order-2" style={rowStyle} data-reveal data-stagger="2">
+        <TodayFood
+          nextMeal={nextMeal}
+          goals={macroGoals}
+          totals={macroTotals}
+          traveling={traveling}
+        />
+      </div>
+
+      {/* ── Today's workout + Habits ─────────────────────────────────── */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-2 print:order-3"
+        style={rowStyle}
+        data-reveal
+        data-stagger="2"
+      >
+        <TodayWorkout plan={todayWorkout} />
+        <HabitsCheckin
+          registry={habitRegistry}
+          todayLogs={todayLogs}
+          streaks={habitStreaks}
+          toggleAction={toggleHabit}
+          date={today}
+        />
+      </div>
+
+      {/* Mobile-only sticky time-range selector — it drives the recovery/health charts below,
+          so it sits directly above them. Solid page background (issue 761): it used to be
           transparent with an 8px backdrop blur so the watercolor canvas read through, but a
           blur that light leaves text and charts plainly legible as they scroll underneath,
           so the bar read as content overlapping content. --color-bg is the same paper the
@@ -294,14 +391,9 @@ export default async function DashboardPage() {
         <WindowSelector current={windowKey} />
       </div>
 
-      {/* ── Birthday (conditionally rendered inside the widget) ──────── */}
-      <div className="print:order-7" data-reveal data-stagger="2">
-        <UpcomingBirthdayWidget />
-      </div>
-
       {/* ── Readiness hero — the same row Health Breakdown reads ───── */}
       {latestRecovery && (
-        <div className="print:order-6" data-reveal data-stagger="2">
+        <div className="print:order-6" data-reveal data-stagger="3">
           <TodayScoresStrip recovery={latestRecovery} today={today} />
         </div>
       )}
@@ -320,33 +412,25 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Body & Fitness 7-day summary ─────────────────────────────── */}
-      <div data-reveal data-stagger="3">
+      <div style={rowStyle} data-reveal data-stagger="4">
         <BodyFitnessSummary fitnessData={fitnessData} trends={recoveryTrends} />
       </div>
 
-      {/* ── Row 1: Schedule + Inbox ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 print:order-2" style={rowStyle} data-reveal data-stagger="4">
-        <ScheduleToday />
-      </div>
-
-      {/* ── Row 2: Tasks + Habits ────────────────────────────────────── */}
+      {/* ── Schedule (+ birthday) + Tasks ────────────────────────────── */}
       <div
-        className="grid grid-cols-1 lg:grid-cols-2 print:order-3"
+        className="grid grid-cols-1 lg:grid-cols-2 print:order-4"
         style={rowStyle}
         data-reveal
         data-stagger="5"
       >
+        <div className="flex flex-col" style={{ gap: "var(--space-5)", minWidth: 0 }}>
+          <ScheduleToday />
+          <UpcomingBirthdayWidget />
+        </div>
         <TasksSummary tasks={tasks} />
-        <HabitsCheckin
-          registry={habitRegistry}
-          todayLogs={todayLogs}
-          streaks={habitStreaks}
-          toggleAction={toggleHabit}
-          date={today}
-        />
       </div>
 
-      {/* ── Row 3: Watchlist + Sports (last row — no trailing rule) ──── */}
+      {/* ── Watchlist + Sports — last (last row, no trailing rule) ───── */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2 print:order-8"
         style={rowStyleLast}

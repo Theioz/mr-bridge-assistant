@@ -38,3 +38,8 @@ EOF
 ```
 
 Confirm: "Weather location reset. Using Identity/Location ([value]) as default."
+## Travel mode (automatic, nothing to set)
+While an all-day calendar event titled **"Stay at …"** covers today (Gmail creates these from hotel
+bookings), the dashboard weather and the morning summary use that event's `location` instead of
+home, and say "Traveling — <city>". This overrides the profile keys above without writing them, so
+there is nothing to reset afterwards. Code: `web/src/lib/travel/stay.ts`, `scripts/_travel.py`.
