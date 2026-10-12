@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-13
+
+The self-hosted, single-user release. Since 1.1.0, Mr. Bridge has left Vercel and Supabase Cloud
+for a homelab node, dropped the Anthropic API and the in-app chat in favour of Claude Code over a
+local MCP server (50 tools), and dropped multi-tenancy for self-hosting. It is now a closed
+plan → buy → cook → eat → train loop: USDA-pinned nutrition, batch cooks and leftovers, a kitchen
+inventory, a grocery list with pinned Amazon Fresh products and an add-to-cart skill that never
+checks out, training plans, recurring tasks, a media library with Plex sync, and a hardened
+notification and status layer. GA hardening is tracked in #761.
+
 ### Added
 
 - **Scheduled journal reminder (#761).** `scripts/check_journal_reminder.py` pushes at 7 PM Pacific
@@ -3775,7 +3785,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.10.0] — 2026-04-10
+## 0.10.0 — 2026-04-10
 
 ### Added
 
@@ -3819,7 +3829,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.9.0] — 2026-04-10
+## 0.9.0 — 2026-04-10
 
 ### Added
 
@@ -3857,7 +3867,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.8.0] — 2026-04-10
+## 0.8.0 — 2026-04-10
 
 ### Added
 
@@ -3885,7 +3895,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.7.0] — 2026-04-05
+## 0.7.0 — 2026-04-05
 
 ### Added
 
@@ -3906,7 +3916,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.6.0] — 2026-04-05
+## 0.6.0 — 2026-04-05
 
 ### Added
 
@@ -3919,7 +3929,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.5.0] — 2026-04-05
+## 0.5.0 — 2026-04-05
 
 ### Added
 
@@ -3939,7 +3949,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.4.0] — 2026-04-04
+## 0.4.0 — 2026-04-04
 
 ### Added
 
@@ -3962,7 +3972,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.3.0] — 2026-04-04
+## 0.3.0 — 2026-04-04
 
 ### Added
 
@@ -3985,7 +3995,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.2.0] — 2026-04-04
+## 0.2.0 — 2026-04-04
 
 ### Added
 
@@ -4007,7 +4017,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-## [0.1.0] — 2026-04-04
+## 0.1.0 — 2026-04-04
 
 ### Added
 
@@ -4022,14 +4032,7 @@ First minor release after v1.0.0. Headliners: the #319 verified-success contract
 
 ---
 
-[Unreleased]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.10.0...HEAD
-[0.10.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.9.0...v0.10.0
-[0.9.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.8.0...v0.9.0
-[0.8.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.7.0...v0.8.0
-[0.7.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/<your-username>/mr-bridge-assistant/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/<your-username>/mr-bridge-assistant/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Theioz/mr-bridge-assistant/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v1.1.0...v2.0.0
+[1.1.0]: https://github.com/Theioz/mr-bridge-assistant/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Theioz/mr-bridge-assistant/releases/tag/v1.0.0
