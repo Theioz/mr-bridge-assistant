@@ -297,6 +297,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **"Ate this" no longer draws inventory (reverts part of #767).** Drawing without a preview or
+  confirm step reversed a deliberate #706 decision; only "Cooked it" (preview, then confirm) moves
+  food out of `inventory_items`. `receive_grocery_order` is unaffected.
 - **Travel mode showed home weather in Melbourne (#761).** Google Calendar writes hotel stays as
   "205 Collins Street Melbourne, Victoria 3000 Australia": two segments, with the city at the end of
   a street line. `geocodeCandidates` skipped number-led segments, found nothing, and the weather fell
