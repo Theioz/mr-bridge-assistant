@@ -38,6 +38,12 @@
       "maxAgeHours": 48
     },
     {
+      "source": "cron:journal_reminder",
+      "label": "Journal reminder",
+      "schedule": "Daily 02:00 UTC (7 PM Pacific)",
+      "maxAgeHours": 48
+    },
+    {
       "source": "cron:coach_check",
       "label": "Coach check",
       "schedule": "Sun/Tue/Thu 03:00 + Mon 01:00 UTC",

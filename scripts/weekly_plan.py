@@ -8,7 +8,9 @@ redundancy) and correction pass before writing to Supabase. The
 planning is driven by the /weekly-plan Claude Code command.
 
 Usage:
-  python3 scripts/run_weekly_plan.py --week-start 2026-05-04
+  python3 scripts/weekly_plan.py context --week-start 2026-05-04
+  python3 scripts/weekly_plan.py validate plan.json [--has-pull-up-bar]
+  python3 scripts/weekly_plan.py submit plan.json --week-start 2026-05-04
 """
 
 import argparse

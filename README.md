@@ -161,6 +161,7 @@ them: `scripts/_push.py` (`scripts/notify.sh` wraps it). The schedule lives in t
 |---|---|---|
 | `check_morning_summary.py` | 14:30 daily | Weather (with storm, heat, freeze and wind flags), last night's recovery (with HRV-drop flag), today's workout, planned meals, due tasks |
 | `check_task_due_alerts.py` | 00:00 + 16:00 daily | Due-today and overdue tasks, per-task 24 h dedup |
+| `check_journal_reminder.py` | 02:00 daily (7 PM Pacific) | A journal nudge, only if nothing was journaled today |
 | `check_birthday_notif.py` | 15:00 daily | Birthdays on your Google Calendar (read over plain HTTPS by `scripts/_google.py`) |
 | `check_series_expiring.py` | Mon 16:00 | Recurring task series about to run out |
 | `/api/cron/audit-recipes` | Mon 15:00 | Recipe-library drift findings, only when they changed since the last run |
@@ -492,7 +493,6 @@ mr-bridge-assistant/
 │   ├── rules/
 │   ├── agents/
 │   │   ├── weekly-review.md               # Sunday 8pm weekly summary agent
-│   │   └── journal-reminder.md            # 7pm journal reminder agent (pushes only if not journaled)
 │   ├── commands/
 │   │   ├── log-habit.md                   # /log-habit slash command
 │   │   ├── session-briefing.md            # /session-briefing slash command
@@ -537,6 +537,7 @@ mr-bridge-assistant/
 │   ├── run-syncs.py                       # Triggers /api/cron/sync, then the alert scripts
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
+│   ├── check_journal_reminder.py          # 7 PM Pacific journal nudge, only if nothing journaled today
 │   ├── check_morning_summary.py           # Morning push: weather, recovery, workout, meals, tasks
 │   ├── check_series_expiring.py           # Weekly: recurring task series about to run out
 │   ├── check_stale_signals.py             # Fails its Uptime Kuma heartbeat when a job or data source goes stale

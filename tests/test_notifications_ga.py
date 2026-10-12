@@ -98,7 +98,8 @@ class StaleSignals(unittest.TestCase):
     def test_registry_is_valid_and_includes_every_scheduled_python_job(self):
         sources = {j["source"] for j in stale.load_jobs()}
         for s in ("cron:morning_summary", "cron:task_due", "cron:birthday", "cron:coach_check",
-                  "cron:spawn_tasks", "cron:purge_tasks", "cron:series_expiring", "cron:stale_check"):
+                  "cron:spawn_tasks", "cron:purge_tasks", "cron:series_expiring", "cron:stale_check",
+                  "cron:journal_reminder"):
             self.assertIn(s, sources)
 
 

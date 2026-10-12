@@ -8,7 +8,8 @@
  *            A tailnet vhost served by Caddy on Surface. The browser is on the
  *            tailnet, so this resolves and works.
  *
- *   SERVER   http://host.docker.internal:8000
+ *   SERVER   http://supabase-gateway:8000  (SUPABASE_INTERNAL_URL, set in the compose file;
+ *            host-side scripts use http://localhost:8000 instead)
  *            The app runs on compute-core, which has NO route to Surface's tailnet
  *            IP (ADR 0016 §2 — internal service refs must never use the vhosts).
  *            Using the public URL server-side fails with "TypeError: fetch failed"

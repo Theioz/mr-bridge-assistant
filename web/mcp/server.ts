@@ -2,7 +2,7 @@
 /**
  * Mr Bridge MCP server — the replacement for the in-app /chat page (#476).
  *
- * It exposes the 48 tools defined in `src/lib/tools/*` to Claude Code / the Claude
+ * It exposes the 50 tools defined in `src/lib/tools/*` to Claude Code / the Claude
  * app, over your existing subscription. No Anthropic API key, no metered billing.
  *
  * It is deliberately a thin ADAPTER, not a rewrite. `src/lib/tools/*` already
