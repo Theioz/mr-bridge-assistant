@@ -1,6 +1,6 @@
 # Mr. Bridge — Personal AI Assistant
 
-Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, habit, task and health data from external services into your own Supabase database, and surfaces it through a Next.js web app.
+Mr. Bridge is a **single-user, self-hosted personal health companion**: one person, one deployment, one database — to use it, you run your own copy. It syncs fitness, habit, task and health data from external services into your own Supabase database, and surfaces it through a Next.js web app.
 
 **It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and it uses **no Anthropic API key**:
 
@@ -18,17 +18,20 @@ Mr. Bridge is a **self-hosted personal health companion**. It syncs fitness, hab
 
 ## What you get
 
-- **Dashboard** — Personalized briefing with live weather, Google Calendar schedule, habit check-in, active tasks, Oura recovery scores, and stock watchlist widget (sparkline + price/change, Polygon.io) in one view
-- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **50 tools** (tasks, habits, fitness, meals, calendar, backlog, profile, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
+- **Dashboard** — Ordered for a phone check-in: greeting and live weather, today's food (the next planned meal with a one-tap "Ate this", plus macros vs targets), today's workout, habit check-in, Oura recovery, Google Calendar schedule, active tasks, then stock watchlist (sparkline + price/change, Polygon.io) and sports. **Re-entry mode:** after 3+ days with nothing logged, one calm "Welcome back. Start from today." card instead of missed-day counts. **Travel mode:** while a "Stay at …" all-day calendar event covers today, weather follows the stay's location and meal-plan prompts pause
+- **Claude Code (MCP)** — the conversational surface. `web/mcp/run.sh` exposes **50 tools** (tasks, habits, fitness, meals, recipes + cooks, grocery list, calendar, backlog, profile, equipment, workouts, stocks, sports) to Claude Code or Claude Desktop. Runs on your Claude subscription — no API key, no metered chat. Laptop/desktop only: claude.ai and the mobile app can only reach *remote* MCP servers, so the web app remains the phone client.
 - **Habits** — Daily toggle check-in with 30-day momentum line (rolling 7-day completion rate), per-habit current + personal-best streak rows, weekly radial completion chart, and 90-day history grid
 - **Tasks** — Inline editing, priority, relative due dates, completed-tasks accordion; subtask/list hierarchy with progress indicator, expand/collapse, rapid "Add item…" entry optimised for grocery lists; completing a parent cascades to all subtasks
-- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, optional ntfy.sh push on completion, kill-switch in Settings → Fitness)
+- **Fitness** — Body composition charts (weight + BF%), workout frequency + active calorie charts with daily/weekly granularity toggle (auto-weekly at >90d), full workout history table (start/end time, HR zones, source badge, activity filter); goal progress overlays; window selector wired through to all charts; weekly workout program (Mon–Sun plan cards with warm-up / workout / cool-down phases, expand/collapse, today badge, completed-day checkmark, Google Calendar sync, cancel action with soft-cancel + calendar delete); **inline set-by-set logging** during today's workout (weight / reps / RPE per set, kg or lb display based on your profile), end-of-workout recap with perceived-effort 1–10 and notes, recent-sessions list, and per-exercise sparklines for your top 3 lifts by volume; **expandable exercise technique panel** (tap ▾ on any exercise to show the AI-generated description + form tips); **in-app rest timer** that auto-starts after each logged set (localStorage-persisted, dismissible, on-screen completion signal only — no push, kill-switch in Settings → Fitness)
 - **Journal** — Guided 5-prompt daily reflection + free-write tab; auto-save; collapsible history
 - **Weekly Review** — Last 7 days at a glance: habit scores, task completion, workout summary, recovery averages, body comp delta, journal count
 - **Meals** — Daily macro summary vs goals. **Food photo analyzer** and **nutrition-label scanner**, both powered by a local model + USDA FoodData Central rather than a cloud API. Describe the dish alongside the photo and your words win: a stated "6oz" is used verbatim rather than re-guessed from pixels, and naming the dish settles identification. Inline-editable review before anything is logged. 7-day meal history and macro trends.
-- **Backlog** — Personal media tracker for games, shows, movies, and books. Four tabbed categories with drag-to-reorder stack ranking; automatic metadata import (cover, creator, release date, description) via TMDB (movies + shows), IGDB (games), and OpenLibrary / Google Books (books); status lifecycle (backlog → active → paused → finished / dropped) with lifecycle timestamps; session log for re-watches / re-reads / replays; 0–10 rating and free-form review; shareable public read-only link per item. MCP tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`.
+- **Kitchen** — `/inventory` tracks what's in the fridge, freezer and pantry; logging a cook draws its ingredients out of inventory. **Grocery list:** `get_grocery_list` turns planned recipes × portions, minus what's on hand, into whole packs; `pin_grocery_product` pins a food to an Amazon Fresh product, and `receive_grocery_order` turns a delivered order into inventory rows. The `amazon-cart` skill fills the cart from the list (it never checks out).
+- **Calendar** — `/calendar`: week, day and month views of your Google Calendar.
+- **Library** (`/library`; old `/backlog` links redirect) — Personal media tracker for games, shows, movies, and books. Four tabbed categories with drag-to-reorder stack ranking; automatic metadata import (cover, creator, release date, description) via TMDB (movies + shows), IGDB (games), and OpenLibrary / Google Books (books); status lifecycle (backlog → active → paused → finished / dropped) with lifecycle timestamps; session log for re-watches / re-reads / replays; 0–10 rating and free-form review; shareable public read-only link per item; optional Plex watch sync marks watched movies/shows and logs sessions. MCP tools: `list_backlog`, `add_backlog_item`, `update_backlog_item`, `log_backlog_session`.
 - **Notifications** — In-app notification center (`/notifications`) showing last 30 days of push notification history; type filter pills (HRV / Weather / Tasks / Birthday); unread indicator (left-border accent + bold title); red badge on the Bell nav icon; auto-marked read on page visit; 30-day TTL auto-cleanup via daily cron
-- **Push notifications** — HRV drop alerts, task due-date reminders, weather warnings, birthday reminders, weekly review nudge via ntfy.sh (Android/iOS/macOS)
+- **Push notifications** — one morning summary (weather warnings, recovery with HRV-drop flag, today's workout, planned meals, due tasks), task due-date reminders, birthday reminders, coach nudges, recipe-audit findings when they change, and a weekly review nudge, via ntfy.sh (Android/iOS/macOS). See [Notifications](#notifications)
+- **Status** — Settings → Status lists every scheduled job and data source with its last success, flagging late, failing and never-run ones
 - **Data export** — one-click JSON or CSV zip of all your data from Settings → Data; one file per user-authored table plus a `_manifest.json` with schema version, timestamp, and row counts; optional date-range filter; encrypted OAuth tokens are deliberately excluded
 
 ---
@@ -106,8 +109,8 @@ This step enables Calendar and optionally Google Health. It's the most involved 
 **Create OAuth credentials:**
 
 7. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**.
-8. Application type: **Desktop app**. Name it anything.
-9. Click **Download JSON** — save the file somewhere safe. It contains your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+8. Application type: **Web application**. Name it anything. Under **Authorized redirect URIs** add `https://<your-host>/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local dev), and set the same value as `GOOGLE_OAUTH_REDIRECT_URI`. The app redirects back to a hostname, which a Desktop-app client cannot register.
+9. Copy the client ID and secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 **Connect Google in the web app:**
 
@@ -117,10 +120,10 @@ This step enables Calendar and optionally Google Health. It's the most involved 
 
 Skip any integrations you don't use. The app works with none, one, or all of them.
 
-**Oura Ring:**
-1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) and create a Personal Access Token.
-2. In your running app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
-3. *(Migration fallback)* If you set `OURA_ACCESS_TOKEN` in `.env` before connecting via Settings, the sync will fall back to it until you connect via UI.
+**Oura Ring** *(OAuth2 — Oura deprecated Personal Access Tokens, #732)*:
+1. Register an application in the Oura developer console ([cloud.ouraring.com/oauth/applications](https://cloud.ouraring.com/oauth/applications)) with redirect URI `https://<your-host>/api/auth/oura/callback`.
+2. Set `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` and `OURA_OAUTH_REDIRECT_URI` in `.env`. Scopes default to `daily spo2`; `OURA_SCOPES` overrides them without a rebuild.
+3. In your running app, go to **Settings → Integrations → Connect Oura**. The refresh token is stored encrypted in `user_integrations`; Oura rotates it on every refresh and the sync persists the new one.
 
 **Google Health** *(replaces Fitbit and Google Fit — see [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607))*:
 1. Enable the [Google Health API](https://console.cloud.google.com/apis/library/health.googleapis.com) on the **same** Google Cloud project from Step 4.
@@ -151,14 +154,16 @@ Also set `APP_URL` in `.env` to your app's hostname (e.g. `https://mr-bridge.jl-
 All notifications are ntfy pushes that also land in the in-app Notifications page. One path sends
 them: `scripts/_push.py` (`scripts/notify.sh` wraps it). The schedule lives in the host crontab
 (for this deployment, jl-homelab `system/cron/compute-core-crontab`); host-side entries override
-`SUPABASE_URL` to `http://localhost:8000`, because `.env` holds the container-internal address.
+`SUPABASE_URL` to `http://localhost:8000`, because `.env`'s `SUPABASE_URL` is the tailnet vhost,
+which compute-core cannot route to.
 
 | Script | Schedule (UTC) | What it sends |
 |---|---|---|
 | `check_morning_summary.py` | 14:30 daily | Weather (with storm, heat, freeze and wind flags), last night's recovery (with HRV-drop flag), today's workout, planned meals, due tasks |
 | `check_task_due_alerts.py` | 00:00 + 16:00 daily | Due-today and overdue tasks, per-task 24 h dedup |
-| `check_birthday_notif.py` | 15:00 daily | Birthdays on your Google Calendar |
-| `check_series_expiring.py` | 15:30 daily | Recurring task series about to run out |
+| `check_birthday_notif.py` | 15:00 daily | Birthdays on your Google Calendar (read over plain HTTPS by `scripts/_google.py`) |
+| `check_series_expiring.py` | Mon 16:00 | Recurring task series about to run out |
+| `/api/cron/audit-recipes` | Mon 15:00 | Recipe-library drift findings, only when they changed since the last run |
 | `check_stale_signals.py` | every 6 h | Nothing directly: exits 10 with a reason when a job or data source is stale, and Uptime Kuma pages it |
 | `coach_check.py` | Sun/Tue/Thu 03:00, Mon 01:00 | Missed-session and weekly-planning nudges |
 
@@ -178,7 +183,8 @@ tail -f ~/.mr-bridge/notify.log
 ### Step 7 — Configure environment variables
 
 ```bash
-cp .env.example .env
+cp .env.example .env                      # Python scripts, the MCP server, the app container
+cp web/.env.local.example web/.env.local  # local `npm run dev` only
 ```
 
 `.env.example` documents every variable, including which ones are load-bearing. The ones worth reading twice:
@@ -197,7 +203,14 @@ cp .env.example .env
 The app is a plain Docker image (`web/Dockerfile`, Next.js standalone output). The homelab stacks live in [jl-homelab](https://github.com/Theioz/jl-homelab): `docker/mr-bridge/`, `docker/supabase/`, `docker/ollama/`.
 
 ```bash
+# in jl-homelab docker/mr-bridge/ — the compose file builds from your clone of this repo
 docker compose build && docker compose up -d
+```
+
+The scheduled Python scripts run on the host from a virtualenv in the repo clone:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r scripts/requirements.txt
 ```
 
 **Ingress** — three hostnames, three exposure levels:
@@ -208,7 +221,7 @@ docker compose build && docker compose up -d
 | `supabase.<domain>` | **tailnet only** | The database gateway. It *must* be a real hostname — the browser talks to Supabase directly, so it cannot hide on the Docker network. |
 | `share.<domain>` | **public** | Only token-gated `/share/*`, behind a default-deny path allowlist. The dashboard, meals, journal, fitness, settings and the entire API return **404** from the internet. |
 
-**Cron** — `web/vercel.json` is gone. `/api/cron/sync` runs from the node's crontab, authenticated with `CRON_SECRET` exactly as before. The weekly planner moved to a Claude Code command (see below).
+**Cron** — `web/vercel.json` is gone. `/api/cron/sync` (Oura, Google Health, Plex, stocks, sports) and `/api/cron/audit-recipes` run from the node's crontab, authenticated with `CRON_SECRET` exactly as before. The weekly planner moved to a Claude Code command (see below).
 
 ### Step 8b — Wire up the MCP server (this is the chat)
 
@@ -233,7 +246,7 @@ and `playwright`.
 
 1. Open Claude Code in the project directory:
 ```bash
-claude .
+claude
 ```
 2. Run `/mcp` in the Claude Code session and follow the prompt to authenticate with your Google account.
 
@@ -250,10 +263,10 @@ Mr. Bridge reads a flat key-value `profile` table in Supabase. Fill in your deta
 
 ```bash
 cd mr-bridge-assistant
-claude .
+claude
 ```
 
-Mr. Bridge will sync fitness data, query Supabase, fetch your calendar and important mail through the claude.ai connectors from Step 9 (the web app itself no longer reads Gmail, #693), and deliver the session briefing. On your very first run it will ask for your name if it isn't in the profile table yet.
+A `SessionStart` hook (`.claude/hooks/scripts/hooks.py`) starts the briefing automatically: Mr. Bridge will sync fitness data, query Supabase, fetch your calendar and important mail through the claude.ai connectors from Step 9 (the web app itself no longer reads Gmail, #693), and deliver the session briefing. On your very first run it will ask for your name if it isn't in the profile table yet.
 
 ### Step 12 — Weekly plan *(optional)*
 
@@ -282,6 +295,8 @@ meal-prep task. See `.claude/commands/weekly-plan.md` for the full procedure.
 | `/session-briefing` | Re-run the full session briefing on demand |
 | `/weekly-review` | Run the weekly habit + accountability summary |
 | `/weekly-plan` | Generate, validate and write next week's workout + meal-prep plan |
+
+Skills in `.claude/skills/`: `plan-week` (training + meals for the coming week, with grocery list and prep tasks), `amazon-cart` (fill the Amazon Fresh cart from the grocery list, never checks out; drives the owner's own signed-in Chrome), `log-habit`, `send-notification`, and `ui-ux-pro-max` (design reference).
 
 ---
 
@@ -314,7 +329,7 @@ The chat specs are **gone** (`chat.spec.ts`, `chat-multi-turn-smoke.spec.ts`,
 specs are still valuable and were kept.
 
 ```bash
-npm run smoke:a11y    # a11y sweep (still useful locally)
+cd web && npm run smoke:a11y    # a11y sweep (still useful locally)
 ```
 
 
@@ -331,7 +346,7 @@ mr-bridge-assistant/
 ├── CLAUDE.md                              # Session bootstrap (loads rules via @path)
 ├── CHANGELOG.md
 ├── README.md
-├── .env.example                           # Root env var template (Python scripts)
+├── .env.example                           # Root env var template (Python scripts, MCP server, app container)
 ├── .gitignore
 ├── .mcp.json                              # MCP servers for this repo: mr-bridge + playwright
 │
@@ -345,13 +360,18 @@ mr-bridge-assistant/
 │   │   ├── app/
 │   │   │   ├── (protected)/               # Auth-gated pages
 │   │   │   │   ├── layout.tsx             # Protected layout with sidebar
-│   │   │   │   ├── page.tsx               # Daily briefing dashboard
-│   │   │   │   ├── onboarding/page.tsx    # First-run wizard (7 steps) — redirected here by auth callback for new accounts; sets onboarding_completed in profile on finish
+│   │   │   │   ├── page.tsx               # Redirect → /dashboard
+│   │   │   │   ├── dashboard/page.tsx     # Daily dashboard — food, workout, habits, recovery, schedule; re-entry + travel modes
+│   │   │   │   ├── calendar/page.tsx      # Google Calendar — week, day, month views
+│   │   │   │   ├── inventory/page.tsx     # Fridge, freezer, pantry
+│   │   │   │   ├── library/page.tsx       # Media library — games, shows, movies, books
+│   │   │   │   ├── notifications/page.tsx # Last 30 days of push history
+│   │   │   │   ├── onboarding/page.tsx    # First-run wizard (8 steps) — auth callback redirects here until onboarding is done; sets onboarding_completed in profile on finish
 │   │   │   │   ├── tasks/page.tsx         # Task management
 │   │   │   │   ├── habits/page.tsx        # Habit tracking — add/archive + 7/30/90d history
 │   │   │   │   ├── fitness/page.tsx       # Body composition + workouts
 │   │   │   │   ├── weekly/page.tsx        # Weekly review — habits, tasks, workouts, recovery, body comp, journal
-│   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → Claude vision → macros → log)
+│   │   │   │   ├── meals/page.tsx         # Meal log + FoodPhotoAnalyzer (photo → local model + USDA → macros → log)
 │   │   │   │   ├── meals/FoodPhotoAnalyzer.tsx  # Client component: food photo or label scan, serving multiplier, daily macro context
 │   │   │   │   ├── journal/page.tsx       # Daily journal — guided 5-prompt flow + free write
 │   │   │   │   ├── backlog/page.tsx       # Redirect → /library (old bookmarks)
@@ -372,11 +392,12 @@ mr-bridge-assistant/
 │   │   │   │   │       ├── share/route.ts       # POST generate token, DELETE revoke
 │   │   │   │   │       └── priority/route.ts    # PATCH priority (drag-to-reorder)
 │   │   │   │   ├── cron/
-│   │   │   │   │   └── sync/route.ts      # GET — node crontab hits this; CRON_SECRET auth; daily 6am PST
+│   │   │   │   │   ├── sync/route.ts      # GET — node crontab hits this daily 14:00 UTC; CRON_SECRET auth
+│   │   │   │   │   └── audit-recipes/route.ts # GET — weekly recipe audit; pushes only when findings change
 │   │   │   │   ├── weather/route.ts       # Open-Meteo forecast (no API key)
 │   │   │   │   ├── meals/
-│   │   │   │   │   ├── analyze-photo/route.ts   # POST — Claude vision: food macro estimation (mode=food) or exact label reading (mode=label)
-│   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate from edited ingredients (Haiku)
+│   │   │   │   │   ├── analyze-photo/route.ts   # POST — local model: identify food for USDA macros (mode=food) or read a nutrition label (mode=label)
+│   │   │   │   │   ├── estimate-macros/route.ts # POST — re-estimate from edited ingredients (local model + USDA)
 │   │   │   │   │   └── log/route.ts             # POST — insert meal_log row; PATCH — inline edit
 │   │   │   │   ├── stocks/
 │   │   │   │   │   └── validate/route.ts        # GET — proxy Polygon ticker validation (keeps API key server-side)
@@ -387,7 +408,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── strength-sessions/
 │   │   │   │   │   └── route.ts                 # GET/POST — strength session log (sets, reps, weight per exercise)
 │   │   │   │   ├── workout-plans/
-│   │   │   │   │   └── backfill-descriptions/route.ts # POST — AI-generate exercise descriptions for existing plan entries
+│   │   │   │   │   └── backfill-descriptions/route.ts # POST — local-model exercise descriptions for existing plan entries
 │   │   │   │   ├── exercise-prs/
 │   │   │   │   │   └── backfill/route.ts        # POST — compute personal records from historical strength_session_sets
 │   │   │   │   ├── export/
@@ -396,7 +417,9 @@ mr-bridge-assistant/
 │   │   │   │   │   ├── google/start/route.ts    # GET — initiate Google OAuth flow
 │   │   │   │   │   ├── google/callback/route.ts # GET — handle Google OAuth callback; store encrypted refresh token
 │   │   │   │   │   ├── google-health/start/route.ts    # GET — initiate Google Health OAuth (health scopes only)
-│   │   │   │   │   └── google-health/callback/route.ts # GET — handle callback; store encrypted refresh token
+│   │   │   │   │   ├── google-health/callback/route.ts # GET — handle callback; store encrypted refresh token
+│   │   │   │   │   ├── oura/start/route.ts             # GET — initiate Oura OAuth2 (#732)
+│   │   │   │   │   └── oura/callback/route.ts          # GET — handle callback; store encrypted refresh token
 │   │   │   │   └── google/
 │   │   │   │       ├── calendar/route.ts              # GET — today's Google Calendar events (dashboard widget)
 │   │   │   │       ├── calendar/events/route.ts       # GET/POST — list or create calendar events
@@ -431,6 +454,9 @@ mr-bridge-assistant/
 │   │   │       └── watchlist-widget.tsx   # Stock ticker rows: sparkline + price/change; refresh button
 │   │   └── lib/
 │   │       ├── timezone.ts                # Timezone-aware date helpers (USER_TIMEZONE)
+│   │       ├── reentry.ts                 # Re-entry mode: days since anything was hand-logged
+│   │       ├── travel/stay.ts             # Travel mode: the "Stay at …" event covering today
+│   │       ├── status/jobs.json           # Scheduled-job registry — Settings → Status + check_stale_signals.py
 │   │       ├── supabase/                  # Client, server, service clients
 │   │       ├── types.ts                   # TypeScript interfaces for all DB tables
 │   │       ├── backlog/
@@ -466,17 +492,19 @@ mr-bridge-assistant/
 │   ├── rules/
 │   ├── agents/
 │   │   ├── weekly-review.md               # Sunday 8pm weekly summary agent
-│   │   └── journal-reminder.md            # 7pm journal reminder (remote trigger)
+│   │   └── journal-reminder.md            # 7pm journal reminder agent (pushes only if not journaled)
 │   ├── commands/
 │   │   ├── log-habit.md                   # /log-habit slash command
 │   │   ├── session-briefing.md            # /session-briefing slash command
 │   │   ├── weekly-review.md               # /weekly-review slash command
 │   │   └── weekly-plan.md                 # /weekly-plan slash command (Claude is the planner)
 │   ├── skills/
-│   │   ├── send-notification/SKILL.md     # macOS push notification skill
+│   │   ├── plan-week/SKILL.md             # Week of training + meals, grocery list, prep tasks
+│   │   ├── amazon-cart/SKILL.md           # Fill the Amazon Fresh cart from the grocery list (never checks out)
+│   │   ├── send-notification/SKILL.md     # ntfy push + in-app history row, via scripts/notify.sh
 │   │   └── log-habit/SKILL.md             # Habit logging skill (writes to Supabase)
 │   ├── hooks/
-│   │   └── scripts/hooks.py               # PostToolUse hook (Python 3)
+│   │   └── scripts/hooks.py               # SessionStart (auto-briefing), PostToolUse and Stop hooks (Python 3)
 │   ├── settings.json
 │   └── references/
 │       └── best-practice/                 # Submodule: shanraisshan/claude-code-best-practice
@@ -484,7 +512,7 @@ mr-bridge-assistant/
 ├── .github/
 │   └── workflows/
 │       ├── weekly-review-nudge.yml        # Sunday 8pm ntfy.sh push (runs in cloud)
-│       ├── lint.yml                       # Token guards, eslint + prettier, typecheck, depcheck, docs check
+│       ├── lint.yml                       # Token guards, client/server boundary, eslint + prettier, typecheck, depcheck, docs check
 │       ├── build.yml                      # `next build` on PRs touching web/**
 │       ├── smoke.yml                      # Playwright a11y + perf smokes (manual; weekly when enabled)
 │       └── python-tests.yml               # "Unit tests": python (tests/) + node (web/src/__tests__)
@@ -498,8 +526,11 @@ mr-bridge-assistant/
 ├── scripts/
 │   ├── check-docs.mjs                     # Asserts this README still describes the repo (#700) — CI + `--fix`
 │   ├── lint-tokens.sh                     # Design-token guards (no inline hover, no raw hex)
-│   ├── _supabase.py                       # Shared Supabase client + urlopen_with_retry helper
-│   ├── requirements.txt                   # Pinned Python dependencies
+│   ├── _supabase.py                       # Shared Supabase client; loads the root .env
+│   ├── _push.py                           # The one notification path: ntfy push + in-app history row
+│   ├── _google.py                         # Google Calendar over plain HTTPS (no googleapiclient)
+│   ├── _joblog.py                         # Cron jobs' sync_log heartbeat (feeds Settings → Status)
+│   ├── requirements.txt                   # Python dependencies (python-dotenv, supabase)
 │   ├── fetch_briefing_data.py             # Queries Supabase → outputs session briefing data (incl. weather)
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
@@ -507,9 +538,12 @@ mr-bridge-assistant/
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
 │   ├── check_morning_summary.py           # Morning push: weather, recovery, workout, meals, tasks
-│   ├── check_stale_signals.py             # Push when a scheduled job stops succeeding
+│   ├── check_series_expiring.py           # Weekly: recurring task series about to run out
+│   ├── check_stale_signals.py             # Fails its Uptime Kuma heartbeat when a job or data source goes stale
+│   ├── coach_check.py                     # Missed-session and weekly-planning nudges
+│   ├── spawn_task_occurrences.py          # Daily: creates the next occurrences of recurring tasks
 │   ├── purge_completed_tasks.py           # Nightly: deletes completed tasks older than 90 days (#684)
-│   ├── notify.sh                          # Push notifications: macOS (osascript) + Android/Windows (ntfy.sh)
+│   ├── notify.sh                          # Shell wrapper over _push.py
 │   ├── weekly_plan.py                     # Weekly planner: context / validate / submit (structural rules live here)
 │   └── update-references.sh              # Pull latest best practices submodule
 │
@@ -563,8 +597,8 @@ no code review catches:
 
 Supabase Cloud issues `sb_publishable_` / `sb_secret_` keys — a Cloud-only auth system.
 Self-hosted GoTrue and PostgREST verify **legacy JWTs**. Mint them with
-`docker/supabase/gen-keys.sh`. (The upside: your Cloud project keeps working on its own
-keys, so it stays a genuine rollback.)
+`docker/supabase/gen-keys.sh`. (The upside: a Cloud project keeps working on its own keys
+while you migrate, so it can serve as a rollback until you retire it.)
 
 ### Backups are now your problem
 
