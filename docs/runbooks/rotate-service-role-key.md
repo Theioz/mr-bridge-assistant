@@ -1,76 +1,99 @@
 # Runbook: Rotate SUPABASE_SERVICE_ROLE_KEY
 
-**Risk level:** MEDIUM — the key bypasses RLS and grants full database access. Rotation is low-risk technically (no data migration required), but a gap between the old key expiring and the new key being deployed will break all cron syncs and service-level operations.
+**Risk level:** MEDIUM — the key bypasses RLS and grants full database access. No data migration is
+required, but every consumer must get the new value at the same time, and on self-hosted Supabase
+the rotation also replaces the anon key and signs every user out.
 
-**Who uses this key:** Any code that imports `createServiceClient()` from `web/src/lib/supabase/server.ts`. Do not use this client for user-specific data reads — it bypasses RLS.
+**Why it is coupled to the anon key:** self-hosted GoTrue and PostgREST verify **legacy JWTs**
+signed with the stack's `JWT_SECRET`. The service-role key and the anon key are both JWTs minted from
+that secret. Invalidating a leaked service-role key means changing `JWT_SECRET`, which invalidates
+the anon key and all existing sessions with it. (Supabase Cloud's dashboard "Reset" button does not
+exist here.)
+
+**Who uses the key:** any server code that calls `createServiceClient()` from
+`web/src/lib/supabase/service.ts`, the Python scripts (`scripts/_supabase.py`), and the MCP server
+(`web/mcp/server.ts`). See [ARCHITECTURE.md → Two Supabase clients](../ARCHITECTURE.md#two-supabase-clients).
 
 ---
 
 ## Prerequisites
 
-- Access to the Supabase dashboard (project → Settings → API)
-- Vercel dashboard access to update env vars and trigger a redeploy
+- Shell on compute-core and a current jl-homelab checkout there (`docker/supabase/`)
+- Vaultwarden access (Secure Note `mr-bridge-env`)
+- A few minutes of downtime: between steps 2 and 4 the app cannot talk to Supabase
 
 ---
 
-## Step 1 — Generate the new key in Supabase
+## Step 1 — Mint new keys
 
-1. Supabase dashboard → your project → Settings → API
-2. Under **Service role** → click **Reset** (or regenerate, depending on dashboard version)
-3. Copy the new `service_role` JWT. This is `<NEW_SERVICE_KEY>`.
+In jl-homelab `docker/supabase/`:
 
-The old key remains active until Supabase expires it (typically immediately on reset, or after a brief overlap window — confirm in the dashboard).
+```bash
+./gen-keys.sh     # prints JWT_SECRET, ANON_KEY, SERVICE_ROLE_KEY
+```
 
----
-
-## Step 2 — Update Vercel env vars
-
-1. Vercel dashboard → your project → Settings → Environment Variables
-2. Find `SUPABASE_SERVICE_ROLE_KEY` → Edit → replace value with `<NEW_SERVICE_KEY>`
-3. Confirm the Sensitive flag is checked
-4. Save
-5. If `SMOKE_SUPABASE_SERVICE_KEY` is set (used by smoke tests), update it to the same new value
+Keep the three values for the next steps. Never commit them.
 
 ---
 
-## Step 3 — Redeploy
+## Step 2 — Update the Supabase stack
 
-Trigger a Vercel redeploy (Settings → Deployments → Redeploy latest, or push a trivial commit). Serverless functions pick up the new key on cold start.
+Put the new `JWT_SECRET` (and the keys, wherever that stack's `.env` holds them) into the
+Supabase stack's env file on compute-core, then recreate its containers so GoTrue and PostgREST
+pick up the new secret:
 
-Time the redeploy to minimize the window where the old key is expired but the new deployment is not yet live. On Vercel, a full redeploy typically completes in under two minutes.
+```bash
+docker compose up -d --force-recreate
+```
 
----
-
-## Step 4 — Verify
-
-- [ ] `/api/cron/sync` with `CRON_SECRET`: returns 200 and rows are written to Supabase
-- [ ] Settings → Integrations → Sync Now for any integration: returns 200
-- [ ] Vercel logs: no `Invalid API key` or `JWT expired` errors in the 10 minutes after redeploy
-- [ ] Smoke tests pass if configured: `SMOKE_SUPABASE_SERVICE_KEY` updated and test suite green
+`docker compose restart` does **not** reload `.env`.
 
 ---
 
-## Step 5 — Audit other storage locations
+## Step 3 — Update every consumer
 
-Check whether the old key exists anywhere besides Vercel:
+| Where | Variables |
+|---|---|
+| Vaultwarden `mr-bridge-env` (canonical) | `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| `~/docker/mr-bridge/.env` (app container) | same |
+| Root `.env` of the repo checkout on compute-core (Python scripts, cron jobs) | `SUPABASE_SERVICE_ROLE_KEY` (and `SUPABASE_ANON_KEY`, which `.env.example` lists) |
+| `~/.mrb-secrets/env` on every machine that runs the MCP server | `SUPABASE_SERVICE_ROLE_KEY` |
+| `web/.env.local` on any dev machine | `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SMOKE_SUPABASE_SERVICE_KEY` |
+| GitHub Actions secrets, if set (`SMOKE_SUPABASE_SERVICE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) | used by the dispatch-only smoke workflow |
 
-- [ ] `.env.local` (development) — update to new key or remove if not needed locally
-- [ ] Any CI/CD secrets (GitHub Actions, etc.) — update if present
-- [ ] Any local scripts that hardcode the key — update
+---
+
+## Step 4 — Recreate the app
+
+The anon key is baked into the browser bundle at build time (`NEXT_PUBLIC_*`), so rebuild the
+image, then recreate the container:
+
+```bash
+docker compose build && docker compose up -d --force-recreate
+```
+
+---
+
+## Step 5 — Verify
+
+- [ ] Sign in from a fresh browser (every old session is now invalid)
+- [ ] `python3 scripts/run-syncs.py --force` on compute-core succeeds and rows land in `sync_log`
+- [ ] Settings → Integrations → Sync Now for an integration succeeds
+- [ ] Settings → Status shows fresh heartbeats after the next scheduled jobs
+- [ ] An MCP tool call from Claude Code succeeds (e.g. a read such as listing tasks)
+- [ ] `docker logs mr-bridge` shows no `Invalid API key` / `JWT` errors for 10 minutes
 
 ---
 
 ## Rollback
 
-If the new key does not work post-redeploy:
-
-1. In the Supabase dashboard, check whether the new key was saved correctly (copy it again)
-2. Update Vercel `SUPABASE_SERVICE_ROLE_KEY` with the re-copied value and redeploy
-3. If the key was reset in Supabase and the old key is now invalid, there is no rollback — generate a new key and proceed from Step 2
+Restore the previous `JWT_SECRET` and keys from Vaultwarden's item history into the Supabase stack
+and every consumer, then recreate both stacks. If the old key was leaked, this is not an option —
+mint a fresh set and repeat from Step 1.
 
 ---
 
 ## After completion
 
-- Discard the old key from any clipboard or local note
+- Discard the old values from any clipboard or local note
 - Log this rotation in `docs/SECURITY.md` under the Rotation log index

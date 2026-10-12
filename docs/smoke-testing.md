@@ -7,19 +7,21 @@ smoke) and the multi-hour #323 pre-release verification.
 
 ## What's covered today
 
-- `smoke/specs/a11y.spec.ts` — runs axe-core across all 10 routes
-  (`/dashboard`, `/fitness`, `/habits`, `/tasks`, `/weekly`,
-  `/journal`, `/meals`, `/notifications`, `/settings`, `/login`). Fails on
-  any Critical or Serious violation; Moderate / Minor findings surface as
-  Playwright annotations in the HTML report without blocking. The
-  `color-contrast` rule is temporarily disabled pending the design-token
-  sweep in #381. Whole run: ~21s on a warm dev server.
+- `smoke/specs/a11y.spec.ts` — runs axe-core across 13 routes
+  (`/dashboard`, `/fitness`, `/habits`, `/tasks`, `/weekly`, `/journal`,
+  `/meals`, `/inventory`, `/library`, `/calendar`, `/notifications`,
+  `/settings`, `/login`). Fails on any Critical or Serious violation;
+  Moderate / Minor findings surface as Playwright annotations in the HTML
+  report without blocking. No axe rules are disabled.
 - `smoke/specs/gate-b.spec.ts` — responsive overflow, theme persistence,
-  touch targets, print styles and nav smoke across the same routes.
+  touch targets, print styles and nav smoke across 10 routes (`/dashboard`,
+  `/journal`, `/tasks`, `/habits`, `/meals`, `/fitness`, `/weekly`,
+  `/notifications`, `/settings`, `/login`).
 - Plus targeted specs: `calendar-smoke`, `dashboard-hydration`, `export`,
   `login-signup-smoke`, `security-headers`, `tasks-mutation-errors`.
 - `smoke/perf/lighthouse.mts` — Lighthouse Core Web Vitals sweep across
-  the same 10 routes, mobile + desktop presets, median of 3 runs per
+  10 routes (`/dashboard`, `/fitness`, `/habits`, `/tasks`, `/weekly`,
+  `/journal`, `/meals`, `/notifications`, `/settings`, `/login`), mobile + desktop presets, median of 3 runs per
   (route × preset). Thresholds from #323 Gate B: **CLS < 0.1**,
   **LCP < 2.5s**, **TBT < 200ms** as the INP proxy (INP is a field metric
   and can't be measured in a lab run — TBT is the published surrogate —
@@ -51,12 +53,12 @@ the user through GoTrue's admin API or `auth.users` as postgres):
 
 1. Create a user.
 2. Email: `smoke+test@mr-bridge.test` (or any dedicated address).
-3. Password: generate a strong one; store in 1Password under
-   `Mr. Bridge — Smoke test account`.
+3. Password: generate a strong one; store it in your password manager
+   (Vaultwarden is canonical for this deployment's secrets).
 4. Mark it email-confirmed (`email_confirm: true`) so no verification step blocks sign-in.
-5. Start the dev server, sign in once as the test account, and set
-   `display_name`, `timezone`, and `location` via Settings — this initialises
-   the `profiles` row.
+5. Start the dev server, sign in once as the test account, and fill in the
+   basics in Settings (name, location) — this creates the account's rows in
+   the key/value `profile` table.
 
 **Do NOT connect OAuth integrations** (Calendar, Google Health, Oura) on
 this account. Mutating-tool smokes are deferred to a follow-up issue
@@ -70,7 +72,7 @@ Shell-exported values always win.
 
 ```
 SMOKE_TEST_EMAIL=smoke+test@mr-bridge.test
-SMOKE_TEST_PASSWORD=<from-1Password>
+SMOKE_TEST_PASSWORD=<from-your-password-manager>
 SMOKE_SUPABASE_SERVICE_KEY=<same-value-as-SUPABASE_SERVICE_ROLE_KEY>
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.jl-infra-lab.com
 ```
@@ -119,10 +121,11 @@ PERF_ROUTES=/login npm run smoke:perf                              # public rout
 PERF_TARGET=https://mr-bridge.jl-infra-lab.com npm run smoke:perf  # measure the live deployment instead
 ```
 
-**Local only since the July 2026 self-host cutover.** The database is tailnet-only, so CI cannot
-sign in, and the Smoke workflow's secrets still point at the deleted Supabase Cloud project; the
-CI description below is historical until that is rebuilt. Put `SMOKE_TEST_EMAIL` /
-`SMOKE_TEST_PASSWORD` for a test account on the self-hosted instance in `web/.env.local`.
+**Local only since the July 2026 self-host cutover.** The database is tailnet-only, so a
+GitHub-hosted runner cannot sign in; the workflow (see [CI](#ci)) only runs on manual dispatch, or
+on its weekly schedule when explicitly enabled, and needs a runner that can reach the tailnet. Put
+`SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` for a test account on the self-hosted instance in
+`web/.env.local`.
 
 The script fronts the app with a local proxy that drops one response header,
 `Referrer-Policy`: Lighthouse 13.1 on Chromium 147 crashes the page on it (`TARGET_CRASHED` →
@@ -195,6 +198,9 @@ The MCP and the committed `smoke/` suite are independent:
 jobs. Neither runs on pull requests: the app and Supabase are tailnet-only, so a
 GitHub-hosted runner cannot reach them (see the workflow header).
 
+Neither job is useful until a runner that can reach the tailnet exists and
+the secrets below point at the self-hosted instance.
+
 - **`smoke-a11y`** — `smoke:a11y` (axe sweep, critical + serious violations
   fail) against Playwright-managed `next dev`. Runs on `workflow_dispatch`
   with suite `a11y`, and weekly (Mondays 09:00 UTC) **only** when the repo
@@ -237,7 +243,7 @@ Add these under repo Settings → Secrets and variables → Actions:
   auto-loads) or exported in your shell. `grep ^SMOKE_ web/.env.local` is a
   quick sanity check.
 - **Sign-in fails** — confirm the test account is email-confirmed and the
-  password in 1Password matches. Temporarily run with `--headed` to watch the
+  password you stored matches. Temporarily run with `--headed` to watch the
   browser: `npm run smoke:a11y -- --headed`.
 - **Dev server port conflict** — stop any existing `next dev` on port 3000 or
   set `reuseExistingServer: true` (already the default outside CI).

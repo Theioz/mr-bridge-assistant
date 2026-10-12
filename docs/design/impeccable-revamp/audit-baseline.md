@@ -1,3 +1,5 @@
+> **Historical record (2026-04-16).** Describes the system as of 2026-04-16; parts no longer apply (e.g. the Gmail `ImportantEmails` dashboard card (#693), and several cited components that have since been removed or renamed, such as `trends-card.tsx` and `weight-trend-chart.tsx`). Current state: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
 # Mr. Bridge — Dashboard Design Audit (Baseline)
 
 Captured 2026-04-16 during the Impeccable revamp planning. The CLI scan

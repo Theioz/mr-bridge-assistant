@@ -1,3 +1,5 @@
+> **Historical record (2026-04-23).** Describes the system as of 2026-04-23; parts no longer apply (e.g. multi-tenant RLS and the /admin tenant console (#201, #762), the in-app chat and Anthropic API calls (#476, #609-#611), Vercel hosting (#514), and the Gmail widgets (#693)). Current state: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 # Mr. Bridge — Full Audit Report
 
 **Date:** 2026-04-23

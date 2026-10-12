@@ -1,3 +1,5 @@
+> **Historical record (2026-04-17).** Describes the system as of 2026-04-17; parts no longer apply (e.g. the demo account (#718), `GROQ_API_KEY` (#476), `SPORTSDB_API_KEY` (#368) and the Google Fit client (#607)). Current state: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 # Pre-release audit — 2026-04-17
 
 Scope: issue [#252](https://github.com/Theioz/mr-bridge-assistant/issues/252). Method: stratified sweep (ship-blocker hunt → deep dive). Executed against `main` at `7ce4b677` (post demo-refresh merge).

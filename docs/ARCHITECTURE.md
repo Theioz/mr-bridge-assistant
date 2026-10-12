@@ -9,18 +9,18 @@ Mr. Bridge is a **single-user, self-hosted** app: one owner, one Supabase instan
 | Layer | Technology | Notes |
 |-------|-----------|-------|
 | Frontend | Next.js 16 App Router | Self-hosted Docker on compute-core (web/Dockerfile, standalone output); SSR + RSC; `web/` subdirectory |
-| Database | Supabase Postgres | RLS enforced; pgcrypto for token encryption |
+| Database | Self-hosted Supabase — Postgres + GoTrue + PostgREST | RLS on every public table; pgcrypto for token encryption. No Kong, Realtime or Storage (see [Deployment](#deployment-self-hosted-476--adr-0017)) |
 | Nutrition | **USDA FoodData Central** (measured data) + a local Ollama model (`qwen2.5vl:7b`) that only identifies foods and reads qty+unit — it is never asked for grams or calories. No Anthropic API call sites remain (#609–#611). |
 | Conversation | **MCP server** (`web/mcp/`) → Claude Code, on the existing subscription. No API key. The in-app chat was deleted (#476). |
 | Auth | Supabase Auth | JWT; SSR cookie-based via `@supabase/ssr` |
-| Hosting / Cron | Self-hosted on compute-core. Cron is the **node's crontab** — `web/vercel.json` is deleted. |
-| External APIs | Google Calendar, Google Health, Oura, Polygon.io, Open-Meteo, ntfy.sh, TheSportsDB | All server-side; credentials never reach the browser |
+| Hosting / Cron | Docker on compute-core | Cron is the **node's crontab** (jl-homelab `system/cron/compute-core-crontab`); there is no Vercel and no `vercel.json` (#514). |
+| External APIs | Google Calendar, Google Health, Oura, USDA FoodData Central, Polygon.io, ESPN, Open-Meteo, TMDB, IGDB, Open Library, Google Books, Plex, ntfy.sh | All server-side; credentials never reach the browser. The web app's Google grant is Calendar-only — it has no Gmail scope (#693). |
 
 ---
 
 ## Schema — grouped by domain
 
-All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern](#rls-pattern) below); `sync_log` is the exception. The tables below are grouped by domain and are not exhaustive — [`supabase/migrations/`](../supabase/migrations/) is the authoritative schema, and `.claude/rules/data-sources.md` maps each table to what writes it.
+Every table in `public` has Row Level Security switched on (see [RLS Pattern](#rls-pattern) below). Tables with a `user_id` column carry an own-rows policy; the shared exceptions are listed under [Shared tables](#shared-tables-sync_log-exercises-usda_food_picks). The tables below are grouped by domain and are not exhaustive — [`supabase/migrations/`](../supabase/migrations/) is the authoritative schema, and `.claude/rules/data-sources.md` maps each table to what writes it.
 
 ### Identity & Profile
 
@@ -39,8 +39,10 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 
 | Table | Purpose |
 |-------|---------|
-| `tasks` | Todos with priority, status, due date, parent_id for subtask hierarchy |
-| `study_log` | Study sessions: subject, duration, notes |
+| `tasks` | Todos with priority, status, due date, parent_id for subtask hierarchy, `list_id`, `blocked_by` |
+| `task_lists` | Named lists a task belongs to (replaced the free-text `tasks.category`) |
+| `task_series` | Recurring-task rules; `scripts/spawn_task_occurrences.py` materializes `tasks` rows from them |
+| `study_log` | Legacy study sessions. Nothing writes it since the study timer was removed (#762); read only by `fetch_briefing_data.py` and the data export |
 
 ### Fitness & Body Composition
 
@@ -54,6 +56,8 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 | `workout_plans` | Structured weekly programs: Mon–Sun plan cards with phases (warm-up/workout/cool-down) |
 | `exercise_prs` | Personal records per exercise, computed from `strength_session_sets` |
 | `user_equipment` | Gym equipment inventory (dumbbell pairs, barbells, bands) used to scope workout suggestions |
+| `exercises` | Shared exercise catalog (movements, cues). No `user_id`; signed-in users may read it, only the service role writes it |
+| `user_metric_preferences` | Which integration to trust per metric (e.g. HRV from Oura) |
 
 ### Meals & Nutrition
 
@@ -61,6 +65,18 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 |-------|---------|
 | `recipes` | Saved recipes: name, cuisine, ingredients, tags, macros |
 | `meal_log` | Daily food entries: date, meal type, macros (calories/protein/carbs/fat/fiber/sugar), optional recipe link |
+| `cooks` | One time food was actually made; portions and leftovers live here, not on the recipe |
+| `meal_plans` | Planned meals — a cook (leftovers), a recipe (to cook), or freeform. Carries no macros of its own |
+| `inventory_items` / `inventory_draws` | Raw ingredients on hand, and the grams a cook drew from them |
+| `packaged_foods` | Nutrition labels of branded products, as photographed |
+| `grocery_products` | Grocery product pins (food identity → ASIN, pack size, last price) |
+| `usda_food_picks` | Cache of which USDA record a food name resolved to. Service-role only |
+
+### Backlog
+
+| Table | Purpose |
+|-------|---------|
+| `backlog_items` / `backlog_sessions` | Games, shows, movies and books, plus play/watch/read sessions (Plex watch history is synced in) |
 
 ### Journal
 
@@ -72,14 +88,14 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 
 | Table | Purpose |
 |-------|---------|
-| `notifications` | Push notification history: type, title, body, read status; 30-day TTL |
+| `notifications` | Push notification history: type, title, body, read status. Every ntfy push from `scripts/_push.py` also writes a row; `/api/cron/sync` purges rows older than 30 days |
 
 ### Integrations & Sync
 
 | Table | Purpose |
 |-------|---------|
-| `user_integrations` | Encrypted OAuth refresh tokens per provider (Google, Google Health, Oura) — see [OAuth Token Encryption](#oauth-token-encryption) |
-| `sync_log` | External sync audit log: source, status, records written, error — globally readable/writable (no per-user RLS) |
+| `user_integrations` | Encrypted OAuth refresh tokens per provider (`google`, `google_health`, `oura`) — see [OAuth Token Encryption](#oauth-token-encryption) |
+| `sync_log` | Sync audit log and cron heartbeats: source, status, records written, error. Read by Settings → Status. No `user_id` — see [Shared tables](#shared-tables-sync_log-exercises-usda_food_picks) |
 
 ### System / Cache
 
@@ -87,35 +103,54 @@ All tables with a `user_id` column enforce Row Level Security (see [RLS Pattern]
 |-------|---------|
 | `stocks_cache` | Stock quote + sparkline data from Polygon.io; refreshed on-demand |
 | `sports_cache` | Sports scores/schedules from ESPN (TheSportsDB removed in #368); refreshed on-demand |
+| `web_vitals` | Real-user page-load metrics per route (#445), written via `POST /api/vitals` |
 
 ---
 
 ## RLS Pattern
 
-Every user-data table enforces Row Level Security with a single policy:
+Every per-user table enforces Row Level Security with one own-rows policy for the `authenticated` role, e.g.:
 
 ```sql
-CREATE POLICY "users can access own rows"
-  ON <table>
-  USING (user_id = auth.uid());
+CREATE POLICY "users access own data" ON <table>
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 ```
 
-This means a session JWT can only read or write its own rows — even with a single owner, a query that forgets a filter cannot reach rows it does not own, and the token-gated public `/share/*` surface cannot widen into the owner's data.
+(Policy names vary by table; the shape does not.) A session JWT can only read or write its own rows — even with a single owner, a query that forgets a filter cannot reach rows it does not own.
+
+### Privileges under the policies
+
+RLS is not the only lock. Three migrations make the grants fail closed:
+
+- **`anon` holds nothing in `public`** — no table, sequence or function privileges, now or on future objects (`20260928180000_lock_down_anon_access.sql`). The gateway routes `/rest/v1/*` straight to PostgREST with no Kong `apikey` gate, so a keyless request runs as `anon`; it can reach nothing. The migration asserts that every public table has RLS on.
+- **RLS is on by default** — an event trigger enables RLS on every new table created in `public` (`20260928181000_rls_on_by_default.sql`). A table created without a policy shows nothing rather than everything.
+- **`authenticated` keeps only SELECT / INSERT / UPDATE / DELETE** — TRUNCATE, TRIGGER, MAINTAIN and REFERENCES were revoked on existing and future tables, since RLS does not govern them (`20261005160000_authenticated_table_privileges.sql`, #756).
 
 ### Two Supabase clients
 
-**`createClient()`** (`web/src/lib/supabase/server.ts`) — uses the anon key and the SSR cookie session. RLS is fully enforced. Used for all user-facing reads and writes in Server Components and standard API routes.
+**`createClient()`** (`web/src/lib/supabase/server.ts`; the browser counterpart is `web/src/lib/supabase/client.ts`) — uses the anon key and the SSR cookie session. RLS is fully enforced. Used for user-facing reads and writes in Server Components and API routes.
 
-**`createServiceClient()`** (`web/src/lib/supabase/service.ts`) — uses the service-role key, which bypasses all RLS policies. Used only in trusted server-side contexts where RLS would block a legitimate system operation:
+**`createServiceClient()`** (`web/src/lib/supabase/service.ts`) — uses the service-role key, which bypasses all RLS policies. Used only server-side, in contexts that have already established who the caller is or that have no session at all:
 
-- The cron sync route (`/api/cron/sync`) — writes to any user's rows
-- OAuth callbacks — create/update `user_integrations` rows before the session is fully established
+- The cron routes (`/api/cron/sync`, `/api/cron/audit-recipes`), behind `CRON_SECRET`
+- OAuth callbacks (`/api/auth/{google,google-health,oura}/callback`) — create/update `user_integrations` rows
+- The public, token-gated `/share/*` pages, which must resolve a share token without a session
+- A number of signed-in API routes (recipes, cooks, inventory, meal plans, packaged foods, sync) that check `auth.getUser()` first and then write with the user's id
+- The MCP server (`web/mcp/server.ts`), scoped to `OWNER_USER_ID`
 
-**`SUPABASE_SERVICE_ROLE_KEY` is never exposed to the browser.** It lives only in server-side env vars.
+Because the service client bypasses RLS, **RLS does not protect those paths** — the route's own auth check and `user_id` filter do. Treat any change to them as security-relevant.
 
-### Exception: `sync_log`
+**`SUPABASE_SERVICE_ROLE_KEY` is never exposed to the browser.** It lives only in server-side env.
 
-`sync_log` has no per-user RLS policy. It is globally readable and writable by the authenticated role. Rationale: sync operations run under the service client and are an infrastructure concern, not user data. The table has no PII.
+### Shared tables (`sync_log`, `exercises`, `usda_food_picks`)
+
+These have no `user_id`. All three still have RLS on:
+
+- **`sync_log`** — policy `authenticated full access` (`USING (true)`). Sync and cron heartbeats are an infrastructure concern, not user data, and the table holds no PII.
+- **`exercises`** — a shared catalog; `authenticated` may SELECT, writes are service-role only.
+- **`usda_food_picks`** — RLS on with **no** policy, so only the service role can read or write it.
 
 ---
 
@@ -123,13 +158,13 @@ This means a session JWT can only read or write its own rows — even with a sin
 
 OAuth refresh tokens are long-lived credentials. They are stored encrypted at rest in `user_integrations.refresh_token_encrypted` (type: `bytea`).
 
-**Encryption:** `pgp_sym_encrypt(token::bytea, key)` from the `pgcrypto` Postgres extension. The symmetric key is `ENCRYPTION_KEY` — a 32-byte hex string set as a server-side env var, never in the browser.
+**Encryption:** `extensions.pgp_sym_encrypt(token, key)` from the `pgcrypto` Postgres extension. The symmetric key is `ENCRYPTION_KEY` — a 32-byte hex string set as a server-side env var, never in the browser.
 
-**Why SQL-layer helpers:** Two `SECURITY DEFINER` functions (`encrypt_integration_token`, `decrypt_integration_token`) wrap the pgcrypto calls. This keeps `ENCRYPTION_KEY` out of application call sites — the key is only referenced inside the function bodies, which run under the definer's privileges.
+**SQL-layer helpers:** Two `SECURITY DEFINER` functions, `encrypt_integration_token(token, key)` and `decrypt_integration_token(encrypted, key)`, wrap the pgcrypto calls (`20260420000001_add_user_integrations.sql`). The key is **not** stored in the database: the server reads `ENCRYPTION_KEY` from its env and passes it as an RPC argument on each call (`web/src/lib/integrations/tokens.ts`). `anon` cannot execute either function (`20260928180000_lock_down_anon_access.sql`); `authenticated` and the service role can.
 
 **Access tokens** (short-lived) are stored as plaintext in `access_token` / `access_token_expires_at`. They expire within the hour and pose no at-rest risk.
 
-**RLS** ensures each `user_integrations` row is owned by exactly one user. The service client bypasses this only during OAuth callbacks (the user is mid-flow and the session may not yet be set).
+**RLS** ensures each `user_integrations` row is owned by exactly one user. OAuth callbacks write the row with the service client.
 
 ---
 
@@ -165,7 +200,8 @@ Code: `web/src/lib/nutrition/{parse,fdc,estimate,suggest,targets}.ts`.
 All state-mutating MCP tools return a typed result shape:
 
 ```typescript
-{ ok: true } | { ok: false, error: string }
+// web/src/lib/tools/_contract.ts
+({ ok: true } & T) | { ok: false; error: string }
 ```
 
 The tool never returns `ok: true` unless the mutation is confirmed. For calendar operations, this means:
@@ -187,7 +223,7 @@ Tools that read state (no mutation) return their payload directly. The `{ ok }` 
 |----------|-----------------|
 | [README.md](../README.md) | Setup guide, env vars, deployment steps |
 | [CHANGELOG.md](../CHANGELOG.md) | Full feature history by release |
-| [docs/SECURITY.md](SECURITY.md) | CSP hardening, nonce injection, auth guard patterns |
+| [docs/SECURITY.md](SECURITY.md) | Where secrets live, network exposure, rotation order and runbooks |
 | [supabase/migrations/](../supabase/migrations/) | Authoritative schema history — every table creation and RLS policy is here |
 
 ## Deployment (self-hosted, #476 / ADR 0017)
@@ -232,11 +268,13 @@ Consequences that follow from that split, each of which broke something:
 
 ## The MCP server
 
-`web/mcp/server.ts` exposes **48 tools** to Claude Code / Claude Desktop, over the existing
-Claude subscription. It is a thin **adapter**, not a rewrite:
-`lib/tools/*` already defines each tool as an AI SDK `tool()` with a plain JSON Schema and an
-async `execute()` — structurally already an MCP tool. So each tool keeps **one**
-implementation and the app and Claude Code cannot drift apart.
+`web/mcp/server.ts` exposes **50 tools** to Claude Code / Claude Desktop, over the existing
+Claude subscription. `.mcp.json` launches it through `web/mcp/run.sh`, which reads its secrets
+from `~/.mrb-secrets/env` (outside the repo tree). It is a thin **adapter**, not a rewrite:
+`web/src/lib/tools/*` defines each tool as an AI SDK `tool()` with a plain JSON Schema and an
+async `execute()` — structurally already an MCP tool — so each tool keeps **one**
+implementation. Where a tool and a web route do the same job they call the same `lib/` helper
+(e.g. `lib/fitness/cancel-workout.ts`), so the app and Claude Code do not drift apart.
 
 It also inherits none of the old chat route's bug class. There is no serverless deadline, no
 streaming wire format and no message history to reconstruct — so the orphaned

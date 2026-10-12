@@ -1,6 +1,6 @@
 # Fitness Tracker Setup
 
-Both fitness integrations are synced by the app, in `web/src/lib/sync/`, and reached through the `/api/cron/sync` route. The nightly cron calls it; `scripts/run-syncs.py` calls the same endpoint for an on-demand refresh before a session. The standalone Python syncs were deleted in [#658](https://github.com/Theioz/mr-bridge-assistant/pull/658) — there is one implementation now, and it needs the app container running.
+Both fitness integrations are synced by the app, in `web/src/lib/sync/`, and reached through the `/api/cron/sync` route (which also refreshes Plex, stocks and sports). The node's daily cron calls it; `scripts/run-syncs.py` calls the same endpoint for an on-demand refresh before a session. The standalone Python syncs were deleted in [#658](https://github.com/Theioz/mr-bridge-assistant/pull/658) — there is one implementation now, and it needs the app container running.
 
 ---
 
@@ -25,7 +25,7 @@ Writes:
 4. Add `https://<your-host>/api/auth/google-health/callback` as an authorized redirect URI on the **existing** OAuth client, and set `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` in `.env`. No new client ID or secret — it reuses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 5. In the app, go to **Settings → Integrations → Connect Google Health**. Click through the "Google hasn't verified this app" screen. The refresh token is stored encrypted in `user_integrations` under provider `google_health`.
 
-**Why a separate consent from the `google` integration:** Google revokes a refresh token on password change *if that token carries Gmail scopes*. Keeping the health token free of Gmail scopes means a password change can't take the fitness sync down with it. `include_granted_scopes: false` is what keeps the two tokens from merging.
+**Why a separate consent from the `google` integration:** Google revokes a refresh token on password change *if that token carries Gmail scopes*, and the Calendar consent used to request `gmail.readonly`. Keeping the health token separate meant a password change couldn't take the unattended fitness sync down with it. #693 removed the Gmail scope from the Calendar flow, so that hazard has cleared, but the split stays: an interactive Calendar re-consent still cannot invalidate the fitness token. `include_granted_scopes: false` is what keeps the two tokens from merging.
 
 **Run:**
 ```bash
@@ -33,7 +33,7 @@ python3 scripts/run-syncs.py             # default window, 30-min skip applies
 python3 scripts/run-syncs.py --days 30   # backfill 30 days (implies --force)
 ```
 
-Both Oura and Google Health sync together — the endpoint runs them in parallel. There is no
+Oura and Google Health sync together in one call to the endpoint. There is no
 longer a `--probe` dry run; it went with the Python script it belonged to.
 
 **Known differences from the Fitbit sync it replaced:**
@@ -50,18 +50,25 @@ longer a `--probe` dry run; it went with the Python script it belonged to.
 
 **Implementation:** `web/src/lib/sync/oura.ts`, reached via `/api/cron/sync`.
 
-Uses a Personal Access Token (no OAuth flow).
+Uses **OAuth2**. Oura deprecated Personal Access Tokens, so the old "paste a PAT" flow and the
+`OURA_ACCESS_TOKEN` env fallback are gone — nothing in the code reads either.
 
-**First-time setup (web UI — recommended):**
-1. Go to [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens) and create a token.
-2. In the app, go to **Settings → Integrations → Connect Oura** and paste the token. It is stored encrypted in `user_integrations`.
+**First-time setup:**
+1. Register an OAuth application with Oura (cloud.ouraring.com) and add
+   `https://<your-host>/api/auth/oura/callback` as its redirect URI.
+2. Set in the app's env file:
+   ```
+   OURA_CLIENT_ID=...
+   OURA_CLIENT_SECRET=...
+   OURA_OAUTH_REDIRECT_URI=https://<your-host>/api/auth/oura/callback
+   # OURA_SCOPES="daily spo2"   # optional override; this is the default
+   ```
+   Without the first three, **Connect Oura** returns "Oura OAuth not configured".
+3. In the app, go to **Settings → Integrations → Connect Oura** and approve. The refresh token is
+   stored encrypted in `user_integrations` under provider `oura`.
 
-**First-time setup (env var — owner fallback):**
-1. Create a token as above and add to `.env`:
-   ```
-   OURA_ACCESS_TOKEN=your_token_here
-   ```
-   The sync uses this as a fallback if no `user_integrations` row exists.
+Oura **rotates the refresh token on every exchange**; the sync persists the new one each run. If a
+run reports "Oura refresh token rejected", reconnect Oura in Settings.
 
 **Run:**
 ```bash
@@ -69,15 +76,20 @@ python3 scripts/run-syncs.py            # default window
 python3 scripts/run-syncs.py --days 30  # backfill 30 days
 ```
 
-**Recovery Metrics written to `recovery_metrics` table in Supabase:**
+**Main columns written to `recovery_metrics`** (one row per day, `source = 'oura'`):
 | Column | Source |
 |--------|--------|
-| Readiness | `/daily_readiness` score (0–100) |
-| Sleep Score | `/daily_sleep` score (0–100) |
-| Avg HRV | HRV balance contributor (0–100 scale) |
-| Resting HR | Resting heart rate contributor |
+| `readiness` | `/daily_readiness` score (0–100) |
+| `sleep_score` | `/daily_sleep` score (0–100) |
+| `total_sleep_hrs`, `deep_hrs`, `rem_hrs`, `light_hrs`, `awake_hrs`, `bedtime`, `sleep_efficiency` | `/sleep` (the night's `long_sleep` period) |
+| `avg_hrv` | `/sleep` `average_hrv` (ms) |
+| `resting_hr` | `/sleep` `lowest_heart_rate` (bpm) |
+| `active_cal`, `steps`, `activity_score` | `/daily_activity` |
+| `spo2_avg`, `vo2_max`, `body_temp_delta` | `/daily_spo2`, `/vo2_max`, readiness `temperature_deviation` (optional endpoints; null when unavailable) |
 
-**Session briefing:** Mr. Bridge will surface the most recent row under "Recovery" and flag low readiness scores.
+Stress and resilience levels go into `metadata`.
+
+**Session briefing:** Mr. Bridge surfaces the most recent row under "Recovery" and flags low readiness scores.
 
 ---
 
@@ -85,7 +97,7 @@ python3 scripts/run-syncs.py --days 30  # backfill 30 days
 
 Run before starting a session to get the latest data:
 ```bash
-python3 scripts/run-syncs.py   # runs both in parallel, skips anything synced in the last 30m
+python3 scripts/run-syncs.py   # one call to /api/cron/sync; skips anything synced in the last 30 min
 ```
 
 All sync data writes to Supabase — no file commits needed.

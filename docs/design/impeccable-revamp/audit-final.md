@@ -1,3 +1,5 @@
+> **Historical record (2026-04-17).** Describes the system as of 2026-04-17; parts no longer apply (e.g. the `/chat` route and chat sidebar (#476), and the axe route list, which no longer matches [smoke-testing.md](../../smoke-testing.md)). Current state: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
 # Impeccable revamp — Gate B audit (final)
 
 Issue: [#272](https://github.com/Theioz/mr-bridge-assistant/issues/272)
