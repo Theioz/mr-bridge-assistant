@@ -28,9 +28,8 @@ says "MCP tool", that tool is available to you directly in this session.
 | `grocery_products` | Amazon Fresh product pins (#4): food identity (`fdc_id` or `packaged_food_id`, **never name**) → ASIN, pack grams, last price. One pin per food | `pin_grocery_product` **MCP tool**; read by `get_grocery_list` (planned recipes × portions − `inventory_items`, in whole packs; reports `unlisted` recipes with no structured ingredients) |
 | `notifications` | ntfy push history | `/api/cron/sync` |
 | `web_vitals` | Real-user page-load metrics (LCP, FCP, CLS, INP, TTFB) per page load, per route, phone vs desktop (#445) | The signed-in app via `POST /api/vitals` (`components/web-vitals-reporter.tsx`). Summarize with `python3 scripts/web_vitals_report.py [--days 14]` |
-| `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/stocks/refresh`, `/api/sports/refresh` |
+| `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`), plus an on-demand refresh when `/dashboard` renders stale data; `sports_cache` also via the sports **MCP tool** |
 | `user_metric_preferences` | Per-metric **source** preference — which integration to trust for each metric (e.g. HRV from Oura, body composition from Google Health). Rows are `(user_id, metric, preferred_source)`; `metric` ∈ sleep/hrv/steps/active_calories/readiness/body_composition. **Not units.** Empty in prod → falls back to `METRIC_DEFAULTS` (`web/src/lib/metric-preferences.ts`) | `/settings` (integrations panel writes it via the `saveMetricPreferences` server action; per-metric upsert) |
-| `chat_sessions`, `chat_messages` | **Orphaned.** Retained for history; nothing writes them since the chat was deleted (#476) | — |
 
 **Units are not a table.** Display units come solely from `profile.weight_unit`. Weights are stored canonically in **kg** (`strength_session_sets.weight_kg`, `exercise_prs.weight_pr_kg`) and converted at the UI boundary by `kgToDisplay` / `displayToKg` in `web/src/lib/units.ts`. There is no separate units table — if you are hunting a unit bug, this is the only place units live.
 

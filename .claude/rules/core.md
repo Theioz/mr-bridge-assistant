@@ -40,6 +40,5 @@ When the user's request matches one of these contexts, read the matching file be
 | morning briefing, daily session start, status          | `.claude/rules/briefing.md`        |
 | new feature work, branches, PRs, best-practice refs    | `.claude/rules/features.md`        |
 | change/reset weather location                          | `.claude/rules/location.md`        |
-| start/stop a study timer                               | `.claude/rules/study-timer.md`     |
 | data source or Supabase table lookup                   | `.claude/rules/data-sources.md`    |
-| RLS, schema design, multi-tenancy, OAuth encryption, verified-success contract, architecture intent | `docs/ARCHITECTURE.md` |
+| RLS, schema design, OAuth encryption, verified-success contract, architecture intent | `docs/ARCHITECTURE.md` |

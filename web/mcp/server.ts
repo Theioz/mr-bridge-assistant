@@ -2,8 +2,8 @@
 /**
  * Mr Bridge MCP server — the replacement for the in-app /chat page (#476).
  *
- * This exposes the SAME 30 tools the chat had, to Claude Code / the Claude app,
- * over your existing subscription. No Anthropic API key, no metered billing.
+ * It exposes the 48 tools defined in `src/lib/tools/*` to Claude Code / the Claude
+ * app, over your existing subscription. No Anthropic API key, no metered billing.
  *
  * It is deliberately a thin ADAPTER, not a rewrite. `src/lib/tools/*` already
  * defines every tool as an AI SDK `tool()` with a plain JSON Schema (`jsonSchema()`)
@@ -19,7 +19,7 @@
  *
  * Run:  npx tsx web/mcp/server.ts        (see .mcp.json)
  * Env:  SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OWNER_USER_ID
- *       (+ ENCRYPTION_KEY / GOOGLE_* for the gmail + calendar tools)
+ *       (+ ENCRYPTION_KEY / GOOGLE_* for the calendar tools)
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
