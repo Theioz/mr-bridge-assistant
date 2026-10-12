@@ -1,5 +1,6 @@
 import { tool, jsonSchema } from "ai";
-import { daysAgoString } from "@/lib/timezone";
+import { daysAgoString, todayString } from "@/lib/timezone";
+import { getHandLoggingSignal } from "@/lib/reentry-query";
 import { loadMetricPreferences } from "@/lib/metric-preferences";
 import type { ToolContext } from "./_context";
 
@@ -61,6 +62,24 @@ export function buildFitnessTools({ supabase, userId }: ToolContext) {
           workouts: workoutsResult.data ?? [],
           recovery: recoveryResult.data?.[0] ?? null,
         };
+      },
+    }),
+
+    get_logging_status: tool({
+      description:
+        "When the user last logged anything BY HAND (meal_log, habits, strength_sessions, " +
+        "journal_entries — synced Oura/Google Health data does not count). Returns " +
+        "{ lastHandLoggedOn, quietDays, reentry }; reentry is true after 3+ quiet days. " +
+        "Call at session start. When reentry is true, open forward-only: help plan and log " +
+        "TODAY. Do not list the missed days, do not offer to reconstruct or backfill them, and " +
+        "never treat the gap as fasted or dry — absent rows mean unlogged.",
+      inputSchema: jsonSchema<Record<string, never>>({ type: "object", properties: {} }),
+      execute: async () => {
+        try {
+          return await getHandLoggingSignal(supabase, todayString(), userId || undefined);
+        } catch (e) {
+          return { error: e instanceof Error ? e.message : "Failed to read logging status" };
+        }
       },
     }),
   };

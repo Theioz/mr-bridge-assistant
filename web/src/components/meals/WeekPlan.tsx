@@ -60,7 +60,10 @@ export function WeekPlan({
   // least one day has something planned and the gaps are the decisions still owed.
   if (week.length === 0) {
     return (
-      <section style={{ marginBottom: "var(--space-6)" }}>
+      <section
+        id="week-plan"
+        style={{ marginBottom: "var(--space-6)", scrollMarginTop: "var(--space-5)" }}
+      >
         <h2 className="font-heading font-semibold" style={headingStyle}>
           This week
         </h2>
@@ -70,7 +73,10 @@ export function WeekPlan({
   }
 
   return (
-    <section style={{ marginBottom: "var(--space-6)" }}>
+    <section
+      id="week-plan"
+      style={{ marginBottom: "var(--space-6)", scrollMarginTop: "var(--space-5)" }}
+    >
       <h2 className="font-heading font-semibold" style={headingStyle}>
         This week
       </h2>

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { geocode, geocodeFirst } from "@/lib/weather/geocode";
+import { getCurrentStay } from "@/lib/travel/current-stay";
+import { geocodeCandidates } from "@/lib/travel/stay";
 
 export interface WeatherData {
   temp: number | null;
@@ -10,6 +13,11 @@ export interface WeatherData {
   windMph: number | null;
   precipIn: number | null;
   location: string;
+  /**
+   * Set when the forecast is for a "Stay at …" calendar event rather than home (travel mode).
+   * `until` is the last day the stay covers, YYYY-MM-DD.
+   */
+  travel?: { city: string; until: string } | null;
 }
 
 const WMO_CONDITIONS: Record<number, string> = {
@@ -43,35 +51,6 @@ const WMO_CONDITIONS: Record<number, string> = {
   99: "Thunderstorm w/ Heavy Hail",
 };
 
-async function geocode(query: string): Promise<{ lat: number; lon: number; label: string } | null> {
-  const tryFetch = async (name: string) => {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
-    const res = await fetch(url, { next: { revalidate: 86400 } }); // cache 24h
-    const data = await res.json();
-    return data.results as
-      | Array<{
-          latitude: number;
-          longitude: number;
-          name: string;
-          admin1?: string;
-          country_code?: string;
-        }>
-      | undefined;
-  };
-
-  let results = await tryFetch(query);
-  if (!results?.length && query.includes(",")) {
-    results = await tryFetch(query.split(",")[0].trim());
-  }
-  if (!results?.length) return null;
-
-  const r = results[0];
-  let label = r.name;
-  if (r.admin1) label += `, ${r.admin1}`;
-  else if (r.country_code) label += `, ${r.country_code}`;
-  return { lat: r.latitude, lon: r.longitude, label };
-}
-
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -89,12 +68,23 @@ export async function GET() {
     const profile: Record<string, string> = {};
     for (const row of profileRows ?? []) profile[row.key] = row.value;
 
-    // Resolve location
+    // Resolve location. A current "Stay at …" calendar event wins over home: that is where the
+    // weather actually is today. Nothing is written — when the event ends, home comes back on
+    // its own (see lib/travel/stay.ts).
     let lat: number | null = null;
     let lon: number | null = null;
     let location = "";
+    let travel: WeatherData["travel"] = null;
 
-    if (profile.location_lat && profile.location_lon) {
+    const stay = await getCurrentStay(supabase, user.id);
+    const away = stay?.location ? await geocodeFirst(geocodeCandidates(stay.location)) : null;
+
+    if (stay && away) {
+      lat = away.lat;
+      lon = away.lon;
+      location = away.label;
+      travel = { city: away.name, until: stay.end };
+    } else if (profile.location_lat && profile.location_lon) {
       lat = parseFloat(profile.location_lat);
       lon = parseFloat(profile.location_lon);
       location = profile.location_city ?? `${lat.toFixed(4)},${lon.toFixed(4)}`;
@@ -141,6 +131,7 @@ export async function GET() {
       windMph: current.windspeed_10m ?? null,
       precipIn: daily.precipitation_sum?.[0] ?? current.precipitation ?? null,
       location,
+      travel,
     };
 
     return NextResponse.json(weather);

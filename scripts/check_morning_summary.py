@@ -86,8 +86,15 @@ def compose(
     meals: list[dict],
     tasks_due: int,
     hrv_drop_pct: float = DEFAULT_HRV_DROP_PCT,
+    travel: dict | None = None,
 ) -> tuple[str, str]:
-    lines = [weather_line(weather), recovery_line(recovery, hrv_drop_pct)]
+    """`travel` is {"city", "until"} while a "Stay at ..." event covers today (scripts/_travel.py).
+    It leads the summary, and an empty meal plan is then expected rather than a gap to report."""
+    lines = []
+    if travel:
+        until = date.fromisoformat(travel["until"]).strftime("%b %-d") if travel.get("until") else None
+        lines.append(f"Traveling: {travel['city']}" + (f" until {until}" if until else ""))
+    lines += [weather_line(weather), recovery_line(recovery, hrv_drop_pct)]
     active = [w for w in workouts if w.get("status") != "cancelled"]
     lines.append("Workout: " + (", ".join(w.get("name") or "planned session" for w in active) if active else "rest day"))
     planned = sorted(
@@ -96,16 +103,50 @@ def compose(
     )
     if planned:
         lines.append("Meals: " + "; ".join(f"{m.get('meal_type', 'meal')} {m.get('label') or 'planned'}" for m in planned))
-    else:
+    elif not travel:
         lines.append("Meals: nothing planned")
     if tasks_due:
         lines.append(f"Tasks: {tasks_due} due or overdue")
     return f"Today · {today.strftime('%a %b %-d')}", "\n".join(lines)
 
 
+def find_stay_today(client, uid: str, today: date) -> dict | None:
+    """The "Stay at ..." event covering today, read from Google Calendar; None on any failure."""
+    from datetime import datetime
+
+    from _dates import user_tz
+    from _google import access_token, all_events
+    from _travel import find_current_stay
+
+    try:
+        tz = user_tz()
+        start = datetime(today.year, today.month, today.day, tzinfo=tz)
+        token = access_token(client, uid)
+        # Google returns events OVERLAPPING the window, so a stay that began last week is included.
+        events = [e for _cal, e in all_events(token, start.isoformat(), (start + timedelta(days=1)).isoformat())]
+        return find_current_stay(events, today, tz)
+    except Exception as e:  # noqa: BLE001 — travel mode is an enhancement, never a failure
+        print(f"[morning_summary] travel lookup skipped: {e}", file=sys.stderr)
+        return None
+
+
+def geocode_stay(stay: dict) -> tuple[float, float, str] | None:
+    """(lat, lon, label) for the stay's location, trying each place-name candidate in turn."""
+    from fetch_weather import _geocode
+    from _travel import geocode_candidates
+
+    for cand in geocode_candidates(stay.get("location")):
+        try:
+            return _geocode(cand)
+        except Exception:  # noqa: BLE001 — try the next candidate
+            continue
+    return None
+
+
 def main() -> int:
     from fetch_weather import fetch_weather
     from _push import push
+    from _travel import stay_city
     from _supabase import get_client, get_owner_user_id
 
     client = get_client()
@@ -114,8 +155,20 @@ def main() -> int:
     iso = today.isoformat()
     loaded = 0
 
+    # Travel mode: a "Stay at ..." event covering today moves the forecast to the stay and
+    # quiets the empty-meal-plan line. Read-only — no profile key is written, so home weather
+    # returns on its own when the event ends. Any failure here means "not traveling".
+    stay = find_stay_today(client, uid, today)
+    travel = {"city": stay_city(stay), "until": stay["end"]} if stay else None
+    away = geocode_stay(stay) if stay else None
+
     try:
-        weather = fetch_weather(client=client, owner_user_id=uid)
+        if away:
+            lat, lon, label = away
+            weather = fetch_weather(lat=lat, lon=lon)
+            weather["location"] = label
+        else:
+            weather = fetch_weather(client=client, owner_user_id=uid)
         loaded += 1
     except Exception as e:  # noqa: BLE001
         print(f"[morning_summary] weather failed: {e}", file=sys.stderr)
@@ -152,7 +205,7 @@ def main() -> int:
     if loaded == 0:
         raise RuntimeError("no section of the morning summary could be loaded")
 
-    title, body = compose(today, weather, recovery, workouts, meals, due, threshold)
+    title, body = compose(today, weather, recovery, workouts, meals, due, threshold, travel)
     if DRY_RUN:
         print(f"[dry-run] {title}\n{body}")
         return 0
