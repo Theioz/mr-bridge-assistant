@@ -14,6 +14,13 @@
 
 Closes #
 
+## Checklist
+
+- [ ] `CHANGELOG.md` updated under `## [Unreleased]`
+- [ ] `README.md` updated if structure or usage changed; `node scripts/check-docs.mjs` passes
+- [ ] UI changes: `bash scripts/lint-tokens.sh` passes
+- [ ] Migrations: none, **or** listed here and applied by hand to the self-hosted Supabase **before** the container is rebuilt (then reload PostgREST's schema cache)
+
 ---
 
 ## Security checklist

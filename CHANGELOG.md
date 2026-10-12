@@ -702,6 +702,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- **Docs:** Claude rules, skills, commands, agents and design-system docs brought in line with the code (#761).
 - **UI polish: task row actions, one name setting, Library on shared tokens (#761).**
   - *Tasks.* Each row now shows the complete circle, the edit (due date / priority) button and a
     single `⋯` overflow menu (`aria-label="More actions for <title>"`) holding Add item, Add to
