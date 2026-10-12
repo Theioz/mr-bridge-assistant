@@ -8,18 +8,21 @@ Execute in this exact order:
    python3 scripts/run-syncs.py
    ```
    Since #658 this is a thin client of the app's `/api/cron/sync` — the same endpoint the nightly
-   cron uses — so it refreshes Oura, Google Health, stocks, sports and packages in one call and
-   skips any source synced within the last 30 minutes. It therefore **requires the mr-bridge
-   container to be up**. `--force` bypasses the skip window; `--days N` (1-90) backfills.
+   cron uses — so it refreshes Oura, Google Health, Plex, stocks and sports in one call and
+   skips any health/Plex source synced within the last 30 minutes, then runs the task-due alert script.
+   It therefore **requires the mr-bridge container to be up**. `--force` bypasses the skip
+   window; `--days N` (1-90) backfills; `--no-alerts` skips it.
 2. Fetch all briefing data from Supabase:
    ```bash
    python3 scripts/fetch_briefing_data.py
    ```
-   Read the output — it contains profile, tasks, habits, body composition, workouts, recovery, study log, and recent meals.
+   Read the output — it contains profile, weather (profile location; not travel-aware — see `location.md`), active + newly-unblocked tasks, habits,
+   body composition, yesterday/today workouts, recovery, recent meals, intake vs targets, fridge leftovers,
+   meal plan, recent strength sessions, exercise PRs and upcoming workout plans (plus legacy study log rows, if any).
 3. Issue the following three external fetches **in a single message turn as parallel tool calls** (they are independent — do not run them sequentially):
-   - **Calendar events**: `List Calendar Events` for today (primary + any shared/secondary calendars) — note calendar/account source for each event
-   - **Upcoming birthdays**: `List Calendar Events` for the next 60 days (timeMin = today, timeMax = today+60 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; sort ascending; show only the single nearest birthday regardless of how far out it is; strip "'s birthday" suffix for display
-   - **Important unread emails**: `Search Gmail Emails` — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline — note account source; secondary accounts are labeled (e.g. "Professional") via a Gmail filter on forwarded mail
+   - **Calendar events**: the claude.ai Google Calendar connector's `list_events` for today (primary + any shared/secondary calendars) — note calendar/account source for each event
+   - **Upcoming birthdays**: `list_events` for the next 60 days (timeMin = today, timeMax = today+60 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; sort ascending; show only the single nearest birthday regardless of how far out it is; strip "'s birthday" suffix for display
+   - **Important unread emails**: the claude.ai Gmail connector's `search_threads` (the app itself has no Gmail access since #693) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline — note account source; secondary accounts are labeled (e.g. "Professional") via a Gmail filter on forwarded mail
 4. Deliver session briefing (format below)
 
 ## Name Usage
@@ -66,10 +69,10 @@ Weight: [X] lb | Body Fat: [X]% | Muscle: [X] lb | BMI: [X] | Visceral: [X] — 
 [delta vs previous entry, e.g. "Weight -1.2 lb | Fat -0.3% vs prior"]
 
 ### Yesterday's Activity
-[All Session Log rows for yesterday's date — activity, duration, calories. If none: "No workouts logged"]
+[All `workout_sessions` rows for yesterday's date — activity, duration, calories. If none: "No workouts logged"]
 
 ### Today's Activity
-[All Session Log rows for today's date — activity, duration, calories. If none: "None yet"]
+[All `workout_sessions` rows for today's date — activity, duration, calories. If none: "None yet"]
 
 ### Recovery (last night)
 Readiness: [score] | Sleep: [score] | Total: [Xh Ym] | Deep: [Xh Ym] | REM: [Xh Ym] | HRV: [X]ms | RHR: [X] bpm | Active Cal: [X]

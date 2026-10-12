@@ -15,20 +15,21 @@
 
 ## Interface
 - There is **no in-app chat** (deleted #476). You ARE the chat: the MCP server
-  (`web/mcp/run.sh`) exposes 50 tools to this session — tasks, habits, fitness,
-  meals, calendar, backlog, profile.
+  (`web/mcp/run.sh` → `web/mcp/server.ts` → `web/src/lib/tools/*.ts`) exposes 50 tools to
+  this session — tasks, habits, fitness, workouts, meals + groceries, calendar, backlog,
+  profile, equipment, stocks, sports, session history.
 - Prefer an MCP tool over shelling out to a script when both exist.
 
 ## Memory Update Rules
 - Data is stored in **self-hosted** Supabase — do not write to local markdown files for live data
-- Habit logging: run `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`
-- Task updates: use Supabase directly or a future task management command
+- Habit logging: the `log_habit` MCP tool, or `python3 scripts/log_habit.py --habits <names> --date <YYYY-MM-DD>`
+- Task updates: the task MCP tools (`add_task`, `complete_task`, `restore_task`, `set_task_blocker`, `schedule_task`, …)
 - After any Supabase write: confirm to user what was written and to which table
 
 ## Session Close
 Before any commit or PR:
 - Update `CHANGELOG.md` — add all changes under `[Unreleased]` or a new version block
-- Update `README.md` if file structure or usage changed
+- Update `README.md` if file structure or usage changed; `node scripts/check-docs.mjs` (run in CI) fails on a stale tool count, migration summary or file-tree path
 - If a dev server was started for smoke testing, stop it with `preview_stop` before committing
 - Follow feature-branch + PR workflow (see `features.md`) — never commit directly to main
 

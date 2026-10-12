@@ -30,7 +30,7 @@ authorise it.
 Load the Chrome tools in ONE ToolSearch call:
 `select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__tabs_close_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__javascript_tool,mcp__claude-in-chrome__computer`
 
-Page-reading scripts live in `scripts/`. Read the file and pass its contents to
+Page-reading scripts live in `.claude/skills/amazon-cart/scripts/` (not the repo's top-level `scripts/`). Read the file and pass its contents to
 `javascript_tool`. **All four are read-only.**
 
 | Script | Run on | Returns |

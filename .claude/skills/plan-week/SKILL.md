@@ -44,7 +44,7 @@ Run these together — they're independent:
 - `get_recipes` — the library, with macros.
 - `get_user_equipment` — what they can actually train with.
 - `list_calendar_events` for the week — a 7pm meeting is why Tuesday's session moves, and a
-  restaurant booking is why Thursday dinner is freeform.
+  restaurant booking is why Thursday dinner is a meal out.
 
 ### 2. Training
 
@@ -55,7 +55,9 @@ motivation problem — move it.
 Weigh recovery honestly. Readiness below 70 means deload the hardest session, not "push
 through". Below 50 means a rest day.
 
-Then `assign_workout` per training day. It syncs to Google Calendar automatically.
+Then `assign_workout` per training day. It also creates/updates the Google Calendar event
+unless `update_calendar: false` — so first settle the start time and check that day's
+`list_calendar_events` for clashes, as the tool's description requires.
 
 ### 3. Food
 
@@ -65,9 +67,10 @@ In this order — the order matters, it's what keeps the plan cheap:
    (`cook_id`). Oldest first.
 2. **Fill the rest from the recipe library**, biased toward what batches well. Several days
    pointing at the same recipe *is* the batch — there is no separate "planned cook" object.
-3. **Freeform the slots that aren't yours** — meals out, meals with other people. Give them a
-   `name` and no recipe. They carry no macros and claim none. Pretending you can plan them is
-   how a plan loses credibility.
+3. **Meals out for the slots that aren't yours** — restaurants, meals with other people. Plan
+   the reusable **"Eating out"** recipe (find it with `get_recipes`); a `name` with no
+   `cook_id`/`recipe_id` is rejected. The real macros get logged afterward. Pretending you can
+   plan them is how a plan loses credibility.
 
 Sanity-check the daily totals against the flat target using recipe macros ÷ intended
 portions. If a day is well short on protein, fix it by changing *what* is planned, never by

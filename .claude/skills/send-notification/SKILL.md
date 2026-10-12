@@ -7,7 +7,7 @@ user-invocable: false
 ---
 
 ## Task
-Send a macOS push notification using the Mr. Bridge notification script.
+Send a push notification (ntfy, plus a row in the in-app Notifications history) using `scripts/notify.sh`, a thin wrapper over `scripts/_push.py`. There is no macOS/osascript path any more.
 
 ## Instructions
 Run the following, substituting the provided title and message:
@@ -21,4 +21,6 @@ bash scripts/notify.sh \
 ## Rules
 - Title defaults to "Mr. Bridge" if not specified
 - Message is required — do not call without one
+- Optional: `--click-url <url>` (opened when the push is tapped) and `--type <type>` (default `general`)
+- A failed send exits non-zero — report it rather than assuming delivery
 - Do not write to any files

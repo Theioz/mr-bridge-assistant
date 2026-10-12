@@ -32,14 +32,17 @@ not be quietly interpreted away.
    `<YYYY-MM-DD>` is the **Monday** of the week to plan. Default to next Monday.
 
 2. **Write the plan** as JSON, following the schema and the planning rules embedded in
-   `scripts/weekly_plan.py` (read the module docstring and `PROMPT` constant — they carry
-   the goal phase, split, volume and recovery constraints). Save it to `/tmp/plan.json`.
+   `scripts/weekly_plan.py` (read the `PLANNER_PROMPT` constant — it carries the JSON
+   schema, goal phase, split, volume and recovery constraints). Save it to `/tmp/plan.json`.
 
 3. **Validate it.** This is not optional:
 
    ```bash
-   python3 scripts/weekly_plan.py validate /tmp/plan.json
+   python3 scripts/weekly_plan.py validate /tmp/plan.json [--has-pull-up-bar]
    ```
+
+   Pass `--has-pull-up-bar` when the context's equipment includes one — it makes vertical-pull
+   coverage required.
 
    It checks weekly muscle coverage, recovery spacing between hard sessions, same-day
    redundancy, and **superset metadata**. If it fails, FIX THE PLAN and re-run. Do not

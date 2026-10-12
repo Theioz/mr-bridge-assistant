@@ -1,6 +1,6 @@
 ---
 name: session-briefing
-description: Re-run the full Mr. Bridge session briefing on demand — weather, schedule, emails, pending tasks, and habit accountability.
+description: Re-run the full Mr. Bridge session briefing on demand — weather, schedule, birthdays, emails, pending tasks, habit accountability, body comp, activity and recovery.
 user-invocable: true
 allowed-tools:
   - Bash(bash *)
@@ -10,16 +10,17 @@ allowed-tools:
 model: sonnet
 ---
 
-Re-run the full session briefing as defined in `.claude/rules/mr-bridge-rules.md`.
+Re-run the full session briefing as defined in `.claude/rules/briefing.md`.
 
 Execute the following in order:
 
-1. Fetch briefing data from Supabase:
+1. Fetch briefing data from Supabase (weather is included — it resolves the profile location
+   `location_lat`/`location_lon` → `location_city` → `Identity/Location` itself):
    ```bash
    python3 scripts/fetch_briefing_data.py
    ```
-2. Issue these three fetches **in parallel** (single message turn):
-   - **Weather**: fetch current conditions and today's forecast for the location in the profile (use `location_lat`/`location_lon`, then `location_city`, then `Identity/Location` as fallback)
-   - **Calendar events**: List Calendar Events for today (primary + secondary calendars)
-   - **Important unread emails**: Search Gmail for unread messages with subjects containing: meeting / urgent / invoice / action required / deadline
-3. Output the full briefing in the standard format from `.claude/rules/mr-bridge-rules.md`.
+   Skip `scripts/run-syncs.py` unless the user asks for fresh data — it needs the app container up.
+2. Issue the three external fetches from `briefing.md` step 3 **in parallel** (single message turn):
+   calendar events for today, the nearest birthday (next 60 days), and important unread emails —
+   via the claude.ai Google Calendar and Gmail connectors.
+3. Output the full briefing in the standard format from `.claude/rules/briefing.md`.
