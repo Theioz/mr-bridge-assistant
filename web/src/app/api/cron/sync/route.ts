@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { syncOura } from "@/lib/sync/oura";
 import { syncGoogleHealth } from "@/lib/sync/google-health";
 import { syncStocks } from "@/lib/sync/stocks";
+import { syncPlex } from "@/lib/sync/plex";
 import { syncSports, type SportsFavorite } from "@/lib/sync/sports";
 import { lastSyncAgeSecs } from "@/lib/sync/log";
 import { listConnectedUsers } from "@/lib/integrations/tokens";
@@ -40,9 +41,10 @@ export async function GET(request: NextRequest) {
 
   // Run both health syncs in parallel, skipping any synced within the last 30 minutes.
   // Fitbit and Google Fit were folded into Google Health — see #607.
-  const [ouraAge, googleHealthAge] = await Promise.all([
+  const [ouraAge, googleHealthAge, plexAge] = await Promise.all([
     lastSyncAgeSecs(db, "oura"),
     lastSyncAgeSecs(db, "google_health"),
+    lastSyncAgeSecs(db, "plex"),
   ]);
 
   if (force || ouraAge === null || ouraAge >= SKIP_WINDOW_SECS) {
@@ -83,6 +85,21 @@ export async function GET(request: NextRequest) {
     };
   } else {
     results.googleHealth = { skipped: true, ageSecs: Math.round(googleHealthAge) };
+  }
+
+  // Plex watch sync (#691) — owner only, since the Plex server is the owner's. Its own
+  // try/catch: an unreachable Plex logs a failure and must not take the other sources
+  // down with it. `days` does not apply: Plex syncs from a cursor, not a window.
+  if (!process.env.PLEX_URL || !process.env.PLEX_TOKEN) {
+    results.plex = { skipped: true, reason: "PLEX_URL / PLEX_TOKEN not set" };
+  } else if (force || plexAge === null || plexAge >= SKIP_WINDOW_SECS) {
+    try {
+      results.plex = await syncPlex(db, ownerUserId);
+    } catch (e) {
+      results.plex = { error: (e as Error).message };
+    }
+  } else {
+    results.plex = { skipped: true, ageSecs: Math.round(plexAge) };
   }
 
   // Stocks sync — no skip window; EOD data doesn't change intraday

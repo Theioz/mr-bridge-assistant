@@ -1460,10 +1460,12 @@ export default function LibraryClient({
   initialItems,
   initialCounts,
   initialShareToken,
+  ratePrompts,
 }: {
   initialItems: BacklogItem[];
   initialCounts: AllCounts;
   initialShareToken: string | null;
+  ratePrompts?: React.ReactNode;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2264,6 +2266,8 @@ export default function LibraryClient({
 
       {/* Summary strip — always shows global totals, unaffected by filters */}
       <SummaryStrip counts={counts} activeTab={activeTab} />
+
+      {ratePrompts}
 
       {/* Tabs */}
       <div

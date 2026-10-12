@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { BacklogItem, MediaType, BacklogStatus, AllCounts, StatusCounts } from "@/lib/types";
 import LibraryClient from "./LibraryClient";
+import RatePrompts from "./RatePrompts";
 
 export const metadata: Metadata = {
   title: "Library",
@@ -47,24 +48,33 @@ export default async function LibraryPage() {
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const [{ data: countRows }, { data: items }, { data: shareRow }] = await Promise.all([
-    // Lightweight count query — only two string columns, no metadata
-    supabase.from("backlog_items").select("media_type, status").eq("user_id", user.id),
-    // First page of items for the "all" tab
-    supabase
-      .from("backlog_items")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("priority", { ascending: true })
-      .order("created_at", { ascending: false })
-      .range(0, 49),
-    supabase
-      .from("profile")
-      .select("value")
-      .eq("user_id", user.id)
-      .eq("key", "library_share_token")
-      .maybeSingle(),
-  ]);
+  const [{ data: countRows }, { data: items }, { data: shareRow }, { data: prompts }] =
+    await Promise.all([
+      // Lightweight count query — only two string columns, no metadata
+      supabase.from("backlog_items").select("media_type, status").eq("user_id", user.id),
+      // First page of items for the "all" tab
+      supabase
+        .from("backlog_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("priority", { ascending: true })
+        .order("created_at", { ascending: false })
+        .range(0, 49),
+      supabase
+        .from("profile")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("key", "library_share_token")
+        .maybeSingle(),
+      // Rate prompts from the Plex watch sync (#691)
+      supabase
+        .from("backlog_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .not("rate_prompt_at", "is", null)
+        .order("rate_prompt_at", { ascending: false })
+        .limit(10),
+    ]);
 
   const initialCounts = buildCounts(countRows ?? []);
   const initialShareToken = (shareRow?.value as string | null) ?? null;
@@ -74,6 +84,7 @@ export default async function LibraryPage() {
       initialItems={(items ?? []) as BacklogItem[]}
       initialCounts={initialCounts}
       initialShareToken={initialShareToken}
+      ratePrompts={<RatePrompts initialItems={(prompts ?? []) as BacklogItem[]} />}
     />
   );
 }

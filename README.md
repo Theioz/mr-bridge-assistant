@@ -505,6 +505,7 @@ mr-bridge-assistant/
 │   │       └── sync/
 │   │           ├── oura.ts                # syncOura() — Oura endpoints → recovery_metrics
 │   │           ├── google-health.ts       # syncGoogleHealth() — body comp + workouts + HR zones
+│   │           ├── plex.ts                # syncPlex() — Plex watch history → library status, sessions, rate prompts
 │   │           ├── stocks.ts              # syncStocks() — Polygon.io EOD + sparkline → stocks_cache
 │   │           └── log.ts                 # logSync() + lastSyncAgeSecs() helpers
 │   └── package.json

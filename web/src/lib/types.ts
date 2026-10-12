@@ -368,6 +368,13 @@ export interface ShowMetadata {
   network?: string;
   genres?: string[];
   tmdb_url?: string;
+  /** Written by the Plex watch sync (#691). Specials (Season 0) are excluded. */
+  plex_progress?: {
+    watched: number;
+    total: number;
+    last_watched_at?: string;
+    tmdb_checked_at?: string;
+  };
 }
 
 export interface MovieMetadata {
@@ -405,6 +412,8 @@ export interface BacklogItem {
   share_token: string | null;
   started_at: string | null;
   finished_at: string | null;
+  /** Pending "rate this" prompt from the Plex watch sync (#691); null = none. */
+  rate_prompt_at: string | null;
   created_at: string;
   updated_at: string;
 }
