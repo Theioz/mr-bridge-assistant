@@ -297,6 +297,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **CI guard for the client/server boundary.** `scripts/check-client-boundary.py` (run in the lint
+  workflow) fails when server code imports a function from a `"use client"` module, the class of
+  bug below that no other check catches.
 - **Every Settings tab crashed after #766.** The page called `isSettingsTab()`, which lived in a
   `"use client"` component; Next refuses a server call into a client module, and only at request
   time, so tsc, eslint and `next build` all passed. The tab list now lives in

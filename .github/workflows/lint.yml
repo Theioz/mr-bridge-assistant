@@ -6,6 +6,7 @@ on:
       - 'web/**'
       - 'scripts/lint-tokens.sh'
       - 'scripts/check-docs.mjs'
+      - 'scripts/check-client-boundary.py'
       - 'supabase/migrations/**'
       - 'README.md'
       - '.github/workflows/lint.yml'
@@ -19,6 +20,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run token guards
         run: bash scripts/lint-tokens.sh
+      # Server code calling a function from a "use client" module passes tsc, eslint and
+      # next build, then 500s at request time (every Settings tab, after #766).
+      - name: Client/server boundary
+        run: python3 scripts/check-client-boundary.py
 
   # The README describes the repo; this asserts it still does. Deliberately depends on nothing —
   # no npm ci, no setup beyond node — so it stays the cheapest job here and cannot rot itself.
