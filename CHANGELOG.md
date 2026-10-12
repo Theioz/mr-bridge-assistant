@@ -239,6 +239,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Status registry matched the real crontab (#761).** `series-expiring` runs weekly (Mon 16:00
+  UTC), not daily, so its 48 h allowance would have marked it late, and paged, every week. It
+  now allows 15 days, and the stale checker allows 14 h for its own 6-hourly run.
 - **GA trust bugs from the 2026-10-12 walkthrough (#761).**
   - **Dashboard showed two readiness scores.** The hero strip read today's `recovery_metrics`
     row and Health Breakdown read the latest row capped to `date < today`, each with its own
