@@ -279,6 +279,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- **Every Settings tab crashed after #766.** The page called `isSettingsTab()`, which lived in a
+  `"use client"` component; Next refuses a server call into a client module, and only at request
+  time, so tsc, eslint and `next build` all passed. The tab list now lives in
+  `web/src/lib/settings-tabs.ts`, which the server page and the client tab bar both import.
 - **Settings → Status was unreachable (#761).** The settings page kept its own copy of the
   valid tab list, which still said "usage", so `?tab=status` fell back to Profile. The page now
   uses `isSettingsTab` from `settings-tabs.tsx`, the single list.

@@ -30,7 +30,8 @@ import {
   type MetricPreferences,
 } from "@/lib/metric-preferences";
 import type { SportsFavorite } from "@/lib/sync/sports";
-import { SettingsTabs, isSettingsTab, type SettingsTab } from "@/components/settings/settings-tabs";
+import { SettingsTabs } from "@/components/settings/settings-tabs";
+import { isSettingsTab, type SettingsTab } from "@/lib/settings-tabs";
 import { DataSettings } from "@/components/settings/data-settings";
 import { StatusSettings } from "@/components/settings/status-settings";
 import { loadJobStatuses } from "@/lib/status/jobs";
