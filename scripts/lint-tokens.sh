@@ -55,7 +55,7 @@ fi
 # colour is not a theme concern. A chicken breast that flips to a dark-mode token is not a
 # chicken breast. Only the plate BEHIND each icon is themed, and that correctly uses
 # var(--rule-soft) / var(--color-text-faint). The literals are a fixed illustration palette.
-# Allowlist: globals.css (token defs), FoodPhotoAnalyzer (own cleanup issue),
+# Allowlist: globals.css (token defs),
 # icon.svg (SVG markup),
 # logo.tsx (SVG markup — static fill can't reference CSS vars),
 # MealsClient.tsx (CSS var fallbacks — var(--token, #hex)),
@@ -77,7 +77,6 @@ fi
 HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
   | grep -v 'globals\.css' \
-  | grep -v 'FoodPhoto' \
   | grep -v 'icon\.svg' \
   | grep -v 'logo\.tsx' \
   | grep -v 'food-art\.tsx' \
