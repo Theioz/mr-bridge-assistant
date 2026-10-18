@@ -7,6 +7,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- **The three oversized client components are split into modules (#777).** No behaviour change;
+  code was moved, not rewritten. `MealsClient.tsx` 2,051 → 316 lines: one file per tab
+  (`TodayTab`, `RecipesTab`, `PlanTab`, `TrendsTab`), plus `MealRows`, `PastMeals` and
+  `meals-shared.ts`; its type re-exports keep `meals/page.tsx` unchanged. `LibraryClient.tsx`
+  2,675 → 426 lines: state, paging and the import/reorder/delete handlers move to
+  `useLibraryItems.ts`, and `SearchModal`, `ItemRow`, `CoverGrid`, `SummaryStrip`,
+  `LibraryFilterBar`, `ShareButton` and `TypePickerModal` to `library/components/`.
+  `FoodPhotoAnalyzer.tsx` 1,952 → 422 lines: three hooks (`usePhotoQueue`, `useScanItems`,
+  `useManualEntry`) and 17 section components under `meals/food-photo/`; the copy-pasted
+  re-estimate/re-scan merge is now one `applyEstimate()`. Log, meal-prep and chat state stay in the
+  parent because they depend on items, totals and the router. `lint-tokens.sh`: the `#fff`
+  cover-overlay exemption follows the code to `CoverGrid.tsx`, and the stale `FoodPhoto` exemption
+  is removed (that code has no raw hex).
+
 ## [2.0.0] — 2026-10-13
 
 The self-hosted, single-user release. Since 1.1.0, Mr. Bridge has left Vercel and Supabase Cloud

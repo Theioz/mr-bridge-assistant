@@ -55,13 +55,14 @@ fi
 # colour is not a theme concern. A chicken breast that flips to a dark-mode token is not a
 # chicken breast. Only the plate BEHIND each icon is themed, and that correctly uses
 # var(--rule-soft) / var(--color-text-faint). The literals are a fixed illustration palette.
-# Allowlist: globals.css (token defs), FoodPhotoAnalyzer (own cleanup issue),
+# Allowlist: globals.css (token defs),
 # icon.svg (SVG markup),
 # logo.tsx (SVG markup — static fill can't reference CSS vars),
 # MealsClient.tsx (CSS var fallbacks — var(--token, #hex)),
 # layout.tsx (viewport.themeColor must be a static hex — can't reference CSS vars),
-# LibraryClient.tsx (cover-card title overlay: white over arbitrary artwork, not a theme concern —
-#   status colours moved onto tokens in #761, and LibraryDetailClient.tsx left the list then),
+# library/components/CoverGrid.tsx (cover-card title overlay: white over arbitrary artwork, not a
+#   theme concern — status colours moved onto tokens in #761, and LibraryDetailClient.tsx left the
+#   list then; the overlay moved here out of LibraryClient.tsx in #777),
 # share/backlog/[token]/page.tsx + share/library/[token]/page.tsx (standalone public pages — no app shell, CSS vars unavailable).
 # Only scans .tsx/.css to avoid false positives from issue numbers in .ts.
 #
@@ -76,13 +77,12 @@ fi
 HEX_HITS=$(grep -rn '#[0-9a-fA-F]\{3,8\}\b' "$WEB_SRC" \
   --include='*.tsx' --include='*.css' \
   | grep -v 'globals\.css' \
-  | grep -v 'FoodPhoto' \
   | grep -v 'icon\.svg' \
   | grep -v 'logo\.tsx' \
   | grep -v 'food-art\.tsx' \
   | grep -v 'MealsClient' \
   | grep -v 'layout\.tsx' \
-  | grep -v 'LibraryClient' \
+  | grep -v 'library/components/CoverGrid\.tsx' \
   | grep -v 'share/backlog' \
   | grep -v 'share/library' \
   | awk '{ body = $0; sub(/^[^:]+:[0-9]+:/, "", body); if (body !~ /^[[:space:]]*(\{[[:space:]]*)?(\/\/|\/\*|\*)/) print }' \
