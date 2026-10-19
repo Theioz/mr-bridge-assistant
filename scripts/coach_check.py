@@ -22,8 +22,13 @@ from _dates import today_local  # noqa: E402
 # can be unit-tested without pip installs. Same reason weekly_plan.py keeps its top imports stdlib.
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+# Fallbacks only. The goal and the session count live in `profile` (weight_goal_lbs,
+# workout_days_per_week) — they were hardcoded here, so a changed goal in Settings never
+# reached the push that reports against it.
 GOAL_LB = 140.0
 SESSIONS_PER_WEEK = 3
+# Weeks of history the "limits broken N of the last 4 weeks" check reads.
+OVER_CAP_LOOKBACK_WEEKS = 4
 # Beyond this gap, two sessions are not comparable — the later one is a re-entry
 # deload, not a performance drop.
 REGRESSION_MAX_GAP_DAYS = 14
@@ -37,6 +42,39 @@ def notify(title, message, click=None):
 
     push(title, message, type_="coach", click_url=click or None)
     print(f"[notify] {title} :: {message}")
+
+
+def load_profile(c, uid):
+    return {r["key"]: r["value"] for r in
+            c.table("profile").select("key,value").eq("user_id", uid).execute().data}
+
+
+def sessions_target(profile):
+    try:
+        return int(float(profile.get("workout_days_per_week") or SESSIONS_PER_WEEK))
+    except ValueError:
+        return SESSIONS_PER_WEEK
+
+
+def days_away(c, uid, start, end):
+    """Local days in [start, end] covered by a "Stay at ..." calendar event. Empty on any failure:
+    travel mode softens the loop, it must never be the reason the loop doesn't run."""
+    from datetime import datetime
+
+    from _dates import user_tz
+    from _google import access_token, all_events
+    from _travel import stay_days
+
+    try:
+        tz = user_tz()
+        lo = datetime(start.year, start.month, start.day, tzinfo=tz)
+        hi = datetime(end.year, end.month, end.day, tzinfo=tz) + timedelta(days=1)
+        token = access_token(c, uid)
+        events = [e for _cal, e in all_events(token, lo.isoformat(), hi.isoformat())]
+        return stay_days(events, start, end, tz)
+    except Exception as e:  # noqa: BLE001
+        print(f"[coach_check] travel lookup skipped: {e}", file=sys.stderr)
+        return set()
 
 
 def programmed_sessions(c, uid, start, end=None, select="performed_on"):
@@ -61,13 +99,6 @@ def programmed_sessions(c, uid, start, end=None, select="performed_on"):
     if end is not None:
         q = q.lte("performed_on", end if isinstance(end, str) else end.isoformat())
     return q.execute().data
-
-
-def weight_avg(rows, start, end):
-    """Mean weight over [start, end]. Real scale rows only."""
-    vals = [r["weight_lb"] for r in rows
-            if r.get("weight_lb") and start <= date.fromisoformat(r["date"]) <= end]
-    return sum(vals) / len(vals) if vals else None
 
 
 def top_sets(c, session_ids):
@@ -152,6 +183,7 @@ def post_session(c, uid, today):
         return
 
     logged = programmed_sessions(c, uid, today, today, select="id,perceived_effort,notes")
+    target = sessions_target(load_profile(c, uid))
 
     wk = today - timedelta(days=6)
     done = programmed_sessions(c, uid, wk, today)
@@ -160,7 +192,7 @@ def post_session(c, uid, today):
     if logged:
         effort = logged[0].get("perceived_effort")
         note = (logged[0].get("notes") or "").strip()
-        bits = [f"Session logged. {n}/{SESSIONS_PER_WEEK} this week."]
+        bits = [f"Session logged. {n}/{target} this week."]
 
         # Effort bands target 1-3 RIR on the last set of each exercise. The old bands
         # treated 8-9 as a fault and cut load — that is the productive zone, and at a
@@ -194,7 +226,14 @@ def post_session(c, uid, today):
         notify("Mr. Bridge — Logged", " ".join(bits))
         return
 
-    # Missed. Count consecutive missed *planned* days.
+    # Missed — unless he's away. Travel mode makes training optional (two 20-min hotel sessions
+    # at most), so an unlogged lift on a trip is the plan working, not a miss. Nudging it would
+    # be the planner prescribing leg day to someone in another timezone.
+    if today in days_away(c, uid, today, today):
+        print("traveling; miss not counted")
+        return
+
+    # Count consecutive missed *planned* days.
     recent = c.table("workout_plans").select("date,status").eq("user_id", uid) \
         .lte("date", today.isoformat()).gte("date", (today - timedelta(days=21)).isoformat()) \
         .order("date", desc=True).execute().data
@@ -215,43 +254,65 @@ def post_session(c, uid, today):
         msg = (f"2 missed in a row. Next session is cut to 3 exercises — open Claude Code and "
                f"it gets rewritten smaller. Consistency beats intensity.")
     else:
-        msg = f"'{name}' wasn't logged. 13 sets, ~35 min, last set of each to 1-3 reps in reserve. Still counts if you do it late."
+        msg = f"'{name}' wasn't logged. ~35-40 min, last set of each to 1-3 reps in reserve. Still counts if you do it late."
     notify("Mr. Bridge — Missed", msg, click=os.environ.get("APP_URL", "") + "/weekly")
 
 
 def weekly(c, uid, today):
-    wk_start = today - timedelta(days=6)
-    prev_start, prev_end = today - timedelta(days=13), today - timedelta(days=7)
+    """Sunday scorecard: plain numbers for the week, against the program's own limits.
 
-    fl = c.table("fitness_log").select("date,weight_lb,body_fat_pct").eq("user_id", uid) \
-        .gte("date", prev_start.isoformat()).order("date").execute().data
-    cur = weight_avg(fl, wk_start, today)
-    prev = weight_avg(fl, prev_start, prev_end)
+    The arithmetic lives in _scorecard.py (stdlib, unit-tested, twin of the /weekly panel);
+    this function only fetches rows. History is read back OVER_CAP_LOOKBACK_WEEKS so the push
+    can state the pre-agreed signal — limits broken 3 of the last 4 weeks — when it holds.
+    """
+    from _scorecard import compute, over_cap, render
+    from _travel import excluded_weigh_ins
 
-    done = programmed_sessions(c, uid, wk_start, select="performed_on,perceived_effort")
-    n = len({r["performed_on"] for r in done})
+    profile = load_profile(c, uid)
+    profile.setdefault("weight_goal_lbs", str(GOAL_LB))
+    hist_start = today - timedelta(days=7 * OVER_CAP_LOOKBACK_WEEKS - 1)
+    # The projection reads 28 days of weigh-ins; the prior-week mean reads 14. Fetch the wider.
+    since = min(hist_start, today - timedelta(days=27)).isoformat()
 
+    fl = c.table("fitness_log").select("date,weight_lb").eq("user_id", uid) \
+        .gte("date", since).order("date").execute().data
+    sess = programmed_sessions(c, uid, hist_start, today)
     # Oura rows only — the google_health dupes carry total_sleep_hrs 0.0 and poison the mean.
-    rec = c.table("recovery_metrics").select("readiness,total_sleep_hrs").eq("user_id", uid) \
-        .gte("date", wk_start.isoformat()).gt("total_sleep_hrs", 0).execute().data
-    rd = [r["readiness"] for r in rec if r.get("readiness")]
-    sl = [r["total_sleep_hrs"] for r in rec if r.get("total_sleep_hrs")]
+    rec = c.table("recovery_metrics").select("date,steps,readiness,total_sleep_hrs").eq("user_id", uid) \
+        .gte("date", hist_start.isoformat()).execute().data
+    meals = c.table("meal_log").select("date,calories,protein_g,standard_drinks,origin") \
+        .eq("user_id", uid).gte("date", hist_start.isoformat()).execute().data
+    plans = c.table("meal_plans").select("date,is_cheat").eq("user_id", uid) \
+        .gte("date", hist_start.isoformat()).execute().data
+    excluded = excluded_weigh_ins(days_away(c, uid, date.fromisoformat(since), today))
 
-    lines = [f"Training: {n}/{SESSIONS_PER_WEEK}."]
-    if cur:
-        lines.append(f"Weight 7d avg: {cur:.1f} lb ({cur - GOAL_LB:+.1f} to goal).")
-        if prev:
-            d = cur - prev
-            verdict = "on pace" if -1.2 <= d <= -0.4 else ("stalled" if abs(d) < 0.4 else
-                      ("fast — check protein" if d < 0 else "up"))
-            lines.append(f"vs prior week: {d:+.1f} lb — {verdict}.")
+    card = compute(today, profile, fl, sess, rec, meals, plans, excluded)
+    # Limits checked per prior week with the same rules. Weeks with no meal rows at all are
+    # skipped rather than counted as clean — an empty week is missing data, not a dry one.
+    broken = checked = 0
+    for w in range(OVER_CAP_LOOKBACK_WEEKS):
+        end = today - timedelta(days=7 * w)
+        wk = compute(end, profile, fl, sess, rec, meals, plans, excluded)
+        if wk["days_logged"]:
+            checked += 1
+            broken += over_cap(wk)
+    has_limits = any(card[k] is not None for k in ("cap", "dry_min", "per_occasion"))
+
+    lines = render(card, broken if has_limits and checked == OVER_CAP_LOOKBACK_WEEKS else None,
+                   OVER_CAP_LOOKBACK_WEEKS)
+    healthy = [r for r in rec if (r.get("total_sleep_hrs") or 0) > 0
+               and date.fromisoformat(r["date"]) >= today - timedelta(days=6)]
+    rd = [r["readiness"] for r in healthy if r.get("readiness")]
+    sl = [r["total_sleep_hrs"] for r in healthy]
     if rd:
         lines.append(f"Readiness avg {sum(rd)/len(rd):.0f}.")
     if sl:
         lines.append(f"Sleep avg {sum(sl)/len(sl):.1f}h.")
+    if excluded & {today - timedelta(days=i) for i in range(7)}:
+        lines.append("Trip weigh-ins excluded from the weight numbers.")
     lines.append("Open Claude Code — what's in the fridge and what's on sale?")
 
-    notify("Mr. Bridge — Weekly Planning", " ".join(lines),
+    notify("Mr. Bridge — Weekly Scorecard", " ".join(lines),
            click=os.environ.get("APP_URL", "") + "/weekly")
 
 

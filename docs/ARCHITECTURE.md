@@ -268,7 +268,7 @@ Consequences that follow from that split, each of which broke something:
 
 ## The MCP server
 
-`web/mcp/server.ts` exposes **50 tools** to Claude Code / Claude Desktop, over the existing
+`web/mcp/server.ts` exposes **52 tools** to Claude Code / Claude Desktop, over the existing
 Claude subscription. `.mcp.json` launches it through `web/mcp/run.sh`, which reads its secrets
 from `~/.mrb-secrets/env` (outside the repo tree). It is a thin **adapter**, not a rewrite:
 `web/src/lib/tools/*` defines each tool as an AI SDK `tool()` with a plain JSON Schema and an

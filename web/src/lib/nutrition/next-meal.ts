@@ -8,7 +8,7 @@
  * the plan row plus the recipe or cook it points at. Shared by the Meals page and the dashboard.
  */
 export const MEAL_PLAN_SELECT =
-  "id, date, meal_type, portions, status, name, " +
+  "id, date, meal_type, portions, status, name, is_cheat, " +
   "recipes(id, name, ingredients, instructions, ingredients_json, steps_json, " +
   "calories, protein_g, carbs_g, fat_g, fiber_g, " +
   "typical_portions, macros_confidence, macros_computed_at), " +

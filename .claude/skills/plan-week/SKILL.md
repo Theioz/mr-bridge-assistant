@@ -72,6 +72,28 @@ In this order — the order matters, it's what keeps the plan cheap:
    `cook_id`/`recipe_id` is rejected. The real macros get logged afterward. Pretending you can
    plan them is how a plan loses credibility.
 
+**The prep system.** Two preps a week (Sun + Wed by default), each built from ONE formula:
+1 lean protein + 1 carb + 2 vegetables + 1 sauce, cooked as 4-5 portions with 2 frozen as
+backups. A frozen portion is what makes a tired night a microwave instead of a delivery order.
+Rotate formulas across preps so no plate runs more than 3 days in a row; swap the sauce
+before swapping the formula. Frozen vegetables are fine and spoil less.
+
+**Plate limits.** About 600 g of food and about 15 g of fibre per plate. When a plate needs
+calories, add density (rice, beans, a measured oil), never more vegetable bulk — a plate too
+big to finish is a worse outcome than a smaller one.
+
+**The day shape** follows the `profile` macro targets and eating window: lunch (a prep plate),
+an early-afternoon snack box (eggs boiled on prep day, or jerky, plus edamame or carrots and a
+piece of fruit), dinner, and whey only to close a protein gap.
+
+**The cheat meal.** Plan exactly `cheat_meals_per_week` (profile, default 1) rows with
+`is_cheat: true`. It is budgeted into the week, not earned, and the next day is planned as a
+normal day — never a compensating low day.
+
+**Travel.** On days a "Stay at ..." calendar event covers, plan no prep and no deficit: the
+target is maintenance, a protein floor, and "Eating out" rows. A trip is a diet break, not a
+lapse.
+
 Sanity-check the daily totals against the flat target using recipe macros ÷ intended
 portions. If a day is well short on protein, fix it by changing *what* is planned, never by
 asserting a number.

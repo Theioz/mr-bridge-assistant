@@ -164,7 +164,7 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
         const { data, error } = await supabase
           .from("meal_plans")
           .select(
-            "id, date, meal_type, portions, status, name, notes, " +
+            "id, date, meal_type, portions, status, name, notes, is_cheat, " +
               "recipes(id, name, calories, protein_g, carbs_g, fat_g, typical_portions), " +
               "cooks(id, name, portions, portions_remaining, calories, protein_g, carbs_g, fat_g)",
           )
@@ -197,6 +197,7 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
           name?: string;
           portions?: number;
           notes?: string;
+          is_cheat?: boolean;
         }[];
       }>({
         type: "object",
@@ -224,6 +225,12 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
                 },
                 portions: { type: "number", description: "Defaults to 1." },
                 notes: { type: "string" },
+                is_cheat: {
+                  type: "boolean",
+                  description:
+                    "True for the week's budgeted cheat meal (profile cheat_meals_per_week, " +
+                    "default 1). Defaults to false.",
+                },
               },
               required: ["date", "meal_type"],
             },

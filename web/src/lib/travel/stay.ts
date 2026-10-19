@@ -101,6 +101,30 @@ export function findCurrentStay(
 }
 
 /**
+ * Every local day in [start, end] (inclusive, YYYY-MM-DD) covered by a "Stay at …" event, sorted.
+ *
+ * Same title and cancellation rules as findCurrentStay, over a range instead of one day — the
+ * weekly planner needs to know which days of the coming week are away so it schedules no lifting
+ * on them. Mirrors stay_days in scripts/_travel.py.
+ */
+export function stayDays(
+  events: ReadonlyArray<CalendarEventLike>,
+  start: string,
+  end: string,
+  tz: string = "UTC",
+): string[] {
+  const out = new Set<string>();
+  for (const e of events) {
+    if (e.status === "cancelled" || !STAY_PREFIX.test(e.summary ?? "")) continue;
+    const s = span(e, tz);
+    if (!s) continue;
+    const last = s.end < end ? s.end : end;
+    for (let d = s.start > start ? s.start : start; d <= last; d = addDays(d, 1)) out.add(d);
+  }
+  return [...out].sort();
+}
+
+/**
  * Place names worth sending to a city geocoder, best first, from a free-text location.
  *
  * The geocoder the weather code uses (Open-Meteo) searches PLACE NAMES, not addresses, so the city

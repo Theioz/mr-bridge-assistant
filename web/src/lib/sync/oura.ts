@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSync } from "./log";
 import { todayString, daysAgoString } from "@/lib/timezone";
 import { loadIntegration, persistRotatedToken } from "@/lib/integrations/tokens";
+import { autoCompleteStepsHabit } from "./steps-habit";
 
 const OURA_BASE = "https://api.ouraring.com/v2/usercollection";
 export const OURA_AUTHORIZE_URL = "https://cloud.ouraring.com/oauth/authorize";
@@ -315,6 +316,15 @@ export async function syncOura(
     .from("recovery_metrics")
     .upsert(rows, { onConflict: "user_id,date,source" });
   if (error) throw new Error(error.message);
+
+  // Complete the "10,000 Steps" habit for days the ring says qualified (lib/sync/steps-habit.ts).
+  // Best-effort: the recovery rows above already landed, and a habit write failing must not turn
+  // a good sync into a failed one.
+  try {
+    await autoCompleteStepsHabit(db, userId, rows);
+  } catch (e) {
+    console.warn(`[oura] steps habit auto-complete skipped: ${(e as Error).message}`);
+  }
 
   // `partial` deliberately falls outside lastSyncAgeSecs()'s `status = 'ok'` filter, so a
   // degraded window is retried on the next run instead of being skipped for 30 minutes.

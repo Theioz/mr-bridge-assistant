@@ -7,6 +7,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added
+
+- **Program tracking: weekly scorecard, drink logging, travel-aware coaching.** Migration
+  `20261019120000_program_tracking.sql` adds `meal_log.standard_drinks` (US standard drinks, 14 g
+  ethanol), `meal_log.origin` (home/restaurant/delivery/travel), `meal_plans.is_cheat`, and a
+  `body_measurements` table (waist; kept out of `fitness_log` so a tape row can never read as the
+  latest weigh-in). `coach_check.py --weekly` now pushes a plain-numbers scorecard built by the
+  stdlib-only `scripts/_scorecard.py`. It covers: 7-day weight vs the prior week and the planned
+  trajectory line, a 28-day landing projection, lifts, days at the steps goal, food averages,
+  cheat meals, delivery orders, drinks vs the profile limits, and the alcohol share of the food
+  deficit. Weigh-ins on trip days and the 3 days after are excluded from the weight numbers, and
+  a miss on a travel day is not counted. The goal weight and the session count are read from
+  `profile` instead of being hardcoded. New profile keys: `steps_goal`, `waist_goal_in`,
+  `phase_start_date`, `phase_start_weight`, `target_rate_lb_wk`, `tdee_estimate`,
+  `alcohol_weekly_cap`, `alcohol_dry_days_min`, `alcohol_max_per_occasion`,
+  `alcohol_earliest_hour`, `cheat_meals_per_week`. The planner prompt and the `plan-week` skill
+  carry the session shape, the two-formula prep system, plate limits, the flagged cheat meal and
+  the travel rules. `_travel.py` gains `stay_days()` / `excluded_weigh_ins()`, and six movements are
+  mapped in the validator. Tests: `tests/test_scorecard.py`.
+
 ### Changed
 
 - **The three oversized client components are split into modules (#777).** No behaviour change;

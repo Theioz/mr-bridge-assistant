@@ -11,6 +11,7 @@ import { buildEquipmentTools } from "@/lib/tools/equipment";
 import { buildStocksTools } from "@/lib/tools/stocks";
 import { buildSportsTools } from "@/lib/tools/sports";
 import { buildBacklogTools } from "@/lib/tools/backlog";
+import { buildProgramTools } from "@/lib/tools/program";
 
 /**
  * Assembles every domain tool set.
@@ -35,6 +36,7 @@ export function buildChatTools(context: ToolContext) {
     ...buildStocksTools(context),
     ...buildSportsTools(context),
     ...buildBacklogTools(context),
+    ...buildProgramTools(context),
   };
   return baseTools;
 }

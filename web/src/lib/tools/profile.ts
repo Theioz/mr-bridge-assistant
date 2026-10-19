@@ -28,7 +28,12 @@ export function buildProfileTools({ supabase, userId }: ToolContext) {
         "Upsert one or more profile key/value pairs. Use when the user explicitly agrees to save a goal, preference, or personal target. " +
         "For known fitness/nutrition goals use the canonical flat keys (weight_goal_lbs, body_fat_goal_pct, weekly_workout_goal, " +
         "weekly_active_cal_goal, calorie_goal, protein_goal, carbs_goal, fat_goal, fiber_goal, " +
-        "goal_phase [cut|bulk|maintain|recomp]) so they surface in the web UI. " +
+        "goal_phase [cut|bulk|maintain|recomp], workout_days_per_week) so they surface in the web UI. " +
+        "Program keys read by the /weekly scorecard: phase_start_date (YYYY-MM-DD), phase_start_weight (lb), " +
+        "target_rate_lb_wk (lb/week, default 0.75), tdee_estimate (kcal/day, default 2350), " +
+        "steps_goal (default 10000; also auto-completes the '10,000 Steps' habit), waist_goal_in, " +
+        "cheat_meals_per_week (default 1), alcohol_weekly_cap / alcohol_max_per_occasion (US standard drinks), " +
+        "alcohol_dry_days_min (days per 7), alcohol_earliest_hour (0-23, local). " +
         "For other goals use dot-notation (sleep.goal.hrs, study.goal.mins_per_day, etc.). " +
         "Always tell the user what you are about to write before calling this tool, then confirm each key that was saved.",
       inputSchema: jsonSchema<{ updates: { key: string; value: string }[] }>({

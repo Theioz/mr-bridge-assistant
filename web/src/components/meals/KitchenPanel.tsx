@@ -38,6 +38,9 @@ export interface KitchenPlannedMeal {
   portions: number;
   status: string;
   name: string | null;
+  // The week's budgeted cheat meal (meal_plans.is_cheat). Labelled so it reads as planned,
+  // not as a slip — the scorecard counts it the same way.
+  is_cheat?: boolean;
   // macros_computed_at distinguishes a real recipe from a name-only stub: only a resolved
   // recipe can be cooked-and-logged in one tap. The rest feeds the click-in detail view —
   // ingredients and macros are surfaced there so a plan isn't just an opaque label.
@@ -253,6 +256,7 @@ export function KitchenPanel({ leftovers, plan }: KitchenPanelProps) {
                       <span style={nameStyle}>{label}</span>
                       <span style={subStyle}>
                         {p.meal_type}
+                        {p.is_cheat ? " · Cheat meal" : ""}
                         {canEatRecipe ? " · from recipe" : ""}
                         {/* The consequence is stated INLINE, not only in the button's title.
                             This panel is used from the installed PWA on a phone, where a title
