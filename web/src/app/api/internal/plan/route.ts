@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateWeights } from "@/lib/fitness/equipment-validation";
 import { todayString, comingMonday, addDays } from "@/lib/timezone";
+import { getStayDays } from "@/lib/travel/current-stay";
 
 interface WorkoutExercise {
   exercise: string;
@@ -71,6 +72,11 @@ export async function GET(request: NextRequest) {
   const priorSunday = addDays(nextMonday, -1);
   const nextSunday = addDays(nextMonday, 6);
   const [nMon, pMon, pSun, nSun] = [nextMonday, priorMonday, priorSunday, nextSunday];
+
+  // Days of the coming week covered by a "Stay at …" calendar event. Started now so the Google
+  // round trip overlaps the table reads; fail-soft to [] (getStayDays never rejects), so a
+  // disconnected calendar plans the week as if at home.
+  const awayDatesP = getStayDays(db, uid, nMon, nSun);
 
   const [
     profileR,
@@ -429,9 +435,20 @@ export async function GET(request: NextRequest) {
     lines.push("No meals logged for prior week.");
   }
 
+  // The planner's rule: no lifting day on a date marked away. The JSON line is the machine-readable
+  // list; the per-date marker below repeats it where the dates are actually chosen.
+  const awayDates = await awayDatesP;
+  const away = new Set(awayDates);
+  lines.push("\n## AWAY DATES (coming week)");
+  lines.push(`away_dates: ${JSON.stringify(awayDates)}`);
+  if (!awayDates.length) lines.push('None — no "Stay at ..." calendar event in the coming week.');
+
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   lines.push("\n## COMING WEEK — dates available for scheduling");
-  for (let i = 0; i < 7; i++) lines.push(`- ${addDays(nextMonday, i)} (${dayNames[i]})`);
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(nextMonday, i);
+    lines.push(`- ${d} (${dayNames[i]})${away.has(d) ? " — AWAY, no lifting" : ""}`);
+  }
 
   return new Response(lines.join("\n"), {
     headers: { "Content-Type": "text/plain; charset=utf-8" },

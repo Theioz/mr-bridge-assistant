@@ -15,7 +15,7 @@
 
 ## Interface
 - There is **no in-app chat** (deleted #476). You ARE the chat: the MCP server
-  (`web/mcp/run.sh` → `web/mcp/server.ts` → `web/src/lib/tools/*.ts`) exposes 50 tools to
+  (`web/mcp/run.sh` → `web/mcp/server.ts` → `web/src/lib/tools/*.ts`) exposes 52 tools to
   this session — tasks, habits, fitness, workouts, meals + groceries, calendar, backlog,
   profile, equipment, stocks, sports, session history.
 - Prefer an MCP tool over shelling out to a script when both exist.

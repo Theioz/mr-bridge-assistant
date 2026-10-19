@@ -12,6 +12,7 @@ import {
   findCurrentStay,
   geocodeCandidates,
   stayCity,
+  stayDays,
 } from "../lib/travel/stay.ts";
 
 const WESTIN = {
@@ -114,4 +115,33 @@ test("geocode candidates for the address Google Calendar actually writes (live, 
 test("stayCity falls back to the hotel name without a location", () => {
   assert.equal(stayCity({ name: "The Westin Melbourne", location: WESTIN.location }), "Melbourne");
   assert.equal(stayCity({ name: "Ace Hotel", location: null }), "Ace Hotel");
+});
+
+// stayDays — the range form the weekly planner uses (away dates = no lifting). Mirrors
+// test_stay_days_clipped_to_window in tests/test_scorecard.py.
+test("stayDays: covered days clipped to the window, non-stays ignored", () => {
+  const events = [
+    { summary: "Stay at Hotel X", start: { date: "2030-03-08" }, end: { date: "2030-03-12" } },
+    { summary: "Dinner at X", start: { date: "2030-03-09" }, end: { date: "2030-03-10" } },
+  ];
+  assert.deepEqual(stayDays(events, "2030-03-10", "2030-03-20"), ["2030-03-10", "2030-03-11"]);
+});
+
+test("stayDays: overlapping stays de-duplicate; cancelled stays and out-of-range days drop", () => {
+  const events = [
+    { summary: "Stay at A", start: { date: "2030-03-01" }, end: { date: "2030-03-04" } },
+    { summary: "stay at B", start: { date: "2030-03-03" }, end: { date: "2030-03-05" } },
+    {
+      summary: "Stay at C",
+      status: "cancelled",
+      start: { date: "2030-03-06" },
+      end: { date: "2030-03-07" },
+    },
+  ];
+  assert.deepEqual(stayDays(events, "2030-03-02", "2030-03-07"), [
+    "2030-03-02",
+    "2030-03-03",
+    "2030-03-04",
+  ]);
+  assert.deepEqual(stayDays(events, "2030-04-01", "2030-04-07"), []);
 });

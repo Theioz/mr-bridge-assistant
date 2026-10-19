@@ -5,7 +5,7 @@
 // the real query chains end to end and assert on the resulting table state:
 //
 //   from(t).select(cols) / insert(rows) / update(patch) / upsert(rows, { onConflict }) / delete()
-//   filters: eq neq gt gte lt lte in is not
+//   filters: eq neq gt gte lt lte in is not ilike
 //   modifiers: order limit single maybeSingle, and .select() after a write to return rows
 //
 // Every chain is a thenable resolving to `{ data, error }`, like supabase-js. Columns may be
@@ -27,6 +27,8 @@ export interface FakeCall {
   table: string;
   op: Op;
   payload?: unknown;
+  /** The write's options, e.g. `{ onConflict }` — the conflict target is part of the contract. */
+  options?: { onConflict?: string };
 }
 
 let idCounter = 0;
@@ -122,6 +124,24 @@ class Query implements PromiseLike<Result> {
     this.filters.push((r) => col(r, column) != null && cmp(col(r, column), value) <= 0);
     return this;
   }
+  /** PostgREST ilike: case-insensitive, `%` = any run, `_` = one character. */
+  ilike(column: string, pattern: string) {
+    const re = new RegExp(
+      "^" +
+        pattern
+          .split("")
+          .map((ch) =>
+            ch === "%" ? ".*" : ch === "_" ? "." : ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+          )
+          .join("") +
+        "$",
+      "i",
+    );
+    this.filters.push(
+      (r) => typeof col(r, column) === "string" && re.test(col(r, column) as string),
+    );
+    return this;
+  }
   in(column: string, values: unknown[]) {
     this.filters.push((r) => values.includes(col(r, column)));
     return this;
@@ -167,7 +187,12 @@ class Query implements PromiseLike<Result> {
   }
 
   private run(): Result {
-    this.db.calls.push({ table: this.table, op: this.op, payload: this.payload });
+    this.db.calls.push({
+      table: this.table,
+      op: this.op,
+      payload: this.payload,
+      ...(this.options ? { options: this.options } : {}),
+    });
     const injected = this.db.failures.get(`${this.table}:${this.op}`);
     if (injected) return { data: null, error: { message: injected } };
 

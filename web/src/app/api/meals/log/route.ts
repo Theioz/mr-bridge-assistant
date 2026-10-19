@@ -1,6 +1,7 @@
 import { recordPick } from "@/lib/nutrition/pick-cache";
 import { createClient } from "@/lib/supabase/server";
 import { todayString } from "@/lib/timezone";
+import { parseOrigin } from "@/lib/nutrition/origin";
 
 interface MealLogBody {
   meal_type: "breakfast" | "lunch" | "dinner" | "snack";
@@ -15,6 +16,8 @@ interface MealLogBody {
   sugar_g?: number | null;
   sodium_mg?: number;
   source?: string;
+  /** Where the food came from (meal_log.origin). Omitted = unknown. */
+  origin?: string;
   count?: number;
   /**
    * The USDA records this meal was actually priced from, as shown in the review step.
@@ -69,6 +72,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "user_context must be ≤ 500 characters" }, { status: 400 });
   }
 
+  const origin = parseOrigin(body.origin);
+  if (!origin.ok) return Response.json({ error: origin.error }, { status: 400 });
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -91,6 +97,8 @@ export async function POST(req: Request) {
     sugar_g: body.sugar_g ?? null,
     sodium_mg: body.sodium_mg ?? null,
     source: body.source ?? "manual",
+    // Spread only when given, so a client that never sends origin writes exactly what it did before.
+    ...(origin.origin ? { origin: origin.origin } : {}),
   };
 
   if (count === 1) {

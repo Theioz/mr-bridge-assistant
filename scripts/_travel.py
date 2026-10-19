@@ -70,6 +70,38 @@ def find_current_stay(events: list[dict], today: date, tz: tzinfo) -> dict | Non
     return best
 
 
+TRIP_WATER_DAYS = 3
+
+
+def stay_days(events: list[dict], start: date, end: date, tz: tzinfo) -> set[date]:
+    """Every local day in [start, end] covered by a "Stay at ..." event. Same title and
+    cancellation rules as find_current_stay; used by the coaching loop, which needs a range."""
+    out: set[date] = set()
+    for e in events:
+        if e.get("status") == "cancelled" or not STAY_PREFIX.match(e.get("summary") or ""):
+            continue
+        span = _span(e, tz)
+        if span is None:
+            continue
+        d = max(span[0], start)
+        while d <= min(span[1], end):
+            out.add(d)
+            d += timedelta(days=1)
+    return out
+
+
+def excluded_weigh_ins(days_away: set[date], after: int = TRIP_WATER_DAYS) -> set[date]:
+    """Days whose scale reading says more about the trip than about fat: every day away plus
+    `after` days past each return. Flights, restaurant sodium and the carb refeed put 2-4 lb of
+    water on the scale that clears in about three days of normal eating; counting it reads a
+    vacation as a failed week."""
+    out = set(days_away)
+    for d in days_away:
+        if d + timedelta(days=1) not in days_away:  # last day of a stay
+            out.update(d + timedelta(days=i) for i in range(1, after + 1))
+    return out
+
+
 STREET_SUFFIX = re.compile(
     r"^(st|street|rd|road|ave|avenue|blvd|boulevard|ln|lane|dr|drive|way|pl|place|ct|court|hwy|"
     r"highway|pde|parade|tce|terrace|cres|crescent|sq|square)\.?$",

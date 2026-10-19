@@ -18,6 +18,8 @@ export interface PlanMealInput {
   name?: string;
   portions?: number;
   notes?: string;
+  /** The week's budgeted cheat meal. Omitted = false, matching the column default. */
+  is_cheat?: boolean;
 }
 
 export async function planMeals(supabase: SupabaseClient, userId: string, meals: PlanMealInput[]) {
@@ -45,6 +47,9 @@ export async function planMeals(supabase: SupabaseClient, userId: string, meals:
     name: m.name ?? null,
     portions: m.portions ?? 1,
     notes: m.notes ?? null,
+    // Always written, never left to the default: re-planning a slot replaces the row, and a
+    // replacement that silently kept a previous `true` would mislabel the new meal.
+    is_cheat: m.is_cheat === true,
     status: "planned",
     updated_at: new Date().toISOString(),
   }));

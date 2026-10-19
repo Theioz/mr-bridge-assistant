@@ -59,7 +59,10 @@ async function saveBodyStats(
     { key: "body_weight_lb", value: weightLb },
     { key: "height_cm", value: heightCm },
     { key: "biological_sex", value: sex },
-    { key: "target_weight_lb", value: targetWeightLb },
+    // `weight_goal_lbs` is the key every reader uses (dashboard, /fitness, settings, the
+    // update_profile tool). Onboarding used to write `target_weight_lb`, which nothing read, so
+    // the goal entered here never appeared anywhere else.
+    { key: "weight_goal_lbs", value: targetWeightLb },
   ].filter((r) => r.value.trim());
   for (const row of rows) await upsert(user.id, row.key, row.value);
 }
@@ -161,7 +164,9 @@ async function suggestNutritionTargets(
     : null;
   const sex = overrides?.biologicalSex ?? v["biological_sex"] ?? null;
   const goal = overrides?.fitnessGoal ?? v["fitness_goal"] ?? null;
-  const rawTargetWeightLb = overrides?.targetWeightLb ?? v["target_weight_lb"];
+  // `target_weight_lb` is read only as a fallback for rows written before the key was fixed.
+  const rawTargetWeightLb =
+    overrides?.targetWeightLb ?? v["weight_goal_lbs"] ?? v["target_weight_lb"];
   const targetWeightLb = rawTargetWeightLb ? parseFloat(rawTargetWeightLb) : null;
   const workoutDaysPerWeek = overrides?.workoutDaysPerWeek ?? v["workout_days_per_week"] ?? null;
 
@@ -223,7 +228,7 @@ export default async function OnboardingPage() {
         initialLocation={v["location_city"] ?? ""}
         initialBirthday={v["birthday"] ?? ""}
         initialWeightLb={v["body_weight_lb"] ?? ""}
-        initialTargetWeightLb={v["target_weight_lb"] ?? ""}
+        initialTargetWeightLb={v["weight_goal_lbs"] ?? v["target_weight_lb"] ?? ""}
         initialHeightCm={v["height_cm"] ?? ""}
         initialBiologicalSex={v["biological_sex"] ?? ""}
         initialFocus={JSON.parse(v["primary_focus"] ?? "[]") as string[]}

@@ -85,7 +85,8 @@ EXERCISE_PATTERN_MAP: dict[str, list[str]] = {
     "DB Chest Press (floor)": ["push_horizontal"], "DB Floor Press": ["push_horizontal"],
     "DB Chest Fly (floor)": ["push_horizontal"], "Slider Push-Up": ["push_horizontal"],
     "Push-Up": ["push_horizontal"], "Floor Press": ["push_horizontal"],
-    "Band Chest Press": ["push_horizontal"],
+    "Band Chest Press": ["push_horizontal"], "Deficit Push-Up": ["push_horizontal"],
+    "Archer Push-Up": ["push_horizontal"], "Close-Grip Push-Up": ["push_horizontal"],
     # Vertical push
     "DB Overhead Press": ["push_vertical"], "DB Arnold Press": ["push_vertical"],
     "Pike Push-Up": ["push_vertical"], "Overhead Press": ["push_vertical"],
@@ -106,9 +107,10 @@ EXERCISE_PATTERN_MAP: dict[str, list[str]] = {
     "Slider Body Saw": ["core"], "Plank": ["core"], "Side Plank": ["core"],
     "Hollow Hold": ["core"], "Dead Bug": ["core"], "Bird Dog": ["core"],
     "Ab Wheel Rollout": ["core"], "Slider Pike": ["core"],
+    "DB Crunch": ["core"], "Hanging Knee Raise": ["core"],
     # Auxiliary — no pattern
     "DB Lateral Raise": [], "DB Rear Delt Raise": [], "DB Reverse Fly": [],
-    "DB Hammer Curl": [], "DB Bicep Curl": [], "DB Tricep Kickback": [],
+    "DB Hammer Curl": [], "DB Bicep Curl": [], "DB Concentration Curl": [], "DB Tricep Kickback": [],
     "DB Tricep Extension": [], "DB Skull Crusher": [], "DB Calf Raise": [],
     "DB Pullover (floor)": [], "Standing Calf Raise": [], "DB Pullover": [],
     "Band Pull-Apart": [], "Scapular Push-Up": [], "Arm Circles": [],
@@ -144,6 +146,8 @@ EXERCISE_MUSCLE_MAP: dict[str, list[str]] = {
     "DB Floor Press": ["chest", "triceps", "shoulders"],
     "DB Chest Fly (floor)": ["chest"], "Slider Push-Up": ["chest", "triceps", "shoulders"],
     "Push-Up": ["chest", "triceps", "shoulders"], "Floor Press": ["chest", "triceps", "shoulders"],
+    "Deficit Push-Up": ["chest", "triceps", "shoulders"], "Archer Push-Up": ["chest", "triceps", "shoulders"],
+    "Close-Grip Push-Up": ["triceps", "chest", "shoulders"],
     "Band Chest Press": ["chest", "triceps", "shoulders"],
     "DB Overhead Press": ["shoulders", "triceps"], "DB Arnold Press": ["shoulders", "triceps"],
     "Overhead Press": ["shoulders", "triceps"], "Pike Push-Up": ["shoulders", "triceps"],
@@ -155,12 +159,14 @@ EXERCISE_MUSCLE_MAP: dict[str, list[str]] = {
     "Assisted Pull-Up": ["back", "biceps"],
     "DB Lateral Raise": ["shoulders"], "DB Rear Delt Raise": ["shoulders"],
     "DB Reverse Fly": ["shoulders", "back"],
-    "DB Hammer Curl": ["biceps"], "DB Bicep Curl": ["biceps"],
+    "DB Hammer Curl": ["biceps"], "DB Bicep Curl": ["biceps"], "DB Concentration Curl": ["biceps"],
     "DB Tricep Kickback": ["triceps"], "DB Tricep Extension": ["triceps"],
     "DB Skull Crusher": ["triceps"], "DB Pullover (floor)": ["back", "chest"],
     "Slider Body Saw": ["core"], "Plank": ["core"], "Side Plank": ["core"],
     "Hollow Hold": ["core"], "Dead Bug": ["core"], "Bird Dog": ["core"],
-    "Ab Wheel Rollout": ["core"], "Slider Pike": ["core"],
+    "Ab Wheel Rollout": ["core"], "Slider Pike": ["core"], "DB Crunch": ["core"],
+    # "Hanging Knee Raise" is absent on purpose, like the GtG pull-ups it rides with: it is done in
+    # the one-bar block on the walk, most days, sub-failure — not a lifting-day working set.
 }
 
 DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -499,7 +505,14 @@ OUTPUT RULES:
 }}
 
 SCHEDULING:
-- Use preferred_workout_days from profile (default: Mon, Tue, Thu, Sat — 4 days/week).
+- Use workout_days_per_week from profile (default 3): Mon and Wed are ANCHORED; the third
+  session FLOATS Fri-Sun. Re-dating it inside that window is a move, not a skip. Lifts are
+  MORNING sessions, ~35-40 min including warm-up and cool-down.
+- A 4th "Pump" session (20 min: arms, lateral raises, abs) may be offered on an open afternoon,
+  named "Pump (bonus)". It is optional and is never counted as a miss — four mandatory days
+  produced zero completions in the first coaching attempt.
+- TRAVEL: on dates the context marks as away (a "Stay at ..." calendar event), write no lifting
+  day. At most two optional 20-min bodyweight sessions per trip; steps target 8-10k.
 - If avg readiness < 65 for prior week, reduce to 3 days and note deload.
 - If any single-day readiness < 50, drop one workout day and flag it in notes.
 - If HRV has been declining 3+ consecutive days or chronic high RPE is flagged above, reduce intensity across all days and avoid max-effort sets.
@@ -555,6 +568,26 @@ GOAL PHASE (check goal_phase profile key):
 - maintain: 8-12 sets/muscle/week, variety > overload
 - recomp: hybrid — high-protein assumed, conservative volume
 
+PROGRAM — LEAN, NOT BIG (overrides the generic goal-phase table where they disagree):
+The goal is a lean, fitted-in-a-t-shirt look: visible abs, chest, shoulders, arms. Not size.
+- Every lift day is 3 antagonist pairs + a finisher, ~20 working sets:
+  A chest/back (push-up progression or DB floor press <-> a row),
+  B biceps/triceps (a curl <-> a triceps extension or close-grip push-up),
+  C legs/core (one unilateral or tempo leg movement <-> a core movement),
+  finisher: DB Lateral Raise (myo-reps) or Pike Push-Up + lateral raise.
+- Weekly targets: chest ~9+ sets plus push-up volume; back ~9 plus grease-the-groove; biceps 9;
+  triceps 9; side delts 6-8 (lateral raises 3x/week); legs MAINTENANCE 6-9; direct core ~9.
+- Chest at the 25 lb ceiling: push-up progressions are the main chest lift (tempo -> Deficit
+  Push-Up -> Archer Push-Up); DB Floor Press for high reps or 1.5-reps.
+- Myo-reps or a mechanical drop set on the last round of 1-2 exercises per session — this is how
+  light loads get near failure inside the time cap.
+- Effort: last set of each exercise to 1-3 reps in reserve; earlier sets 3-4. Reductions come
+  from measured performance decrement across sessions, never from a set feeling hard.
+- Pull-ups stay OUT of lift sessions (grease-the-groove on the walk). Hanging Knee Raise 2 x 8-12
+  rides in that same one-bar block — never a detour, never a separate trip.
+- Take every exercise's description and cues from the `exercises` library rows, never write form
+  prose by hand.
+
 EXERCISE SELECTION:
 - Use only exercises suited to available equipment
 - Vary the split — avoid repeating the same day-order as the prior week
@@ -562,8 +595,12 @@ EXERCISE SELECTION:
 - Add at least one direct hamstring exercise per lower-body day
 
 MEAL PREP:
-- Align with cuisine_preferences (Korean, Southeast Asian) and profile macro goals
-- Integrate goal_phase
+- Two preps a week (Sun + Wed), each ONE formula: 1 lean protein + 1 carb + 2 vegetables + 1 sauce,
+  4-5 portions, 2 of them frozen as backups. Rotate formulas; no plate more than 3 days running.
+- Frozen vegetables are fine. Cap a plate at ~600 g of food and ~15 g fibre; add calories as density
+  (rice, beans), never as more vegetable bulk.
+- Boil 10-12 eggs on each prep day for the 1 PM snack box.
+- Align with cuisine_preferences and profile macro goals; macros come from USDA, never estimated.
 
 If a data source is missing, note it in workout notes and continue with best-effort planning."""
 

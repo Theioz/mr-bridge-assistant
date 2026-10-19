@@ -147,6 +147,84 @@ const FITNESS_GOAL_FIELDS: Field[] = [
   },
 ];
 
+// The lean-fit program's targets, read by the /weekly Scorecard (lib/scorecard.ts) and its Python
+// twin (scripts/_scorecard.py). Kept apart from Fitness Goals because these are the rules of one
+// phase — a start date, a rate, caps — not standing goals, and they get reset when a phase does.
+const PROGRAM_FIELDS: Field[] = [
+  {
+    key: "phase_start_date",
+    label: "Phase Start Date",
+    placeholder: "YYYY-MM-DD",
+    hint: "Day the current cut started — anchors the expected-weight line",
+  },
+  {
+    key: "phase_start_weight",
+    label: "Phase Start Weight",
+    placeholder: "e.g. 205",
+    hint: "lbs on the start date",
+  },
+  {
+    key: "target_rate_lb_wk",
+    label: "Target Rate",
+    placeholder: "0.75",
+    hint: "lbs lost per week (default 0.75)",
+  },
+  {
+    key: "tdee_estimate",
+    label: "TDEE Estimate",
+    placeholder: "2350",
+    hint: "kcal per day maintenance (default 2350)",
+  },
+  {
+    key: "workout_days_per_week",
+    label: "Sessions per Week",
+    placeholder: "3",
+    hint: "planned strength sessions (default 3)",
+  },
+  {
+    key: "steps_goal",
+    label: "Steps Goal",
+    placeholder: "10000",
+    hint: "steps per day (default 10000) — also auto-completes the 10,000 Steps habit",
+  },
+  {
+    key: "waist_goal_in",
+    label: "Waist Goal",
+    placeholder: "e.g. 34",
+    hint: "inches",
+  },
+  {
+    key: "cheat_meals_per_week",
+    label: "Cheat Meals per Week",
+    placeholder: "1",
+    hint: "planned, not earned (default 1)",
+  },
+  {
+    key: "alcohol_weekly_cap",
+    label: "Alcohol Weekly Cap",
+    placeholder: "e.g. 7",
+    hint: "US standard drinks (14 g ethanol) per 7 days",
+  },
+  {
+    key: "alcohol_dry_days_min",
+    label: "Dry Days Minimum",
+    placeholder: "e.g. 4",
+    hint: "days per 7 with no drinks",
+  },
+  {
+    key: "alcohol_max_per_occasion",
+    label: "Max Drinks per Occasion",
+    placeholder: "e.g. 3",
+    hint: "standard drinks in one day",
+  },
+  {
+    key: "alcohol_earliest_hour",
+    label: "Earliest Drink Hour",
+    placeholder: "e.g. 17",
+    hint: "0–23, local time",
+  },
+];
+
 interface SuggestedMacros {
   calories: number;
   protein: number;
@@ -860,6 +938,20 @@ export function ProfileForm({ values, updateAction, deleteAction }: Props) {
 
       <SettingsSection label="Fitness Goals">
         {FITNESS_GOAL_FIELDS.map((field, i) => (
+          <FieldRow
+            key={field.key}
+            field={field}
+            initialValue={values[field.key] ?? ""}
+            updateAction={updateAction}
+            deleteAction={deleteAction}
+            onDirtyChange={handleDirtyChange}
+            isFirst={i === 0}
+          />
+        ))}
+      </SettingsSection>
+
+      <SettingsSection label="Program">
+        {PROGRAM_FIELDS.map((field, i) => (
           <FieldRow
             key={field.key}
             field={field}

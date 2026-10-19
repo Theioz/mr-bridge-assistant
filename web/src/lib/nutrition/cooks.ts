@@ -182,6 +182,8 @@ export async function eatFromCook(
     date?: string;
     mealPlanId?: string | null;
     notes?: string;
+    /** meal_log.origin (home|restaurant|delivery|travel); validated by the caller. */
+    origin?: string | null;
   },
 ): Promise<{ mealLogId: string; portionsRemaining: number; macros: Totals }> {
   const portions = input.portions ?? 1;
@@ -248,6 +250,7 @@ export async function eatFromCook(
       meal_plan_id: input.mealPlanId ?? null,
       portions,
       notes: input.notes ?? null,
+      ...(input.origin ? { origin: input.origin } : {}),
       ...macros,
     })
     .select("id")
@@ -314,6 +317,7 @@ export async function eatFromRecipe(
     date?: string;
     mealPlanId?: string | null;
     notes?: string;
+    origin?: string | null;
   },
 ): Promise<{
   mealLogId: string;
@@ -363,6 +367,7 @@ export async function eatFromRecipe(
     date: input.date,
     mealPlanId: input.mealPlanId,
     notes: input.notes,
+    origin: input.origin,
   });
 
   return { ...eaten, cookId: cook.id };

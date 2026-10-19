@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { todayString, getLast7Days, startOfDayRFC3339 } from "@/lib/timezone";
+import { todayString, getLast7Days, startOfDayRFC3339, addDays } from "@/lib/timezone";
+import { computeScorecard, PROJECTION_WINDOW_DAYS, type Scorecard } from "@/lib/scorecard";
 import { computeStreaks } from "@/lib/streaks";
 import { getHabitIcon } from "@/lib/habit-icons";
 import { weeklyCompletion } from "@/lib/habits/weekly-completion";
@@ -99,6 +100,206 @@ function Panel({
         {children}
       </div>
     </section>
+  );
+}
+
+// ── Scorecard ─────────────────────────────────────────────────────────────────
+
+/**
+ * The program's week in plain numbers (lib/scorecard.ts — the same definitions as the Sunday
+ * push, scripts/_scorecard.py). Its own fetch so it streams alongside the grid; every window is
+ * derived from `today`, a user-timezone date string.
+ */
+async function ScorecardRow({ today }: { today: string }) {
+  const supabase = await createClient();
+  const start = addDays(today, -6);
+  // 28 days covers the landing projection and, inside it, the prior-week weight mean.
+  const fitnessStart = addDays(today, -(PROJECTION_WINDOW_DAYS - 1));
+
+  const [profileRes, fitnessRes, sessionsRes, recoveryRes, mealsRes, plansRes] = await Promise.all([
+    supabase.from("profile").select("key,value"),
+    supabase
+      .from("fitness_log")
+      .select("date,weight_lb")
+      .not("weight_lb", "is", null)
+      .gte("date", fitnessStart)
+      .lte("date", today),
+    // Programmed sessions only: walk pull-ups are logged as strength_sessions with no plan id
+    // and would otherwise count as lifting days.
+    supabase
+      .from("strength_sessions")
+      .select("performed_on")
+      .not("workout_plan_id", "is", null)
+      .gte("performed_on", start)
+      .lte("performed_on", today),
+    supabase.from("recovery_metrics").select("date,steps").gte("date", start).lte("date", today),
+    supabase
+      .from("meal_log")
+      .select("date,calories,protein_g,standard_drinks,origin")
+      .gte("date", start)
+      .lte("date", today),
+    supabase.from("meal_plans").select("date,is_cheat").gte("date", start).lte("date", today),
+  ]);
+
+  const profile: Record<string, string> = {};
+  for (const row of (profileRes.data ?? []) as { key: string; value: string }[]) {
+    profile[row.key] = row.value;
+  }
+
+  const card = computeScorecard({
+    today,
+    profile,
+    fitness: fitnessRes.data ?? [],
+    sessions: sessionsRes.data ?? [],
+    recovery: recoveryRes.data ?? [],
+    meals: mealsRes.data ?? [],
+    plans: plansRes.data ?? [],
+  });
+
+  return <ScorecardPanels card={card} />;
+}
+
+function fmtLimit(value: string, limit: number | null, prefix = "/"): React.ReactNode {
+  return (
+    <>
+      {value}
+      {limit != null && (
+        <span style={{ color: "var(--color-text-faint)" }}>
+          {" "}
+          {prefix} {limit}
+        </span>
+      )}
+    </>
+  );
+}
+
+const scoreLabel: React.CSSProperties = {
+  paddingTop: "var(--space-3)",
+  paddingBottom: "var(--space-3)",
+  borderTop: "1px solid var(--rule-soft)",
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  verticalAlign: "baseline",
+};
+const scoreValue: React.CSSProperties = {
+  ...scoreLabel,
+  color: "var(--color-text)",
+  textAlign: "right",
+  whiteSpace: "nowrap",
+};
+
+function Row({ name, children }: { name: string; children: React.ReactNode }) {
+  return (
+    <tr>
+      <td style={scoreLabel}>{name}</td>
+      <td className="tnum" style={scoreValue}>
+        {children}
+      </td>
+    </tr>
+  );
+}
+
+function ScorecardPanels({ card }: { card: Scorecard }) {
+  const breached = new Set(card.breaches);
+  const over = (b: Scorecard["breaches"][number]): React.CSSProperties | undefined =>
+    breached.has(b) ? { color: "var(--accent)" } : undefined;
+
+  return (
+    <div
+      className="grid grid-cols-1 lg:grid-cols-2"
+      style={{
+        gap: "var(--space-7)",
+        paddingBottom: "var(--space-7)",
+        borderBottom: "1px solid var(--rule-soft)",
+      }}
+    >
+      <Panel title="Scorecard" meta=" · last 7 days">
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <tbody>
+            <Row name="Weight, 7-day mean">
+              {card.weight7 != null ? `${fmtNum(card.weight7, 1)} lb` : "—"}
+              {card.delta != null && (
+                <span style={{ color: "var(--color-text-faint)" }}>
+                  {" "}
+                  · {deltaText(card.weight7, card.prev7)} vs prior
+                </span>
+              )}
+            </Row>
+            <Row name="Plan line">
+              {card.expected != null ? `${fmtNum(card.expected, 1)} lb` : "—"}
+            </Row>
+            <Row name="Landing at 4-week trend">
+              {card.goal == null
+                ? "no goal set"
+                : card.landing
+                  ? `${fmtNum(card.goal, 0)} lb by ${fmtDate(card.landing)}`
+                  : card.weight7 != null
+                    ? "not trending down"
+                    : "—"}
+            </Row>
+            <Row name="Lifting sessions">
+              {fmtLimit(String(card.sessions), card.sessionsTarget)}
+            </Row>
+            <Row name={`Days at ${card.stepsGoal.toLocaleString()}+ steps`}>
+              {fmtLimit(String(card.stepsDays), 7)}
+            </Row>
+            <Row name="Food days logged">{fmtLimit(String(card.daysLogged), 7)}</Row>
+            <Row name="Avg intake, logged days">
+              {card.avgKcal != null
+                ? `${fmtNum(card.avgKcal)} kcal · ${fmtNum(card.avgProtein)} g protein`
+                : "—"}
+            </Row>
+            <Row name="Cheat meals">{card.cheatMeals}</Row>
+            <Row name="Delivery orders">
+              {card.deliveryN}
+              {card.deliveryN > 0 && (
+                <span style={{ color: "var(--color-text-faint)" }}>
+                  {" "}
+                  · {card.deliveryKcal.toLocaleString()} kcal
+                </span>
+              )}
+            </Row>
+          </tbody>
+        </table>
+      </Panel>
+
+      <Panel
+        title="Alcohol"
+        meta={card.breaches.length ? ` · over: ${card.breaches.join(", ")}` : undefined}
+      >
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <tbody>
+            <Row name="Standard drinks">
+              <span style={over("weekly cap")}>{fmtLimit(String(card.drinks), card.cap)}</span>
+            </Row>
+            <Row name="Dry days">
+              <span style={over("dry days")}>
+                {fmtLimit(String(card.dryDays), card.dryMin, "· min")}
+              </span>
+            </Row>
+            <Row name="Most in one day">
+              <span style={over("per occasion")}>
+                {fmtLimit(String(card.maxDay), card.perOccasion, "· limit")}
+              </span>
+            </Row>
+            <Row name="Alcohol kcal">{card.alcoholKcal.toLocaleString()}</Row>
+            <Row name="Share of food deficit">
+              {card.alcoholSharePct != null ? `${fmtNum(card.alcoholSharePct)}%` : "—"}
+            </Row>
+          </tbody>
+        </table>
+        <p
+          style={{
+            marginTop: "var(--space-3)",
+            fontSize: "var(--t-micro)",
+            color: "var(--color-text-faint)",
+          }}
+        >
+          Unlogged days count as dry. Deficit share needs 5+ logged food days; standard drink = 14 g
+          ethanol.
+        </p>
+      </Panel>
+    </div>
   );
 }
 
@@ -918,7 +1119,8 @@ export default async function WeeklyPage() {
           {rangeLabel}
         </p>
       </header>
-      <Suspense fallback={<div style={{ minHeight: 880 }} />}>
+      <Suspense fallback={<div style={{ minHeight: 1320 }} />}>
+        <ScorecardRow today={today} />
         <WeeklyGrid today={today} weekStart={weekStart} last7Days={last7Days} />
       </Suspense>
     </div>

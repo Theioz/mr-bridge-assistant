@@ -31,7 +31,11 @@ export default function Loading() {
         <Skeleton className="h-3 w-36" style={{ marginTop: "var(--space-2)" }} />
       </div>
 
-      {/* Three rows of two uniform-height panels, hairline-separated */}
+      {/* Four rows of two uniform-height panels (Scorecard first), hairline-separated */}
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
+        <PanelSkeleton />
+        <PanelSkeleton />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2" style={rowStyle}>
         <PanelSkeleton />
         <PanelSkeleton />

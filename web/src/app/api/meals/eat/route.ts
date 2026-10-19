@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { eatFromCook, eatFromRecipe } from "@/lib/nutrition/cooks";
+import { parseOrigin } from "@/lib/nutrition/origin";
 
 /**
  * "I ate this." One tap: the macros are already known, so there is no photo, no local model
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     date?: string;
     meal_plan_id?: string;
     notes?: string;
+    origin?: string;
   };
   try {
     body = await req.json();
@@ -44,6 +46,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "cook_id or recipe_id is required" }, { status: 400 });
   }
 
+  const origin = parseOrigin(body.origin);
+  if (!origin.ok) return NextResponse.json({ error: origin.error }, { status: 400 });
+
   try {
     const db = createServiceClient();
     const result = body.cook_id
@@ -54,6 +59,7 @@ export async function POST(req: NextRequest) {
           date: body.date,
           mealPlanId: body.meal_plan_id ?? null,
           notes: body.notes,
+          origin: origin.origin,
         })
       : await eatFromRecipe(db, user.id, {
           recipeId: body.recipe_id!,
@@ -62,6 +68,7 @@ export async function POST(req: NextRequest) {
           date: body.date,
           mealPlanId: body.meal_plan_id ?? null,
           notes: body.notes,
+          origin: origin.origin,
         });
     return NextResponse.json({ success: true, ...result });
   } catch (err) {

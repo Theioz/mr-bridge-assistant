@@ -117,6 +117,7 @@ export function WeekPlan({
                         }}
                       >
                         {name}
+                        {p.is_cheat && <span style={cheatStyle}>Cheat meal</span>}
                       </span>
                       <span style={statusStyle}>
                         {eaten
@@ -206,6 +207,14 @@ const nameStyle: React.CSSProperties = {
   fontSize: "var(--t-body)",
   minWidth: 0,
   overflowWrap: "anywhere",
+};
+
+// A small inline tag, not a badge: the cheat meal is planned, so it is labelled, not flagged.
+const cheatStyle: React.CSSProperties = {
+  marginLeft: "var(--space-2)",
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  whiteSpace: "nowrap",
 };
 
 const statusStyle: React.CSSProperties = {
