@@ -145,10 +145,7 @@ export interface OuraSyncResult {
   withData: number;
 }
 
-// Oura can publish a day's scores (readiness, daily_sleep) days before that night's /sleep
-// session and /daily_activity land. With a 3-day window the scores arrived and the detail never
-// did: two weeks of rows carried readiness and NULL sleep/HRV/steps, every run logged `status: ok`.
-// A wider window costs eight slightly longer requests per run and re-reads late arrivals.
+// How many days each run re-reads, so a day a failed run missed is picked up by the next one.
 export const DEFAULT_OURA_SYNC_DAYS = 14;
 
 export async function syncOura(
@@ -164,6 +161,14 @@ export async function syncOura(
 
   const startStr = daysAgoString(days);
   const endStr = todayString();
+  // Fetch from the day BEFORE the window, then write only dates inside it. /sleep and
+  // /daily_activity omit the start_date day itself, while the daily_* score endpoints include
+  // it, so the first day of the window came back with readiness but no sleep or steps — and the
+  // upsert below then overwrote that day's good row with NULLs. Every day eventually becomes
+  // the first day of some run, so the damage walked backwards one day per run: only the newest
+  // days ever looked complete, all under `status: ok`. Reproduced 2026-10-22 with --days 13/14/15:
+  // each run blanked exactly its own start date.
+  const fetchStart = daysAgoString(days + 1);
 
   const [
     sleepData,
@@ -175,14 +180,14 @@ export async function syncOura(
     resilienceData,
     vo2Data,
   ] = await Promise.all([
-    ouraGet("sleep", startStr, endStr, token),
-    ouraGet("daily_readiness", startStr, endStr, token),
-    ouraGet("daily_sleep", startStr, endStr, token),
-    ouraGet("daily_activity", startStr, endStr, token),
-    ouraGet("daily_spo2", startStr, endStr, token, false),
-    ouraGet("daily_stress", startStr, endStr, token, false),
-    ouraGet("daily_resilience", startStr, endStr, token, false),
-    ouraGet("vo2_max", startStr, endStr, token, false),
+    ouraGet("sleep", fetchStart, endStr, token),
+    ouraGet("daily_readiness", fetchStart, endStr, token),
+    ouraGet("daily_sleep", fetchStart, endStr, token),
+    ouraGet("daily_activity", fetchStart, endStr, token),
+    ouraGet("daily_spo2", fetchStart, endStr, token, false),
+    ouraGet("daily_stress", fetchStart, endStr, token, false),
+    ouraGet("daily_resilience", fetchStart, endStr, token, false),
+    ouraGet("vo2_max", fetchStart, endStr, token, false),
   ]);
 
   type SleepDetail = Record<string, number | string | null>;
@@ -267,7 +272,10 @@ export async function syncOura(
 
   const allDates = [
     ...new Set([...Object.keys(sleepDetail), ...Object.keys(readiness), ...Object.keys(activity)]),
-  ].sort();
+  ]
+    // Drop the fetchStart day: it is the one /sleep and /daily_activity leave out.
+    .filter((d) => d >= startStr)
+    .sort();
 
   const rows = allDates.map((d) => {
     const sd = sleepDetail[d] ?? {};

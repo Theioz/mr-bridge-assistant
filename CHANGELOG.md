@@ -29,14 +29,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
-- **Oura sync looks back 14 days instead of 3.** Oura can publish a day's readiness and sleep
-  score days before that night's `/sleep` session and `/daily_activity` arrive. With a 3-day
-  window the scores landed and the detail never did, so `recovery_metrics` rows held readiness
-  with NULL sleep, HRV, resting HR and steps while every run logged `status: ok`. The default
-  is now `DEFAULT_OURA_SYNC_DAYS = 14` (`web/src/lib/sync/oura.ts`), used by both the nightly
-  `/api/cron/sync` and the manual `/api/sync/oura`; `--days N` still overrides it. Late steps
-  data can now auto-complete the "10,000 Steps" habit for a day up to 14 days back. As before,
-  it never un-completes a day.
+- **Oura sync no longer blanks the first day of its window.** `/sleep` and `/daily_activity`
+  leave out the `start_date` day, while the `daily_*` score endpoints include it. So the
+  window's first day came back with readiness but no sleep or steps, and the upsert
+  overwrote that day's good `recovery_metrics` row with NULL sleep, HRV, resting HR, bedtime
+  and steps. Every day eventually becomes the first day of some run, so rows went blank one
+  day per run: only the newest days ever looked complete, and every run logged `status: ok`.
+  Reproduced with `--days 13/14/15`, each of which blanked exactly its own start date. The
+  sync now fetches from one day before the window and writes only the dates inside it.
+- **Oura sync looks back 14 days instead of 3** (`DEFAULT_OURA_SYNC_DAYS`, #781), so a run that
+  fails is covered by the next. This was first shipped as the fix for the blank rows above,
+  and it did not fix them; the window-start fix does. Late steps data can now auto-complete
+  the "10,000 Steps" habit up to 14 days back. As before, it never un-completes a day.
 
 ### Changed
 
