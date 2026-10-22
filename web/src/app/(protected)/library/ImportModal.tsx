@@ -164,7 +164,7 @@ export default function ImportModal({
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: 48,
+        paddingTop: "calc(48px + env(safe-area-inset-top))",
         paddingLeft: 16,
         paddingRight: 16,
       }}

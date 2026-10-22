@@ -27,9 +27,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       {/* ml-0 on mobile (nav is bottom bar), ml-60 on desktop (240px sidebar) */}
       {/* pb-16 on mobile to clear the 56px bottom tab bar */}
       {/* pb accounts for 56px tab bar + safe-area-inset-bottom on iOS */}
+      {/* pt adds safe-area-inset-top: in the Android app (#782) the WebView draws edge-to-edge under
+          the status bar (viewportFit "cover"). 0 in a browser or the installed PWA, so no change there. */}
       <main
         id="main-content"
-        className="flex-1 ml-0 lg:ml-60 px-5 lg:px-8 pt-8 pb-[calc(56px+env(safe-area-inset-bottom)+16px)] lg:pb-8 min-w-0"
+        className="flex-1 ml-0 lg:ml-60 px-5 lg:px-8 pt-[calc(2rem+env(safe-area-inset-top))] lg:pt-8 pb-[calc(56px+env(safe-area-inset-bottom)+16px)] lg:pb-8 min-w-0"
       >
         <div className="max-w-6xl mx-auto">{children}</div>
       </main>
