@@ -150,7 +150,7 @@ export default function SearchModal({
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: 60,
+        paddingTop: "calc(60px + env(safe-area-inset-top))",
         paddingLeft: 16,
         paddingRight: 16,
       }}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MB "M" from web/src/app/icon.svg, scaled 2.5x into the 108dp adaptive-icon canvas so it
+     stays inside the 66dp safe zone every launcher mask preserves. Also the themed (monochrome)
+     icon and the splash-screen icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M34,71.5 V36.5 L54,59 L74,36.5 V71.5"
+        android:strokeColor="#C5872F"
+        android:strokeWidth="6.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

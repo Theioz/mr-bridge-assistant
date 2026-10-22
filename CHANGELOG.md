@@ -9,6 +9,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Android app: a sideloaded Capacitor shell over the live web app (#782).** New `android/`
+  directory, with Capacitor 8.5.3 and the Gradle project in `android/native`. `server.url` loads
+  `https://mr-bridge.jl-infra-lab.com/dashboard` full screen, so web deploys reach the app
+  without a rebuild. `www/offline.html` is shown when the tailnet is unreachable. The launcher
+  icon, themed icon and splash use vector drawables made from `web/src/app/icon.svg`'s path, with
+  no raster assets. Release signing reads `~/.mrb-android/keystore.properties`, outside the
+  public repo. Without it, `build.sh` refuses to build rather than sign with another key, because
+  a key change forces an uninstall that wipes app data. `scripts/setup-toolchain.sh` installs
+  JDK 21 and the Android command-line tools on macOS (Homebrew) or Linux/WSL (apt plus a
+  SHA-1-verified Google zip), with no Android Studio. `build.sh` builds and verifies the signed
+  APK, and `install.sh` installs it over Wireless debugging (`adb install -r` keeps app data).
+  Runbook: `android/README.md`. Google OAuth can't run in a WebView (`disallowed_useragent`), so
+  integrations are connected from Chrome.
+
 - **Program tracking: weekly scorecard, drink logging, travel-aware coaching.** Migration
   `20261019120000_program_tracking.sql` adds `meal_log.standard_drinks` (US standard drinks, 14 g
   ethanol), `meal_log.origin` (home/restaurant/delivery/travel), `meal_plans.is_cheat`, and a

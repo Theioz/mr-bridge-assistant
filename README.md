@@ -286,6 +286,14 @@ Run it on compute-core: the script calls the app's AI-free `/api/internal/plan` 
 tailnet `APP_URL` is not reachable from that node. `submit` writes `workout_plans` rows and the
 meal-prep task. See `.claude/commands/weekly-plan.md` for the full procedure.
 
+### Step 13 — Android app *(optional)*
+
+The PWA already installs from Chrome. For a real app in the drawer, `android/` is a thin
+Capacitor shell that opens the live URL full screen, sideloaded over Wireless debugging with no
+Play Store. It builds the same way on macOS and Linux/WSL, with no Android Studio. Web deploys
+reach it without a reinstall. See [`android/README.md`](android/README.md) for setup, the
+signing key, build and install.
+
 ---
 
 ## Slash commands
@@ -350,6 +358,11 @@ mr-bridge-assistant/
 ├── .env.example                           # Root env var template (Python scripts, MCP server, app container)
 ├── .gitignore
 ├── .mcp.json                              # MCP servers for this repo: mr-bridge + playwright
+│
+├── android/                               # Capacitor shell over the live app, sideloaded (#782); see android/README.md
+│   ├── capacitor.config.json
+│   ├── native/                            # Gradle project
+│   └── scripts/                           # setup-toolchain.sh, build.sh, install.sh
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
