@@ -1,0 +1,5 @@
+node_modules/
+# Signing material never lives in the repo (it is public): ~/.mrb-android/, from the vault.
+*.jks
+*.keystore
+keystore.properties

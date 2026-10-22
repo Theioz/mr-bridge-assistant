@@ -1,0 +1,14 @@
+{
+  "appId": "com.jlinfralab.mrbridge",
+  "appName": "Mr. Bridge",
+  "webDir": "www",
+  "server": {
+    "url": "https://mr-bridge.jl-infra-lab.com/dashboard",
+    "allowNavigation": ["mr-bridge.jl-infra-lab.com", "supabase.jl-infra-lab.com"],
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "path": "native",
+    "backgroundColor": "#261C13"
+  }
+}

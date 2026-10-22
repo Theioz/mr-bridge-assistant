@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 7.x (API 24-25) only; 26+ uses mipmap-anydpi-v26/ic_launcher_round.xml. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <path
+        android:fillColor="#261C13"
+        android:pathData="M16,0 A16,16 0 1 1 16,32 A16,16 0 1 1 16,0 Z" />
+    <path
+        android:pathData="M10,21.5 V10.5 L16,17.5 L22,10.5 V21.5"
+        android:strokeColor="#C5872F"
+        android:strokeWidth="2.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
