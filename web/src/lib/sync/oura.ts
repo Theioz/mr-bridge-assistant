@@ -145,10 +145,16 @@ export interface OuraSyncResult {
   withData: number;
 }
 
+// Oura can publish a day's scores (readiness, daily_sleep) days before that night's /sleep
+// session and /daily_activity land. With a 3-day window the scores arrived and the detail never
+// did: two weeks of rows carried readiness and NULL sleep/HRV/steps, every run logged `status: ok`.
+// A wider window costs eight slightly longer requests per run and re-reads late arrivals.
+export const DEFAULT_OURA_SYNC_DAYS = 14;
+
 export async function syncOura(
   db: SupabaseClient,
   userId: string,
-  days = 3,
+  days = DEFAULT_OURA_SYNC_DAYS,
 ): Promise<OuraSyncResult> {
   const integration = await loadIntegration(db, userId, "oura");
   if (!integration?.refreshToken) {

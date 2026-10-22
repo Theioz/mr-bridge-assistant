@@ -27,6 +27,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   the travel rules. `_travel.py` gains `stay_days()` / `excluded_weigh_ins()`, and six movements are
   mapped in the validator. Tests: `tests/test_scorecard.py`.
 
+### Fixed
+
+- **Oura sync looks back 14 days instead of 3.** Oura can publish a day's readiness and sleep
+  score days before that night's `/sleep` session and `/daily_activity` arrive. With a 3-day
+  window the scores landed and the detail never did, so `recovery_metrics` rows held readiness
+  with NULL sleep, HRV, resting HR and steps while every run logged `status: ok`. The default
+  is now `DEFAULT_OURA_SYNC_DAYS = 14` (`web/src/lib/sync/oura.ts`), used by both the nightly
+  `/api/cron/sync` and the manual `/api/sync/oura`; `--days N` still overrides it. Late steps
+  data can now auto-complete the "10,000 Steps" habit for a day up to 14 days back. As before,
+  it never un-completes a day.
+
 ### Changed
 
 - **The three oversized client components are split into modules (#777).** No behaviour change;
