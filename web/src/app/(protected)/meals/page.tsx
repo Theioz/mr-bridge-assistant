@@ -60,7 +60,7 @@ export default async function MealsPage() {
       ? supabase
           .from("recipes")
           .select(
-            "id, name, cuisine, tags, ingredients, instructions, ingredients_json, steps_json",
+            "id, name, cuisine, tags, ingredients, instructions, ingredients_json, steps_json, typical_portions",
           )
           .eq("user_id", userId)
           .order("name")

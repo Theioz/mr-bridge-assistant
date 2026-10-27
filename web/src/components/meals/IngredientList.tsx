@@ -1,4 +1,9 @@
-import { formatIngredient, groupIngredients, parseIngredients } from "@/lib/units";
+import {
+  formatIngredient,
+  groupIngredients,
+  parseIngredients,
+  scaleIngredients,
+} from "@/lib/units";
 import type { RecipeIngredient } from "@/lib/types";
 
 /**
@@ -20,20 +25,27 @@ import type { RecipeIngredient } from "@/lib/types";
  *
  * A real `<ul>` rather than a text blob: an ingredient list IS a list, and screen readers announce
  * the item count, which a pre-line paragraph does not.
+ *
+ * `basePortions` / `portions` scale the structured amounts for display (see PortionScaler). Legacy
+ * text has no amounts as data, so it always renders as written — the scaler hides itself there.
  */
 export function IngredientList({
   items,
   text,
   tone = "default",
+  basePortions = 1,
+  portions = basePortions,
 }: {
   items?: RecipeIngredient[] | null;
   text?: string | null;
   tone?: "default" | "muted";
+  basePortions?: number;
+  portions?: number;
 }) {
   const color = tone === "muted" ? "var(--color-text-muted)" : "var(--color-text)";
 
   if (items?.length) {
-    const groups = groupIngredients(items);
+    const groups = groupIngredients(scaleIngredients(items, basePortions, portions));
     // A single ungrouped bucket is the common case — render a bare list with no heading rather
     // than wrapping every flat recipe in a pointless section.
     const flat = groups.length === 1 && groups[0].group === null;

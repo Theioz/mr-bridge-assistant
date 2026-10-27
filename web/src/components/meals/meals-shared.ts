@@ -31,6 +31,8 @@ export interface RecipeRow {
   instructions: string | null;
   ingredients_json: RecipeIngredient[] | null;
   steps_json: RecipeStep[] | null;
+  /** What a full batch makes; the base the PortionScaler scales from. */
+  typical_portions: number | null;
 }
 
 export interface DailyMacroTotals {

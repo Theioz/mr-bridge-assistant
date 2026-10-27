@@ -180,6 +180,36 @@ export function formatIngredient(ing: RecipeIngredient): string {
   return line;
 }
 
+// Units weighed or poured on a scale: scaled amounts round to a whole number of them. Everything
+// else (tbsp, clove, can, each…) is counted by hand, so it rounds to the nearest quarter — nobody
+// measures 0.67 tbsp, and 1.75 tbsp is the finest a spoon set reads anyway.
+const SCALE_UNITS = new Set(["g", "gram", "grams", "ml", "milliliter", "milliliters"]);
+
+/**
+ * A recipe's ingredients for `portions` instead of the `basePortions` it was written for.
+ *
+ * Quantity is the only field that moves. `note` is dropped on a scaled row because notes are
+ * written about the stored amount ("this single tablespoon is 879 mg") and would read as wrong
+ * beside a doubled one. A null quantity ("salt, to taste") stays null. A non-positive or
+ * non-finite target returns the list untouched rather than zeroing every line.
+ */
+export function scaleIngredients(
+  items: RecipeIngredient[],
+  basePortions: number,
+  portions: number,
+): RecipeIngredient[] {
+  if (!(basePortions > 0) || !(portions > 0) || !Number.isFinite(portions)) return items;
+  const factor = portions / basePortions;
+  if (factor === 1) return items;
+  return items.map((ing) => {
+    if (ing.quantity == null) return ing;
+    const raw = ing.quantity * factor;
+    const onScale = SCALE_UNITS.has((ing.unit ?? "").toLowerCase());
+    const quantity = onScale ? Math.round(raw) : Math.max(0.25, Math.round(raw * 4) / 4);
+    return { ...ing, quantity, note: null };
+  });
+}
+
 /**
  * Ingredients bucketed by `group`, preserving first-seen order for both the groups and the rows
  * inside them. Ungrouped rows collect under a null key, which the renderer prints without a
