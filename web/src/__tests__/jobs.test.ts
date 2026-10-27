@@ -18,6 +18,7 @@ import {
   trackerPatch,
   trackerSummary,
   weekStart,
+  type Block,
 } from "../lib/jobs/jobs.ts";
 
 const NOW = "2026-10-28T16:00:00.000Z";
@@ -206,11 +207,76 @@ describe("parseMarkdown", () => {
       type: "p",
       inl: [{ t: "text", s: "Two new roles. Second line." }],
     });
-    const ul = blocks[2] as { type: "ul"; items: unknown[][] };
-    assert.deepEqual(ul.items[0][0], { t: "b", s: "Acme" });
-    const table = blocks[3] as { type: "table"; head: unknown[][]; rows: unknown[][][] };
+    const ul = blocks[2] as Extract<Block, { type: "ul" }>;
+    assert.deepEqual(ul.items[0], {
+      depth: 0,
+      inl: [
+        { t: "b", s: "Acme" },
+        { t: "text", s: " TPM" },
+      ],
+    });
+    const table = blocks[3] as Extract<Block, { type: "table" }>;
     assert.equal(table.head.length, 2);
     assert.deepEqual(table.rows, [[[{ t: "text", s: "Acme" }], [{ t: "text", s: "8" }]]]);
+  });
+
+  it("--- is a rule and indented items nest", () => {
+    const blocks = parseMarkdown("Intro\n\n---\n- top\n  - nested\n    - deeper\n- top again\n***");
+    assert.deepEqual(
+      blocks.map((b) => b.type),
+      ["p", "hr", "ul", "hr"],
+    );
+    const ul = blocks[2] as Extract<Block, { type: "ul" }>;
+    assert.deepEqual(
+      ul.items.map((it) => it.depth),
+      [0, 1, 2, 0],
+    );
+  });
+
+  // The shape of the daily report (synthetic content): one ## heading per role, then a meta
+  // line, a Posting link, bold sub-headings each followed directly by a list, and bold-led lines.
+  it("parses a per-role report section", () => {
+    const md = [
+      "# Job Scout - 2026-10-27 (Tuesday)",
+      "",
+      "Checked 66 companies; 10 recommended.",
+      "",
+      "## 1. Acme - TPM Manager, Infrastructure",
+      "Fit 8/10 (High) | Location: San Francisco | Pay: $200k-$250k base",
+      "",
+      "[Posting](https://jobs.example.com/acme/1)",
+      "",
+      "**Why it fits**",
+      "- Capacity planning scope.",
+      "- Cost visibility work.",
+      "",
+      "**Gaps / risks**",
+      "- Manager title.",
+      "",
+      "**Lead story:** Datacenter capacity strategy.",
+      "",
+      "## 2. Beta - Senior TPM",
+      "Fit 7/10 (Medium)",
+      "",
+      "## Filtered out today",
+      "",
+      "| Stage | Count |",
+      "|---|---|",
+      "| Prefiltered | 472 |",
+    ].join("\n");
+    const blocks = parseMarkdown(md);
+    assert.deepEqual(
+      blocks.map((b) => b.type),
+      ["h1", "p", "h2", "p", "p", "p", "ul", "p", "ul", "p", "h2", "p", "h2", "table"],
+    );
+    assert.deepEqual((blocks[4] as { inl: unknown }).inl, [
+      { t: "a", s: "Posting", href: "https://jobs.example.com/acme/1" },
+    ]);
+    assert.deepEqual((blocks[9] as { inl: unknown }).inl, [
+      { t: "b", s: "Lead story:" },
+      { t: "text", s: " Datacenter capacity strategy." },
+    ]);
+    assert.equal((blocks[6] as Extract<Block, { type: "ul" }>).items.length, 2);
   });
 
   it("only http(s) links become links; HTML stays text", () => {

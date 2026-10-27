@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, FileText, Plus } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 import type { JobRow, Status } from "@/lib/jobs/jobs";
 import {
   inTab,
@@ -59,34 +59,20 @@ export function useJobRows(initial: JobRow[]) {
   return { rows, peek, setPeek, saved, patch, error };
 }
 
-export function LinkIcons({ job }: { job: Pick<JobRow, "url" | "notion_page_url"> }) {
+/** The posting's ↗ link. (No Notion link: imported Notion page urls do not open.) */
+export function LinkIcons({ job }: { job: Pick<JobRow, "url"> }) {
+  if (!job.url) return null;
   return (
-    <span style={{ display: "inline-flex", gap: 2 }}>
-      {job.url && (
-        <a
-          className="jobs-link"
-          href={job.url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Open posting"
-          title="Posting"
-        >
-          <ExternalLink size={14} aria-hidden />
-        </a>
-      )}
-      {job.notion_page_url && (
-        <a
-          className="jobs-link"
-          href={job.notion_page_url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Open Notion page"
-          title="Notion page"
-        >
-          <FileText size={14} aria-hidden />
-        </a>
-      )}
-    </span>
+    <a
+      className="jobs-link"
+      href={job.url}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Open posting"
+      title="Posting"
+    >
+      <ExternalLink size={14} aria-hidden />
+    </a>
   );
 }
 
@@ -194,7 +180,7 @@ export function TrackerTable({ jobs, today }: { jobs: JobRow[]; today: string })
       title: (r) => r.location ?? undefined,
       render: (r) => r.location,
     },
-    { key: "links", label: "Links", width: "4.5rem", render: (r) => <LinkIcons job={r} /> },
+    { key: "links", label: "Link", width: "3.5rem", render: (r) => <LinkIcons job={r} /> },
   ];
 
   return (

@@ -6,6 +6,7 @@ import { parseMarkdown, type Inline } from "@/lib/jobs/jobs";
  * in lib/jobs/jobs.ts only knows headings, paragraphs, lists, tables, bold and http(s) links.
  */
 export function ReportView({ markdown }: { markdown: string }) {
+  let sections = 0; // h2/h3 seen so far: each one after the first starts a new role, so gets a rule
   return (
     <div
       style={{ fontSize: "var(--t-body)", color: "var(--color-text)", overflowWrap: "anywhere" }}
@@ -13,17 +14,39 @@ export function ReportView({ markdown }: { markdown: string }) {
       {parseMarkdown(markdown).map((b, i) => {
         switch (b.type) {
           case "h1":
-          case "h2":
             return (
               <h3 key={i} className="font-heading" style={headStyle}>
                 {render(b.inl)}
               </h3>
             );
-          case "h3":
+          case "h2":
+          case "h3": {
+            const divided = sections++ > 0;
             return (
-              <h4 key={i} style={{ ...headStyle, fontSize: "var(--t-body)" }}>
+              <h4
+                key={i}
+                className={b.type === "h2" ? "font-heading" : undefined}
+                style={{
+                  ...headStyle,
+                  fontSize: b.type === "h2" ? headStyle.fontSize : "var(--t-body)",
+                  ...(divided ? dividerStyle : null),
+                }}
+              >
                 {render(b.inl)}
               </h4>
+            );
+          }
+          case "hr":
+            return (
+              <hr
+                key={i}
+                style={{
+                  ...dividerStyle,
+                  border: 0,
+                  borderTop: dividerStyle.borderTop,
+                  paddingTop: 0,
+                }}
+              />
             );
           case "p":
             return (
@@ -33,9 +56,19 @@ export function ReportView({ markdown }: { markdown: string }) {
             );
           case "ul":
             return (
-              <ul key={i} style={{ margin: "var(--space-2) 0", paddingLeft: "var(--space-5)" }}>
+              <ul key={i} style={{ margin: "var(--space-1) 0 var(--space-2)", padding: 0 }}>
                 {b.items.map((it, j) => (
-                  <li key={j}>{render(it)}</li>
+                  <li
+                    key={j}
+                    style={{
+                      listStyle: it.depth ? "circle" : "disc",
+                      marginLeft: `calc(var(--space-5) + ${it.depth} * var(--space-4))`,
+                      paddingLeft: 2,
+                      marginBlock: 2,
+                    }}
+                  >
+                    {render(it.inl)}
+                  </li>
                 ))}
               </ul>
             );
@@ -77,7 +110,7 @@ function render(inl: Inline[]): ReactNode {
     x.t === "b" ? (
       <strong key={i}>{x.s}</strong>
     ) : x.t === "a" ? (
-      <a key={i} href={x.href} target="_blank" rel="noreferrer">
+      <a key={i} href={x.href} target="_blank" rel="noreferrer" style={linkStyle}>
         {x.s}
       </a>
     ) : (
@@ -90,6 +123,16 @@ const headStyle: CSSProperties = {
   fontSize: "var(--t-h3, var(--t-body))",
   fontWeight: 600,
   margin: "var(--space-4) 0 var(--space-1)",
+};
+const linkStyle: CSSProperties = {
+  color: "var(--accent-text)",
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+};
+const dividerStyle: CSSProperties = {
+  borderTop: "1px solid var(--rule)",
+  paddingTop: "var(--space-4)",
+  marginTop: "var(--space-5)",
 };
 const cellStyle: CSSProperties = {
   border: "1px solid var(--rule-soft)",

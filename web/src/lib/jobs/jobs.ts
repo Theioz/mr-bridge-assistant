@@ -299,12 +299,13 @@ export function feedbackStatus(r: Pick<JobRow, "feedback" | "processed_at" | "st
 export type Inline = { t: "text" | "b"; s: string } | { t: "a"; s: string; href: string };
 export type Block =
   | { type: "h1" | "h2" | "h3" | "p"; inl: Inline[] }
-  | { type: "ul"; items: Inline[][] }
+  | { type: "ul"; items: { depth: number; inl: Inline[] }[] }
+  | { type: "hr" }
   | { type: "table"; head: Inline[][]; rows: Inline[][][] };
 
 /**
- * The subset of markdown the Job Scout report uses: #/##/### headings, paragraphs, - / * lists,
- * pipe tables, **bold** and [links](https://…). Returned as data so the page renders it with React
+ * The subset of markdown the Job Scout report uses: #/##/### headings, paragraphs, - / * lists
+ * (indent two spaces to nest), --- rules, pipe tables, **bold** and [links](https://…). Returned as data so the page renders it with React
  * elements — the report is agent-written text and is never injected as HTML. Only http(s) links
  * become links; anything else stays text.
  */
@@ -324,11 +325,21 @@ export function parseMarkdown(md: string): Block[] {
       blocks.push({ type: (["h1", "h2", "h3"] as const)[h[1].length - 1], inl: inline(h[2]) });
       continue;
     }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+      flush();
+      blocks.push({ type: "hr" });
+      continue;
+    }
     if (/^\s*[-*]\s+/.test(line)) {
       flush();
-      const items: Inline[][] = [];
+      const items: { depth: number; inl: Inline[] }[] = [];
       while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
-        items.push(inline(lines[i].replace(/^\s*[-*]\s+/, "")));
+        // Two spaces (or a tab) of indent per nesting level, capped at 3.
+        const indent = /^[ \t]*/.exec(lines[i])![0].replace(/\t/g, "  ").length;
+        items.push({
+          depth: Math.min(3, Math.floor(indent / 2)),
+          inl: inline(lines[i].replace(/^\s*[-*]\s+/, "")),
+        });
         i++;
       }
       i--;
