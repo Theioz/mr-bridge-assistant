@@ -827,3 +827,421 @@ body {
     display: none;
   }
 }
+
+/* ─── /jobs database tables (components/jobs/*): Notion-style view, Mr. Bridge tokens ─────── */
+.jobs-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule-soft);
+  margin-bottom: 0;
+}
+.jobs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.jobs-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 2px;
+  font-size: var(--t-micro);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.jobs-tab[aria-selected="true"],
+.jobs-tab[aria-current="page"] {
+  color: var(--color-text);
+  border-bottom-color: var(--color-text);
+  font-weight: 600;
+}
+.jobs-tab:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.jobs-tab-count {
+  color: var(--color-text-faint);
+  font-weight: 400;
+}
+.jobs-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  padding: var(--space-1) 0;
+}
+.jobs-search {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px; /* iOS zooms inputs under 16px (#688) */
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  width: 12rem;
+  max-width: 50vw;
+}
+.jobs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--r-1);
+  border: 1px solid var(--rule-soft);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--t-micro);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.jobs-btn[data-primary] {
+  background: var(--color-cta);
+  border-color: var(--color-cta);
+  color: var(--color-text-on-cta);
+  font-weight: 600;
+}
+.jobs-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jobs-table-wrap {
+  /* Scrolls both ways so the header row can stick (a sideways scroller is also the sticky
+     header's containing block, so the page itself cannot be what scrolls). */
+  overflow: auto;
+  max-height: 70vh;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.jobs-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: var(--t-micro);
+  color: var(--color-text);
+}
+.jobs-table th,
+.jobs-table td {
+  height: 38px;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--rule-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  vertical-align: middle;
+  background: var(--color-bg);
+}
+.jobs-table th + th,
+.jobs-table td + td {
+  border-left: 1px solid var(--rule-soft);
+}
+.jobs-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 34px;
+  font-weight: 400;
+  color: var(--color-text-faint);
+}
+.jobs-table th[data-sticky],
+.jobs-table td[data-sticky] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+.jobs-table thead th[data-sticky] {
+  z-index: 3;
+}
+.jobs-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.jobs-sort[data-active] {
+  color: var(--color-text);
+}
+.jobs-row {
+  cursor: pointer;
+}
+.jobs-row:focus-visible td {
+  background: var(--color-surface);
+}
+.jobs-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  .jobs-row:hover td {
+    background: var(--color-surface);
+  }
+  .jobs-tab:hover,
+  .jobs-sort:hover {
+    color: var(--color-text);
+  }
+  .jobs-btn:not(:disabled):hover {
+    background: var(--hover-subtle);
+  }
+  .jobs-btn[data-primary]:not(:disabled):hover {
+    background: var(--color-cta);
+    opacity: 0.9;
+  }
+}
+.jobs-primary {
+  font-weight: 600;
+}
+.jobs-faint {
+  color: var(--color-text-faint);
+}
+.jobs-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-1);
+  color: var(--color-text-muted);
+}
+.jobs-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+@media (hover: hover) {
+  .jobs-link:hover {
+    background: var(--hover-subtle);
+    color: var(--color-text);
+  }
+}
+
+/* Pills: one hue per tone; the tint and ink are mixed against the current theme's ink so they
+   read on both the dark and the light palette. */
+.jobs-pill {
+  --pill: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 4px;
+  border: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in oklch, var(--pill) 75%, var(--color-text));
+  background: color-mix(in oklch, var(--pill) 20%, transparent);
+}
+.jobs-pill[data-tone="gray"] {
+  --pill: oklch(68% 0.01 260);
+}
+.jobs-pill[data-tone="slate"] {
+  --pill: oklch(66% 0.07 245);
+}
+.jobs-pill[data-tone="yellow"] {
+  --pill: oklch(78% 0.14 90);
+}
+.jobs-pill[data-tone="orange"] {
+  --pill: oklch(72% 0.15 55);
+}
+.jobs-pill[data-tone="purple"] {
+  --pill: oklch(68% 0.15 305);
+}
+.jobs-pill[data-tone="green"] {
+  --pill: var(--color-positive);
+}
+.jobs-pill[data-tone="red"] {
+  --pill: var(--color-danger);
+}
+.jobs-pill[data-tone="muted"] {
+  --pill: oklch(55% 0.005 260);
+  opacity: 0.8;
+}
+.jobs-pill-empty {
+  color: var(--color-text-faint);
+  background: transparent;
+}
+/* The pill trigger: the pill stays small, the hit area is >= 40px tall. */
+.jobs-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 36px;
+  min-width: 40px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.jobs-pill-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-radius: var(--r-1);
+}
+.jobs-pill-btn:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.jobs-pill-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 11rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: var(--space-1);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-lg);
+}
+.jobs-pill-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border-radius: var(--r-1);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.jobs-pill-option[aria-checked="true"] {
+  background: var(--hover-subtle);
+}
+.jobs-pill-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  .jobs-pill-option:hover {
+    background: var(--hover-subtle);
+  }
+}
+
+/* Side peek: a right-hand panel on desktop, a full-screen sheet on a phone. */
+.jobs-peek-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--overlay-scrim);
+}
+.jobs-peek {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 768px) {
+  .jobs-peek-scrim {
+    background: oklch(0% 0 0 / 0.25);
+  }
+  .jobs-peek {
+    left: auto;
+    width: min(34rem, 100vw);
+    border-left: 1px solid var(--rule);
+    box-shadow: var(--shadow-lg);
+  }
+}
+.jobs-peek-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule-soft);
+}
+.jobs-peek-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+}
+.jobs-peek-title {
+  width: 100%;
+  font-family: var(--font-heading, inherit);
+  font-size: var(--t-h2);
+  font-weight: 600;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-bottom: var(--space-3);
+  resize: none;
+  field-sizing: content; /* the title wraps like Notion's instead of scrolling sideways */
+}
+.jobs-props {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 2px var(--space-2);
+  font-size: var(--t-micro);
+}
+.jobs-props > label,
+.jobs-props > span[data-label] {
+  color: var(--color-text-faint);
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+.jobs-prop-input {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+.jobs-prop-input:focus {
+  border-color: var(--rule);
+  background: var(--color-bg);
+  outline: none;
+}
+@media (hover: hover) {
+  .jobs-prop-input:hover {
+    background: var(--hover-subtle);
+  }
+}
+.jobs-notes {
+  width: 100%;
+  min-height: 12rem;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1);
+  padding: var(--space-2);
+  resize: vertical;
+}

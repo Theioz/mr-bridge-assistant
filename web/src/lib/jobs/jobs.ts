@@ -136,10 +136,10 @@ function optDate(v: unknown, field: string): string | null {
   return v;
 }
 
-function optUrl(v: unknown): string | null {
-  const s = optText(v, "url", 1000);
+function optUrl(v: unknown, field = "url"): string | null {
+  const s = optText(v, field, 1000);
   if (!s) return null;
-  if (!/^https?:\/\//i.test(s)) throw new Error("url must start with http:// or https://");
+  if (!/^https?:\/\//i.test(s)) throw new Error(`${field} must start with http:// or https://`);
   return s.replace(/\/+$/, "");
 }
 
@@ -212,6 +212,7 @@ export function trackerPatch(
     }
   }
   if ("url" in b) out.url = optUrl(b.url);
+  if ("notion_page_url" in b) out.notion_page_url = optUrl(b.notion_page_url, "notion_page_url");
   if ("date_applied" in b) out.date_applied = optDate(b.date_applied, "date_applied");
   if ("date_rejected" in b) out.date_rejected = optDate(b.date_rejected, "date_rejected");
 
