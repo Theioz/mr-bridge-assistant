@@ -77,6 +77,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- **/jobs looks like a Notion database.** Jason's feedback on the first version: stacked cards
+  fit ~3 roles per screen. The tracker and the filtered roles are now compact tables
+  (`components/jobs/DataTable.tsx`): sticky header, one 38px line per role with ellipsis, hover
+  highlight, click a header to sort, the Role column pinned while a phone scrolls sideways.
+  Status, fit, stage and feedback are coloured pills; clicking status/fit/feedback opens a small
+  keyboard-operable menu of pills (`PillSelect.tsx`; same `PATCH /api/jobs/<id>` and applied/
+  rejected auto-dates). Clicking a row opens a side peek (`JobPeek.tsx`; a full-screen sheet on a
+  phone) with every property editable in place, the full notes and the Job Scout reason and
+  feedback note; "+ New" uses the same peek and replaces the add-role form. View tabs (Open / To
+  apply / Applied / Interviewing / Rejected / All) with counts and a search over role, company
+  and notes; the filtered table keeps its server-side stage / company / title / toggle filters.
+  The header is a one-line stat strip and the report collapses unless it is today's.
+  `notion_page_url` is now editable. Pure helpers in `lib/jobs/table.ts` (tested).
+
 - **The three oversized client components are split into modules (#777).** No behaviour change;
   code was moved, not rewritten. `MealsClient.tsx` 2,051 → 316 lines: one file per tab
   (`TodayTab`, `RecipesTab`, `PlanTab`, `TrendsTab`), plus `MealRows`, `PastMeals` and

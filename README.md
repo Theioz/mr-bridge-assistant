@@ -378,7 +378,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── dashboard/page.tsx     # Daily dashboard — food, workout, habits, recovery, schedule; re-entry + travel modes
 │   │   │   │   ├── calendar/page.tsx      # Google Calendar — week, day, month views
 │   │   │   │   ├── inventory/page.tsx     # Fridge, freezer, pantry
-│   │   │   │   ├── jobs/page.tsx          # Job Scout report, application tracker, filtered roles + feedback
+│   │   │   │   ├── jobs/page.tsx          # Job Scout report + Notion-style tracker and filtered-roles tables with side peek
 │   │   │   │   ├── library/page.tsx       # Media library — games, shows, movies, books
 │   │   │   │   ├── notifications/page.tsx # Last 30 days of push history
 │   │   │   │   ├── onboarding/page.tsx    # First-run wizard (8 steps) — auth callback redirects here until onboarding is done; sets onboarding_completed in profile on finish

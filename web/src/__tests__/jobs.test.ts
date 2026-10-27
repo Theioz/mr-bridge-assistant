@@ -94,6 +94,14 @@ describe("trackerPatch", () => {
       trackerPatch({ url: "https://x.com/jobs/1/" }, NONE, TODAY).url,
       "https://x.com/jobs/1",
     );
+    assert.equal(
+      trackerPatch({ notion_page_url: "https://www.notion.so/x" }, NONE, TODAY).notion_page_url,
+      "https://www.notion.so/x",
+    );
+    assert.throws(
+      () => trackerPatch({ notion_page_url: "notion://x" }, NONE, TODAY),
+      /notion_page_url must start/,
+    );
     assert.throws(() => trackerPatch({ fit: "great" }, NONE, TODAY), /fit must be/);
     assert.throws(() => trackerPatch({ status: "ghosted" }, NONE, TODAY), /status must be/);
     assert.throws(() => trackerPatch({ url: "javascript:alert(1)" }, NONE, TODAY), /http/);
