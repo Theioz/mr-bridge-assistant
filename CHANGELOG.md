@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Recipes: a "Makes N portions" box that rescales the ingredient list.** Both the planned-meal
+  detail and the Recipes tab show it on any recipe with structured `ingredients_json`, starting at
+  the recipe's `typical_portions` (the batch size Mr. Bridge wrote it for). Changing it rescales the
+  amounts and the "Whole recipe (N)" macro line for display only - nothing is saved, so the stored
+  recipe, its per-serving macros and the grocery list are unaffected. Weighed units (g, ml) round to
+  whole numbers and counted units (tbsp, clove, can) to the nearest quarter; a scaled row hides its
+  `note`, which was written about the stored amount. Steps are free text and are not rescaled; the
+  detail view says so when the count differs. New `scaleIngredients` in `lib/units.ts`, tested in
+  `src/__tests__/scale-ingredients.test.ts`; `typical_portions` added to the `/meals` recipes query.
+
 - **Job Scout v3: Mr. Bridge becomes the job-application tracker, with a Jobs tab.** Notion's free
   plan caps database queries, and reading back ~1,200 filtered roles to dedupe killed the 2026-10-27
   run. Migration `20261027120000_jobs.sql` adds `jobs` (one row per posting url: the scout pipeline

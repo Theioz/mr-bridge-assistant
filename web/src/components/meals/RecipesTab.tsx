@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { IngredientList } from "./IngredientList";
+import { PortionScaler, batchOf } from "./PortionScaler";
 import { MEAL_TYPES, ctaStyle, inputStyle, type MealType, type RecipeRow } from "./meals-shared";
 
 // ─── Recipes Tab ──────────────────────────────────────────────────────────────
@@ -12,6 +13,8 @@ export function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Display-only batch size for the expanded recipe; cleared whenever another one opens.
+  const [makes, setMakes] = useState<number | null>(null);
   const [useRecipeId, setUseRecipeId] = useState<string | null>(null);
   const [useRecipeMealType, setUseRecipeMealType] = useState<MealType>("lunch");
   const [logging, setLogging] = useState(false);
@@ -83,7 +86,10 @@ export function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                 }}
               >
                 <button
-                  onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                  onClick={() => {
+                    setExpandedId(isExpanded ? null : r.id);
+                    setMakes(null);
+                  }}
                   className="w-full text-left flex items-start justify-between"
                   style={{
                     gap: "var(--space-3)",
@@ -166,10 +172,20 @@ export function RecipesTab({ recipes }: { recipes: RecipeRow[] }) {
                   >
                     {r.ingredients && (
                       <div style={{ marginBottom: "var(--space-3)" }}>
+                        {r.ingredients_json?.length ? (
+                          <PortionScaler
+                            key={r.id}
+                            base={batchOf(r.typical_portions)}
+                            value={makes ?? batchOf(r.typical_portions)}
+                            onChange={setMakes}
+                          />
+                        ) : null}
                         <IngredientList
                           items={r.ingredients_json}
                           text={r.ingredients}
                           tone="muted"
+                          basePortions={batchOf(r.typical_portions)}
+                          portions={makes ?? undefined}
                         />
                       </div>
                     )}

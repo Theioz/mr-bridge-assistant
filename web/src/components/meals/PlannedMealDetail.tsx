@@ -6,6 +6,7 @@ import type { KitchenPlannedMeal } from "./KitchenPanel";
 import { IngredientList } from "./IngredientList";
 import { StepList } from "./StepList";
 import { RecipeEditor } from "./RecipeEditor";
+import { PortionScaler, batchOf } from "./PortionScaler";
 
 /**
  * The click-in view for a planned meal: what's in it, and what it costs you.
@@ -58,13 +59,17 @@ function MacroLine({ m, label, scale = 1 }: { m: Macros; label: string; scale?: 
 export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  // null = the recipe's own batch size; set only once Jason changes the box.
+  const [portions, setPortions] = useState<number | null>(null);
   const recipe = meal.recipes;
   const cook = meal.cooks;
 
   // ── Recipe-backed ──────────────────────────────────────────────────────────
   if (recipe) {
     const hasMacros = !!recipe.macros_computed_at;
-    const typ = recipe.typical_portions ?? null;
+    const base = batchOf(recipe.typical_portions);
+    const makes = portions ?? base;
+    const scalable = !!recipe.ingredients_json?.length;
     if (editing) {
       return (
         <RecipeEditor
@@ -84,7 +89,13 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
         {recipe.ingredients_json?.length || recipe.ingredients ? (
           <div style={{ marginBottom: "var(--space-3)" }}>
             <p style={sectionLabelStyle}>Ingredients</p>
-            <IngredientList items={recipe.ingredients_json} text={recipe.ingredients} />
+            {scalable && <PortionScaler base={base} value={makes} onChange={setPortions} />}
+            <IngredientList
+              items={recipe.ingredients_json}
+              text={recipe.ingredients}
+              basePortions={base}
+              portions={makes}
+            />
           </div>
         ) : (
           <p style={mutedStyle}>No ingredients recorded for this recipe yet.</p>
@@ -92,15 +103,21 @@ export function PlannedMealDetail({ meal }: { meal: KitchenPlannedMeal }) {
         {(recipe.steps_json?.length || recipe.instructions) && (
           <div style={{ marginBottom: hasMacros ? "var(--space-3)" : 0 }}>
             <p style={sectionLabelStyle}>How to make it</p>
+            {makes !== base && (
+              <p style={stepsNoteStyle}>
+                Steps are written for {base} portion{base === 1 ? "" : "s"}; scale any amounts in
+                them by the same ratio.
+              </p>
+            )}
             <StepList steps={recipe.steps_json} text={recipe.instructions} />
           </div>
         )}
         {hasMacros ? (
           <>
-            {typ && typ > 1 ? (
+            {makes > 1 ? (
               <>
                 <MacroLine m={recipe} label="Per serving" />
-                <MacroLine m={recipe} label={`Whole recipe (${typ})`} scale={typ} />
+                <MacroLine m={recipe} label={`Whole recipe (${makes})`} scale={makes} />
               </>
             ) : (
               <MacroLine m={recipe} label="This meal" />
@@ -276,6 +293,12 @@ const macroValsStyle: React.CSSProperties = {
   color: "var(--color-text)",
   fontVariantNumeric: "tabular-nums",
   textAlign: "right",
+};
+
+const stepsNoteStyle: React.CSSProperties = {
+  fontSize: "var(--t-micro)",
+  color: "var(--color-text-muted)",
+  marginBottom: "var(--space-1)",
 };
 
 const confidenceStyle: React.CSSProperties = {
