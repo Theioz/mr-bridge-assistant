@@ -3,7 +3,7 @@ import { todayString, daysAgoString, addDays } from "@/lib/timezone";
 import type { ToolContext } from "./_context";
 import { createCook, getLeftovers } from "@/lib/nutrition/cooks";
 import { getGroceryList } from "@/lib/nutrition/grocery-list";
-import { planMeals, pinGroceryProduct } from "./meal-actions.ts";
+import { planMeals, pinGroceryProduct, type ListingLabelInput } from "./meal-actions.ts";
 import { receiveGroceryOrder } from "@/lib/nutrition/grocery-receive";
 
 /**
@@ -13,7 +13,8 @@ import { receiveGroceryOrder } from "@/lib/nutrition/grocery-receive";
  * cooked and eaten; USDA FoodData Central decides what is in it. `log_cook` takes a recipe
  * or an ingredient list and a portion count — the macros are copied from the recipe (already
  * USDA-derived) or resolved through the USDA pipeline. There is nowhere for a model to
- * assert a calorie.
+ * assert a calorie. `pin_grocery_product`'s `label` is no exception: it carries a listing's
+ * panel TEXT, and the numbers are parsed from it server-side (lib/nutrition/listing-label.ts).
  *
  * Eating is still not a tool. The user confirms a meal in the UI (`POST /api/meals/eat`);
  * the model never records that food went in a mouth.
@@ -349,7 +350,14 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
         "Re-pinning a food REPLACES its product. Only pin a product the user chose or that was " +
         'already ordered — never a guess. Pack size comes from the listing ("14 oz" -> ' +
         'pack_quantity 14, pack_unit "oz"); omit it for count-sold produce like a head of ' +
-        "cabbage. Volume units (fl oz) are not weights: omit them and say so in `notes`.",
+        "cabbage. Volume units (fl oz) are not weights: omit them and say so in `notes`. " +
+        "LABELS: for a packaged product, pass `label` with the listing's Nutrition Facts panel " +
+        "TEXT exactly as the amazon-cart skill's read-nutrition.js returned it (`panel_text`) — " +
+        "never type or edit numbers; the server parses and sanity-checks them, stores the panel " +
+        "in the packaged_foods catalog and links it to the pin. A photographed catalog label is " +
+        "never overwritten. Omit `label` for produce sold by weight or count, and when the " +
+        "listing has no text panel (say the label needs a photo on delivery). Read `label` in " +
+        "the result: created/updated/kept_photographed, or skipped/error with the reason.",
       inputSchema: jsonSchema<{
         asin: string;
         title: string;
@@ -360,6 +368,7 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
         price_usd?: number;
         fresh?: boolean;
         notes?: string;
+        label?: ListingLabelInput;
       }>({
         type: "object",
         properties: {
@@ -372,6 +381,35 @@ export function buildMealsTools({ supabase, userId }: ToolContext) {
           price_usd: { type: "number", description: "Price seen on the listing." },
           fresh: { type: "boolean", description: "Sold through Amazon Fresh. Defaults true." },
           notes: { type: "string" },
+          label: {
+            type: "object",
+            description:
+              "The listing's Nutrition Facts panel, captured by read-nutrition.js. Text only.",
+            properties: {
+              brand: { type: "string", description: "Brand, from read-nutrition.js." },
+              product: {
+                type: "string",
+                description: "Short product name (catalog key with brand), e.g. 'Classic Kimchi'.",
+              },
+              panel_text: {
+                type: "string",
+                description: "read-nutrition.js `panelText`, verbatim. Never edited by hand.",
+              },
+              prep_state: {
+                type: "string",
+                enum: ["as_sold", "dry", "cooked", "drained", "prepared"],
+                description:
+                  "Which weight the panel describes. as_sold unless the listing says dry " +
+                  "(pasta, rice) or the food is sold cooked (cooked shrimp).",
+              },
+              animal_protein: {
+                type: "boolean",
+                description:
+                  "Meat, fish, eggs or dairy. A printed 0 mg sodium is then stored as unknown.",
+              },
+            },
+            required: ["brand", "product", "panel_text"],
+          },
         },
         required: ["asin", "title"],
       }),
