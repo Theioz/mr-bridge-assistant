@@ -19,6 +19,7 @@ const ROUTES: Route[] = [
   { path: "/journal", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/meals", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/inventory", auth: "signed-in", settled: (p) => p.locator("h1").first() },
+  { path: "/jobs", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   { path: "/library", auth: "signed-in", settled: (p) => p.locator("h1").first() },
   // /calendar has no h1 (full-bleed view); its toolbar renders whether or not Google
   // Calendar is connected.

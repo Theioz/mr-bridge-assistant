@@ -366,7 +366,7 @@ mr-bridge-assistant/
 │
 ├── supabase/                              # Database schema + migrations
 │   ├── config.toml
-│   └── migrations/                        # 82 files, newest 20261019120000_program_tracking.sql
+│   └── migrations/                        # 83 files, newest 20261027120000_jobs.sql
 │
 ├── web/                                   # Next.js web app (self-hosted Docker; web/Dockerfile)
 │   ├── .env.local.example                 # Web app env var template
@@ -378,6 +378,7 @@ mr-bridge-assistant/
 │   │   │   │   ├── dashboard/page.tsx     # Daily dashboard — food, workout, habits, recovery, schedule; re-entry + travel modes
 │   │   │   │   ├── calendar/page.tsx      # Google Calendar — week, day, month views
 │   │   │   │   ├── inventory/page.tsx     # Fridge, freezer, pantry
+│   │   │   │   ├── jobs/page.tsx          # Job Scout report, application tracker, filtered roles + feedback
 │   │   │   │   ├── library/page.tsx       # Media library — games, shows, movies, books
 │   │   │   │   ├── notifications/page.tsx # Last 30 days of push history
 │   │   │   │   ├── onboarding/page.tsx    # First-run wizard (8 steps) — auth callback redirects here until onboarding is done; sets onboarding_completed in profile on finish
@@ -548,6 +549,9 @@ mr-bridge-assistant/
 │   ├── fetch_weather.py                   # Open-Meteo weather helper; location from profile
 │   ├── log_habit.py                       # Logs habit completions to Supabase
 │   ├── run-syncs.py                       # Triggers /api/cron/sync, then the alert scripts
+│   ├── job_scout.py                       # Job Scout homelab half: collect (fetch boards → jobs + inbox) / ingest (agent decisions)
+│   ├── _job_scout.py                      # Job Scout pure logic: board fetchers, keep/drop verdict, collect/ingest plans (stdlib only)
+│   ├── import_notion_tracker.py           # One-time import of the Notion job tracker export into jobs
 │   ├── check_birthday_notif.py            # Birthday push alerts from Google Calendar
 │   ├── check_task_due_alerts.py           # Task due-date push alerts (grouped, per-task 24h dedup)
 │   ├── check_journal_reminder.py          # 7 PM Pacific journal nudge, only if nothing journaled today

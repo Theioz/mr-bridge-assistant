@@ -9,6 +9,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Job Scout v3: Mr. Bridge becomes the job-application tracker, with a Jobs tab.** Notion's free
+  plan caps database queries, and reading back ~1,200 filtered roles to dedupe killed the 2026-10-27
+  run. Migration `20261027120000_jobs.sql` adds `jobs` (one row per posting url: the scout pipeline
+  `stage` / reason / score / first + last seen / feedback, plus the tracker: `status`, applied and
+  rejected dates, fit, level, req id, pay, notes, `source` job_scout / manual / notion_import and a
+  link to the Notion prep page) and `job_scout_reports` (the agent's daily markdown report + stats).
+  `scripts/job_scout.py` is the homelab half (no LLM): `collect` fetches the configured job boards
+  (logic moved from the Notion-hosted fetcher into stdlib-only `scripts/_job_scout.py`), inserts new
+  roles, bumps `last_seen` on known ones and writes the ranking agent's inbox (new roles, unsent
+  feedback, preferences, the current tracker); `--dry-run` skips the database. `ingest` applies the
+  agent's decisions file (rejecting a malformed one before any write), puts recommended and
+  "Want this" roles in the tracker as To apply without ever downgrading a status, and stores the
+  report. `scripts/import_notion_tracker.py` is the one-time import of the Notion tracker export.
+  `/jobs` shows the report (with past dates), the tracker (filter by status, one-tap status change
+  that stamps applied/rejected dates, edit fit/level/dates/pay/notes, add a role by hand via
+  `POST /api/jobs`), applied this week vs the 8/week target, and every filtered role with its reason
+  and Want this / Not for me / Wrong reason feedback (`PATCH /api/jobs/<id>`). A Workday posting
+  with no title no longer drops the whole company (seen with Nvidia on 2026-10-27).
+
 - **Android app: a sideloaded Capacitor shell over the live web app (#782).** New `android/`
   directory, with Capacitor 8.5.3 and the Gradle project in `android/native`. `server.url` loads
   `https://mr-bridge.jl-infra-lab.com/dashboard` full screen, so web deploys reach the app
