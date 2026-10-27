@@ -1011,6 +1011,13 @@ body {
     opacity: 0.9;
   }
 }
+.jobs-table td.jobs-rownum,
+.jobs-table th:first-child {
+  padding: 0 var(--space-1) 0 var(--space-2);
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
 .jobs-primary {
   font-weight: 600;
 }

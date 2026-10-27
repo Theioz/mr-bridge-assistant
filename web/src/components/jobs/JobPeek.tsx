@@ -47,7 +47,6 @@ const TEXT_FIELDS = [
   ["req_id", "Req ID", "text"],
   ["location", "Location", "text"],
   ["url", "Posting URL", "url"],
-  ["notion_page_url", "Notion page", "url"],
 ] as const;
 type TextKey = (typeof TEXT_FIELDS)[number][0] | "title" | "notes";
 type Form = Record<TextKey, string> & { status: Status | null; fit: Fit | null };
@@ -65,7 +64,6 @@ function toForm(j: Partial<JobRow>): Form {
     req_id: s(j.req_id),
     location: s(j.location),
     url: s(j.url),
-    notion_page_url: s(j.notion_page_url),
     notes: s(j.notes),
     status: j.status ?? null,
     fit: j.fit ?? null,
@@ -281,25 +279,11 @@ function PeekPanel({
               ))}
             </datalist>
 
-            {(form.url || form.notion_page_url) && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "var(--space-3)",
-                  margin: "var(--space-2) 0",
-                  fontSize: "var(--t-micro)",
-                }}
-              >
-                {form.url && /^https?:/i.test(form.url) && (
-                  <a href={form.url} target="_blank" rel="noreferrer" style={linkStyle}>
-                    Open posting <ExternalLink size={12} aria-hidden />
-                  </a>
-                )}
-                {form.notion_page_url && /^https?:/i.test(form.notion_page_url) && (
-                  <a href={form.notion_page_url} target="_blank" rel="noreferrer" style={linkStyle}>
-                    Open Notion page <ExternalLink size={12} aria-hidden />
-                  </a>
-                )}
+            {form.url && /^https?:/i.test(form.url) && (
+              <div style={{ margin: "var(--space-2) 0", fontSize: "var(--t-micro)" }}>
+                <a href={form.url} target="_blank" rel="noreferrer" style={linkStyle}>
+                  Open posting <ExternalLink size={12} aria-hidden />
+                </a>
               </div>
             )}
 

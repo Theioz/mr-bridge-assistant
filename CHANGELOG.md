@@ -87,6 +87,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- **/jobs tweaks from use with real data.** The Job Scout report now separates roles: every
+  `##`/`###` heading after the first gets a rule above it, and `---` renders as a rule. List
+  items show real bullets (indent two spaces to nest), and report links read as links. The
+  tracker and filtered tables gain a "#" column, the 1-based row number in the current
+  filter/search/sort order, pinned with Role on a phone. The Notion page link is gone from the
+  table and the peek (imported Notion urls open "page not found"); the column stays in the DB.
+
 - **/jobs looks like a Notion database.** Jason's feedback on the first version: stacked cards
   fit ~3 roles per screen. The tracker and the filtered roles are now compact tables
   (`components/jobs/DataTable.tsx`): sticky header, one 38px line per role with ellipsis, hover
@@ -835,7 +842,7 @@ notification and status layer. GA hardening is tracked in #761.
 - **Docs:** README and env examples brought in line with the code (#761).
 - **Docs:** docs/ brought in line with the code; historical records marked as such (#761).
 - **UI polish: task row actions, one name setting, Library on shared tokens (#761).**
-  - *Tasks.* Each row now shows the complete circle, the edit (due date / priority) button and a
+  - _Tasks._ Each row now shows the complete circle, the edit (due date / priority) button and a
     single `⋯` overflow menu (`aria-label="More actions for <title>"`) holding Add item, Add to
     calendar / Edit calendar block, Stop repeating… and Archive. The menu is a new reusable
     primitive, `components/ui/overflow-menu.tsx` (WAI-ARIA menu button: arrow keys, Home/End,
@@ -843,11 +850,11 @@ notification and status layer. GA hardening is tracked in #761.
     an inline row. The "Add item…" field no longer sits under every task: on a task with no items
     it appears on hover or keyboard focus of the row, or after choosing Add item from the menu
     (the touch path). List filter chips wrap instead of scrolling behind a hidden scrollbar.
-  - *Settings → Profile.* "Display Name" and "Identity Name" collapse into one **Name** field
+  - _Settings → Profile._ "Display Name" and "Identity Name" collapse into one **Name** field
     (`profile.name`). The legacy `Identity/Name` key is still read as a fallback by the field, the
     dashboard greeting and the public library share page (which previously ignored it); clearing
     the field removes both keys. No data is migrated.
-  - *Library.* The summary strip drops its coloured bordered stat cards and per-media-type colours
+  - _Library._ The summary strip drops its coloured bordered stat cards and per-media-type colours
     for the house style: a `db-section-label` "Overview" heading, flat tabular figures, muted
     labels and hairline rules. Status colours move onto tokens (active = the amber accent;
     paused, previously a second amber identical to active, is now neutral; finished / dropped =

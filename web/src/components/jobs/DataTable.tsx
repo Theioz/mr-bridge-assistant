@@ -26,7 +26,7 @@ export type Column<T> = {
  */
 export function DataTable<T extends { id: string }>({
   rows,
-  columns,
+  columns: cols,
   onOpen,
   label,
   empty,
@@ -40,11 +40,25 @@ export function DataTable<T extends { id: string }>({
   rowLabel: (row: T) => string;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(null);
+  // "#": 1-based position in the current view order (after the caller's filter/search and our
+  // sort), pinned with the Role column on a phone. Not a sort key: it is the order itself.
+  const columns: Column<T>[] = [
+    { key: "#", label: "#", width: "2.75rem", sticky: true, render: () => null },
+    ...cols,
+  ];
+  // Pinned columns stack: each one's left edge is the sum of the pinned widths before it.
+  const stickyLeft: Record<string, string> = {};
+  let pinned: string[] = [];
+  for (const c of columns)
+    if (c.sticky) {
+      stickyLeft[c.key] = pinned.length ? `calc(${pinned.join(" + ")})` : "0px";
+      pinned = [...pinned, c.width];
+    }
   const sorted = useMemo(() => {
     if (!sort) return rows;
-    const col = columns.find((c) => c.key === sort.key);
+    const col = cols.find((c) => c.key === sort.key);
     return col?.sortValue ? sortRows(rows, col.sortValue, sort.dir) : rows;
-  }, [rows, columns, sort]);
+  }, [rows, cols, sort]);
   const minWidth = `calc(${columns.map((c) => c.width).join(" + ")})`;
 
   function cycle(key: string) {
@@ -70,6 +84,7 @@ export function DataTable<T extends { id: string }>({
                   key={c.key}
                   scope="col"
                   data-sticky={c.sticky ? "" : undefined}
+                  style={c.sticky ? { left: stickyLeft[c.key] } : undefined}
                   aria-sort={
                     active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined
                   }
@@ -105,7 +120,7 @@ export function DataTable<T extends { id: string }>({
               </td>
             </tr>
           ) : (
-            sorted.map((r) => (
+            sorted.map((r, n) => (
               <tr
                 key={r.id}
                 className="jobs-row"
@@ -124,8 +139,14 @@ export function DataTable<T extends { id: string }>({
                 }}
               >
                 {columns.map((c) => (
-                  <td key={c.key} data-sticky={c.sticky ? "" : undefined} title={c.title?.(r)}>
-                    {c.render(r)}
+                  <td
+                    key={c.key}
+                    data-sticky={c.sticky ? "" : undefined}
+                    className={c.key === "#" ? "jobs-rownum" : undefined}
+                    style={c.sticky ? { left: stickyLeft[c.key] } : undefined}
+                    title={c.title?.(r)}
+                  >
+                    {c.key === "#" ? n + 1 : c.render(r)}
                   </td>
                 ))}
               </tr>
