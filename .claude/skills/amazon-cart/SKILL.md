@@ -31,7 +31,7 @@ Load the Chrome tools in ONE ToolSearch call:
 `select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__tabs_close_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__javascript_tool,mcp__claude-in-chrome__computer`
 
 Page-reading scripts live in `.claude/skills/amazon-cart/scripts/` (not the repo's top-level `scripts/`). Read the file and pass its contents to
-`javascript_tool`. **All four are read-only.**
+`javascript_tool`. **All five are read-only.**
 
 | Script | Run on | Returns |
 |---|---|---|
@@ -39,6 +39,7 @@ Page-reading scripts live in `.claude/skills/amazon-cart/scripts/` (not the repo
 | `read-fresh-cart.js` | the Fresh cart | items (ASIN, qty, price, title, out-of-stock) + subtotal |
 | `search-fresh.js` | a Fresh search | results with `addable` (false = not deliverable by Fresh) |
 | `product-state.js` | a product page | Fresh offer?, price, availability, **visible** add-button coordinates |
+| `read-nutrition.js` | a product page | the listing's Nutrition Facts `panelText` + brand, or `hasPanel: false` |
 
 URLs:
 - Fresh cart: `https://www.amazon.com/cart/localmarket?almBrandId=QW1hem9uIEZyZXNo`
@@ -95,7 +96,42 @@ For each `buy` line with a product, target quantity = `packs` (plus any user edi
    and re-read until `qty` equals the target. Re-read after every click.
 
 If a pinned price differs from the listing, call `pin_grocery_product` with the same identity
-and ASIN and the new `price_usd` (this updates the price, it does not re-pin).
+and ASIN and the new `price_usd` (this updates the price, it does not re-pin, and it keeps the
+pin's label link).
+
+## 4b. Capture the label (every pinned product the run touched)
+
+On the product page you are already on, run `read-nutrition.js`. Do this for each product added
+or newly pinned in this run, so the next delivery arrives with label macros.
+
+- **`hasPanel: true`** and the product is **packaged** (anything with a brand and a
+  Nutrition Facts box: meat, fish, eggs, frozen veg, kimchi, pasta, sauces): call
+  `pin_grocery_product` with the same identity plus
+  `label: {brand, product, panel_text, prep_state?, animal_protein?}`.
+  - `panel_text` is the script's `panelText` **verbatim**. Never type, round or "fix" a number:
+    the server parses it and runs the sanity checks.
+  - `product` is a short name ("Classic Kimchi"); brand + product is the catalog key.
+  - `prep_state`: `as_sold` unless the panel describes dry weight (pasta, rice) or the food is
+    sold cooked (cooked shrimp → `cooked`).
+  - `animal_protein: true` for meat, fish, eggs and dairy.
+- **`hasPanel: false`**: do not guess. It goes in the report as **needs a photo on delivery**
+  (Just Bare thighs, Amazon Grocery edamame, Organic Girl spinach and 365 green beans were all
+  photo-only on 2026-10-26).
+- **Produce sold by weight or count** (broccoli, apples, onions, loose mushrooms): skip the label.
+  Their panels are generic USDA-style data, and the `fdc_id` pin is the better source. The server
+  refuses values that are not label-rounded for the same reason.
+
+Read the `label` field of the result:
+
+| `label.status` | Meaning | Report it as |
+|---|---|---|
+| `created` / `updated` | stored from the listing and linked | captured, with any `flags` |
+| `kept_photographed` | a photographed label already exists; it was linked, not overwritten | already on file |
+| `skipped` / `error` | not stored; `reason` says why | needs a photo on delivery (+ reason) |
+
+`flags` are corrections the server made or doubts it has (servings recomputed from net weight,
+energy that doesn't add up, a 0 mg sodium on meat stored as unknown). Repeat them in the report;
+they are what to check against the physical label when the order arrives.
 
 ## 5. Search for unpinned or unavailable items
 
@@ -129,6 +165,11 @@ baseline:
   1. <title> — <size>, <price> — <why it's a fair substitute>
   2. ...
 
+### Labels
+- Captured: <product> — <kcal / P per serving as listed>, <flags if any>
+- Already on file (photographed): <product>
+- Needs a photo on delivery: <product> — <reason>
+
 ### Needs your decision
 - check-stock: <item> — do you still have it?
 - unlisted recipes: <names> — ingredients not on the list
@@ -157,6 +198,9 @@ After the user says the order arrived (never before, and never from the cart):
 3. Report what went into the kitchen, and anything skipped: **not pinned** means pin it first
    if the user wants it tracked; **already received** means this order was done before, and
    nothing was added twice.
+4. For each product the cart run reported as **needs a photo**, or whose label carries `flags`,
+   ask the user to photograph the Nutrition Facts panel and enter it in the Inventory → Catalog
+   tab. A photographed label replaces the listing's as the source of truth.
 
 ## 8. Clean up
 

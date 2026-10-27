@@ -14,6 +14,7 @@ import assert from "node:assert/strict";
 
 import { pinGroceryProduct, planMeals } from "../lib/tools/meal-actions.ts";
 import { FakeSupabase, type Row } from "./helpers/fake-supabase.ts";
+import { KIMCHI_TEXT, SHRIMP_TEXT, panelText } from "./helpers/listing-panels.ts";
 
 const USER = "user-1";
 const ASIN = "B07COD0001";
@@ -160,6 +161,215 @@ describe("pin_grocery_product", () => {
     db.failures.set("grocery_products:upsert", "unique violation");
     const res = await pinGroceryProduct(db.client, USER, { asin: ASIN, title: "X", fdc_id: 1 });
     assert.deepEqual(res, { error: "unique violation" });
+  });
+});
+
+describe("pin_grocery_product with a listing label", () => {
+  const SHRIMP = "B07ZS3ZTCC";
+  const SHRIMP_TITLE = "Amazon Grocery, Medium Cooked Shrimp, 12 Oz";
+  const shrimpLabel = {
+    brand: "Amazon Grocery",
+    product: "Medium Cooked Shrimp",
+    panel_text: SHRIMP_TEXT,
+    prep_state: "cooked" as const,
+    animal_protein: true,
+  };
+  type Pinned = { pinned: Row; label: Row; replaced: Row[] };
+
+  it("stores the parsed panel in packaged_foods and links the pin to it", async () => {
+    const db = new FakeSupabase();
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: SHRIMP,
+      title: SHRIMP_TITLE,
+      label: shrimpLabel,
+    })) as Pinned;
+
+    assert.equal(res.label.status, "created");
+    const [food] = db.table("packaged_foods");
+    assert.equal(res.pinned.packaged_food_id, food.id, "the pin carries the label");
+    assert.equal(food.user_id, USER);
+    assert.equal(food.brand, "Amazon Grocery");
+    assert.equal(food.prep_state, "cooked");
+    assert.equal(food.serving_size_g, 85);
+    assert.equal(food.net_weight_g, 340.19, "net weight read from the title");
+    assert.equal(food.servings_per_container, 4, "the listing's 1.0 servings is repaired");
+    assert.equal(food.calories_per_100g, 117.65);
+    assert.equal(food.protein_per_100g, 22.35);
+    assert.equal(food.sodium_mg_per_100g, null, "0 mg sodium on shrimp is stored as unknown");
+    assert.ok(food.label_photographed_on, "the required date column is filled");
+    const meta = food.metadata as Row;
+    assert.equal(meta.source, "amazon_listing");
+    assert.equal(meta.asin, SHRIMP);
+    assert.equal(meta.photographed, false);
+    assert.equal((meta.per_serving_as_listed as Row).sodium_mg, 0, "what the page said is kept");
+    assert.match(String(meta.panel_text), /^Nutrition information/, "audit trail");
+    assert.equal((res.label.flags as string[]).length, 2);
+  });
+
+  it("never overwrites a photographed label: links it and leaves it alone", async () => {
+    const db = new FakeSupabase({
+      packaged_foods: [
+        {
+          id: "pf-photo",
+          user_id: USER,
+          brand: "amazon grocery ",
+          product: "Medium Cooked Shrimp",
+          calories_per_100g: 99,
+          metadata: {},
+        },
+      ],
+    });
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: SHRIMP,
+      title: SHRIMP_TITLE,
+      label: shrimpLabel,
+    })) as Pinned;
+    assert.equal(res.label.status, "kept_photographed");
+    assert.equal(res.pinned.packaged_food_id, "pf-photo");
+    assert.equal(db.table("packaged_foods").length, 1);
+    assert.equal(db.table("packaged_foods")[0].calories_per_100g, 99);
+  });
+
+  it("refreshes its own earlier capture of the same ASIN in place", async () => {
+    const at = "2026-10-20T10:00:00.000Z";
+    const db = new FakeSupabase({
+      packaged_foods: [
+        {
+          id: "pf-listing",
+          user_id: USER,
+          brand: "Amazon Grocery",
+          product: "Shrimp (old name)",
+          calories_per_100g: 50,
+          updated_at: at,
+          metadata: { source: "amazon_listing", asin: SHRIMP, captured_at: at },
+        },
+      ],
+    });
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: SHRIMP,
+      title: SHRIMP_TITLE,
+      label: shrimpLabel,
+    })) as Pinned;
+    assert.equal(res.label.status, "updated");
+    assert.equal(res.label.packaged_food_id, "pf-listing");
+    assert.equal(db.table("packaged_foods").length, 1);
+    assert.equal(db.table("packaged_foods")[0].calories_per_100g, 117.65);
+  });
+
+  it("treats a capture edited afterwards in the Catalog tab as a person's label", async () => {
+    const db = new FakeSupabase({
+      packaged_foods: [
+        {
+          id: "pf-edited",
+          user_id: USER,
+          brand: "Amazon Grocery",
+          product: "Medium Cooked Shrimp",
+          calories_per_100g: 105,
+          updated_at: "2026-10-30T09:00:00.000Z",
+          metadata: {
+            source: "amazon_listing",
+            asin: SHRIMP,
+            captured_at: "2026-10-26T10:00:00.000Z",
+          },
+        },
+      ],
+    });
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: SHRIMP,
+      title: SHRIMP_TITLE,
+      label: shrimpLabel,
+    })) as Pinned;
+    assert.equal(res.label.status, "kept_photographed");
+    assert.equal(db.table("packaged_foods")[0].calories_per_100g, 105);
+  });
+
+  it("a photo-only listing still pins by fdc_id and reports why no label was stored", async () => {
+    const db = new FakeSupabase();
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: ASIN,
+      title: "Just Bare Chicken Thighs, 1.25 LB",
+      fdc_id: 173627,
+      label: { brand: "Just Bare", product: "Chicken Thighs", panel_text: "" },
+    })) as Pinned;
+    assert.equal(res.label.status, "skipped");
+    assert.match(String(res.label.reason), /only a photo/);
+    assert.equal(res.pinned.fdc_id, 173627);
+    assert.equal(db.table("packaged_foods").length, 0);
+  });
+
+  it("with no fdc_id and no usable panel, refuses and writes nothing", async () => {
+    const db = new FakeSupabase();
+    const res = await pinGroceryProduct(db.client, USER, {
+      asin: ASIN,
+      title: "Apples, 3 lb",
+      label: {
+        brand: "Amazon Grocery",
+        product: "Honeycrisp Apples",
+        panel_text: panelText({
+          servings: "1",
+          serving: "1 apple (182g)",
+          kcal: "95",
+          fat: "0.31",
+          carbs: "25",
+          protein: "0.47",
+        }),
+      },
+    });
+    assert.match(
+      (res as { error: string }).error,
+      /listing label not usable: values are not label-rounded/,
+    );
+    assert.equal(db.table("grocery_products").length, 0);
+    assert.equal(db.table("packaged_foods").length, 0);
+  });
+
+  it("an explicit packaged_food_id wins over the listing", async () => {
+    const db = new FakeSupabase();
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: "B098PVNV18",
+      title: "Cleveland Kitchen Classic Kimchi, 16 oz",
+      packaged_food_id: "pf-chosen",
+      label: { brand: "Cleveland Kitchen", product: "Classic Kimchi", panel_text: KIMCHI_TEXT },
+    })) as Pinned;
+    assert.equal(res.label.status, "skipped");
+    assert.equal(res.pinned.packaged_food_id, "pf-chosen");
+    assert.equal(db.table("packaged_foods").length, 0);
+  });
+
+  it("re-pinning without a label keeps the label link the pin already has", async () => {
+    const db = new FakeSupabase({
+      grocery_products: [
+        { user_id: USER, asin: ASIN, title: "Beef", fdc_id: 173110, packaged_food_id: "pf-beef" },
+      ],
+    });
+    await pinGroceryProduct(db.client, USER, {
+      asin: ASIN,
+      title: "Beef",
+      fdc_id: 173110,
+      price_usd: 8.19,
+    });
+    const [row] = db.table("grocery_products");
+    assert.equal(row.packaged_food_id, "pf-beef");
+    assert.equal(row.price_cents, 819);
+  });
+
+  it("a pin with both identities replaces rivals on either one", async () => {
+    const db = new FakeSupabase({
+      grocery_products: [
+        { user_id: USER, asin: "B000FDC001", title: "Old by fdc", fdc_id: 175180 },
+      ],
+    });
+    const res = (await pinGroceryProduct(db.client, USER, {
+      asin: SHRIMP,
+      title: SHRIMP_TITLE,
+      fdc_id: 175180,
+      label: shrimpLabel,
+    })) as Pinned;
+    assert.deepEqual(res.replaced, [{ asin: "B000FDC001", title: "Old by fdc" }]);
+    assert.deepEqual(
+      db.table("grocery_products").map((r) => [r.asin, r.fdc_id, r.packaged_food_id]),
+      [[SHRIMP, 175180, db.table("packaged_foods")[0].id]],
+    );
   });
 });
 
