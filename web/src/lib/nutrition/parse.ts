@@ -1,6 +1,7 @@
 /**
- * Local model client (Ollama on compute-core) for the two jobs a small model IS
- * reliable at:
+ * Model client for the two jobs a model IS reliable at. The backend is Claude when
+ * ANTHROPIC_API_KEY is set, otherwise local Ollama on compute-core (`llmProvider()`); the
+ * Ollama-era comments below describe measurements on qwen2.5vl:7b and still apply to that path.
  *
  *   1. parseFoodText()  — "2 eggs and toast" -> [{query, qty, unit}, ...]
  *   2. pickBestFood()   — choose the right USDA hit from a candidate list
@@ -16,6 +17,10 @@
  * even when they are unreliable at recalling facts — so we search, then let it
  * choose.
  */
+import { anthropicChatJSON } from "./llm-anthropic";
+import { llmProvider } from "./llm-provider";
+
+export { llmProvider };
 import type { PackagedFoodRow } from "./packaged-foods";
 
 export type ParsedFood = {
@@ -131,14 +136,25 @@ export type ChatOpts = {
   timeoutMs?: number;
   /** Context window. Should be MODEL_NUM_CTX on every call — see the note there. */
   numCtx?: number;
-  /** Override the model for this call. Defaults to `model()`. */
+  /** Override the model for this call. Defaults to `model()`. Ollama only. */
   model?: string;
+  /** Anthropic only. Defaults to medium for an image, low otherwise — see llm-anthropic.ts. */
+  effort?: "low" | "medium" | "high";
 };
 
 export async function chatJSON<T>(
   messages: ChatMessage[],
   schema: Record<string, unknown>,
   opts: ChatOpts = {},
+): Promise<T> {
+  if (llmProvider() === "anthropic") return anthropicChatJSON<T>(messages, schema, opts);
+  return ollamaChatJSON<T>(messages, schema, opts);
+}
+
+async function ollamaChatJSON<T>(
+  messages: ChatMessage[],
+  schema: Record<string, unknown>,
+  opts: ChatOpts,
 ): Promise<T> {
   const { timeoutMs = 120_000, numCtx } = opts;
   const ctl = new AbortController();

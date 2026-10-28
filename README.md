@@ -2,9 +2,9 @@
 
 Mr. Bridge is a **single-user, self-hosted personal health companion**: one person, one deployment, one database — to use it, you run your own copy. It syncs fitness, habit, task and health data from external services into your own Supabase database, and surfaces it through a Next.js web app.
 
-**It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and it uses **no Anthropic API key**:
+**It runs entirely on your own hardware.** Since 2026-07-13 (#476) it is off Vercel and off Supabase Cloud, running on a homelab node behind a tailnet — and its only Anthropic API use is optional: with `ANTHROPIC_API_KEY` set, Claude does food identification (local Ollama otherwise):
 
-- **Macros come from data, not from a model.** USDA FoodData Central supplies every gram and calorie; a small local model (Ollama) only identifies the food and reads the quantity. Measured: the model was ~2x off on portion weight (a large egg at 105g; real ~50g), so it is never asked to weigh anything.
+- **Macros come from data, not from a model.** USDA FoodData Central supplies every gram and calorie; a model (Claude via the API when `ANTHROPIC_API_KEY` is set, local Ollama otherwise) only identifies the food and reads the quantity. Measured: the model was ~2x off on portion weight (a large egg at 105g; real ~50g), so it is never asked to weigh anything.
 - **Conversation happens in Claude Code**, through an MCP server (`web/mcp/`) exposing all 52 tools — on your existing subscription, with no metered API.
 - **Only share links are public.** The app itself is tailnet-only.
 
@@ -47,10 +47,10 @@ This runs on your own hardware. You need:
 | **A domain** | For TLS + hostnames. The reference uses `jl-infra-lab.com` via Cloudflare. |
 | **Google Cloud project** | Calendar + Google Health OAuth. Free. |
 | **USDA FoodData Central key** | Free, instant: <https://fdc.nal.usda.gov/api-key-signup.html>. This is where macros come from. |
-| **Ollama** | Local model for food identification. CPU is fine. |
+| **Ollama** | Local model for food identification, the fallback when no `ANTHROPIC_API_KEY` is set. CPU works but a photo takes minutes. |
 | Google Health / Oura *(optional)* | Google Health replaced Fitbit + Google Fit in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607). |
 
-**No Anthropic API key. No Vercel account. No Supabase Cloud account.** Conversation runs through Claude Code on your existing subscription (see the MCP section).
+**No Vercel account. No Supabase Cloud account.** An Anthropic API key is optional (food identification only). Conversation runs through Claude Code on your existing subscription (see the MCP section).
 
 ## Setup guide
 
@@ -584,7 +584,7 @@ project genuinely self-hosts now (#476), and that changes what you need to know.
 |---|---|
 | Next.js app | Docker (`web/Dockerfile`, standalone output). Built on the node from a git checkout. |
 | Supabase | **3 containers** — Postgres 17.6 + GoTrue + PostgREST, plus a small local Caddy gateway. Not Kong, not Realtime, not Storage, not edge-runtime, not analytics, not the pooler. None of them are used. |
-| Local model | Ollama (`qwen2.5vl:7b`), CPU, loopback-only. |
+| Food-identification model | Claude (`ANTHROPIC_MODEL`, default `claude-opus-5-5`) when `ANTHROPIC_API_KEY` is set; Ollama (`qwen2.5vl:7b`), CPU, as the fallback. |
 | Nutrition data | USDA FoodData Central. |
 | Chat | Claude Code + MCP (`web/mcp/`), on your subscription. |
 
@@ -630,7 +630,7 @@ else. `auth` matters because every table foreign-keys to `auth.users(id)` and
 ### Required environment
 
 See `.env.example` — it documents every variable and flags the load-bearing ones.
-There is **no** `ANTHROPIC_API_KEY`, **no** `GROQ_API_KEY`, and **no** Vercel anything.
+`ANTHROPIC_API_KEY` is optional and used only by the nutrition model client (`web/src/lib/nutrition/llm-anthropic.ts`); there is **no** `GROQ_API_KEY` and **no** Vercel anything.
 
 
 ## Changelog

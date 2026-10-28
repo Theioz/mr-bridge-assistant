@@ -2,14 +2,15 @@ import sharp from "sharp";
 
 import { createClient } from "@/lib/supabase/server";
 import { estimateFromPhoto } from "@/lib/nutrition/estimate";
-import { readNutritionLabel } from "@/lib/nutrition/parse";
+import { llmProvider, readNutritionLabel } from "@/lib/nutrition/parse";
 
 /**
- * Meal photo -> macros, and nutrition label -> macros. Was Anthropic vision (#476).
+ * Meal photo -> macros, and nutrition label -> macros. Was Anthropic vision (#476), then local
+ * Ollama; Claude again when ANTHROPIC_API_KEY is set (`llmProvider()`), Ollama as the fallback.
  *
  * Two very different jobs behind one endpoint:
  *
- * - mode=food   The local VLM identifies the foods and portions; USDA FoodData
+ * - mode=food   The model identifies the foods and portions; USDA FoodData
  *               Central supplies the macros. The model never produces a calorie.
  *               The user's `prompt`/`user_context` is AUTHORITATIVE — a stated
  *               "6oz" is used verbatim rather than re-guessed from pixels, and a
@@ -90,6 +91,26 @@ const FOOD_MAX_EDGE = 1200;
  * Phone photos are routinely stored sideways with a "rotate 90" flag, and the resize below would
  * otherwise hand the model a plate on its side.
  */
+/**
+ * Longest edge the Messages API accepts for an image (2576 px); anything larger is downscaled
+ * server-side anyway, after being uploaded at full size. The label path therefore only shrinks
+ * when Claude is the backend — Ollama keeps the full-resolution behaviour described above.
+ */
+const LABEL_MAX_EDGE = 2576;
+
+async function shrinkLabelPhoto(raw: Buffer): Promise<Buffer> {
+  return sharp(raw)
+    .rotate()
+    .resize({
+      width: LABEL_MAX_EDGE,
+      height: LABEL_MAX_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+}
+
 async function shrinkFoodPhoto(raw: Buffer): Promise<Buffer> {
   return sharp(raw)
     .rotate()
@@ -145,7 +166,14 @@ export async function POST(req: Request) {
   const raw = Buffer.from(await imageFile.arrayBuffer());
 
   let base64: string;
-  if (mode === "label") {
+  if (mode === "label" && llmProvider() === "anthropic") {
+    base64 = await shrinkLabelPhoto(raw)
+      .then((b) => b.toString("base64"))
+      .catch((err) => {
+        console.warn("[analyze-photo] label downscale failed, sending original:", err);
+        return raw.toString("base64");
+      });
+  } else if (mode === "label") {
     base64 = raw.toString("base64");
   } else {
     // A failed re-encode is not a reason to fail the upload — send the original and let the
