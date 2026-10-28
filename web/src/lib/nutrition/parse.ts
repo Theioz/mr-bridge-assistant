@@ -17,7 +17,8 @@
  * even when they are unreliable at recalling facts — so we search, then let it
  * choose.
  */
-import { anthropicChatJSON, llmProvider } from "./llm-anthropic";
+import { anthropicChatJSON } from "./llm-anthropic";
+import { llmProvider } from "./llm-provider";
 
 export { llmProvider };
 import type { PackagedFoodRow } from "./packaged-foods";

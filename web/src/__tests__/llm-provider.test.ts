@@ -10,7 +10,7 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { llmProvider, mediaType, toStrictSchema } from "../lib/nutrition/llm-anthropic.ts";
+import { llmProvider, mediaType, toStrictSchema } from "../lib/nutrition/llm-provider.ts";
 
 describe("toStrictSchema", () => {
   it("closes every object, nested ones included", () => {

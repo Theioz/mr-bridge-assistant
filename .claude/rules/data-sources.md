@@ -46,7 +46,7 @@ says "MCP tool", that tool is available to you directly in this session.
 Macros are **not** produced by an LLM. The pipeline is:
 
 1. **A model** — Claude via the API when `ANTHROPIC_API_KEY` is set, otherwise local
-   `qwen2.5vl:7b` via Ollama (`llmProvider()` in `web/src/lib/nutrition/llm-anthropic.ts`;
+   `qwen2.5vl:7b` via Ollama (`llmProvider()` in `web/src/lib/nutrition/llm-provider.ts`;
    `LLM_PROVIDER` forces either) — parses text or a photo into a food list — name, quantity,
    unit — and picks the USDA match from a candidate list. It is *never* asked for grams or calories.
 2. **USDA FoodData Central** (`FDC_API_KEY`) supplies the measured portion weights and
