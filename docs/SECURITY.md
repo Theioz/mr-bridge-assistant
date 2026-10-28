@@ -63,7 +63,9 @@ Inside the database, `anon` holds no privileges in `public`, every public table 
 | `NTFY_TOPIC` | Anyone who knows the topic can read (and send) notifications. It is the only secret ntfy has. |
 | `FDC_API_KEY`, `POLYGON_API_KEY`, `TMDB_API_KEY`, `IGDB_CLIENT_SECRET`, `GOOGLE_BOOKS_API_KEY`, `PLEX_TOKEN` | Low to moderate: third-party data keys. `PLEX_TOKEN` grants access to the Plex server, so treat it as the most sensitive of these. |
 
-**No `ANTHROPIC_API_KEY` and no `GROQ_API_KEY`** — both removed (#476, #609–#611).
+| `ANTHROPIC_API_KEY` | Optional. Spends the Anthropic account's API credit; used only by the nutrition model client (food photos, labels, text parsing, USDA picks). Set a monthly spend limit on the key's workspace. |
+
+**No `GROQ_API_KEY`** — removed (#476). `ANTHROPIC_API_KEY` was removed in #609–#611 and reintroduced, scoped to the nutrition client only, in 2026-10.
 
 ## Rotation cadence
 

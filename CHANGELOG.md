@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- **Nutrition: Claude as the food-identification model, Ollama as the fallback.** Every
+  `chatJSON` call — meal photo identification, nutrition-label OCR, meal-text parsing, USDA
+  candidate picks, meal suggestions, scan-chat intents and exercise descriptions — goes to the
+  Anthropic API (`claude-opus-5-5`, structured JSON outputs) when `ANTHROPIC_API_KEY` is set, and to
+  local Ollama otherwise. `LLM_PROVIDER=ollama|anthropic` forces one; an unknown value throws. On
+  compute-core (no GPU) a photo took minutes of CPU prompt-eval and still misidentified mixed
+  plates. USDA still supplies every gram and calorie — the model's job is unchanged. Effort is
+  `medium` for image calls and `low` for text; refusals fall back server-side
+  (`fallbacks: "default"`). Labels are shrunk to the API's 2576 px edge on the Claude path only. New:
+  `web/src/lib/nutrition/llm-anthropic.ts`, `@anthropic-ai/sdk` 1.3.0.
 - **Recipes: a "Makes N portions" box that rescales the ingredient list.** Both the planned-meal
   detail and the Recipes tab show it on any recipe with structured `ingredients_json`, starting at
   the recipe's `typical_portions` (the batch size Mr. Bridge wrote it for). Changing it rescales the
