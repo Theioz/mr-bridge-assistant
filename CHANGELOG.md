@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Security
+
+- **The public share host is scoped inside the app as well as at the reverse proxy.** On the
+  share host the app now serves `GET`/`HEAD /share/*` and nothing else
+  ([`lib/share-host.ts`](web/src/lib/share-host.ts), checked first in
+  [`src/proxy.ts`](web/src/proxy.ts)); it is inactive unless `SHARE_BASE_URL` names a
+  different host from `APP_URL`. The proxy matcher now lists static assets by name instead of
+  skipping every path with an image, CSS or JS extension, so no route can bypass the proxy by
+  ending in `.png`. Share pages send `robots: noindex, nofollow`.
+
 ### Added
 
 - **Nutrition: Claude as the food-identification model, Ollama as the fallback.** Every

@@ -37,7 +37,7 @@ The primary control is **network reach**, not application auth:
 |---|---|
 | `mr-bridge.jl-infra-lab.com` | **tailnet only.** Health data is never publicly routable. |
 | `supabase.jl-infra-lab.com` | **tailnet only.** |
-| `share.jl-infra-lab.com` | **The only public surface.** Caddy default-deny path allowlist: only token-gated `/share/*` is served. The dashboard, meals, journal, fitness, settings and the whole API return **404** from the internet. |
+| `share.jl-infra-lab.com` | **The only public surface.** Default-deny, enforced twice. The reverse proxy passes only `GET`/`HEAD` for token-gated `/share/*` and a short list of static assets named exactly (`/_next/static/*`, the icons, `/manifest.json`); the app then applies the same scope itself (`web/src/lib/share-host.ts`, called first thing in `src/proxy.ts`). The dashboard, meals, journal, fitness, settings and the whole API return **404** from the internet. Share pages send `noindex`. |
 
 Two things worth knowing about that public surface:
 

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { supabaseServerUrl, SUPABASE_COOKIE_NAME } from "@/lib/supabase/urls";
+import { blockedOnShareHost } from "@/lib/share-host";
 import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -53,6 +54,12 @@ function buildCSP(nonce: string): string {
 }
 
 export async function proxy(request: NextRequest) {
+  // The public share host serves GET/HEAD /share/* and nothing else. The reverse proxy
+  // enforces the same rule; this is the second layer (lib/share-host.ts).
+  if (blockedOnShareHost(request.headers.get("host"), request.nextUrl.pathname, request.method)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   // Generate a per-request nonce and forward it to RSC via x-nonce request header
   // so layout.tsx can read it with headers() if needed.
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64");
@@ -110,8 +117,15 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse;
 }
 
+// Static assets skip the proxy. They are listed BY NAME on purpose. The previous matcher
+// skipped every path ending in .svg/.png/.jpg/.ico/.css/.js, which meant a request such as
+// /api/anything/x.png reached its route handler with no proxy in front of it — no session
+// refresh, no login redirect, no share-host scope. Each handler checks the session itself,
+// so nothing was exposed, but "every handler remembers" should not be the only barrier.
+// A new file in web/public or a new app icon must be added here, or it will be treated as
+// a page (and redirected to /login when signed out).
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest\\.json|.*\\.(?:svg|png|jpg|ico|css|js)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|icon-192\\.png$|icon-512\\.png$|manifest\\.json$|sw\\.js$).*)",
   ],
 };
