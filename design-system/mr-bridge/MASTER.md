@@ -1,14 +1,8 @@
 # Design System Master File
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
-
----
-
 **Project:** mr-bridge
 **Generated:** 2026-04-15 (ui-ux-pro-max); rewritten to match the shipped tokens in #761
-**Category:** Personal dashboard — single user, self-hosted. No in-app chat (#476): conversation
+**Category:** Personal dashboard — single user, self-hosted. No in-app chat: conversation
 happens in Claude Code over MCP; the web UI is the visual layer and the phone logging client.
 
 **Source of truth:** `web/src/app/globals.css`. Design intent and tone: `.impeccable.md`. If this

@@ -18,9 +18,8 @@ wrapper around it). Each call does two things:
 Every send is appended to `~/.mr-bridge/notify.log` (title, type, click URL, HTTP status — never
 the topic).
 
-The jobs that call it, and their schedule, are listed in the README's Notifications section; the
-schedule itself lives in the host crontab (jl-homelab `system/cron/compute-core-crontab`), not in
-this repo. Each job writes a heartbeat to `sync_log`, shown under **Settings → Status**.
+The jobs that call it, and their schedule, are listed in [OPERATIONS.md](OPERATIONS.md#schedule);
+the schedule itself lives in the host crontab, not in this repo. Each job writes a heartbeat to `sync_log`, shown under **Settings → Status**.
 
 Two senders sit outside that path: `/api/cron/audit-recipes` (in the app) posts to ntfy and writes
 its own `notifications` row, and the GitHub Actions weekly review nudge (below) posts to ntfy only.

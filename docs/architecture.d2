@@ -1,20 +1,23 @@
 # To re-render:
-# d2 --layout=elk --theme=200 docs/architecture.d2 docs/architecture.svg && sed -i '' 's/data-d2-version="[^"]*" preserveAspectRatio="[^"]*" viewBox="/width="100%" viewBox="/' docs/architecture.svg
+# (on Linux use `sed -i`; on macOS `sed -i ''`)
+# d2 --layout=elk --theme=200 docs/architecture.d2 docs/architecture.svg && sed -i 's/data-d2-version="[^"]*" preserveAspectRatio="[^"]*" viewBox="/width="100%" viewBox="/' docs/architecture.svg
 # d2 --layout=elk --theme=200 --scale=2 docs/architecture.d2 docs/architecture.png
 
 direction: right
 
 data_sources: "Data Sources\nOura · Google Health · Plex"
 
-sync: "Sync Layer\nTypeScript modules (web/src/lib/sync)\nnode crontab 14:00 UTC · scripts/run-syncs.py"
+sync: "Sync Layer\nTypeScript modules (web/src/lib/sync)\nhost crontab 14:00 UTC · scripts/run-syncs.py"
 
 supabase: "Self-hosted Supabase\nPostgres · GoTrue · PostgREST\nRLS on every public table"
 
-nextjs: "Next.js standalone · Docker (compute-core)\nApp Router · route handlers"
+nextjs: "Next.js standalone · Docker (home server)\nApp Router · route handlers"
 
 external: "External APIs\nGoogle Calendar · USDA FoodData\nOpen-Meteo · Polygon · ESPN · TMDB · ntfy.sh"
 
-ollama: "Ollama (local, compute-core)\nqwen2.5vl:7b · food identification"
+anthropic: "Anthropic API (optional)\nClaude · food identification\nwhen ANTHROPIC_API_KEY is set"
+
+ollama: "Ollama (local)\nqwen2.5vl:7b · fallback\nfood identification"
 
 user: "Browser / Mobile"
 
@@ -28,7 +31,8 @@ supabase -> nextjs: query / SSR
 nextjs -> supabase: write
 nextjs -> user
 external -> nextjs: OAuth · macros · media · EOD
-ollama -> nextjs: vision (qty + unit only)
+anthropic -> nextjs: food list (qty + unit only)
+ollama -> nextjs: fallback (qty + unit only)
 mcp -> supabase: service role
 claude -> mcp: tool calls
 
@@ -46,6 +50,9 @@ nextjs.style.stroke: "#38BDF8"
 
 external.style.stroke: "#475569"
 external.style.font-color: "#94A3B8"
+
+anthropic.style.stroke: "#F59E0B"
+anthropic.style.font-color: "#FDE68A"
 
 ollama.style.stroke: "#A78BFA"
 ollama.style.font-color: "#C4B5FD"

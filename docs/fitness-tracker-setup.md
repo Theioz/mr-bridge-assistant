@@ -8,7 +8,7 @@ Both fitness integrations are synced by the app, in `web/src/lib/sync/`, and rea
 
 **Implementation:** `web/src/lib/sync/google-health.ts`, reached via `/api/cron/sync`.
 
-Superseded the Fitbit and Google Fit syncs in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607); the Python implementation was later deleted in [#658](https://github.com/Theioz/mr-bridge-assistant/pull/658) when the duplicated sync implementations were collapsed into one. The Fitbit Web API is turned down **September 2026** and the Google Fit REST API is deprecated; the Google Health API (`health.googleapis.com/v4`) supersedes both.
+The Google Health API (`health.googleapis.com/v4`) is the single source for body composition and workouts; it replaced two earlier tracker syncs in [#607](https://github.com/Theioz/mr-bridge-assistant/issues/607).
 
 Writes:
 - `workout_sessions` — activity, duration, calories, average HR, and per-session heart-rate zones
@@ -36,8 +36,8 @@ python3 scripts/run-syncs.py --days 30   # backfill 30 days (implies --force)
 Oura and Google Health sync together in one call to the endpoint. There is no
 longer a `--probe` dry run; it went with the Python script it belonged to.
 
-**Known differences from the Fitbit sync it replaced:**
-| | Fitbit | Google Health |
+**Known differences from the tracker sync it replaced:**
+| | Previous sync | Google Health |
 |---|---|---|
 | Heart-rate zones | `Fat Burn` / `Cardio` / `Peak` | `Light` / `Moderate` / `Vigorous` / `Peak` — four zones, different names. Rows written before the cutover keep the old labels. |
 | Workout duration | wall-clock, incl. pauses | `activeDuration`, excludes pauses |

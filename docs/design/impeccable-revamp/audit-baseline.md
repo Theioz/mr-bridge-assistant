@@ -7,7 +7,7 @@ Captured 2026-04-16 during the Impeccable revamp planning. The CLI scan
 a permitted shell to fold automated findings into section 3:
 
 ```bash
-cd "/Users/jason/Code Projects/mr-bridge-assistant"
+cd "<repo>"
 npx --yes impeccable detect web/src/ --json > docs/design/impeccable-revamp/impeccable-detect.json
 npx --yes impeccable detect web/src/                 # human summary
 ```

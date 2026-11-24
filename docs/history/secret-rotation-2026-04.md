@@ -4,7 +4,7 @@
 
 **Incident:** Vercel April 2026 security incident.
 **Date executed:** 2026-04-22
-**PR:** TBD (replace after merge)
+**Tracking issue:** #368 (no pull request was recorded)
 **Executor:** Jason Leung
 
 ---

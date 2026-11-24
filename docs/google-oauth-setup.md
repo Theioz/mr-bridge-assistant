@@ -2,7 +2,7 @@
 
 This guide covers the Google Cloud side of the two Google integrations: **Google Calendar**
 (provider `google`) and **Google Health** (provider `google_health`). Both use one OAuth client,
-so you need exactly three values in the app's env file:
+so you need exactly four values in the app's env file:
 
 ```
 GOOGLE_CLIENT_ID=...

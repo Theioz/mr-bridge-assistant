@@ -1,15 +1,14 @@
 ---
 name: weekly-plan
-description: Generate and write next week's workout + meal-prep plan. Replaces the Anthropic API call that used to run this from a GitHub Action.
+description: Generate and write next week's workout + meal-prep plan. Claude Code is the planner; the structural rules are enforced by scripts/weekly_plan.py.
 user-invocable: true
 allowed-tools:
   - Bash
 model: sonnet
 ---
 
-Generate the weekly plan. **You are the planner** — this used to be a `claude-sonnet`
-call inside `run_weekly_plan.py`; on a zero-Anthropic deployment (#476) that is now you,
-running on the subscription.
+Generate the weekly plan. **You are the planner**: generation runs in Claude Code on the
+subscription, not through the API.
 
 The structural rules stayed in Python on purpose. They are RULES, not judgement, and must
 not be quietly interpreted away.

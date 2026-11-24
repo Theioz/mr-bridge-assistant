@@ -14,7 +14,7 @@
 - If something is ambiguous, state the assumption made and continue
 
 ## Interface
-- There is **no in-app chat** (deleted #476). You ARE the chat: the MCP server
+- There is **no in-app chat**. You ARE the chat: the MCP server
   (`web/mcp/run.sh` → `web/mcp/server.ts` → `web/src/lib/tools/*.ts`) exposes 52 tools to
   this session — tasks, habits, fitness, workouts, meals + groceries, calendar, backlog,
   profile, equipment, stocks, sports, session history.
@@ -29,7 +29,7 @@
 ## Session Close
 Before any commit or PR:
 - Update `CHANGELOG.md` — add all changes under `[Unreleased]` or a new version block
-- Update `README.md` if file structure or usage changed; `node scripts/check-docs.mjs` (run in CI) fails on a stale tool count, migration summary or file-tree path
+- Update the docs the change touches (`README.md` feature list, `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `.env.example`). `node scripts/check-docs.mjs` (run in CI) fails on a stale tool count, a path that no longer exists, an undocumented env var, a broken link, or a real hostname
 - If a dev server was started for smoke testing, stop it with `preview_stop` before committing
 - Follow feature-branch + PR workflow (see `features.md`) — never commit directly to main
 
@@ -43,3 +43,4 @@ When the user's request matches one of these contexts, read the matching file be
 | change/reset weather location                          | `.claude/rules/location.md`        |
 | data source or Supabase table lookup                   | `.claude/rules/data-sources.md`    |
 | RLS, schema design, OAuth encryption, verified-success contract, architecture intent | `docs/ARCHITECTURE.md` |
+| deploying, applying a migration, env files, the schedule, backups | `docs/OPERATIONS.md` |

@@ -54,11 +54,11 @@ docker compose up -d --force-recreate
 
 | Where | Variables |
 |---|---|
-| Vaultwarden `mr-bridge-env` (canonical) | `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| Vaultwarden `mr-bridge-env` (canonical) | `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | `~/docker/mr-bridge/.env` (app container) | same |
-| Root `.env` of the repo checkout on compute-core (Python scripts, cron jobs) | `SUPABASE_SERVICE_ROLE_KEY` (and `SUPABASE_ANON_KEY`, which `.env.example` lists) |
+| Root `.env` of the repo checkout on compute-core (Python scripts, cron jobs) | `SUPABASE_SERVICE_ROLE_KEY` |
 | `~/.mrb-secrets/env` on every machine that runs the MCP server | `SUPABASE_SERVICE_ROLE_KEY` |
-| `web/.env.local` on any dev machine | `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SMOKE_SUPABASE_SERVICE_KEY` |
+| `web/.env.local` on any dev machine | `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | GitHub Actions secrets, if set (`SMOKE_SUPABASE_SERVICE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) | used by the dispatch-only smoke workflow |
 
 ---
@@ -77,7 +77,7 @@ docker compose build && docker compose up -d --force-recreate
 ## Step 5 — Verify
 
 - [ ] Sign in from a fresh browser (every old session is now invalid)
-- [ ] `python3 scripts/run-syncs.py --force` on compute-core succeeds and rows land in `sync_log`
+- [ ] `./.venv/bin/python scripts/run-syncs.py --force` in the clone on compute-core succeeds and rows land in `sync_log`
 - [ ] Settings → Integrations → Sync Now for an integration succeeds
 - [ ] Settings → Status shows fresh heartbeats after the next scheduled jobs
 - [ ] An MCP tool call from Claude Code succeeds (e.g. a read such as listing tasks)

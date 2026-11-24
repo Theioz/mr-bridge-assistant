@@ -1,46 +1,99 @@
 #!/usr/bin/env node
 /**
- * Assert that the README still describes this repository. Run from the repo root:
+ * Assert that the documentation still describes this repository. Run from anywhere:
  *
  *   node scripts/check-docs.mjs          # report drift, exit 1 if any
- *   node scripts/check-docs.mjs --fix    # rewrite the numbers it can derive
+ *   node scripts/check-docs.mjs --fix    # rewrite the tool counts it can derive
  *
  * WHY THIS EXISTS RATHER THAN ANOTHER ROUND OF CORRECTIONS
  *
- * The README's tool count has now been found wrong twice — #464 in April ("25 built-in tools" next
- * to a file-tree comment saying 16) and #700 in August, by which point the same document claimed
- * **35**, **44**, **30** and **26** tools in four different places while calling three of them
- * "the same N tools". Each time it was corrected by hand, and each time it drifted again as tools
- * were added and removed.
+ * A fact a human retypes goes stale. The README's tool count was found wrong twice (#464, #700);
+ * a documentation audit then found the same class of drift in every place this script did not
+ * look: the nutrition model described three ways, an env file model that matched no machine, a
+ * retired Postgres minor version in six places, issue numbers that resolve to the wrong issue.
+ * Each check below derives a fact from the repository, or bans a statement known to be false.
  *
- * A number a human retypes is a number that goes stale. #700 asked for the fix to "end with a
- * check rather than a correction", so these three facts are derived from the repository and
- * asserted in CI:
+ *   1. tool count     every "N tools" claim equals `tool(` across web/src/lib/tools/
+ *   2. migrations     every "N migrations" claim equals the files in supabase/migrations/
+ *   3. paths          every repo path written in backticks exists
+ *   4. env vars       code reads vs the two example files, both directions
+ *   5. stale terms    statements that used to be true
+ *   6. issue refs     bare numbers that mean an issue in another, private repository
+ *   7. links          relative links and #anchors resolve
+ *   8. hostnames      the real deployment domain and SSH login never appear in docs
  *
- *   1. the tool count             — every "N tools" claim must equal `tool(` across lib/tools/
- *   2. the migration summary      — count and newest filename, from supabase/migrations/
- *   3. every path in the file tree must exist
+ * It depends on nothing but Node: no npm install, so it stays the cheapest job in CI.
  *
- * (3) is the one that pays for itself. #700 spotted a single deleted route in the tree
- * (`api/chat/route.ts`, gone since #476). There were **thirteen** — including the entire `voice/`
- * directory and `dashboard/sync-button.tsx`, which has been gone since #296 in April. Nobody was
- * ever going to find those by reading.
+ * HISTORICAL FILES are records of a past state and are exempt from 1-3 and 5-7 (never from 8,
+ * except the three directories below, which predate the rule): docs/history/, docs/audits/,
+ * docs/design/, and CHANGELOG.md, whose released entries name things that have since been removed.
  *
- * DELIBERATELY NOT CHECKED: that every file in the repo appears in the tree. The tree is a guided
- * tour, not an inventory, and requiring exhaustiveness would fail CI on every new file and get the
- * check disabled — which is the failure mode this whole file exists to avoid.
+ * DELIBERATELY NOT CHECKED: that every file in the repo is documented. Requiring exhaustiveness
+ * would fail CI on every new file and get the check disabled.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join, dirname, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const README = join(ROOT, "README.md");
 const FIX = process.argv.includes("--fix");
-
 const problems = [];
-let text = readFileSync(README, "utf8");
+
+// ── File sets ───────────────────────────────────────────────────────────────
+// Vendored or generated trees: not ours to keep accurate.
+const SKIP_DIRS = new Set([
+  ".git",
+  "node_modules",
+  ".next",
+  ".venv",
+  "build",
+  "dist",
+  ".gradle",
+  "perf-report",
+  "playwright-report",
+  "test-results",
+]);
+const SKIP_PREFIXES = [".claude/references/", ".claude/skills/ui-ux-pro-max/", ".claude/worktrees/"];
+
+function walk(dir, out = []) {
+  for (const name of readdirSync(dir)) {
+    if (SKIP_DIRS.has(name)) continue;
+    const abs = join(dir, name);
+    const rel = relative(ROOT, abs).split(sep).join("/");
+    if (SKIP_PREFIXES.some((p) => (rel + "/").startsWith(p))) continue;
+    const st = statSync(abs, { throwIfNoEntry: false });
+    if (!st) continue;
+    if (st.isDirectory()) walk(abs, out);
+    else out.push(rel);
+  }
+  return out;
+}
+
+const ALL = walk(ROOT);
+const read = (rel) => readFileSync(join(ROOT, rel), "utf8");
+const HISTORICAL_DIRS = ["docs/history/", "docs/audits/", "docs/design/"];
+const inHistoryDir = (f) => HISTORICAL_DIRS.some((d) => f.startsWith(d));
+const isHistorical = (f) => inHistoryDir(f) || f === "CHANGELOG.md";
+
+const MD = ALL.filter((f) => f.endsWith(".md"));
+const EXAMPLES = ALL.filter((f) => f.endsWith(".example"));
+const CURRENT_MD = MD.filter((f) => !isHistorical(f));
+/** Docs that must describe the present: current markdown plus the env templates. */
+const CURRENT_DOCS = [...CURRENT_MD, ...EXAMPLES];
+
+/** Line numbers that sit inside a ``` fence, so prose checks can skip code samples. */
+function fencedLines(text) {
+  const inside = new Set();
+  let open = false;
+  text.split("\n").forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) {
+      open = !open;
+      inside.add(i);
+    } else if (open) inside.add(i);
+  });
+  return inside;
+}
 
 // ── 1. Tool count ───────────────────────────────────────────────────────────
 // Counted the way a reader would verify it: `tool(` in the files that define them.
@@ -49,101 +102,257 @@ const toolCount = readdirSync(toolDir)
   .filter((f) => f.endsWith(".ts") && !f.startsWith("_"))
   .reduce((n, f) => n + (readFileSync(join(toolDir, f), "utf8").match(/\btool\(/g)?.length ?? 0), 0);
 
-const CLAIM = /\b(\d+)\s+tools\b/g;
-const claims = [...text.matchAll(CLAIM)];
-const wrong = claims.filter((m) => Number(m[1]) !== toolCount);
-if (wrong.length) {
-  if (FIX) {
-    text = text.replace(CLAIM, `${toolCount} tools`);
-  } else {
-    problems.push(
-      `tool count: README claims ${[...new Set(wrong.map((m) => m[1]))].join(", ")} — actual is ${toolCount}`,
-    );
-  }
-}
-
-// ── 2. Migration summary ────────────────────────────────────────────────────
-// The list used to be typed out in full and stopped four months short: 46 entries against 66 real
-// files. Filenames in a README serve nobody — the directory is the source of truth — so the tree
-// carries a summary line, and the summary is derived.
-const migrations = readdirSync(join(ROOT, "supabase/migrations"))
-  .filter((f) => f.endsWith(".sql"))
-  .sort();
-const newest = migrations.at(-1);
-const SUMMARY = /(└── migrations\/\s+# )(\d+) files, newest (\S+)/;
-const want = `${migrations.length} files, newest ${newest}`;
-const found = text.match(SUMMARY);
-if (!found) {
-  problems.push(
-    `migrations: the file tree has no summary line. Expected "└── migrations/    # ${want}"`,
-  );
-} else if (`${found[2]} files, newest ${found[3]}` !== want) {
-  if (FIX) text = text.replace(SUMMARY, `$1${want}`);
+const TOOL_CLAIM = /\b(\d+)(\*{0,2})\s+tools\b/g;
+for (const f of CURRENT_MD) {
+  const text = read(f);
+  const wrong = [...text.matchAll(TOOL_CLAIM)].filter((m) => Number(m[1]) !== toolCount);
+  if (!wrong.length) continue;
+  if (FIX) writeFileSync(join(ROOT, f), text.replace(TOOL_CLAIM, `${toolCount}$2 tools`));
   else
     problems.push(
-      `migrations: README says "${found[2]} files, newest ${found[3]}" — actual is "${want}"`,
+      `tool count: ${f} claims ${[...new Set(wrong.map((m) => m[1]))].join(", ")}; actual is ${toolCount}`,
     );
 }
 
-// ── 3. Every path in the file tree exists ───────────────────────────────────
-const lines = text.split("\n");
-let start = -1;
-for (let i = 0; i < lines.length && start < 0; i++) {
-  if (lines[i].trim() !== "## File structure") continue;
-  for (let j = i; j < lines.length; j++) {
-    if (lines[j].startsWith("```")) {
-      start = j + 1;
-      break;
-    }
+// ── 2. Migration count ──────────────────────────────────────────────────────
+// No document needs to state this. If one does, it has to be right.
+const migrations = readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql"));
+const MIGRATION_CLAIM = /\b(\d+)\s+migrations\b/g;
+for (const f of CURRENT_MD) {
+  for (const m of read(f).matchAll(MIGRATION_CLAIM)) {
+    if (Number(m[1]) !== migrations.length)
+      problems.push(`migrations: ${f} claims ${m[1]}; actual is ${migrations.length}`);
   }
 }
-if (start < 0) {
-  problems.push("file tree: no '## File structure' section followed by a code fence");
-} else {
-  // Depth comes from the indent: four columns per level, drawn as "│   " or "    ".
-  const stack = [];
-  const missing = [];
-  for (let i = start; i < lines.length; i++) {
-    if (lines[i].startsWith("```")) break;
-    const m = lines[i].match(/^((?:[│|]?[ ]{3,4})*)(?:├──|└──)[ ](\S+)/);
-    if (!m) continue; // wrapped comment lines and blank spacers carry no entry
-    const depth = Math.round(m[1].length / 4);
-    const name = m[2].replace(/\/$/, "");
-    stack.length = depth;
-    stack[depth] = name;
-    const rel = stack.slice(0, depth + 1).join("/");
-    // The tree root is the repo itself; a bare "…" placeholder is not a path.
-    if (rel.startsWith("mr-bridge-assistant") || name === "…" || name === "...") continue;
-    if (!existsSync(join(ROOT, rel))) missing.push(rel);
+
+// ── 3. Every repo path written in backticks exists ──────────────────────────
+// Generalises the old README file-tree check: that tree listed thirteen deleted paths before
+// anyone noticed. A path is checked when it starts at a top-level directory of this repo.
+const PATH_ROOTS = [
+  "web/",
+  "scripts/",
+  "docs/",
+  "supabase/",
+  "android/",
+  "tests/",
+  "design-system/",
+  ".claude/",
+  ".github/",
+];
+// Paths that are real but untracked (created per machine or by a build), with the reason.
+const PATH_ALLOW = new Set([
+  "web/.env.local", // per-machine dev env, gitignored
+  "web/.env", // optional second dotenv file Playwright loads
+  "web/smoke/perf-report", // Lighthouse output, gitignored
+  "web/smoke/test-results", // Playwright output, gitignored
+  "web/smoke/playwright-report", // Playwright output, gitignored
+  "web/node_modules", // npm install output
+  "web/.next", // build output
+  "android/native/app/build", // Gradle output
+  ".claude/settings.local.json", // per-machine Claude Code settings, gitignored
+  ".claude/memory", // lives in the private deployment repo, named here only as a location
+  ".claude/memory/mrbridge",
+  ".claude/memory/mrbridge/README.md",
+  "docs/runbooks/secret-rotation-YYYY-MM.md", // naming pattern for a future rotation log
+  "android/keystore.properties", // signing config, never committed
+]);
+const CODE_SPAN = /`([^`\n]+)`/g;
+for (const f of CURRENT_MD) {
+  const missing = new Set();
+  for (const m of read(f).matchAll(CODE_SPAN)) {
+    let p = m[1].trim();
+    if (!PATH_ROOTS.some((r) => p.startsWith(r))) continue;
+    if (/[\s<>*{}…|$=,;]|\.\.\./.test(p)) continue; // commands, globs, placeholders
+    p = p.replace(/[:#]L?\d+(-L?\d+)?$/, "").replace(/\/$/, ""); // drop a :line suffix
+    if (PATH_ALLOW.has(p) || [...PATH_ALLOW].some((a) => p.startsWith(a + "/"))) continue;
+    if (!existsSync(join(ROOT, p))) missing.add(p);
   }
-  if (missing.length) {
-    problems.push(
-      `file tree: ${missing.length} listed path(s) do not exist:\n    ${missing.join("\n    ")}`,
-    );
+  if (missing.size)
+    problems.push(`paths: ${f} names path(s) that do not exist:\n      ${[...missing].join("\n      ")}`);
+}
+
+// ── 4. Env vars: what the code reads vs what the example files document ─────
+// Read by code: process.env.X under web/ and scripts/, os.environ / os.getenv under scripts/.
+const ENV_EXAMPLE_FILES = [".env.example", "web/.env.local.example"];
+// Read by code, deliberately absent from the example files. Each entry carries its reason.
+const ENV_NOT_DOCUMENTED = {
+  NODE_ENV: "set by Node / Next.js",
+  NEXT_RUNTIME: "set by Next.js",
+  CI: "set by the CI runner",
+  HOME: "shell",
+  ANALYZE: "dev-only: bundle analyzer switch (next.config.ts)",
+  DEV_MAX_RSS_MB: "dev-only: scripts/dev-watchdog.mjs",
+  DEV_POLL_MS: "dev-only: scripts/dev-watchdog.mjs",
+  SMOKE_TEST_EMAIL: "smoke tests only; documented in docs/smoke-testing.md",
+  SMOKE_TEST_PASSWORD: "smoke tests only; documented in docs/smoke-testing.md",
+  SMOKE_SUPABASE_SERVICE_KEY: "read only by an unused smoke helper (web/smoke/utils/supabase-verify.ts)",
+  PERF_ROUTES: "smoke perf run only; documented in docs/smoke-testing.md",
+  PERF_TARGET: "smoke perf run only; documented in docs/smoke-testing.md",
+  HEARTBEAT_MSG_FILE: "set by the host's cron heartbeat wrapper, not by an env file",
+  GOOGLE_REFRESH_TOKEN: "read only by the one-shot scripts/seed-owner-google-integration.ts",
+};
+// Documented in an example file but read through a path this scan cannot see.
+const ENV_NOT_READ = {};
+
+const envRead = new Map(); // name -> first file that reads it
+const note = (name, file) => envRead.has(name) || envRead.set(name, file);
+for (const f of ALL) {
+  const js = /\.(ts|tsx|mts|mjs|js|cjs)$/.test(f) && (f.startsWith("web/") || f.startsWith("scripts/"));
+  const py = f.endsWith(".py") && f.startsWith("scripts/");
+  if (!js && !py) continue;
+  if (f === "scripts/check-docs.mjs") continue;
+  const src = read(f);
+  if (js) {
+    for (const m of src.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) note(m[1], f);
+    for (const m of src.matchAll(/process\.env\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]/g)) note(m[1], f);
+  } else {
+    for (const m of src.matchAll(/os\.environ(?:\.get)?[\[(]\s*["']([A-Z][A-Z0-9_]*)["']/g)) note(m[1], f);
+    for (const m of src.matchAll(/os\.getenv\(\s*["']([A-Z][A-Z0-9_]*)["']/g)) note(m[1], f);
   }
+}
+const envDocumented = new Set();
+for (const f of ENV_EXAMPLE_FILES) {
+  // Active (`NAME=`) and commented-out optional (`# NAME=`) assignments both count as documented.
+  for (const m of read(f).matchAll(/^#?\s?([A-Z][A-Z0-9_]*)=/gm)) envDocumented.add(m[1]);
+}
+const undocumented = [...envRead.keys()]
+  .filter((n) => !envDocumented.has(n) && !(n in ENV_NOT_DOCUMENTED))
+  .sort();
+const unread = [...envDocumented].filter((n) => !envRead.has(n) && !(n in ENV_NOT_READ)).sort();
+if (undocumented.length)
+  problems.push(
+    `env vars: read by code but in neither ${ENV_EXAMPLE_FILES.join(" nor ")}:\n      ` +
+      undocumented.map((n) => `${n}  (${envRead.get(n)})`).join("\n      ") +
+      `\n    Document it, or add it to ENV_NOT_DOCUMENTED in scripts/check-docs.mjs with a reason.`,
+  );
+if (unread.length)
+  problems.push(
+    `env vars: documented in an example file but read by no code:\n      ${unread.join("\n      ")}\n    Remove it from the example file.`,
+  );
+
+// ── 5. Stale terms ──────────────────────────────────────────────────────────
+// Each of these was true once and survived in a document after it stopped being true.
+const STALE = [
+  { re: /No Anthropic/i, why: "the nutrition model is Claude via the API when keyed (#790)" },
+  { re: /zero-Anthropic/i, why: "same" },
+  { re: /5-prompt/i, why: "the journal is free-write with up to 3 contextual prompts" },
+  { re: /Oura PAT/i, why: "Oura uses OAuth2 (#732)" },
+  { re: /Fitbit/i, why: "replaced by Google Health (#607); history belongs in CHANGELOG.md" },
+  { re: /Vercel/i, why: "the app is self-hosted; history belongs in CHANGELOG.md" },
+  // "17.6g" is a nutrition figure in ARCHITECTURE.md, not a version.
+  { re: /\b17\.6\b(?!\s?g\b)/, why: "a retired Postgres minor version; write the major only" },
+];
+for (const f of CURRENT_DOCS) {
+  read(f)
+    .split("\n")
+    .forEach((line, i) => {
+      for (const { re, why } of STALE) {
+        const m = line.match(re);
+        if (m) problems.push(`stale term: ${f}:${i + 1} "${m[0]}" (${why})`);
+      }
+    });
+}
+
+// ── 6. Issue references that mean another repository ────────────────────────
+// The self-hosting migration and the cloud decommission were tracked in the private deployment
+// repo. Their bare numbers resolve to unrelated items here, so they are written as plain text.
+const FOREIGN_ISSUES = /(?<![\w/-])#(476|514)\b/;
+for (const f of CURRENT_DOCS) {
+  read(f)
+    .split("\n")
+    .forEach((line, i) => {
+      const m = line.match(FOREIGN_ISSUES);
+      if (m)
+        problems.push(
+          `issue ref: ${f}:${i + 1} "${m[0]}" is an issue in another repository; say what it was in words`,
+        );
+    });
+}
+
+// ── 7. Relative links and anchors ───────────────────────────────────────────
+/** GitHub's heading-to-anchor rule, including the -1, -2 suffix for repeats. */
+function anchorsOf(text) {
+  const seen = new Map();
+  const out = new Set();
+  const fenced = fencedLines(text);
+  text.split("\n").forEach((line, i) => {
+    if (fenced.has(i)) return;
+    const m = line.match(/^#{1,6}\s+(.*?)\s*#*\s*$/);
+    if (!m) return;
+    const base = m[1]
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // link text only
+      .replace(/[`*_]/g, (c) => (c === "_" ? "_" : ""))
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+      .replace(/\s/g, "-");
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    out.add(n ? `${base}-${n}` : base);
+  });
+  return out;
+}
+const anchorCache = new Map();
+const anchorsFor = (rel) => {
+  if (!anchorCache.has(rel)) anchorCache.set(rel, anchorsOf(read(rel)));
+  return anchorCache.get(rel);
+};
+// CHANGELOG.md is checked too: its dead links were the largest single class the audit found.
+for (const f of MD.filter((x) => !inHistoryDir(x))) {
+  const text = read(f);
+  const fenced = fencedLines(text);
+  const bad = [];
+  text.split("\n").forEach((line, i) => {
+    if (fenced.has(i)) return;
+    const prose = line.replace(/`[^`]*`/g, ""); // a link shown as code is not a link
+    for (const m of prose.matchAll(/\[[^\]]*\]\(\s*<?((?:[^()\s>]|\([^()\s]*\))+)>?(?:\s+"[^"]*")?\s*\)/g)) {
+      const target = m[1];
+      if (/^(https?:|mailto:|tel:)/i.test(target)) continue;
+      const [pathPart, anchor] = target.split("#");
+      const destRel = pathPart
+        ? relative(ROOT, join(ROOT, dirname(f), decodeURIComponent(pathPart))).split(sep).join("/")
+        : f;
+      if (pathPart && !existsSync(join(ROOT, destRel))) {
+        bad.push(`${f}:${i + 1} -> ${target} (no such file)`);
+        continue;
+      }
+      if (anchor && destRel.endsWith(".md") && !anchorsFor(destRel).has(anchor.toLowerCase()))
+        bad.push(`${f}:${i + 1} -> ${target} (no such heading)`);
+    }
+  });
+  if (bad.length) problems.push(`links: ${bad.length} broken in ${f}:\n      ${bad.join("\n      ")}`);
+}
+
+// ── 8. Real hostnames and logins ────────────────────────────────────────────
+// This repository is public. Docs and templates use <your-domain> / <user>@<host>.
+const PRIVATE = [
+  { re: /jl-infra-lab\.com/i, why: "the real deployment domain; write <your-domain>" },
+  { re: /\btheioz@|\bjasonhomelab\b/, why: "a real SSH login or host alias; write <user>@<host>" },
+];
+for (const f of [...MD, ...EXAMPLES].filter((x) => !inHistoryDir(x))) {
+  read(f)
+    .split("\n")
+    .forEach((line, i) => {
+      for (const { re, why } of PRIVATE) {
+        const m = line.match(re);
+        if (m) problems.push(`hostname: ${f}:${i + 1} "${m[0]}" (${why})`);
+      }
+    });
 }
 
 // ── Report ──────────────────────────────────────────────────────────────────
 if (FIX) {
-  writeFileSync(README, text);
-  const left = problems.filter((p) => p.startsWith("file tree"));
-  console.log("README numbers rewritten from the repository.");
-  if (left.length) {
-    // Paths cannot be fixed automatically: only a human knows whether an entry was deleted (drop
-    // the line) or moved (update it).
-    console.error(`\n${left.join("\n\n")}\n\nThese need a hand — see above.`);
-    process.exit(1);
-  }
+  console.log(`Tool counts rewritten to ${toolCount}. Everything else needs a hand.`);
   process.exit(0);
 }
 
 if (problems.length) {
-  console.error("README does not match the repository:\n");
+  console.error(`Documentation does not match the repository (${problems.length} problem(s)):\n`);
   for (const p of problems) console.error(`  - ${p}\n`);
-  console.error("Run `node scripts/check-docs.mjs --fix` for the derivable numbers.");
+  console.error("`node scripts/check-docs.mjs --fix` rewrites tool counts; the rest is a judgement.");
   process.exit(1);
 }
 
 console.log(
-  `README matches: ${toolCount} tools, ${migrations.length} migrations, file tree paths all exist.`,
+  `Docs match: ${toolCount} tools, ${migrations.length} migrations, ` +
+    `${CURRENT_DOCS.length} current docs, ${envRead.size} env vars read by code.`,
 );
