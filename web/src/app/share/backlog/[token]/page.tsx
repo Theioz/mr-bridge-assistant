@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { BacklogItem } from "@/lib/types";
 
 type Props = { params: Promise<{ token: string }> };
+
+// The URL carries the share token. Keep these pages out of search indexes.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
