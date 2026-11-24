@@ -1,3 +1,7 @@
+# LOCAL CLI SCAFFOLDING, NOT THE DEPLOYMENT. This file is what `supabase init` generated. The running
+# stack is Postgres + GoTrue + PostgREST only (no realtime, storage, studio, edge runtime or
+# analytics) with sign-up disabled; it is defined outside this repo. See docs/ARCHITECTURE.md.
+#
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the

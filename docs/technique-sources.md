@@ -1,17 +1,16 @@
 # Recipe technique sources
 
 Recipe **technique** is taken from well-reviewed, tested sources — not generated. This is the same
-rule that already governs macros: numbers come from USDA, never from a model. Jason asked for it on
-2026-08-13, the day a step reading `Simmer 40 min.` with no heat level burned a chili to the bottom
-of the pan.
+rule that already governs macros: numbers come from USDA, never from a model. The rule dates from a step
+reading `Simmer 40 min.` with no heat level, which burned a chili to the bottom of the pan.
 
 ## The split — this is the load-bearing part
 
 |                | Comes from                     | Why                                                                                                                                                                                   |
 | -------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Technique**  | a tested, well-reviewed source | heat per stage, covered/uncovered, stir frequency, doneness cues, resting. This is where the recipes were weak and where thousands of reviewers have already found the failure modes. |
-| **Quantities** | **us**                         | targeted to 1800 kcal / 150 g protein and built around what is in the fridge. Source recipes are sized for families and would break both the macros and the portion count.            |
-| **Macros**     | **USDA**, pinned by `fdc_id`   | unchanged. See `feedback_mrbridge_resolver_needs_fdc_pins`.                                                                                                                           |
+| **Quantities** | **us**                         | sized to the profile's macro targets and built around what is in the fridge. Source recipes are sized for families and would break both the macros and the portion count.            |
+| **Macros**     | **USDA**, pinned by `fdc_id`   | unchanged. Pin each ingredient to a USDA record; a name alone can resolve to the wrong food.                                                                                                                           |
 
 Adopting a source's _amounts_ is the failure mode to avoid. Take how it is cooked, not how much.
 

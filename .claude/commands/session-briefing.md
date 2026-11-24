@@ -4,6 +4,7 @@ description: Re-run the full Mr. Bridge session briefing on demand — weather, 
 user-invocable: true
 allowed-tools:
   - Bash(bash *)
+  - Bash(python3 *)
   - Read
   - mcp__claude_ai_Google_Calendar__*
   - mcp__claude_ai_Gmail__*

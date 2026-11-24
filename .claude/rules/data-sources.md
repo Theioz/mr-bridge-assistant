@@ -1,7 +1,7 @@
 # Data Sources
 
-All live data is in **self-hosted Supabase** on `compute-core` (`supabase.jl-infra-lab.com`).
-Migrated off Supabase Cloud 2026-07-13 — see ADR 0017 in the jl-homelab repo.
+All live data is in **self-hosted Supabase** on the home server (`supabase.<your-domain>`); see
+`docs/ARCHITECTURE.md` (Deployment).
 
 There is **no in-app chat**. Conversation happens through the **MCP server**
 (`web/mcp/run.sh`), which exposes the same 52 tools to Claude Code. Where a row below
@@ -9,10 +9,10 @@ says "MCP tool", that tool is available to you directly in this session.
 
 | Supabase table | Source | How it's written |
 |---|---|---|
-| `user_integrations` | OAuth tokens — Google, Google Health, Oura PAT | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so an interactive Calendar re-consent cannot invalidate the unattended fitness sync (#693 dropped the Gmail scope that was the original reason for the split) |
-| `fitness_log` | Google Health (weight/fat, derived BMI) | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
-| `workout_sessions` | Google Health, Oura, manual | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
-| `recovery_metrics` | Oura Ring | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`) |
+| `user_integrations` | OAuth tokens — Google, Google Health, Oura (all OAuth2) | Connect via `/settings`. Refresh tokens are **pgcrypto-encrypted** with `ENCRYPTION_KEY`. `google` and `google_health` are separate rows: the health token is consented apart so an interactive Calendar re-consent cannot invalidate the unattended fitness sync (#693 dropped the Gmail scope that was the original reason for the split) |
+| `fitness_log` | Google Health (weight/fat, derived BMI) | `/api/cron/sync` (daily cron at 14:00 UTC, or `scripts/run-syncs.py`) |
+| `workout_sessions` | Google Health (the only writer) | `/api/cron/sync` (daily cron at 14:00 UTC, or `scripts/run-syncs.py`) |
+| `recovery_metrics` | Oura Ring | `/api/cron/sync` (daily cron at 14:00 UTC, or `scripts/run-syncs.py`) |
 | `strength_sessions`, `strength_session_sets`, `exercise_prs` | In-app set logger | `/api/strength-sessions` |
 | `workout_plans` | Weekly planner | `/weekly-plan` command → `scripts/weekly_plan.py submit` → `/api/internal/plan` (AI-free); or `assign_workout` / `update_workout_exercise` / `cancel_workout` / `reschedule_workout` **MCP tools** |
 | `exercises` | Shared movement catalog (pattern, equipment, cues) | Hand-run SQL only; no app code writes it |
@@ -32,11 +32,11 @@ says "MCP tool", that tool is available to you directly in this session.
 | `journal_entries` | Manual | `/journal` server action. **No tool writes journal entries** |
 | `backlog_items` + `backlog_sessions` | Manual + TMDB/IGDB/OpenLibrary metadata; Plex watch history (#691) | `/api/backlog/*`, or `list_backlog` / `add_backlog_item` / `update_backlog_item` / `log_backlog_session` **MCP tools**. Movies/shows are also written by `/api/cron/sync` from Plex: status, sessions, `metadata.plex_progress`, and `rate_prompt_at` (a pending rate prompt, cleared by a DB trigger whenever a rating is written) |
 | `grocery_products` | Amazon Fresh product pins (#4): food identity (`fdc_id` or `packaged_food_id`, **never name**) → ASIN, pack grams, last price. One pin per food | `pin_grocery_product` **MCP tool**; read by `get_grocery_list` (planned recipes × portions − `inventory_items`, in whole packs; reports `unlisted` recipes with no structured ingredients) and by `receive_grocery_order`, which turns a delivered order into `inventory_items` rows in grams carrying the pin's identity (idempotent per order) |
-| `jobs` + `job_scout_reports` | Job Scout and the job-application tracker: every PM/TPM posting the daily search saw (stage, reason, agent score, Jason's feedback), every role being pursued (`status` not null: to_apply → applied → … , dates, fit, level, pay, notes, Notion prep link), and the agent's daily markdown report | `scripts/job_scout.py collect` / `ingest` on the homelab (the cloud ranking agent never touches the DB; it exchanges files through a git branch); `scripts/import_notion_tracker.py` (one-time Notion import). The `/jobs` page edits tracker fields and feedback (`PATCH /api/jobs/<id>`) and adds roles by hand (`POST /api/jobs`) |
+| `jobs` + `job_scout_reports` | Job Scout and the job-application tracker: every PM/TPM posting the daily search saw (stage, reason, agent score, the owner's feedback), every role being pursued (`status` not null: to_apply → applied → … , dates, fit, level, pay, notes, Notion prep link), and the agent's daily markdown report | `scripts/job_scout.py collect` / `ingest` on the homelab (the cloud ranking agent never touches the DB; it exchanges files through a git branch); `scripts/import_notion_tracker.py` (one-time Notion import). The `/jobs` page edits tracker fields and feedback (`PATCH /api/jobs/<id>`) and adds roles by hand (`POST /api/jobs`) |
 | `notifications` | In-app history of every push | `scripts/_push.py` (ntfy + history row; `scripts/notify.sh` wraps it) and app routes such as `/api/cron/audit-recipes`; rows older than 30 days are purged by `/api/cron/sync` |
 | `sync_log` | Heartbeat row per sync/job run — what Settings → Status reads (`web/src/lib/status/jobs.json`) | `/api/cron/sync` and the Python jobs (`scripts/_sync_log.py`, `scripts/_joblog.py`) |
 | `web_vitals` | Real-user page-load metrics (LCP, FCP, CLS, INP, TTFB) per page load, per route, phone vs desktop (#445) | The signed-in app via `POST /api/vitals` (`components/web-vitals-reporter.tsx`). Summarize with `python3 scripts/web_vitals_report.py [--days 14]` |
-| `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/cron/sync` (nightly cron, or `scripts/run-syncs.py`), plus an on-demand refresh when `/dashboard` renders stale data; `sports_cache` also via the sports **MCP tool** |
+| `stocks_cache`, `sports_cache` | Polygon.io; ESPN | `/api/cron/sync` (daily cron at 14:00 UTC, or `scripts/run-syncs.py`), plus an on-demand refresh when `/dashboard` renders stale data; `sports_cache` also via the sports **MCP tool** |
 | `user_metric_preferences` | Per-metric **source** preference — which integration to trust for each metric (e.g. HRV from Oura, body composition from Google Health). Rows are `(user_id, metric, preferred_source)`; `metric` ∈ sleep/hrv/steps/active_calories/readiness/body_composition. **Not units.** Empty in prod → falls back to `METRIC_DEFAULTS` (`web/src/lib/metric-preferences.ts`) | `/settings` (integrations panel writes it via the `saveMetricPreferences` server action; per-metric upsert) |
 
 **Units are not a table.** Display units come solely from `profile.weight_unit`. Weights are stored canonically in **kg** (`strength_session_sets.weight_kg`, `exercise_prs.weight_pr_kg`) and converted at the UI boundary by `kgToDisplay` / `displayToKg` in `web/src/lib/units.ts`. There is no separate units table — if you are hunting a unit bug, this is the only place units live.

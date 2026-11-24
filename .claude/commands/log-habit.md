@@ -5,6 +5,7 @@ argument-hint: "[habit1] [habit2] ..."
 user-invocable: true
 allowed-tools:
   - Bash(bash *)
+  - Bash(python3 *)
 model: haiku
 ---
 

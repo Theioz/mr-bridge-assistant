@@ -1,8 +1,9 @@
 ---
 name: weekly-review
-description: Weekly habit and accountability review agent. Queries the last 7 days from Supabase (habits, tasks). Outputs a structured summary and fires a push notification with headline stats. Run Sunday at 8pm or on demand via /weekly-review.
+description: Weekly habit and accountability review agent. Queries the last 7 days from Supabase (habits, tasks). Outputs a structured summary and fires a push notification with headline stats. Run on demand via /weekly-review; nothing schedules it.
 tools:
   - Bash(bash *)
+  - Bash(python3 *)
 model: haiku
 permissionMode: acceptEdits
 maxTurns: 8

@@ -1,7 +1,7 @@
 # Mr. Bridge for Android
 
 A thin [Capacitor](https://capacitorjs.com) shell that opens the live web app,
-`https://mr-bridge.jl-infra-lab.com`, full screen with no browser UI (#782). The web app is
+`https://mr-bridge.<your-domain>` (set in `android/capacitor.config.json`), full screen with no browser UI (#782). The web app is
 **not** bundled into the APK, so a web deploy reaches the app without a rebuild or reinstall.
 Rebuild only when something native changes: this directory, the Capacitor version, the icon,
 or the config.
@@ -65,7 +65,7 @@ android/scripts/setup-toolchain.sh
 It installs JDK 21 and the Android command-line tools: Homebrew on macOS; apt plus a
 checksum-verified Google zip on Linux/WSL, into `~/Android/Sdk`. Gradle fetches the SDK
 platform and build-tools on the first build. Nothing goes into your shell rc file:
-`scripts/env.sh` finds the toolchain itself.
+`android/scripts/env.sh` finds the toolchain itself.
 
 ### The signing key
 
@@ -102,7 +102,7 @@ on Surface and asks for the vault password there):
    It does nothing on a machine that already has the right key.
 
 Both take `SURFACE=<ssh-host>` if `homelab` isn't this machine's alias for Surface (on WSL it may
-be `theioz@jasonhomelab`).
+be `<user>@<host>`).
 
 Confirm a machine has the right key: the build prints the signer's SHA-256, which must start
 `c07b02cf91db962a`.

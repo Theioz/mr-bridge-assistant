@@ -7,9 +7,9 @@ smoke) and the multi-hour #323 pre-release verification.
 
 ## What's covered today
 
-- `smoke/specs/a11y.spec.ts` — runs axe-core across 13 routes
+- `smoke/specs/a11y.spec.ts` — runs axe-core across 14 routes
   (`/dashboard`, `/fitness`, `/habits`, `/tasks`, `/weekly`, `/journal`,
-  `/meals`, `/inventory`, `/library`, `/calendar`, `/notifications`,
+  `/meals`, `/inventory`, `/jobs`, `/library`, `/calendar`, `/notifications`,
   `/settings`, `/login`). Fails on any Critical or Serious violation;
   Moderate / Minor findings surface as Playwright annotations in the HTML
   report without blocking. No axe rules are disabled.
@@ -28,8 +28,7 @@ smoke) and the multi-hour #323 pre-release verification.
   see https://web.dev/articles/inp). Writes per-route HTML reports +
   `summary.json` under `web/smoke/perf-report/` (gitignored); exits
   non-zero on any breach. Expensive (~7 min for 60 Lighthouse runs
-  against a prod build) — intended for nightly / manual dispatch, not
-  per-PR.
+  against a prod build), so it is run by hand, not per PR.
 
 ## What's still manual
 
@@ -61,8 +60,7 @@ the user through GoTrue's admin API or `auth.users` as postgres):
    the key/value `profile` table.
 
 **Do NOT connect OAuth integrations** (Calendar, Google Health, Oura) on
-this account. Mutating-tool smokes are deferred to a follow-up issue
-and will need a separate test Google Calendar.
+this account.
 
 ### 2. Environment variables
 
@@ -73,13 +71,11 @@ Shell-exported values always win.
 ```
 SMOKE_TEST_EMAIL=smoke+test@mr-bridge.test
 SMOKE_TEST_PASSWORD=<from-your-password-manager>
-SMOKE_SUPABASE_SERVICE_KEY=<same-value-as-SUPABASE_SERVICE_ROLE_KEY>
-NEXT_PUBLIC_SUPABASE_URL=https://supabase.jl-infra-lab.com
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.<your-domain>
 ```
 
-`SMOKE_SUPABASE_SERVICE_KEY` is the same value as `SUPABASE_SERVICE_ROLE_KEY`
-— aliased to make the smoke code path explicit and to allow scoping to a
-smoke-only Supabase project later if desired.
+`SMOKE_SUPABASE_SERVICE_KEY` is not needed locally. Its only reader is
+`web/smoke/utils/supabase-verify.ts`, which no spec imports.
 
 ### 3. Install Playwright browsers
 
@@ -98,7 +94,7 @@ The Playwright config auto-starts `npm run dev` on port 3000 (and reuses it if
 you already have one running). From `web/`:
 
 ```
-npm run smoke:a11y     # axe sweep across the 10 routes
+npm run smoke:a11y     # axe sweep across the 14 routes
 npm run smoke           # the full suite
 ```
 
@@ -118,7 +114,7 @@ Useful variants (#445):
 
 ```
 PERF_ROUTES=/login npm run smoke:perf                              # public route only, no test account needed
-PERF_TARGET=https://mr-bridge.jl-infra-lab.com npm run smoke:perf  # measure the live deployment instead
+PERF_TARGET=https://mr-bridge.<your-domain> npm run smoke:perf       # measure the live deployment instead
 ```
 
 **Local only since the July 2026 self-host cutover.** The database is tailnet-only, so a
@@ -142,8 +138,7 @@ Per-route baselines live in
 the gate is `value <= max(threshold, baseline)`, so current known-bad
 routes don't block the pipeline but regressions past the current
 floor still fail. Ratchet baselines down as perf improves; delete the
-file once every route passes the hard thresholds. Tracked in
-[#384](https://github.com/Theioz/mr-bridge-assistant/issues/384).
+file once every route passes the hard thresholds.
 
 On failure, Playwright writes a trace + screenshot to
 `web/smoke/test-results/` and an HTML report to
@@ -165,8 +160,8 @@ MCP servers. Approve `playwright`. Subsequent sessions reuse the approval.
 The MCP and the committed `smoke/` suite are independent:
 
 - **MCP** — interactive authoring. Claude drives Chrome during a session.
-- **Committed specs** — durable regression gate. Runs before PRs and
-  releases. Survives across sessions.
+- **Committed specs** — durable regression checks, run by hand (nothing
+  runs them automatically; see [CI](#ci)). Survive across sessions.
 
 ## Authoring a new smoke
 
@@ -226,9 +221,9 @@ Add these under repo Settings → Secrets and variables → Actions:
 
 - `SMOKE_TEST_EMAIL`
 - `SMOKE_TEST_PASSWORD`
-- `SMOKE_SUPABASE_SERVICE_KEY` — service-role key; the workflow aliases
-  it to `SUPABASE_SERVICE_ROLE_KEY` at runtime so server tools find it
-  under their expected name.
+- `SMOKE_SUPABASE_SERVICE_KEY` — service-role key; the workflow passes
+  it to the dev server as `SUPABASE_SERVICE_ROLE_KEY`. No spec reads it
+  under its own name.
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the Next middleware + auth flow
   use this on every request; without it the dev server crashes before

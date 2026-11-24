@@ -7,8 +7,8 @@ Execute in this exact order:
    ```bash
    python3 scripts/run-syncs.py
    ```
-   Since #658 this is a thin client of the app's `/api/cron/sync` — the same endpoint the nightly
-   cron uses — so it refreshes Oura, Google Health, Plex, stocks and sports in one call and
+   Since #658 this is a thin client of the app's `/api/cron/sync` — the same endpoint the daily
+   cron (14:00 UTC) uses — so it refreshes Oura, Google Health, Plex, stocks and sports in one call and
    skips any health/Plex source synced within the last 30 minutes, then runs the task-due alert script.
    It therefore **requires the mr-bridge container to be up**. `--force` bypasses the skip
    window; `--days N` (1-90) backfills; `--no-alerts` skips it.
@@ -21,7 +21,7 @@ Execute in this exact order:
    meal plan, recent strength sessions, exercise PRs and upcoming workout plans (plus legacy study log rows, if any).
 3. Issue the following three external fetches **in a single message turn as parallel tool calls** (they are independent — do not run them sequentially):
    - **Calendar events**: the claude.ai Google Calendar connector's `list_events` for today (primary + any shared/secondary calendars) — note calendar/account source for each event
-   - **Upcoming birthdays**: `list_events` for the next 60 days (timeMin = today, timeMax = today+60 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; sort ascending; show only the single nearest birthday regardless of how far out it is; strip "'s birthday" suffix for display
+   - **Upcoming birthdays**: `list_events` for the next 60 days (timeMin = today, timeMax = today+60 days) — filter for titles matching `'s birthday` (case-insensitive) or calendar name containing "birthday"; compute days_until = event date − today; sort ascending; show only the single nearest birthday in that 60-day window; strip "'s birthday" suffix for display
    - **Important unread emails**: the claude.ai Gmail connector's `search_threads` (the app itself has no Gmail access since #693) — filter: unread, subjects containing meeting / urgent / invoice / action required / deadline — note account source; secondary accounts are labeled (e.g. "Professional") via a Gmail filter on forwarded mail
 4. Deliver session briefing (format below)
 
@@ -53,7 +53,7 @@ After reading the briefing output, check the PROFILE section for a `name` key (i
 [Calendar events: time + title, or "No events"]
 
 ### Upcoming Birthdays
-[Name — today / in N days. Omit this section entirely if no birthdays in the next 7 days.]
+[Name — today / in N days: the single nearest birthday. Omit this section entirely if there is none in the next 60 days.]
 
 ### Important Emails
 [Unread emails matching filter, or "Inbox clear"]
@@ -77,6 +77,15 @@ Weight: [X] lb | Body Fat: [X]% | Muscle: [X] lb | BMI: [X] | Visceral: [X] — 
 ### Recovery (last night)
 Readiness: [score] | Sleep: [score] | Total: [Xh Ym] | Deep: [Xh Ym] | REM: [Xh Ym] | HRV: [X]ms | RHR: [X] bpm | Active Cal: [X]
 [flag if applicable]
+
+### Intake vs Targets (last 7 logged days)
+[Average calories and protein against the profile targets, from the INTAKE section]
+
+### Fridge and Meal Plan
+[Leftovers with portions remaining (FRIDGE), then planned meals from today forward (MEAL PLAN). Plan into leftovers first.]
+
+### Strength
+[Last 3 strength sessions (STRENGTH), any new PRs (EXERCISE PRs), and upcoming workout plans (WORKOUT PLANS)]
 ```
 
 Body Composition rules:

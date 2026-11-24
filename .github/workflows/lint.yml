@@ -4,11 +4,16 @@ on:
   pull_request:
     paths:
       - 'web/**'
-      - 'scripts/lint-tokens.sh'
-      - 'scripts/check-docs.mjs'
-      - 'scripts/check-client-boundary.py'
+      - 'scripts/**'
       - 'supabase/migrations/**'
-      - 'README.md'
+      # Everything scripts/check-docs.mjs reads: a PR that deletes a script, renames a doc or
+      # adds an env var must run the docs job even when it touches nothing under web/.
+      - '**/*.md'
+      - 'docs/**'
+      - '.claude/**'
+      - 'android/**'
+      - '.env.example'
+      - 'web/.env.local.example'
       - '.github/workflows/lint.yml'
 
 jobs:
@@ -25,7 +30,7 @@ jobs:
       - name: Client/server boundary
         run: python3 scripts/check-client-boundary.py
 
-  # The README describes the repo; this asserts it still does. Deliberately depends on nothing —
+  # The docs describe the repo; this asserts they still do. Deliberately depends on nothing —
   # no npm ci, no setup beyond node — so it stays the cheapest job here and cannot rot itself.
   docs:
     runs-on: ubuntu-latest
