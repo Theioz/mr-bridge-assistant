@@ -136,4 +136,6 @@ Self-hosting means there is no managed point-in-time recovery. Backups are the o
 - Keep `ENCRYPTION_KEY` with the dump but not in it. A restore with the wrong key produces a healthy-looking database in which every integration fails. Prove the key decrypts a real `user_integrations` row before trusting a restore.
 - The dump must be copied off the server to count.
 
-In this deployment a nightly `pg_dump` runs at 03:30 UTC from the Supabase stack's backup script and is written to network storage; the script, retention and restore drill are in the deployment repo.
+- The dump holds health data and the auth schema, so encrypt it before it leaves the server.
+
+In this deployment a nightly `pg_dump` runs at 03:30 UTC from the Supabase stack's backup script. The dump is encrypted with `age` to a public recipient before it is written to network storage, and the script refuses to write a plaintext dump when `age` or the recipient is missing. The server holds only the public recipient, so it cannot read its own backups: **a restore starts with a decrypt on the machine that holds the private key**, then loads the decrypted dump. The script, retention and restore drill are in the deployment repo.
